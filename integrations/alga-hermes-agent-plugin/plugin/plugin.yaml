@@ -1,0 +1,44 @@
+name: alga-platform
+kind: platform
+version: 1.0.0
+description: >
+  Alga SRE investigation gateway adapter for Hermes Agent.
+  Connects via SSE (inbound) + REST (outbound) to Alga investigation threads.
+  Provides Alga-specific tools (acknowledge, resolve, set_severity, etc.)
+  alongside the platform adapter.
+author: Alga
+requires_env:
+  - ALGA_SERVER_URL
+  - ALGA_AGENT_TOKEN
+provides_tools:
+  - alga_resolve_alert
+  - alga_reopen_alert
+  - alga_promote_to_incident
+  - alga_set_outcome
+  - alga_cancel_investigation
+  - alga_pause_investigation
+  - alga_search_knowledge
+  - alga_get_knowledge
+  - alga_create_knowledge
+  - alga_list_alerts
+  - alga_triage_feedback
+  - alga_set_incident_priority
+  - alga_set_incident_severity
+  - alga_trigger_escalation
+  - alga_dispatch_task
+  - alga_complete_task
+  - alga_list_tasks
+  - alga_synthesize_findings
+  - alga_mitigate_incident
+  - alga_resolve_incident
+  - alga_set_incident_resolution_docs
+  - alga_begin_triage
+  - alga_promote_incident
+  - alga_add_incident_timeline
+  - alga_assign_incident_role
+  - alga_get_incident_context
+  - alga_get_incident_timeline
+  - alga_post_handoff
+  - alga_publish_status_update
+  - alga_list_services
+  - alga_who_is_on_call

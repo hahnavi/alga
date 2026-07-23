@@ -1,0 +1,8 @@
+go 1.26.5
+
+use (
+	./apps/alga-agent
+	./apps/backend
+	./integrations/alga-agent-sdk-go
+	./integrations/alga-mattermost-plugin
+)

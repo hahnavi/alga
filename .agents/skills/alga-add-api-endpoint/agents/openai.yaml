@@ -1,0 +1,4 @@
+interface:
+  display_name: "Add Alga API Endpoint"
+  short_description: "Add or change REST handlers, routes, RBAC, API client methods, and pages"
+  default_prompt: "Use Add Alga API Endpoint when adding or changing Alga REST routes, handlers, RBAC gates, frontend API methods, router entries, or pages."

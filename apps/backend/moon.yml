@@ -1,0 +1,27 @@
+tasks:
+  dev:
+    command: "bash"
+    args: ["dev.sh"]
+
+  build:
+    command: bash
+    args: ["-c", "go build -ldflags '-s -w' -o alga ."]
+
+  lint:
+    command: "go vet ./..."
+
+  format:
+    command: "gofmt -l ."
+
+  format-write:
+    command: "gofmt -w ."
+
+  test:
+    command: "go test ./..."
+
+  test-cover:
+    command: "bash"
+    args: ["-c", "go test -race -coverprofile=coverage.out -covermode=atomic ./... && go tool cover -func=coverage.out | tail -1 && echo 'Coverage targets (goals, not enforced): domain >=90%, app >=80% — see refs/plan/architecture/testing-strategy.md'"]
+
+  gen:
+    command: "go generate ./ent"

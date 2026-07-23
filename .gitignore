@@ -1,0 +1,91 @@
+# Binaries
+/alga
+/alertaggregator
+/apps/backend/alga
+/apps/alga-agent/alga-agent
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Output of go coverage
+*.out
+
+# VitePress
+website/.vitepress/dist
+website/.vitepress/cache
+*.prof
+
+# Go workspace
+go.work.sum
+
+# Dependency directories
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Config overrides (keep default)
+config/routes.override.yaml
+
+# Monorepo JS
+node_modules/
+apps/frontend/node_modules/
+apps/frontend/dist/
+
+# Moonrepo
+.moon/cache/
+.moon/docker/
+
+# Backend temporary files
+apps/backend/tmp/
+
+# VitePress
+docs/.vitepress/cache/
+docs/.vitepress/dist/
+
+# Claude Code
+.claude
+
+# Secrets & key material
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa*
+id_ed25519*
+*service-account*.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+.env/
+*.egg-info/
+dist/
+build/
+

@@ -1,0 +1,18 @@
+tasks:
+  dev:
+    command: "pnpm dev"
+
+  build:
+    command: "pnpm build"
+
+  lint:
+    command: "pnpm lint"
+
+  format:
+    command: "pnpm format"
+
+  format-write:
+    command: "pnpm format:write"
+
+  typecheck:
+    command: "pnpm typecheck"

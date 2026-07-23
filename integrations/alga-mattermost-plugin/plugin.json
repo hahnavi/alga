@@ -1,0 +1,31 @@
+{
+  "id": "com.alga.mattermost-plugin",
+  "name": "Alga Investigation Sync",
+  "description": "Synchronizes Mattermost thread replies with Alga investigation records by forwarding thread activity to the Alga webhook endpoint.",
+  "homepage_url": "https://github.com/alga/mattermost-plugin",
+  "support_url": "https://github.com/alga/mattermost-plugin/issues",
+  "version": "0.0.1",
+  "min_server_version": "7.0.0",
+  "server": {
+    "executable": "server/dist/plugin"
+  },
+  "settings_schema": {
+    "header": "Configure the Alga Investigation Sync plugin to forward Mattermost thread replies to your Alga backend. The **Webhook Secret** is used for both inbound and outbound communication — copy it to the `MATTERMOST_WEBHOOK_SECRET` setting in Alga.",
+    "settings": [
+      {
+        "key": "AlgaWebhookURL",
+        "display_name": "Alga Webhook URL",
+        "type": "text",
+        "help_text": "The URL of the Alga webhook endpoint (e.g., `https://alga.example.com/webhooks/mattermost`)",
+        "placeholder": "https://alga.example.com/webhooks/mattermost"
+      },
+      {
+        "key": "WebhookSecret",
+        "display_name": "Webhook Secret",
+        "type": "generated",
+        "help_text": "Shared secret for authenticating requests. Used for both inbound webhook forwarding (plugin → Alga) and outbound API calls (Alga → plugin). Must match the token configured in Alga (`MATTERMOST_WEBHOOK_SECRET`).",
+        "secret": true
+      }
+    ]
+  }
+}

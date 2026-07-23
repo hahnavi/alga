@@ -1,0 +1,4 @@
+interface:
+  display_name: "Alga Dev Environment"
+  short_description: "Run Alga setup, dev server, build, test, format, migration, and troubleshooting commands"
+  default_prompt: "Use Alga Dev Environment when setting up Alga locally, running dev servers, building, testing, formatting, migrating, or troubleshooting workspace commands."

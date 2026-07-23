@@ -1,0 +1,4 @@
+interface:
+  display_name: "Add Alga Worker"
+  short_description: "Add or change RabbitMQ consumers, async jobs, retries, and worker lifecycle wiring"
+  default_prompt: "Use Add Alga Worker when adding or changing RabbitMQ workers, async jobs, retry/dead-letter queues, sweepers, publishers, or worker lifecycle wiring."

@@ -1,0 +1,17 @@
+apiVersion: v2
+name: alga
+description: AI-powered alert operations platform
+type: application
+version: 0.1.0
+appVersion: "2026.5.5"
+keywords:
+  - alerting
+  - sre
+  - monitoring
+  - grafana
+  - self-hosted
+home: https://github.com/hahnavi/alga
+sources:
+  - https://github.com/hahnavi/alga
+maintainers:
+  - name: hahnavi

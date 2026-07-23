@@ -1,0 +1,7 @@
+projects:
+  - "apps/*"
+  - "packages/*"
+  - "integrations/*"
+
+vcs:
+  defaultBranch: "main"

@@ -1,0 +1,127 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-alga}
+      POSTGRES_PASSWORD: ${POSTGRES_PASS:-alga_dev_only}
+      POSTGRES_DB: alga
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-alga}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - app-network
+    ports:
+      - "127.0.0.1:5432:5432"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  valkey:
+    image: valkey/valkey:9.1-alpine
+    restart: unless-stopped
+    command: valkey-server --save 60 1 --loglevel warning --requirepass ${VALKEY_PASSWORD:-valkey_dev_only}
+    volumes:
+      - valkey_data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "-a", "${VALKEY_PASSWORD:-valkey_dev_only}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - app-network
+
+  rabbitmq:
+    image: rabbitmq:4.3.2-management-alpine
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-alga}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-alga_dev_only}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    ports:
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    networks:
+      - app-network
+
+  backend:
+    # Alga backend API server
+    # Integrates with Slack and Mattermost for alert delivery and bidirectional chat
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+      - apps/backend/.env
+    environment:
+      - POSTGRES_DSN=postgres://${POSTGRES_USER:-alga}:${POSTGRES_PASS:-alga_dev_only}@postgres:5432/alga?sslmode=disable
+      - VALKEY_ADDR=valkey:6379
+      - VALKEY_PASSWORD=${VALKEY_PASSWORD:-valkey_dev_only}
+      - RABBITMQ_URI=amqp://${RABBITMQ_USER:-alga}:${RABBITMQ_PASS:-alga_dev_only}@rabbitmq:5672/
+      - POSTGRES_AUTO_MIGRATE=true
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - app-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+
+  frontend:
+    # Alga frontend UI
+    # Connects to backend API for alert management and Slack/Mattermost integration
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+
+volumes:
+  valkey_data:
+  rabbitmq_data:
+  postgres_data:
+
+networks:
+  app-network:
+    driver: bridge

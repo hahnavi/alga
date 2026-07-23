@@ -1,0 +1,78 @@
+backend:
+  image:
+    repository: ghcr.io/hahnavi/alga-backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 250m
+    limits:
+      memory: 512Mi
+      cpu: "1"
+  config:
+    port: 8080
+    logLevel: info
+    environment: production
+    sessionExpiryHours: 24
+    postgresAutoMigrate: true
+  secrets:
+    encryptionKey: ""
+    secretPepper: ""
+    postgresDSN: ""
+    valkeyAddr: ""
+    valkeyPassword: ""
+    rabbitmqURI: ""
+
+frontend:
+  image:
+    repository: ghcr.io/hahnavi/alga-frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 256Mi
+      cpu: 500m
+
+ingress:
+  enabled: true
+  className: ""
+  annotations: {}
+  hosts:
+    - host: alga.example.com
+      paths:
+        - path: /api
+          pathType: Prefix
+        - path: /webhooks
+          pathType: Prefix
+        - path: /metrics
+          pathType: Prefix
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: alga-tls
+      hosts:
+        - alga.example.com
+
+postgresql:
+  enabled: true
+  auth:
+    username: alga
+    password: ""
+    database: alga
+
+valkey:
+  enabled: true
+  auth:
+    password: ""
+
+rabbitmq:
+  enabled: true
+  auth:
+    username: alga
+    password: ""

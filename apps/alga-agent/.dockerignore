@@ -1,0 +1,21 @@
+# Build artifacts
+alga-agent
+*.exe
+*.test
+*.out
+
+# Test files (not needed in the image)
+*_test.go
+
+# Docs and metadata
+*.md
+.git/
+.gitignore
+.dockerignore
+Dockerfile
+moon.yml
+
+# Local config (never bake secrets into the image)
+config.yaml
+.env
+.env.local

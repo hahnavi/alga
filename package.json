@@ -1,0 +1,25 @@
+{
+  "name": "alga-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@12.0.0-alpha.13",
+  "scripts": {
+    "dev": "moon run :dev",
+    "build": "moon run :build",
+    "lint": "moon run :lint",
+    "format": "moon run :format",
+    "format:write": "moon run :format-write",
+    "typecheck": "moon run :typecheck",
+    "docs:dev": "pnpm --filter alga-docs dev",
+    "docs:build": "pnpm --filter alga-docs build",
+    "docs:preview": "pnpm --filter alga-docs preview",
+    "prepare": "git config core.hooksPath .githooks"
+  },
+  "devDependencies": {
+    "@moonrepo/cli": "^2.4.4",
+    "oxlint": "^1.71.0"
+  },
+  "dependencies": {
+    "zod": "^3.25.76"
+  }
+}

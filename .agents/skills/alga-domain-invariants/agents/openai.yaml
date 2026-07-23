@@ -1,0 +1,4 @@
+interface:
+  display_name: "Alga Domain Invariants"
+  short_description: "Preserve alert, incident, investigation, scheduler, RabbitMQ, Valkey, and lifecycle rules"
+  default_prompt: "Use Alga Domain Invariants when changing Alga alert, incident, investigation, scheduler, RabbitMQ, Valkey, escalation, SLA, notification, or lifecycle behavior."

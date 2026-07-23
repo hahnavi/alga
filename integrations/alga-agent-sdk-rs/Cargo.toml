@@ -1,0 +1,15 @@
+[package]
+name = "alga-agent-sdk"
+version = "0.2.0"
+edition = "2021"
+description = "Low-level client library for building custom AI agents that integrate with the Alga SRE investigation platform"
+license = "MIT"
+
+[dependencies]
+reqwest = { version = "0.13", default-features = false, features = ["json", "stream", "multipart", "rustls-tls"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync", "io-util"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+async-trait = "0.1"
+futures-util = "0.3"
+httpdate = "1"

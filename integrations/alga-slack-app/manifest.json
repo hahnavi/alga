@@ -1,0 +1,50 @@
+{
+  "display_information": {
+    "name": "Alga",
+    "description": "Alert management and investigation sync for Alga. Delivers rich alert cards, action buttons, and bidirectional thread sync.",
+    "background_color": "#2c2d30"
+  },
+  "features": {
+    "bot_user": {
+      "display_name": "Alga",
+      "always_online": false
+    },
+    "interactivity": {
+      "is_enabled": true,
+      "request_url": "https://YOUR_ALGA_HOST/webhooks/slack"
+    }
+  },
+  "oauth_config": {
+    "scopes": {
+      "bot": [
+        "chat:write",
+        "chat:write.customize",
+        "chat:write.public",
+        "channels:read",
+        "groups:read",
+        "channels:manage",
+        "groups:manage",
+        "channels:history",
+        "groups:history",
+        "im:write",
+        "mpim:write"
+      ],
+      "user": [
+        "identity.basic"
+      ]
+    }
+  },
+  "settings": {
+    "event_subscriptions": {
+      "request_url": "https://YOUR_ALGA_HOST/webhooks/slack",
+      "bot_events": [
+        "message.channels",
+        "message.groups"
+      ]
+    },
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": false,
+    "token_rotation_enabled": true
+  },
+  "note": "To receive inbound DM/MPIM messages, add 'im:history', 'mpim:history', 'im:read', 'mpim:read' to bot scopes and 'message.im', 'message.mpim' to bot_events. The 'im:write' and 'mpim:write' scopes (already included) allow the bot to open DM/MPIM conversations for outbound messages."
+}

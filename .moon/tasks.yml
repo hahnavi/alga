@@ -1,0 +1,16 @@
+tasks:
+  dev:
+    local: true
+
+  build: {}
+
+  lint: {}
+
+  format: {}
+
+  format-write:
+    local: true
+
+  test: {}
+
+  typecheck: {}

@@ -1,0 +1,3 @@
+*.tgz
+.git
+values-dev.yaml

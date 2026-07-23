@@ -1,0 +1,4 @@
+interface:
+  display_name: "Alga Frontend Patterns"
+  short_description: "Follow Alga Vue, TypeScript, Tailwind, API client, router, and UI primitive conventions"
+  default_prompt: "Use Alga Frontend Patterns when writing or modifying Vue pages, components, frontend API methods, route guards, stores, or Tailwind UI."

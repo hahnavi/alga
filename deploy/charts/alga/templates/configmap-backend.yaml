@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "alga.fullname" . }}-backend
+  labels:
+    {{- include "alga.labels" . | nindent 4 }}
+data:
+  PORT: {{ .Values.backend.config.port | quote }}
+  LOG_LEVEL: {{ .Values.backend.config.logLevel | quote }}
+  ENVIRONMENT: {{ .Values.backend.config.environment | quote }}
+  SESSION_EXPIRY_HOURS: {{ .Values.backend.config.sessionExpiryHours | quote }}
+  POSTGRES_AUTO_MIGRATE: {{ .Values.backend.config.postgresAutoMigrate | quote }}

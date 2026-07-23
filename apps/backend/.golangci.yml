@@ -1,0 +1,15 @@
+# golangci-lint v2 configuration.
+#
+# In v2, directory exclusions moved from `issues.exclude-dirs`
+# (and the removed v1 `--exclude-dirs` flag / `run.skip-dirs`)
+# to `linters.exclusions.paths`; there is no CLI equivalent.
+# ent/ holds generated code; vendor/ is third-party.
+version: "2"
+
+run:
+  timeout: 10m
+
+linters:
+  exclusions:
+    paths:
+      - ent

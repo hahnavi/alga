@@ -1,0 +1,4 @@
+interface:
+  display_name: "Alga Integration SDK"
+  short_description: "Develop agent SDKs, integrations, bearer APIs, SSE clients, and command messages"
+  default_prompt: "Use Alga Integration SDK when developing Alga agent SDKs, Hermes/OpenClaw integrations, bearer-token agent APIs, SSE clients, command messages, or SDK examples."

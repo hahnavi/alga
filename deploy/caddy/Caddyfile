@@ -1,0 +1,23 @@
+{$DOMAIN:localhost} {
+    encode gzip
+
+    handle /api/* {
+        reverse_proxy backend:8080
+    }
+
+    handle /webhooks/* {
+        reverse_proxy backend:8080
+    }
+
+    handle /metrics {
+        reverse_proxy backend:8080
+    }
+
+    handle /health {
+        reverse_proxy backend:8080
+    }
+
+    handle {
+        reverse_proxy frontend:80
+    }
+}

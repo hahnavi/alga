@@ -1,0 +1,26 @@
+.experimental-banner {
+  background-color: var(--vp-c-warning-1);
+  border-bottom: 1px solid var(--vp-c-warning-2);
+  padding: 10px 24px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--vp-c-warning-3);
+  font-weight: 500;
+}
+
+.experimental-banner p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+:root {
+  --vp-c-warning-1: #fff3cd;
+  --vp-c-warning-2: #ffc107;
+  --vp-c-warning-3: #664d03;
+}
+
+.dark {
+  --vp-c-warning-1: #332701;
+  --vp-c-warning-2: #664d00;
+  --vp-c-warning-3: #ffc107;
+}

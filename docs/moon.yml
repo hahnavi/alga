@@ -1,0 +1,9 @@
+tasks:
+  dev:
+    command: "pnpm dev"
+
+  build:
+    command: "pnpm build"
+
+  preview:
+    command: "pnpm preview"

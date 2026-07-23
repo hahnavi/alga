@@ -1,0 +1,401 @@
+# CI pipeline — gated secure development lifecycle (ASVS V14).
+#
+# Stages (fail fast): Format & Lint → Tests → Build → Docker Build & Scan,
+# with a parallel source/dependency security scan. Jobs run in parallel where
+# independent; downstream jobs depend on their upstream gate. Security
+# findings block the pipeline (HIGH/CRITICAL) — no `|| true` on scanners that
+# gate a merge.
+#
+# Images are built with `load: true` (loaded into this runner's Docker daemon
+# only) so CI never pushes. Publishing happens in release.yml on `v*` tags.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Pinned to the exact patch in apps/backend/go.mod (`go 1.26.5`) so setup-go
+  # installs a toolchain that already satisfies the module floor. GOTOOLCHAIN=local
+  # is the belt-and-suspenders guard: if the pin drifts behind go.mod, Go fails
+  # loudly instead of auto-downloading a toolchain into the read-only module cache.
+  GO_VERSION: "1.26.5"
+  GOTOOLCHAIN: local
+  NODE_VERSION: "22"
+  # Keep in sync with `packageManager` in package.json and the corepack pin in
+  # apps/frontend/Dockerfile — pnpm/action-setup@v6 throws on a
+  # version/packageManager mismatch.
+  PNPM_VERSION: "12.0.0-alpha.13"
+  # Pinned to the latest stable release built with Go 1.26 (go1.26.2).
+  # golangci-lint can only lint Go versions ≤ its build toolchain, so this must
+  # stay ≥ the `go 1.26.5` floor in apps/backend/go.mod. v2.4.0 was built with
+  # go1.25 and could not even load the config against go1.26.1.
+  GOLANGCI_LINT_VERSION: "v2.12.2"
+  # Pinned for the native gosec step in security-scan. The securego/gosec
+  # Docker action was dropped because its image ships a fixed Go toolchain that
+  # can drift below the `go 1.26.5` floor in go.work; with GOTOOLCHAIN=local
+  # that made every package fail to load (0 files scanned). `go install` builds
+  # gosec against the runner's own GO_VERSION instead.
+  GOSEC_VERSION: "v2.22.2"
+
+jobs:
+  # ─────────────────────────────── Backend: format, lint, vet ────────────
+  backend-lint:
+    name: Backend · Lint & Format
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: apps/backend/go.sum
+      - name: Go fmt check (gofmt)
+        run: test -z "$(gofmt -l .)"
+      - name: Go vet
+        run: go vet ./...
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a  # v9.3.0
+        with:
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
+          working-directory: apps/backend
+          # v2 dropped the `--exclude-dirs` flag; the ent/ exclusion now lives
+          # in apps/backend/.golangci.yml (issues.exclude-dirs). Timeout too.
+          args: ./...
+
+  # ─────────────────────────────── Backend: tests ────────────────────────
+  # Only Postgres is required: store tests provision an isolated schema per
+  # test (search_path isolation, CREATE privilege only) and apply the ent
+  # schema themselves. Valkey/RabbitMQ tests use mocks, not live brokers.
+  backend-test:
+    name: Backend · Unit & Integration
+    runs-on: ubuntu-latest
+    needs: [backend-lint]
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: alga
+          POSTGRES_PASSWORD: alga_dev_only
+          POSTGRES_DB: alga
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U alga"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: apps/backend
+    env:
+      # store/pgtest_test.go resolves ALGA_TEST_POSTGRES_DSN first, then
+      # POSTGRES_DSN. Without these the tests skip (CI without Postgres).
+      ALGA_TEST_POSTGRES_DSN: postgres://alga:alga_dev_only@localhost:5432/alga?sslmode=disable
+      POSTGRES_DSN: postgres://alga:alga_dev_only@localhost:5432/alga?sslmode=disable
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - name: Setup Go
+        # setup-go enables module/build caching by default when
+        # cache-dependency-path is set (caches ~/go/pkg/mod and
+        # ~/.cache/go-build keyed on go.sum). Do NOT add a separate
+        # actions/cache step for those paths: Go marks module files
+        # read-only, so a second restore over setup-go's already-populated
+        # cache makes tar abort with "Cannot open: File exists".
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: apps/backend/go.sum
+      # Coverage profile is produced here and emitted as a non-gating report
+      # below. Per testing-strategy.md §7 the gate is REPORTING-ONLY until the
+      # codebase meets the coverage targets (domain >=90%, app >=80%); a failing
+      # threshold is intentionally NOT set so existing CI cannot red-break.
+      - name: Go test (race + coverage)
+        run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+      - name: Coverage report (non-gating)
+        if: always()
+        run: |
+          if [ -f coverage.out ]; then
+            echo "=== Total coverage ==="
+            go tool cover -func=coverage.out | tail -1
+            echo "=== Per-package coverage (sorted) ==="
+            go test -cover ./... | grep -E '^(ok|FAIL|---)' | sort -t'	' -k2 -n || true
+            echo "Coverage targets (goals, not enforced): domain >=90%, app >=80% — see refs/plan/architecture/testing-strategy.md"
+          else
+            echo "coverage.out not produced; skipping report"
+          fi
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: backend-coverage
+          path: apps/backend/coverage.out
+          retention-days: 14
+
+  # ─────────────────────────────── Backend: build ────────────────────────
+  backend-build:
+    name: Backend · Build
+    runs-on: ubuntu-latest
+    needs: [backend-lint]
+    defaults:
+      run:
+        working-directory: apps/backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: apps/backend/go.sum
+      - name: Build backend
+        # Single binary (apps/backend/main.go, no cmd/ dir).
+        run: go build -trimpath -ldflags="-s -w" -o /tmp/alga .
+
+  # ─────────────────────────────── Frontend: lint & format ───────────────
+  frontend-lint:
+    name: Frontend · Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271  # v6.0.9
+        with:
+          # Pin explicitly so the action does not fall back to reading the
+          # `packageManager` field. Keeps CI decoupled from that field and
+          # matches the PNPM_VERSION env declared above.
+          version: ${{ env.PNPM_VERSION }}
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Lint (oxlint)
+        run: pnpm --filter frontend lint
+      - name: Format check (oxfmt)
+        run: pnpm --filter frontend format
+
+  # ─────────────────────────────── Frontend: build ───────────────────────
+  frontend-build:
+    name: Frontend · Build
+    runs-on: ubuntu-latest
+    needs: [frontend-lint]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271  # v6.0.9
+        with:
+          # Pin explicitly so the action does not fall back to reading the
+          # `packageManager` field. Keeps CI decoupled from that field and
+          # matches the PNPM_VERSION env declared above.
+          version: ${{ env.PNPM_VERSION }}
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck
+        run: pnpm --filter frontend typecheck
+      - name: Build
+        run: pnpm --filter frontend build
+
+  # ─────────────────────────────── Docker build + image scan ─────────────
+  # Images are built with `load: true`, which loads them into THIS runner's
+  # Docker daemon only — they do NOT transfer to other jobs (each job starts
+  # on a fresh runner). The Trivy image scans therefore run in the SAME job,
+  # right after the builds. CI never pushes; release.yml publishes on tags.
+  docker-build:
+    name: Docker · Build & Scan Images
+    runs-on: ubuntu-latest
+    needs: [backend-build, frontend-build]
+    permissions:
+      contents: read
+      actions: read          # upload-sarif reads run metadata
+      security-events: write # upload-sarif → Security tab
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c  # v4.2.0
+      - name: Build backend image
+        # Context is the repo root (the Dockerfile reads apps/backend/ source).
+        # No --target, so the build stops at runtime-base and never reaches the
+        # with-mm-plugin stage whose COPY needs the gitignored plugin tarball.
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a  # v7.3.0
+        with:
+          context: .
+          file: apps/backend/Dockerfile
+          tags: alga-backend:ci
+          load: true
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+      - name: Build frontend image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a  # v7.3.0
+        with:
+          context: .
+          file: apps/frontend/Dockerfile
+          tags: alga-frontend:ci
+          load: true
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+      # ── Container image scanning (Trivy) ──
+      # Pinned to the immutable commit SHA of v0.35.0, the safe release
+      # following the March 2026 trivy-action supply-chain compromise where
+      # mutable tags were force-pushed. Do NOT switch to a floating tag.
+      # (GHSA-69fq-xp46-6x23)
+      #
+      # Two passes per image:
+      #   1. SARIF (exit-code 0) — trivy-action ignores `severity` in SARIF
+      #      mode and scans ALL severities for the Security tab. exit-code 0
+      #      keeps it non-blocking so MEDIUM/UNKNOWN are reported, not fatal.
+      #   2. Blocking gate (table, HIGH/CRITICAL, exit-code 1) — the real
+      #      ASVS V14 gate. Only HIGH/CRITICAL fail the pipeline.
+
+      # ── Pass 1: SARIF reports (non-blocking, all severities) ──
+      - name: Trivy backend image → SARIF
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
+        with:
+          image-ref: alga-backend:ci
+          format: sarif
+          output: trivy-backend-results.sarif
+          exit-code: "0"
+      - name: Trivy frontend image → SARIF
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
+        with:
+          image-ref: alga-frontend:ci
+          format: sarif
+          output: trivy-frontend-results.sarif
+          exit-code: "0"
+      - name: Upload Trivy backend SARIF
+        # Non-fatal: code scanning (GHAS) is unavailable on free private
+        # repos, so the upload is rejected until the repo is public or
+        # GHAS-enabled. The real gate is the blocking scan below.
+        if: always() && hashFiles('trivy-backend-results.sarif') != ''
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81  # v4.37.3
+        with:
+          sarif_file: trivy-backend-results.sarif
+          category: trivy-backend
+      - name: Upload Trivy frontend SARIF
+        if: always() && hashFiles('trivy-frontend-results.sarif') != ''
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81  # v4.37.3
+        with:
+          sarif_file: trivy-frontend-results.sarif
+          category: trivy-frontend
+
+      # ── Pass 2: Blocking gates (HIGH/CRITICAL only) ──
+      - name: Trivy backend image gate (HIGH + CRITICAL block)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
+        with:
+          image-ref: alga-backend:ci
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
+          format: table
+      - name: Trivy frontend image gate (HIGH + CRITICAL block)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
+        with:
+          image-ref: alga-frontend:ci
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
+          format: table
+
+  # ─────────────────────────────── Source & dependency scanning ──────────
+  # govulncheck + gosec + gitleaks + pnpm audit scan source and dependencies,
+  # not container images, so they run in parallel with the docker job above.
+  security-scan:
+    name: Security · Vuln + Secret Scan
+    runs-on: ubuntu-latest
+    needs: [backend-lint, frontend-lint]
+    permissions:
+      contents: read
+      # gitleaks-action enumerates PR commits via the REST API on
+      # pull_request events (GET /repos/.../pulls/N/commits) and posts inline
+      # comments when GITLEAKS_ENABLE_COMMENTS is set. The default GITHUB_TOKEN
+      # only carries the workflow-level `contents: read`, which 403s on the
+      # commits endpoint (x-accepted-github-permissions: pull_requests=read).
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          # full history so gitleaks can scan all commits on PR events
+          fetch-depth: 0
+
+      # ── Go vulnerability database scan (govulncheck) ──
+      # Reports vulnerabilities reachable from the call graph. Fails CI on
+      # confirmed findings (ASVS V14).
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: apps/backend/go.sum
+      - name: govulncheck
+        uses: golang/govulncheck-action@032d45514ae346b1db93c04b0c90b841c370344f
+        with:
+          go-version-input: ${{ env.GO_VERSION }}
+          work-dir: ./apps/backend
+
+      # ── gosec: Go static analysis security scanner ──
+      # Ent-generated code is excluded. Fail on High/Critical; surface
+      # findings as annotations. Installed natively (not via the securego/gosec
+      # Docker action) so it builds against this job's GO_VERSION toolchain —
+      # the action's pinned image bundles an older Go that cannot load the
+      # `go 1.26.5` floor in go.work under GOTOOLCHAIN=local.
+      - name: gosec
+        working-directory: apps/backend
+        env:
+          GOTOOLCHAIN: local
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@${GOSEC_VERSION}
+          gosec -severity high -confidence medium -exclude-dir ent ./...
+
+      # ── gitleaks: detect secrets committed to the repo ──
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: true
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: false
+
+      # ── pnpm audit: frontend dependency CVEs ──
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271  # v6.0.9
+        with:
+          # Pin explicitly so the action does not fall back to reading the
+          # `packageManager` field. Keeps CI decoupled from that field and
+          # matches the PNPM_VERSION env declared above.
+          version: ${{ env.PNPM_VERSION }}
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Frontend dependency audit
+        working-directory: apps/frontend
+        # --prod scopes to production deps; --audit-level=high fails only on
+        # high/critical advisories so low/info findings don't block merges.
+        run: pnpm audit --prod --audit-level=high

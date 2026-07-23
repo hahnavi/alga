@@ -1,0 +1,153 @@
+import { defineConfig } from "vitepress"
+
+export default defineConfig({
+  title: "Alga",
+  description: "The open-source, AI-powered incident management platform",
+  cleanUrls: true,
+  ignoreDeadLinks: ["localhostLinks"],
+  head: [
+    ["link", { rel: "icon", type: "image/svg+xml", href: "/logo.svg" }],
+  ],
+  themeConfig: {
+    siteTitle: "Alga",
+    nav: [
+      { text: "Docs", link: "/getting-started" },
+      { text: "API", link: "/api-reference" },
+      { text: "GitHub", link: "https://github.com/hahnavi/alga" },
+    ],
+    sidebar: [
+      {
+        text: "Getting Started",
+        collapsed: false,
+        items: [
+          { text: "Quick Start", link: "/getting-started/" },
+          { text: "Core Concepts", link: "/getting-started/concepts" },
+          { text: "Installation & Setup", link: "/getting-started/installation" },
+          { text: "First Steps Guide", link: "/getting-started/first-steps" },
+          { text: "Onboarding Wizard", link: "/getting-started/onboarding" },
+        ],
+      },
+      {
+        text: "Configuration",
+        collapsed: false,
+        items: [
+          { text: "Environment Variables", link: "/configuration/environment-variables" },
+          { text: "System Configuration API", link: "/configuration/system-config" },
+          { text: "Security & Authentication", link: "/configuration/security" },
+        ],
+      },
+      {
+        text: "Integrations",
+        collapsed: false,
+        items: [
+          { text: "Overview", link: "/integrations/" },
+          { text: "Hermes Agent", link: "/integrations/hermes" },
+          { text: "OpenClaw", link: "/integrations/openclaw" },
+          { text: "Agent SDKs", link: "/integrations/agent-sdks" },
+          { text: "Slack", link: "/integrations/slack" },
+          { text: "Slack OAuth", link: "/integrations/slack-oauth" },
+          { text: "Mattermost", link: "/integrations/mattermost" },
+          { text: "Twilio", link: "/integrations/twilio" },
+          { text: "Telnyx", link: "/integrations/telnyx" },
+          { text: "Email", link: "/integrations/email" },
+          { text: "OIDC SSO", link: "/integrations/oidc-sso" },
+        ],
+      },
+      {
+        text: "Core Features",
+        collapsed: false,
+        items: [
+          { text: "Alerts", link: "/core-features/alerts" },
+          { text: "Routing", link: "/core-features/routing" },
+          { text: "AI Investigation", link: "/core-features/investigation" },
+          { text: "Agent Memory", link: "/core-features/agent-memory" },
+          { text: "Peer Ask", link: "/core-features/peer-ask" },
+          { text: "Knowledge Base", link: "/core-features/knowledge-base" },
+          { text: "Triage", link: "/core-features/triage" },
+          { text: "Playbooks", link: "/core-features/playbooks" },
+          { text: "Notifications", link: "/core-features/notifications" },
+          { text: "Heartbeats", link: "/core-features/heartbeats" },
+          { text: "Status Pages", link: "/core-features/status-pages" },
+          { text: "Credential Providers", link: "/core-features/credential-providers" },
+          { text: "Dashboard", link: "/core-features/dashboard" },
+        ],
+      },
+      {
+        text: "Incident Management",
+        collapsed: false,
+        items: [
+          { text: "Overview", link: "/incident-management/" },
+          { text: "Lifecycle & States", link: "/incident-management/lifecycle" },
+          { text: "ICS Roles", link: "/incident-management/ics-roles" },
+          { text: "Coordination", link: "/incident-management/coordination" },
+          { text: "On-Call Handoffs", link: "/incident-management/handoffs" },
+          { text: "SLA Tracking", link: "/incident-management/sla" },
+          { text: "Post-Mortems", link: "/incident-management/post-mortems" },
+        ],
+      },
+      {
+        text: "Service Management",
+        collapsed: false,
+        items: [
+          { text: "Service Catalog", link: "/service-management/" },
+        ],
+      },
+      {
+        text: "On-Call & Escalation",
+        collapsed: false,
+        items: [
+          { text: "Teams", link: "/on-call/" },
+          { text: "On-Call Schedules", link: "/on-call/schedules" },
+          { text: "Escalation Policies", link: "/on-call/escalation-policies" },
+          { text: "Notification Preferences", link: "/on-call/notification-preferences" },
+        ],
+      },
+      {
+        text: "Operations",
+        collapsed: false,
+        items: [
+          { text: "Architecture", link: "/operations/architecture" },
+          { text: "Deployment", link: "/operations/deployment" },
+          { text: "Performance & Scaling", link: "/operations/performance" },
+          { text: "Monitoring & Observability", link: "/operations/monitoring" },
+          { text: "Backup & Restore", link: "/operations/backup" },
+          { text: "Migration Guide", link: "/operations/migration" },
+          { text: "CLI Reference", link: "/operations/cli" },
+          { text: "Personal Access Tokens", link: "/operations/personal-access-tokens" },
+        ],
+      },
+      {
+        text: "API Reference",
+        collapsed: false,
+        items: [
+          { text: "Overview", link: "/api-reference/" },
+        ],
+      },
+      {
+        text: "Resources",
+        collapsed: false,
+        items: [
+          { text: "Use Cases", link: "/resources/use-cases" },
+          { text: "Contributing", link: "/resources/contributing" },
+          { text: "FAQ", link: "/resources/faq" },
+          { text: "Troubleshooting", link: "/resources/troubleshooting" },
+        ],
+      },
+    ],
+    search: {
+      provider: "local",
+    },
+    socialLinks: [
+      { icon: "github", link: "https://github.com/hahnavi/alga" },
+    ],
+    footer: {
+      message: "Released under the MIT License.",
+    },
+  },
+  vite: {
+    server: {
+      allowedHosts: true,
+      port: 5174,
+    }
+  },
+})

@@ -1,0 +1,13 @@
+alga
+alertaggregator
+*.exe
+*_test.go
+*.md
+.idea/
+.vscode/
+.DS_Store
+.git/
+.gitignore
+moon.yml
+Dockerfile
+.dockerignore

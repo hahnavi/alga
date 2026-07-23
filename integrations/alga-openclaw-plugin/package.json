@@ -1,0 +1,46 @@
+{
+  "name": "alga",
+  "version": "1.1.0",
+  "description": "OpenClaw channel plugin for Alga SRE investigation agent",
+  "type": "module",
+  "private": true,
+  "main": "./dist/src/index.js",
+  "exports": { ".": "./dist/src/index.js" },
+  "files": ["dist/", "openclaw.plugin.json", "openclaw-sdk.d.ts"],
+  "scripts": { "build": "tsdown", "prepack": "npm run build" },
+  "keywords": ["openclaw", "alga", "sre", "investigations"],
+  "license": "MIT",
+  "dependencies": {
+    "@sinclair/typebox": "^0.34.0",
+    "eventsource2": "^1.0.8",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsdown": "^0.22.0",
+    "typescript": "~5.9.0"
+  },
+  "peerDependencies": { "openclaw": ">=2026.6.10" },
+  "peerDependenciesMeta": { "openclaw": { "optional": true } },
+  "openclaw": {
+    "extensions": ["./src/index.ts"],
+    "runtimeExtensions": ["./dist/src/index.js"],
+    "setupEntry": "./setup-entry.ts",
+    "runtimeSetupEntry": "./dist/setup-entry.js",
+    "channel": {
+      "id": "alga",
+      "label": "Alga",
+      "selectionLabel": "Alga (investigations)",
+      "blurb": "Connect OpenClaw to Alga investigations over SSE + REST.",
+      "order": 70
+    },
+    "compat": {
+      "pluginApi": ">=2026.6.10",
+      "minGatewayVersion": "2026.6.10"
+    },
+    "build": {
+      "openclawVersion": "2026.6.10",
+      "pluginSdkVersion": "2026.6.10"
+    }
+  }
+}

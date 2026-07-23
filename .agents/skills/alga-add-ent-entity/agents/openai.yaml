@@ -1,0 +1,4 @@
+interface:
+  display_name: "Add Alga Ent Entity"
+  short_description: "Add PostgreSQL-backed Ent schemas, stores, registry entries, and generated client support"
+  default_prompt: "Use Add Alga Ent Entity when adding persistent Ent-backed data, store methods, registry wiring, migrations, or generated Ent client support."

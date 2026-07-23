@@ -1,0 +1,4 @@
+interface:
+  display_name: "Alga Security Checklist"
+  short_description: "Review auth, authorization, routes, secrets, sessions, tokens, integrations, and mutations"
+  default_prompt: "Use Alga Security Checklist when reviewing or changing authentication, authorization, API routes, secrets, sessions, tokens, user-scoped data, integrations, or mutations."

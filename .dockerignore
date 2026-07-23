@@ -1,0 +1,41 @@
+.git/
+.moon/cache/
+node_modules/
+apps/frontend/node_modules/
+apps/frontend/dist/
+.claude/
+.env
+.env.local
+
+# Binaries
+alga
+alertaggregator
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Output of go coverage
+*.out
+*.prof
+
+# Go workspace
+go.work.sum
+
+# Dependency directories
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

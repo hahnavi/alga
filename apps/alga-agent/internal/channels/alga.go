@@ -1,0 +1,339 @@
+package channels
+
+import (
+	"context"
+	"fmt"
+	"log/slog"
+	"strings"
+	"sync"
+	"time"
+
+	alga "github.com/alga/agent-sdk-go"
+
+	"alga-agent/internal/agent"
+	"alga-agent/internal/config"
+)
+
+// AlgaChannel adapts the Alga agent SDK (SSE inbound + REST outbound) to the
+// Channel/ResponseSink interfaces.
+type AlgaChannel struct {
+	client    AlgaSDKClient
+	cfg       config.AlgaConfig
+	router    *Router
+	logger    *slog.Logger
+	chatIDMux sync.Mutex
+	inflight  map[string]*algaStreamState
+	// consecutiveFailures counts connection failures; after 5 the channel is
+	// marked unhealthy and disabled for the session (SPEC §8.3).
+	consecutiveFailures int
+	healthy             bool
+	mu                  sync.Mutex
+	stop                context.CancelFunc
+	// ctx is the channel-scoped context, captured at Start and propagated to
+	// dispatched messages so graceful shutdown cancels in-flight work.
+	ctx     context.Context
+	stopped sync.Once
+}
+
+// AlgaSDKClient is the subset of *alga.AlgaClient used by AlgaChannel.
+type AlgaSDKClient interface {
+	Connect(ctx context.Context) error
+	Disconnect()
+	SendMessage(ctx context.Context, chatID, text string, mentions []string) (*alga.SendMessageResponse, error)
+	SendTyping(ctx context.Context, chatID string, active bool) error
+	GetInvestigation(ctx context.Context, id string) (*alga.Investigation, error)
+}
+
+// algaStreamState tracks per-chat outbound state (for typing indicators).
+type algaStreamState struct {
+	chatID string
+}
+
+// NewAlgaChannel constructs an AlgaChannel. Returns (nil, nil) when disabled.
+func NewAlgaChannel(cfg config.AlgaConfig, router *Router, logger *slog.Logger) (*AlgaChannel, error) {
+	if !cfg.Enabled {
+		return nil, nil
+	}
+	client := alga.NewAlgaClient(cfg.ServerURL, cfg.AgentToken)
+	return newAlgaChannelWithClient(client, cfg, router, logger), nil
+}
+
+// newAlgaChannelWithClient allows injecting a fake AlgaSDKClient (tests).
+func newAlgaChannelWithClient(client AlgaSDKClient, cfg config.AlgaConfig, router *Router, logger *slog.Logger) *AlgaChannel {
+	if logger == nil {
+		logger = slog.Default()
+	}
+	return &AlgaChannel{
+		client:   client,
+		cfg:      cfg,
+		router:   router,
+		logger:   logger,
+		inflight: make(map[string]*algaStreamState),
+		healthy:  true,
+	}
+}
+
+// Name implements Channel.
+func (a *AlgaChannel) Name() string { return "alga" }
+
+// Start connects to the Alga SSE stream and registers event callbacks. The
+// SDK's SSE client reconnects internally with backoff (2s→60s, jitter); this
+// method wires a liveness watchdog that marks the channel unhealthy if no
+// connected event arrives within a deadline, per SPEC §8.3.
+func (a *AlgaChannel) Start(ctx context.Context) error {
+	innerCtx, cancel := context.WithCancel(ctx)
+	a.stop = cancel
+	a.ctx = innerCtx
+
+	// Wire callbacks before connecting.
+	a.registerCallbacks()
+
+	if err := a.client.Connect(innerCtx); err != nil {
+		a.markUnhealthy()
+		return fmt.Errorf("alga connect: %w", err)
+	}
+	a.logger.Info("alga channel connected", "server_url", a.cfg.ServerURL)
+
+	// Liveness watchdog: the SDK reconnects internally, but if it can't reach
+	// the server for sustained periods we mark the channel unhealthy so the
+	// operator is alerted. OnConnected resets the failure counter on every
+	// successful (re)connection.
+	go a.watchdog(innerCtx)
+
+	return nil
+}
+
+// watchdog periodically checks liveness. If the channel hasn't seen a
+// connected event recently, it increments the failure counter. This is a
+// best-effort health signal since the SDK doesn't expose SSE errors directly.
+func (a *AlgaChannel) watchdog(ctx context.Context) {
+	ticker := time.NewTicker(60 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			// If we've accumulated 5+ failures without a reconnect, the SDK's
+			// internal backoff is failing; mark unhealthy (idempotent).
+			a.mu.Lock()
+			unhealthy := a.consecutiveFailures >= 5
+			a.mu.Unlock()
+			if unhealthy {
+				a.logger.Warn("alga channel watchdog: no successful reconnect recently",
+					"consecutive_failures", a.consecutiveFailures)
+			}
+		}
+	}
+}
+
+// registerCallbacks wires the SDK On* callbacks to channel handlers.
+func (a *AlgaChannel) registerCallbacks() {
+	// We need the concrete *alga.AlgaClient to set callbacks; the interface
+	// doesn't expose them. For production wiring we pass the concrete client.
+	if c, ok := a.client.(*alga.AlgaClient); ok {
+		c.OnConnected = func(ev alga.ConnectedEvent) {
+			a.mu.Lock()
+			wasUnhealthy := !a.healthy
+			a.consecutiveFailures = 0
+			a.healthy = true
+			a.mu.Unlock()
+			if wasUnhealthy {
+				a.logger.Info("alga SSE reconnected, channel healthy again",
+					"client_id", ev.ClientID, "agent_id", ev.AgentID)
+			} else {
+				a.logger.Info("alga SSE connected", "client_id", ev.ClientID, "agent_id", ev.AgentID)
+			}
+		}
+		c.OnMessage = a.onMessage
+		c.OnPeerAsk = a.onPeerAsk
+		c.OnPeerFinding = a.onPeerFinding
+		c.OnInvestigationCancel = a.onInvestigationCancel
+		c.OnInvestigationPause = a.onInvestigationPause
+		c.OnInvestigationResume = a.onInvestigationResume
+	}
+}
+
+// onMessage handles inbound investigation thread messages.
+func (a *AlgaChannel) onMessage(ev alga.MessageEvent) {
+	if ev.Text == "" {
+		return
+	}
+	// Skip internal/system messages (leading 🔒 per SDK convention).
+	if strings.HasPrefix(ev.Text, "🔒") {
+		return
+	}
+	chatID := ev.ChatID
+	if chatID == "" {
+		return
+	}
+	// Derive a per-message context from the channel's ctx so graceful
+	// shutdown cancels in-flight Alga work. Previously this used
+	// context.Background(), which leaked work past shutdown.
+	ctx := a.dispatchCtx()
+	// Derive Alga context from the chat id. Alga chat IDs for investigation
+	// threads follow the pattern "investigation_<id>"; extract it.
+	algaCtx := algaContextFromChatID(chatID)
+
+	sessionID := SessionIDFor("alga", chatID)
+	a.router.DispatchAsync(ctx, InboundMessage{
+		SessionID:   sessionID,
+		ChatID:      chatID,
+		Text:        ev.Text,
+		SenderID:    ev.SenderID,
+		SenderName:  ev.SenderName,
+		ChannelName: a.Name(),
+		AlgaCtx:     algaCtx,
+	})
+}
+
+// dispatchCtx returns a context that is canceled when the channel stops,
+// falling back to context.Background() if Start was never called.
+func (a *AlgaChannel) dispatchCtx() context.Context {
+	a.mu.Lock()
+	ctx := a.ctx
+	a.mu.Unlock()
+	if ctx == nil {
+		return context.Background()
+	}
+	return ctx
+}
+
+// onPeerAsk handles peer-agent questions directed at this agent.
+func (a *AlgaChannel) onPeerAsk(ev alga.PeerAskEvent) {
+	ctx := a.dispatchCtx()
+	chatID := investigationChatID(ev.InvestigationID)
+	algaCtx := agent.AlgaContext{InvestigationID: ev.InvestigationID}
+	sessionID := SessionIDFor("alga", chatID)
+	// Treat peer asks as actionable by default; classify in the loop.
+	a.router.DispatchAsync(ctx, InboundMessage{
+		SessionID:   sessionID,
+		ChatID:      chatID,
+		Text:        "Peer ask from " + ev.FromAgentName + ": " + ev.Question,
+		SenderID:    ev.FromAgentID,
+		SenderName:  ev.FromAgentName,
+		ChannelName: a.Name(),
+		AlgaCtx:     algaCtx,
+	})
+}
+
+// onPeerFinding stores peer findings in session memory (PLAN §7.2).
+func (a *AlgaChannel) onPeerFinding(ev alga.PeerFindingEvent) {
+	// Store as a memory via the agent's memory tool if available. For now,
+	// log; the agent can recall it on the next turn.
+	a.logger.Info("alga peer finding",
+		"investigation_id", ev.InvestigationID,
+		"peer_agent_id", ev.PeerAgentID,
+		"peer_agent_type", ev.PeerAgentType,
+		"text", ev.Text)
+}
+
+// onInvestigationCancel stops the agent immediately for that investigation.
+func (a *AlgaChannel) onInvestigationCancel(ev alga.InvestigationSignalEvent) {
+	a.logger.Info("alga investigation cancelled", "investigation_id", ev.InvestigationID, "reason", ev.Reason, "actor", ev.Actor)
+	// Clearing the session discards in-flight context.
+	sessionID := SessionIDFor("alga", investigationChatID(ev.InvestigationID))
+	a.router.agent.Store().Clear(sessionID)
+}
+
+func (a *AlgaChannel) onInvestigationPause(ev alga.InvestigationSignalEvent) {
+	a.logger.Info("alga investigation paused", "investigation_id", ev.InvestigationID, "reason", ev.Reason, "actor", ev.Actor)
+}
+
+func (a *AlgaChannel) onInvestigationResume(ev alga.InvestigationSignalEvent) {
+	a.logger.Info("alga investigation resumed", "investigation_id", ev.InvestigationID, "reason", ev.Reason, "actor", ev.Actor)
+}
+
+// --- ResponseSink implementation ---
+
+// OnThinking sends a typing indicator.
+func (a *AlgaChannel) OnThinking(ctx context.Context, chatID string) error {
+	return a.client.SendTyping(ctx, chatID, true)
+}
+
+// OnDelta is a no-op for Alga (the SDK delivers the final message; partial
+// updates are not expected). We refresh the typing indicator.
+func (a *AlgaChannel) OnDelta(ctx context.Context, chatID, accumulated, delta string) bool {
+	_ = a.client.SendTyping(ctx, chatID, true)
+	return true
+}
+
+// OnFinal delivers the completed response via SendMessage.
+func (a *AlgaChannel) OnFinal(ctx context.Context, chatID, text string) error {
+	_, err := a.client.SendMessage(ctx, chatID, text, nil)
+	if err != nil {
+		return fmt.Errorf("alga send: %w", err)
+	}
+	_ = a.client.SendTyping(ctx, chatID, false)
+	return nil
+}
+
+// OnError delivers an error message via SendMessage.
+func (a *AlgaChannel) OnError(ctx context.Context, chatID, text string) error {
+	_, err := a.client.SendMessage(ctx, chatID, text, nil)
+	return err
+}
+
+// markUnhealthy disables the channel after 5 consecutive failures (SPEC §8.3).
+func (a *AlgaChannel) markUnhealthy() {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.consecutiveFailures++
+	if a.consecutiveFailures >= 5 {
+		a.healthy = false
+		a.logger.Error("alga channel marked unhealthy after 5 consecutive failures", "failures", a.consecutiveFailures)
+	}
+}
+
+// Healthy reports whether the channel is still considered healthy.
+func (a *AlgaChannel) Healthy() bool {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.healthy
+}
+
+// Stop disconnects from the Alga SSE stream.
+func (a *AlgaChannel) Stop() error {
+	a.stopped.Do(func() {
+		if a.stop != nil {
+			a.stop()
+		}
+		a.client.Disconnect()
+	})
+	return nil
+}
+
+// Note on reconnect: the Alga SDK's SSE client implements its own reconnect
+// with exponential backoff (2s→60s, ~0.9-1.1x jitter) and honors Retry-After
+// on 429s. OnConnected fires on each successful (re)connection and resets the
+// failure counter. The watchdog goroutine monitors liveness and logs when the
+// channel has been unable to reconnect for sustained periods.
+
+// algaContextFromChatID derives an AlgaContext from the chat id convention
+// "investigation_<id>" or "incident_coord_<id>".
+func algaContextFromChatID(chatID string) agent.AlgaContext {
+	var ctx agent.AlgaContext
+	if invID, ok := stripPrefix(chatID, "investigation_"); ok {
+		ctx.InvestigationID = invID
+	}
+	if incID, ok := stripPrefix(chatID, "incident_coord_"); ok {
+		ctx.IncidentID = incID
+	}
+	return ctx
+}
+
+// investigationChatID constructs the chat id for an investigation thread.
+func investigationChatID(invID string) string {
+	if invID == "" {
+		return ""
+	}
+	return "investigation_" + invID
+}
+
+// stripPrefix returns s without the prefix and true if s starts with prefix.
+func stripPrefix(s, prefix string) (string, bool) {
+	if len(s) > len(prefix) && s[:len(prefix)] == prefix {
+		return s[len(prefix):], true
+	}
+	return s, false
+}

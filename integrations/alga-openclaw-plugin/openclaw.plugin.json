@@ -1,0 +1,81 @@
+{
+  "id": "alga",
+  "name": "Alga",
+  "description": "Alga investigations gateway (SSE + REST agent API)",
+  "channels": ["alga"],
+  "channelEnvVars": {
+    "alga": ["ALGA_SERVER_URL", "ALGA_AGENT_TOKEN", "ALGA_ALLOWED_USERS"]
+  },
+  "channelConfigs": {
+    "alga": {
+      "label": "Alga",
+      "description": "Connect OpenClaw to Alga investigations over SSE + REST.",
+      "uiHints": {
+        "": {
+          "label": "Alga",
+          "help": "Alga channel provider configuration for SRE investigation routing via SSE and REST agent API."
+        },
+        "serverUrl": {
+          "label": "Alga Server URL",
+          "help": "Base URL of the Alga backend (e.g. https://alga.example.com). No trailing slash."
+        },
+        "token": {
+          "label": "Alga Agent Token",
+          "help": "Bot token from the Alga UI (alga_agent_…). Used for SSE and REST authentication."
+        },
+        "allowFrom": {
+          "label": "Alga Allowed Users",
+          "help": "OpenClaw user IDs allowed to use the Alga channel. Leave unset to allow all."
+        },
+        "defaultTo": {
+          "label": "Alga Default Target",
+          "help": "Default conversation target (e.g. alga_dm for operator private chat)."
+        }
+      },
+      "schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "enabled": { "type": "boolean" },
+          "serverUrl": { "type": "string" },
+          "token": { "type": "string" },
+          "allowFrom": {
+            "type": "array",
+            "items": {
+              "type": ["string", "number"]
+            }
+          },
+          "defaultTo": { "type": "string" },
+          "accounts": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "name": { "type": "string" },
+                "enabled": { "type": "boolean" },
+                "serverUrl": { "type": "string" },
+                "token": { "type": "string" },
+                "allowFrom": {
+                  "type": "array",
+                  "items": {
+                    "type": ["string", "number"]
+                  }
+                },
+                "defaultTo": { "type": "string" }
+              }
+            }
+          },
+          "defaultAccount": { "type": "string" }
+        }
+      }
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  },
+  "activation": { "onStartup": false }
+}

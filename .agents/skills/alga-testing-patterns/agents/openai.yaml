@@ -1,0 +1,4 @@
+interface:
+  display_name: "Alga Testing Patterns"
+  short_description: "Choose focused backend, frontend, store, API, worker, integration, and regression tests"
+  default_prompt: "Use Alga Testing Patterns when adding, changing, or reviewing Alga backend, frontend, store, API, worker, integration, or regression tests."

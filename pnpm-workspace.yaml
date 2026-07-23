@@ -1,0 +1,16 @@
+packages:
+  - apps/*
+  - docs
+allowBuilds:
+  esbuild: true
+
+# Supply-chain cooldown: reject lockfile entries newer than 24h. CI runs
+# `pnpm install --frozen-lockfile`, which enforces this gate. Keep the value
+# (in minutes) in sync with minimumReleaseAge in renovate.json5 — Renovate
+# cannot read pnpm's setting and pnpm cannot read Renovate's.
+minimumReleaseAge: 1440
+minimumReleaseAgeExclude:
+  - '@types/node@26.0.1'
+
+overrides:
+  "@ungap/structured-clone": "^1.3.1"

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Alga Code Review"
+  short_description: "Review Alga diffs for correctness, regressions, security, tests, and maintainability"
+  default_prompt: "Use Alga Code Review when reviewing Alga diffs, pull requests, implementation branches, or generated changes."

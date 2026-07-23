@@ -1,0 +1,114 @@
+# Alga Agent — Example Configuration
+#
+# Copy to config.yaml and edit, or supply values via environment variables
+# (env vars always override YAML values). Path can be overridden with
+# ALGA_AGENT_CONFIG=/path/to/config.yaml.
+
+# Agent identity (used in the system prompt).
+agent:
+  name: "Alga Agent"
+  description: "SRE assistant for the Alga platform"
+
+# LLM configuration. Works with any OpenAI-compatible endpoint.
+model:
+  provider: openai          # openai | openrouter | custom
+  base_url: https://api.openai.com/v1
+  api_key: ${OPENAI_API_KEY}
+  model: gpt-4o
+  max_tokens: 4096
+  temperature: 0.3
+
+# Telegram channel (human interface).
+telegram:
+  enabled: false
+  bot_token: ${TELEGRAM_BOT_TOKEN}
+  allowed_users: []          # empty = allow all; or list user IDs / @usernames
+  webhook_url: ""            # empty = long polling (default)
+  webhook_addr: "0.0.0.0:8443"
+  respond_in_groups: false   # only respond when @mentioned or replied to
+  min_edit_interval: 1s      # throttle progressive message edits
+
+# Alga channel (backend investigation threads).
+alga:
+  enabled: false
+  server_url: ${ALGA_SERVER_URL}
+  agent_token: ${ALGA_AGENT_TOKEN}
+
+# Tools available to the agent.
+tools:
+  shell:
+    enabled: true
+    # NOT a true sandbox — commands run with the agent's privileges.
+    # Restrict to read-only/diagnostic commands in production.
+    allowed_commands:
+      - ls
+      - cat
+      - grep
+      - head
+      - tail
+      - wc
+      - curl
+      - dig
+      - ping
+      - ps
+      - top
+    max_output_bytes: 10240
+    timeout: 30s
+  web_search:
+    enabled: true
+    provider: duckduckgo     # duckduckgo | brave | tavily
+    api_key: ${SEARCH_API_KEY}   # required for brave/tavily; ignored for duckduckgo
+    max_results: 5
+    fetch_content: false
+
+# Agent behavior.
+agent_behavior:
+  max_iterations: 30         # max LLM round-trips per message
+  tool_timeout: 30s          # per-tool execution timeout
+  context_window: 20         # max messages retained per session
+  system_prompt_file: ""     # optional: path to custom base prompt
+
+# Logging.
+logging:
+  level: info                # debug | info | warn | error
+  file: ""                   # empty = stderr only
+
+# Optional Prometheus metrics endpoint.
+metrics:
+  enabled: false
+  addr: "127.0.0.1:9101"
+
+# Model Context Protocol (MCP) integration.
+#
+# The agent plays two MCP roles:
+#
+#   server:   exposes the agent's tools (alga_*, shell, web_search) to
+#             external MCP clients — Claude Desktop, Cursor, custom automation.
+#             Point your MCP client at http://<addr><path> to list and call
+#             tools through the standard MCP Streamable HTTP transport.
+#
+#   clients:  imports tools from external MCP servers (filesystem browsers,
+#             GitHub clients, database inspectors, in-house tools). Each
+#             server's tools are surfaced under a namespaced name
+#             ("<name>_<tool>") to avoid collisions with Alga tools.
+mcp:
+  server:
+    enabled: false
+    addr: "127.0.0.1:8085"
+    path: "/mcp"
+  clients: []
+    # Stdio transport: spawn a subprocess that speaks MCP over stdin/stdout.
+    # - name: filesystem
+    #   command: npx
+    #   args: ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
+    #   init_timeout: 15s
+    #
+    # HTTP transport: connect to a Streamable HTTP MCP server.
+    # - name: github
+    #   url: https://mcp.github.example.com/mcp
+    #   init_timeout: 10s
+    #
+    # Disable a server without removing its config:
+    # - name: legacy
+    #   url: https://legacy-mcp.example.com/mcp
+    #   disabled: true

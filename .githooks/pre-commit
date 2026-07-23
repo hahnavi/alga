@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# Pre-commit gate: fast format + lint checks on staged files only.
+#
+# Slow checks (golangci-lint, full test suites) run in CI. This hook catches
+# the common "forgot to format/lint" mistake locally in seconds.
+#
+# Activate after clone with:  git config core.hooksPath .githooks
+# (also done automatically by the root `prepare` script on `pnpm install`)
+set -euo pipefail
+
+repo_root=$(git rev-parse --show-toplevel)
+
+staged_go=$(git diff --cached --name-only --diff-filter=ACM -- '*.go' | grep -v '/ent/' || true)
+staged_ts=$(git diff --cached --name-only --diff-filter=ACM -- '*.ts' '*.vue' '*.js' '*.tsx' | grep -v node_modules || true)
+
+status=0
+
+# ── Go: gofmt ──
+if [[ -n "$staged_go" ]]; then
+  unformatted=$(gofmt -l $staged_go)
+  if [[ -n "$unformatted" ]]; then
+    echo "✖ gofmt: these Go files need formatting:"
+    echo "$unformatted"
+    echo "  Fix: gofmt -w $unformatted"
+    status=1
+  fi
+fi
+
+# ── Frontend: oxlint + oxfmt ──
+if [[ -n "$staged_ts" ]]; then
+  cd "$repo_root/apps/frontend"
+
+  # Strip the apps/frontend/ prefix so paths resolve from the workspace root.
+  local_ts=""
+  for f in $staged_ts; do
+    local_ts+=" ${f#apps/frontend/}"
+  done
+
+  # oxlint
+  if pnpm exec oxlint $local_ts >/tmp/precommit-oxlint.log 2>&1; then
+    :
+  else
+    echo "✖ oxlint: lint errors in staged frontend files"
+    cat /tmp/precommit-oxlint.log
+    echo "  Fix: pnpm --filter frontend lint --fix"
+    status=1
+  fi
+
+  # oxfmt (check only)
+  if pnpm exec oxfmt --check $local_ts >/tmp/precommit-oxfmt.log 2>&1; then
+    :
+  else
+    echo "✖ oxfmt: these frontend files need formatting:"
+    cat /tmp/precommit-oxfmt.log
+    echo "  Fix: pnpm --filter frontend exec oxfmt $local_ts"
+    status=1
+  fi
+
+  cd "$repo_root"
+fi
+
+if [[ $status -ne 0 ]]; then
+  exit 1
+fi
+
+echo "✔ pre-commit checks passed"

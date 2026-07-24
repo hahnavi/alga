@@ -8,7 +8,7 @@ require (
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/joho/godotenv v1.5.1
 	github.com/nyaruka/phonenumbers v1.8.1
-	github.com/rabbitmq/amqp091-go v1.12.0
+	github.com/rabbitmq/amqp091-go v1.13.0
 	github.com/spf13/cobra v1.10.2
 	github.com/testcontainers/testcontainers-go v0.43.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.43.0

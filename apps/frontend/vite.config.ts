@@ -17,7 +17,25 @@ export default defineConfig(({ mode }) => {
   } as const;
 
   return {
-    plugins: [vue(), tailwindcss()],
+    plugins: [
+      vue(),
+      tailwindcss(),
+      // Vite's dev server uses eval (via `new Function`) for HMR and source
+      // maps, which the strict CSP meta tag in index.html forbids. Relax only
+      // script-src in the HTML served by `vite`/`vite preview`. Production
+      // builds (mode === "production") keep the strict `script-src 'self'`
+      // policy emitted by security-headers.conf and the index.html meta tag.
+      ...(mode !== "production"
+        ? [
+            {
+              name: "alga-relax-csp-dev",
+              transformIndexHtml(html: string) {
+                return html.replace("script-src 'self';", "script-src 'self' 'unsafe-eval';");
+              },
+            },
+          ]
+        : []),
+    ],
     resolve: {
       alias: {
         "@": path.resolve(dirname, "./src"),

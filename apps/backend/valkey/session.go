@@ -349,11 +349,15 @@ func (s *SessionStore) DeleteSession(id string) error {
 		return nil
 	}
 	ctx := context.Background()
-	session, err := s.GetSession(id)
+	idHash := algacrypto.Default().HMACString(id)
+	val, err := s.client.Do(ctx, s.client.Builder().Get().Key(sessionKeyPrefix+idHash).Build()).ToString()
+	if err != nil || val == "" {
+		return nil
+	}
+	session, err := unmarshalSession(val)
 	if err != nil || session == nil {
 		return nil
 	}
-	idHash := algacrypto.Default().HMACString(id)
 
 	if err := s.client.Do(ctx, s.client.Builder().Del().Key(sessionKeyPrefix+idHash).Build()).Error(); err != nil {
 		logger.Warn("failed to delete session key", "error", err)

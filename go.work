@@ -6,3 +6,5 @@ use (
 	./integrations/alga-agent-sdk-go
 	./integrations/alga-mattermost-plugin
 )
+
+replace google.golang.org/genproto => google.golang.org/genproto v0.0.0-20260724162435-b2f20204f0df

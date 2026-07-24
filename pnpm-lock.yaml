@@ -146,7 +146,7 @@ importers:
     dependencies:
       '@lucide/vue':
         specifier: ^1.21.0
-        version: 1.25.0(vue@3.5.40(typescript@7.0.2))
+        version: 1.26.0(vue@3.5.40(typescript@7.0.2))
       '@tiptap/core':
         specifier: ^3.24.0
         version: 3.28.0(@tiptap/pm@3.28.0)
@@ -568,8 +568,8 @@ packages:
   '@kurkle/color@0.3.4':
     resolution: {integrity: sha512-M5UknZPHRu3DEDWoipU6sE8PdkZ6Z/S+v4dD+Ke8IaNlpdSQah50lz1KtcFBa2vsdOnwbbnxJwVM4wty6udA5w==}
 
-  '@lucide/vue@1.25.0':
-    resolution: {integrity: sha512-hkEetV+v48ScIn3uwqwWQ66sI8foeP2q6OMI09GzLFH4SfvBlfe3JHYlMBdBCqFC7WRlhFsndyDn/awRKRc2OQ==}
+  '@lucide/vue@1.26.0':
+    resolution: {integrity: sha512-jz00zLm8+i7VzBuQTbmjChIvIKehaIK5YbOVC+bab7qTh4JTkCd0XJQ4l5TY57gT08fMPVlvUITROB/vm/xImA==}
     peerDependencies:
       vue: '>=3.0.1'
 
@@ -2822,7 +2822,7 @@ snapshots:
 
   '@kurkle/color@0.3.4': {}
 
-  '@lucide/vue@1.25.0(vue@3.5.40(typescript@7.0.2))':
+  '@lucide/vue@1.26.0(vue@3.5.40(typescript@7.0.2))':
     dependencies:
       vue: 3.5.40(typescript@7.0.2)
 

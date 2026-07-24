@@ -42,7 +42,7 @@ services:
       - app-network
 
   rabbitmq:
-    image: rabbitmq:4.3.3-management-alpine
+    image: rabbitmq:4.3.4-management-alpine
     restart: unless-stopped
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-alga}

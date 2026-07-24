@@ -17,7 +17,31 @@ export default defineConfig(({ mode }) => {
   } as const;
 
   return {
-    plugins: [vue(), tailwindcss()],
+    plugins: [
+      vue(),
+      tailwindcss(),
+      // Vite's dev server uses eval (via `new Function`) for HMR and source
+      // maps, which the strict CSP meta tag in index.html forbids. Relax only
+      // script-src in the HTML served by `vite`/`vite preview`. Gating on
+      // apply: "serve" (not mode) guarantees the plugin never runs during
+      // `vite build`, so 'unsafe-eval' stays out of ALL build outputs —
+      // including non-production builds such as staging. Production builds keep
+      // the strict `script-src 'self'` policy from security-headers.conf and
+      // the index.html meta tag.
+      {
+        name: "alga-relax-csp-dev",
+        apply: "serve",
+        transformIndexHtml(html: string) {
+          const marker = "script-src 'self';";
+          if (!html.includes(marker)) {
+            throw new Error(
+              `alga-relax-csp-dev: CSP marker "${marker}" not found in index.html; update the plugin to match apps/frontend/index.html`,
+            );
+          }
+          return html.replace(marker, "script-src 'self' 'unsafe-eval';");
+        },
+      },
+    ],
     resolve: {
       alias: {
         "@": path.resolve(dirname, "./src"),

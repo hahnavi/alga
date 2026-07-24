@@ -25,7 +25,14 @@ FROM nginx:1.31.2-alpine3.23-slim
 RUN apk --no-cache upgrade
 RUN rm /etc/nginx/conf.d/default.conf
 COPY apps/frontend/nginx.conf /etc/nginx/conf.d/default.conf
-COPY apps/frontend/security-headers.conf /etc/nginx/conf.d/security-headers.conf
+# hsts-map.conf defines the http-scope `map` ($strict_transport_security) and
+# must sit in conf.d/ so the stock nginx.conf auto-includes it at http scope.
+COPY apps/frontend/hsts-map.conf /etc/nginx/conf.d/hsts-map.conf
+# security-headers.conf is a location-scoped snippet, NOT a top-level config:
+# keep it OUT of conf.d/ (which is auto-globbed at http scope) so its
+# add_header directives apply only where explicitly included and do not leak
+# SPA CSP/HSTS into the /api/, /api/v1/events and /webhooks/ proxy locations.
+COPY apps/frontend/security-headers.conf /etc/nginx/snippets/security-headers.conf
 COPY --from=builder /app/apps/frontend/dist /usr/share/nginx/html
 RUN chown -R nginx:nginx /usr/share/nginx/html \
     && mkdir -p /var/cache/nginx \

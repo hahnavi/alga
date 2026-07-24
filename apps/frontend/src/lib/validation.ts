@@ -115,11 +115,11 @@ export const alertRecordSchema = z.object({
   acknowledged: z.boolean().optional(),
   silenced: z.boolean().optional(),
   delivery_targets: z.array(z.unknown()).optional(),
-  labels: z.record(z.string()),
-  annotations: z.record(z.string()),
+  labels: z.record(z.string(), z.string()),
+  annotations: z.record(z.string(), z.string()),
   // Backend serializes a nil map as JSON `null` (no `omitempty` on the Go
   // struct field).
-  values: z.union([z.record(z.unknown()), z.null()]).optional(),
+  values: z.union([z.record(z.string(), z.unknown()), z.null()]).optional(),
   starts_at: z.string(),
   // Backend serializes a nil `*time.Time` as JSON `null` (no `omitempty`).
   ends_at: z.union([z.string(), z.null()]).optional(),
@@ -166,7 +166,7 @@ export const incidentRecordSchema = z
     slack_channel_name: z.string().optional(),
     slack_channel_archived: z.boolean(),
     tags: z.array(z.string()).optional(),
-    custom_fields: z.record(z.unknown()).optional(),
+    custom_fields: z.record(z.string(), z.unknown()).optional(),
     sla_target_respond_at: z.string().optional(),
     sla_target_resolve_at: z.string().optional(),
     started_at: z.string().optional(),

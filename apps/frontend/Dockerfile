@@ -1,5 +1,5 @@
 FROM node:lts-alpine3.23 AS builder
-RUN corepack enable && corepack prepare pnpm@12.0.0-alpha.13 --activate
+RUN corepack enable && corepack prepare pnpm@11.17.0 --activate
 
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./

@@ -2,8 +2,8 @@ apiVersion: v2
 name: alga
 description: AI-powered alert operations platform
 type: application
-version: 0.1.0
-appVersion: "2026.5.5"
+version: 0.0.1
+appVersion: "0.0.1"
 keywords:
   - alerting
   - sre

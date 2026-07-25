@@ -7,7 +7,7 @@ tags: [release, helm, chart, semver, ci, github, ghcr]
 
 # Alga Helm Chart Release
 
-Cut a chart release by pushing a `chart-v*` SemVer tag. The pipeline lives in `.github/workflows/chart-release.yml`: it validates the tag against `Chart.yaml`, lints, packages, pushes the chart to `oci://ghcr.io/<owner>/charts/alga`, and opens a GitHub Release. This skill decides **which chart version to tag** and confirms the tree is ready.
+Cut a chart release by pushing a `chart-v*` SemVer tag. The pipeline lives in `.github/workflows/chart-release.yml`: it validates the tag against `Chart.yaml`, lints, packages, pushes the chart to `oci://ghcr.io/<owner>/charts/alga` (`<owner>` is the lowercase GitHub owner — OCI refs reject uppercase), and opens a GitHub Release. This skill decides **which chart version to tag** and confirms the tree is ready.
 
 The chart is versioned **independently** of the application. App releases use `v*` tags (`alga-release` skill); chart releases use `chart-v*` tags. Never bump the chart version just because the app released.
 
@@ -77,7 +77,7 @@ Never force-push or delete a chart tag that has been released. If the workflow f
 ## Post-Release Sanity
 
 - GitHub Release "Helm Chart <X.Y.Z>" exists at the tag.
-- Chart is pullable and installable:
+- Chart is pullable and installable (`<owner>` lowercase):
   ```bash
   helm pull oci://ghcr.io/<owner>/charts/alga --version <X.Y.Z>
   helm show chart oci://ghcr.io/<owner>/charts/alga --version <X.Y.Z>

@@ -1,6 +1,7 @@
 package alga
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 	"time"
@@ -10,7 +11,6 @@ import (
 // against what the backend's InvTool struct expects. This guards the
 // incident_number-vs-incident_id regression and the scope_description pointer.
 func TestInvestigationCommandJSON(t *testing.T) {
-	scope := "write"
 	cases := []struct {
 		name string
 		cmd  InvestigationCommand
@@ -42,15 +42,24 @@ func TestInvestigationCommandJSON(t *testing.T) {
 			want: map[string]any{"op": "mitigate_incident", "incident_number": float64(7), "reason": "patched"},
 		},
 		{
-			name: "assign_incident_role",
-			cmd:  AssignIncidentRole(3, "commander", "user-1", "tok-1", scope),
+			name: "assign_incident_role to user",
+			cmd:  AssignIncidentRoleToUser(3, "commander", "user-1", "write"),
 			want: map[string]any{
 				"op":                "assign_incident_role",
 				"incident_number":   float64(3),
 				"role_type":         "commander",
 				"user_id":           "user-1",
-				"agent_token_id":    "tok-1",
 				"scope_description": "write",
+			},
+		},
+		{
+			name: "assign_incident_role to agent",
+			cmd:  AssignIncidentRoleToAgent(3, "communicator", "tok-1", ""),
+			want: map[string]any{
+				"op":              "assign_incident_role",
+				"incident_number": float64(3),
+				"role_type":       "communicator",
+				"agent_token_id":  "tok-1",
 			},
 		},
 		{
@@ -112,6 +121,28 @@ func TestInvestigationCommandJSON(t *testing.T) {
 	}
 }
 
+// TestAssignIncidentRoleExactlyOneAssignee locks in the backend rule that
+// exactly one of user_id / agent_token_id is present per assignment, and that
+// an empty scope description is omitted rather than serialized as "".
+func TestAssignIncidentRoleExactlyOneAssignee(t *testing.T) {
+	raw, _ := json.Marshal(AssignIncidentRoleToUser(1, "commander", "u1", ""))
+	var got map[string]any
+	_ = json.Unmarshal(raw, &got)
+	if _, ok := got["agent_token_id"]; ok {
+		t.Errorf("user assignment leaked agent_token_id: %s", raw)
+	}
+	if _, ok := got["scope_description"]; ok {
+		t.Errorf("empty scope_description must be omitted: %s", raw)
+	}
+
+	raw, _ = json.Marshal(AssignIncidentRoleToAgent(1, "commander", "t1", ""))
+	got = map[string]any{}
+	_ = json.Unmarshal(raw, &got)
+	if _, ok := got["user_id"]; ok {
+		t.Errorf("agent assignment leaked user_id: %s", raw)
+	}
+}
+
 func TestMessageDedupBasic(t *testing.T) {
 	d := NewMessageDedup(100, time.Minute)
 	if d.IsDuplicate("a") {
@@ -155,8 +186,8 @@ func TestMessageDedupTTLExpiry(t *testing.T) {
 
 // TestCoordinationCommandJSON locks in the wire shape for the coordination
 // task subsystem (dispatch_task / claim_task / complete_task /
-// synthesize_findings / post_investigation_thread_message). These mirror the
-// backend InvTool fields exactly so the backend's op dispatch accepts them.
+// synthesize_findings). These mirror the backend InvTool fields exactly so
+// the backend's op dispatch accepts them.
 func TestCoordinationCommandJSON(t *testing.T) {
 	cases := []struct {
 		name string
@@ -211,15 +242,6 @@ func TestCoordinationCommandJSON(t *testing.T) {
 				},
 			},
 		},
-		{
-			name: "post_investigation_thread_message",
-			cmd:  PostInvestigationThreadMessage("cross-post text", true),
-			want: map[string]any{
-				"op":       "post_investigation_thread_message",
-				"message":  "cross-post text",
-				"internal": true,
-			},
-		},
 	}
 
 	for _, tc := range cases {
@@ -243,8 +265,7 @@ func TestCoordinationCommandJSON(t *testing.T) {
 
 // deepEqualJSON compares values that have been round-tripped through
 // encoding/json, where numbers become float64 and nested objects become
-// map[string]any. We do not import reflect.DeepEqual to keep the diff
-// minimal in case callers eyeball failures.
+// map[string]any.
 func deepEqualJSON(a, b any) bool {
 	switch av := a.(type) {
 	case map[string]any:
@@ -263,47 +284,45 @@ func deepEqualJSON(a, b any) bool {
 	}
 }
 
-// TestListResponseNormalization checks that the All() helpers return data
-// regardless of whether the backend populated the legacy key or "items".
-func TestListResponseNormalization(t *testing.T) {
-	t.Run("alerts via alerts key", func(t *testing.T) {
-		raw := `{"alerts":[{"fingerprint":"fp1"}],"total":1}`
-		var r AlertListResponse
-		if err := json.Unmarshal([]byte(raw), &r); err != nil {
+// TestUnmarshalData covers the backend response envelope handling: standard
+// {"data": ...} responses are unwrapped, flat bodies decode as-is, and a JSON
+// null data field falls back to the flat path.
+func TestUnmarshalData(t *testing.T) {
+	t.Run("enveloped list", func(t *testing.T) {
+		var out []Alert
+		if err := unmarshalData([]byte(`{"data":[{"fingerprint":"fp1"}]}`), &out); err != nil {
 			t.Fatal(err)
 		}
-		if got := r.All(); len(got) != 1 || got[0].Fingerprint != "fp1" {
-			t.Fatalf("All()=%v", got)
+		if len(out) != 1 || out[0].Fingerprint != "fp1" {
+			t.Fatalf("out = %+v", out)
 		}
 	})
-	t.Run("alerts via items key", func(t *testing.T) {
-		raw := `{"items":[{"fingerprint":"fp2"}]}`
-		var r AlertListResponse
-		if err := json.Unmarshal([]byte(raw), &r); err != nil {
+	t.Run("enveloped paginated", func(t *testing.T) {
+		var out KnowledgeListResponse
+		raw := `{"data":{"items":[{"id":"k1","kind":"runbook","title":"t","body_markdown":"b","author_type":"agent"}],"total":1},"meta":{"total":1}}`
+		if err := unmarshalData([]byte(raw), &out); err != nil {
 			t.Fatal(err)
 		}
-		if got := r.All(); len(got) != 1 || got[0].Fingerprint != "fp2" {
-			t.Fatalf("All()=%v", got)
+		if len(out.Items) != 1 || out.Items[0].ID != "k1" || out.Total != 1 {
+			t.Fatalf("out = %+v", out)
 		}
 	})
-	t.Run("investigations via items key", func(t *testing.T) {
-		raw := `{"items":[{"id":"inv-1","investigation_id":"inv-1"}]}`
-		var r InvestigationListResponse
-		if err := json.Unmarshal([]byte(raw), &r); err != nil {
+	t.Run("flat body", func(t *testing.T) {
+		var out SendMessageResponse
+		if err := unmarshalData([]byte(`{"status":"ok","message_id":"m1"}`), &out); err != nil {
 			t.Fatal(err)
 		}
-		if got := r.All(); len(got) != 1 || got[0].ID != "inv-1" {
-			t.Fatalf("All()=%v", got)
+		if out.MessageID != "m1" {
+			t.Fatalf("out = %+v", out)
 		}
 	})
-	t.Run("knowledge via items key", func(t *testing.T) {
-		raw := `{"items":[{"id":"k1","kind":"runbook","title":"t","body_markdown":"b","author_type":"agent"}]}`
-		var r KnowledgeListResponse
-		if err := json.Unmarshal([]byte(raw), &r); err != nil {
+	t.Run("null data falls back to flat", func(t *testing.T) {
+		var out map[string]any
+		if err := unmarshalData([]byte(`{"data":null,"status":"ok"}`), &out); err != nil {
 			t.Fatal(err)
 		}
-		if got := r.All(); len(got) != 1 || got[0].ID != "k1" {
-			t.Fatalf("All()=%v", got)
+		if out["status"] != "ok" {
+			t.Fatalf("out = %+v", out)
 		}
 	})
 }
@@ -332,25 +351,38 @@ func TestErrorClassification(t *testing.T) {
 	if IsRetryableError(&AlgaAuthError{StatusCode: 401}) {
 		t.Error("auth errors are never retryable")
 	}
+	// Connection errors: caller-initiated cancellation is never retryable;
+	// transport resets are.
+	if (&AlgaConnectionError{Err: context.Canceled}).IsRetryable() {
+		t.Error("context.Canceled should not be retryable")
+	}
+	if (&AlgaConnectionError{Err: context.DeadlineExceeded}).IsRetryable() {
+		t.Error("context.DeadlineExceeded should not be retryable")
+	}
+	if !(&AlgaConnectionError{Err: errFake}).IsRetryable() {
+		t.Error("generic transport error should be retryable")
+	}
 }
+
+var errFake = &fakeNetErr{}
+
+type fakeNetErr struct{}
+
+func (*fakeNetErr) Error() string { return "connection reset by peer" }
 
 // TestBackoffForMonotonic sanity-checks that backoff grows (modulo jitter)
 // and honors Retry-After when provided.
 func TestBackoffForMonotonic(t *testing.T) {
-	prev := time.Duration(0)
 	for attempt := 0; attempt < 5; attempt++ {
 		d := backoffFor(attempt, 0)
-		// Allow jitter to dominate small values; assert upper bound only.
-		if d > 31*time.Second {
-			t.Errorf("backoff attempt %d = %s, must be capped near 30s", attempt, d)
+		if d > 37*time.Second {
+			t.Errorf("backoff attempt %d = %s, must be capped near 30s + jitter", attempt, d)
 		}
-		// Lower bound (base): exponential growth implies at least 2^attempt - epsilon.
 		base := time.Second * time.Duration(int64(1)<<attempt)
+		base = min(base, 30*time.Second)
 		if d < base {
 			t.Errorf("backoff attempt %d = %s, must be >= base %s", attempt, d, base)
 		}
-		_ = prev
-		prev = d
 	}
 	if got := backoffFor(0, 5*time.Second); got != 5*time.Second {
 		t.Errorf("Retry-After override = %s, want 5s", got)

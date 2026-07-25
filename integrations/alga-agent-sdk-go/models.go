@@ -42,72 +42,6 @@ type Alert struct {
 	UpdatedAt       time.Time          `json:"updated_at"`
 }
 
-type CorrelatedAlert struct {
-	Fingerprint  string             `json:"fingerprint"`
-	AlertNumber  int64              `json:"alert_number,omitempty"`
-	Labels       map[string]string  `json:"labels"`
-	Annotations  map[string]string  `json:"annotations"`
-	Status       string             `json:"status"`
-	StartsAt     string             `json:"starts_at"`
-	Values       map[string]float64 `json:"values,omitempty"`
-	GeneratorURL string             `json:"generator_url,omitempty"`
-}
-
-type InvestigationResult struct {
-	Status             string   `json:"status"`
-	RootCause          string   `json:"root_cause,omitempty"`
-	Resolution         string   `json:"resolution,omitempty"`
-	Summary            string   `json:"summary"`
-	Evidence           []string `json:"evidence,omitempty"`
-	RecommendedActions []string `json:"recommended_actions,omitempty"`
-	SeverityAssessment string   `json:"severity_assessment,omitempty"`
-	EscalationLevel    string   `json:"escalation_level"`
-	RawResponse        string   `json:"raw_response,omitempty"`
-}
-
-type InvestigationUpdate struct {
-	ID             string    `json:"id"`
-	Type           string    `json:"type"`
-	Message        string    `json:"message"`
-	Source         string    `json:"source"`
-	Internal       bool      `json:"internal,omitempty"`
-	Edited         bool      `json:"edited,omitempty"`
-	UserID         *string   `json:"user_id,omitempty"`
-	Username       *string   `json:"username,omitempty"`
-	MMPostID       string    `json:"mm_post_id,omitempty"`
-	SlackMessageTS string    `json:"slack_message_ts,omitempty"`
-	QuotedUpdateID *string   `json:"quoted_update_id,omitempty"`
-	Mentions       []string  `json:"mentions,omitempty"`
-	CreatedAt      time.Time `json:"created_at"`
-}
-
-type Investigation struct {
-	ID                      string                `json:"id"`
-	InvestigationID         string                `json:"investigation_id"`
-	InvestigationNumber     int64                 `json:"investigation_number,omitempty"`
-	Alerts                  []CorrelatedAlert     `json:"alerts"`
-	Severity                string                `json:"severity"`
-	CorrelationKey          string                `json:"correlation_key"`
-	Status                  string                `json:"status"`
-	Result                  *InvestigationResult  `json:"result,omitempty"`
-	MMPostID                string                `json:"mm_post_id,omitempty"`
-	MMThreadID              string                `json:"mm_thread_id,omitempty"`
-	PrimaryThreadID         string                `json:"primary_thread_id,omitempty"`
-	SlackChannelID          string                `json:"slack_channel_id,omitempty"`
-	SlackThreadTS           string                `json:"slack_thread_ts,omitempty"`
-	TwilioCallSID           string                `json:"twilio_call_sid,omitempty"`
-	AgentID                 string                `json:"agent_id,omitempty"`
-	AgentName               string                `json:"agent_name,omitempty"`
-	AgentType               string                `json:"agent_type,omitempty"`
-	EscalationLevel         string                `json:"escalation_level"`
-	Updates                 []InvestigationUpdate `json:"updates"`
-	CreatedAt               time.Time             `json:"created_at"`
-	UpdatedAt               time.Time             `json:"updated_at"`
-	CompletedAt             *time.Time            `json:"completed_at,omitempty"`
-	StartedAt               *time.Time            `json:"started_at,omitempty"`
-	InvestigatingDurationMs int64                 `json:"investigating_duration_ms"`
-}
-
 // CoordinationTask describes a unit of work dispatched by an incident
 // commander to a role (responder, communicator, verifier). Tasks are the
 // modern coordination primitive; the older post_handoff flow is deprecated.
@@ -194,8 +128,10 @@ type Service struct {
 
 type Incident struct {
 	ID                 string     `json:"id"`
+	IncidentNumber     int64      `json:"incident_number,omitempty"`
 	Title              string     `json:"title"`
 	Description        string     `json:"description,omitempty"`
+	Summary            string     `json:"summary,omitempty"`
 	Status             string     `json:"status"`
 	Severity           string     `json:"severity"`
 	Priority           string     `json:"priority"`
@@ -208,6 +144,42 @@ type Incident struct {
 	UpdatedAt          time.Time  `json:"updated_at"`
 	ResolvedAt         *time.Time `json:"resolved_at,omitempty"`
 	ClosedAt           *time.Time `json:"closed_at,omitempty"`
+}
+
+// IncidentRole is a role assignment (commander, communications lead,
+// responder, ...) attached to an incident.
+type IncidentRole struct {
+	RoleType     string `json:"role_type"`
+	AssigneeType string `json:"assignee_type"`
+	AgentTokenID string `json:"agent_token_id,omitempty"`
+	AgentName    string `json:"agent_name,omitempty"`
+	UserID       string `json:"user_id,omitempty"`
+	UserName     string `json:"user_name,omitempty"`
+	Status       string `json:"status"`
+}
+
+// IncidentContext is the agent-facing incident read model: the incident
+// record plus its active role assignments.
+type IncidentContext struct {
+	Incident Incident       `json:"incident"`
+	Roles    []IncidentRole `json:"roles"`
+}
+
+// OnCallEntry describes who is currently on call for one schedule.
+type OnCallEntry struct {
+	ScheduleID   string `json:"schedule_id"`
+	ScheduleName string `json:"schedule_name"`
+	UserID       string `json:"user_id,omitempty"`
+	UserName     string `json:"user_name,omitempty"`
+}
+
+// SecretValue is the payload of GET /api/v1/agent/secrets/{secret_id}. The
+// value is plaintext for immediate use; never persist or log it.
+type SecretValue struct {
+	SecretID  string    `json:"secret_id"`
+	Name      string    `json:"name"`
+	Value     string    `json:"value"`
+	FetchedAt time.Time `json:"fetched_at"`
 }
 
 type PlaybookStep struct {
@@ -233,12 +205,6 @@ type Playbook struct {
 	UpdatedAt      time.Time           `json:"updated_at"`
 }
 
-type Capability struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-}
-
 // --- Server-Sent Events ---
 
 type ConnectedEvent struct {
@@ -253,6 +219,13 @@ type MessageEvent struct {
 	SenderID   string `json:"sender_id,omitempty"`
 	SenderName string `json:"sender_name,omitempty"`
 	MessageID  string `json:"message_id,omitempty"`
+	// Trigger distinguishes actionable deliveries from passive ones:
+	// "dispatch"/"mention" mean the agent should act, "observe" means the
+	// message is context only (append to transcript, do not wake the agent).
+	Trigger          string   `json:"trigger,omitempty"`
+	ReplyToMessageID string   `json:"reply_to_message_id,omitempty"`
+	ReplyToText      string   `json:"reply_to_text,omitempty"`
+	Mentions         []string `json:"mentions,omitempty"`
 }
 
 type TypingEvent struct {
@@ -261,10 +234,14 @@ type TypingEvent struct {
 	Active bool   `json:"active"`
 }
 
+// InvestigationSignalEvent is the payload of investigation_resume. The
+// backend populates either investigation_id or alert_investigation_id
+// depending on the emitting path.
 type InvestigationSignalEvent struct {
-	InvestigationID string `json:"investigation_id"`
-	Reason          string `json:"reason,omitempty"`
-	Actor           string `json:"actor,omitempty"`
+	InvestigationID      string `json:"investigation_id,omitempty"`
+	AlertInvestigationID string `json:"alert_investigation_id,omitempty"`
+	Reason               string `json:"reason,omitempty"`
+	Actor                string `json:"actor,omitempty"`
 }
 
 type PeerFindingEvent struct {
@@ -299,16 +276,12 @@ type PeerReplyEvent struct {
 	AnsweredAt         time.Time `json:"answered_at"`
 }
 
-type AgentPresenceEvent struct {
-	AgentID string `json:"agent_id"`
-	Online  bool   `json:"online"`
-}
-
 // CoordinationTaskEvent is published by the backend when an incident commander
 // dispatches a task to this agent's role. Agents respond by claiming the task,
 // doing the work, then completing it with a typed result.
 type CoordinationTaskEvent struct {
 	Type            string         `json:"type"`
+	ChatID          string         `json:"chat_id,omitempty"`
 	TaskID          string         `json:"task_id"`
 	IncidentNumber  int64          `json:"incident_number"`
 	Kind            string         `json:"kind"`
@@ -319,77 +292,53 @@ type CoordinationTaskEvent struct {
 	ParentTaskID    string         `json:"parent_task_id,omitempty"`
 }
 
+// SummarizeIncidentEvent asks a communicate-capable agent to produce an
+// incident summary (reply with SendIncidentSummary).
+type SummarizeIncidentEvent struct {
+	IncidentNumber int64          `json:"incident_number"`
+	ChatID         string         `json:"chat_id"`
+	Incident       map[string]any `json:"incident,omitempty"`
+}
+
+// AlertAutoResolvedEvent notifies the agent that an alert it was investigating
+// auto-resolved (e.g. the alert cleared at the source).
+type AlertAutoResolvedEvent struct {
+	InvestigationID string `json:"investigation_id"`
+	Fingerprint     string `json:"fingerprint,omitempty"`
+	AlertName       string `json:"alert_name,omitempty"`
+}
+
+// IncidentCommsStaleEvent nudges the incident-commander agent when incident
+// communications have gone quiet past the SLA threshold.
+type IncidentCommsStaleEvent struct {
+	IncidentNumber int64  `json:"incident_number"`
+	Trigger        string `json:"trigger,omitempty"`
+	Reason         string `json:"reason,omitempty"`
+}
+
 // --- List responses ---
 //
-// The backend historically returns resources under either of two JSON keys
-// (e.g. "alerts" or "items"). The SDK accepts both and exposes a single
-// normalized accessor (e.g. AlertListResponse.All()) so callers do not have
-// to repeat the dual-key workaround at every call site.
-
-type AlertListResponse struct {
-	Alerts []Alert `json:"alerts,omitempty"`
-	Items  []Alert `json:"items,omitempty"`
-	Total  int     `json:"total,omitempty"`
-}
-
-// All returns every alert in the response, regardless of which JSON key
-// the backend populated.
-func (r *AlertListResponse) All() []Alert {
-	if len(r.Alerts) > 0 {
-		return r.Alerts
-	}
-	if r.Items != nil {
-		return r.Items
-	}
-	return nil
-}
-
-type InvestigationListResponse struct {
-	Investigations []Investigation `json:"investigations,omitempty"`
-	Items          []Investigation `json:"items,omitempty"`
-	Total          int             `json:"total,omitempty"`
-	Limit          int             `json:"limit,omitempty"`
-	Skip           int             `json:"skip,omitempty"`
-}
-
-// All returns every investigation in the response.
-func (r *InvestigationListResponse) All() []Investigation {
-	if len(r.Investigations) > 0 {
-		return r.Investigations
-	}
-	if r.Items != nil {
-		return r.Items
-	}
-	return nil
-}
+// List endpoints use the backend's paginated envelope; doJSON unwraps the
+// outer {"data": ...} layer, leaving {"items": [...], "total": N}.
 
 type KnowledgeListResponse struct {
-	Notes []KnowledgeNote `json:"notes,omitempty"`
-	Items []KnowledgeNote `json:"items,omitempty"`
-	Total int             `json:"total,omitempty"`
-	Limit int             `json:"limit,omitempty"`
-	Skip  int             `json:"skip,omitempty"`
-}
-
-// All returns every knowledge note in the response.
-func (r *KnowledgeListResponse) All() []KnowledgeNote {
-	if len(r.Notes) > 0 {
-		return r.Notes
-	}
-	if r.Items != nil {
-		return r.Items
-	}
-	return nil
+	Items []KnowledgeNote `json:"items"`
+	Total int64           `json:"total"`
 }
 
 type MemoryListResponse struct {
-	Memories []Memory `json:"memories"`
-	Total    int      `json:"total"`
+	Items []Memory `json:"items"`
+	Total int64    `json:"total"`
 }
 
 type PeerAskListResponse struct {
-	Asks  []PeerAsk `json:"asks"`
-	Total int       `json:"total"`
+	Items []PeerAsk `json:"items"`
+	Total int64     `json:"total"`
+}
+
+type ServiceListResponse struct {
+	Items []Service `json:"items"`
+	Total int64     `json:"total"`
 }
 
 type SendMessageResponse struct {
@@ -397,14 +346,13 @@ type SendMessageResponse struct {
 	MessageID string `json:"message_id,omitempty"`
 }
 
-// CommandResponse mirrors the backend InvToolOutcome for inv_tool messages.
-// IncidentNumber and IncidentInvestigationID are populated when a command
-// promotes an investigation or mutates an incident.
+// CommandResponse mirrors the backend inv_tool outcome object.
 type CommandResponse struct {
-	Ok                      bool   `json:"ok"`
-	Op                      string `json:"op"`
-	InvestigationID         string `json:"investigation_id,omitempty"`
-	IncidentNumber          int64  `json:"incident_number,omitempty"`
-	IncidentInvestigationID string `json:"incident_investigation_id,omitempty"`
-	Error                   string `json:"error,omitempty"`
+	Ok     bool   `json:"ok"`
+	Op     string `json:"op"`
+	ChatID string `json:"chat_id,omitempty"`
+	// InvestigationID is a deprecated backend alias of ChatID.
+	InvestigationID string `json:"investigation_id,omitempty"`
+	IncidentNumber  int64  `json:"incident_number,omitempty"`
+	Error           string `json:"error,omitempty"`
 }

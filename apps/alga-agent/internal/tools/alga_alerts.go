@@ -19,7 +19,6 @@ type listAlertsInput struct {
 
 type listAlertsOutput struct {
 	Alerts []alga.Alert `json:"alerts"`
-	Total  int          `json:"total"`
 	Count  int          `json:"count"`
 }
 
@@ -44,12 +43,11 @@ func alertTools(c AlgaClient) []Tool {
 				if in.Skip > 0 {
 					params["skip"] = itoa(in.Skip)
 				}
-				resp, err := c.ListAlerts(ctx, params)
+				alerts, err := c.ListAlerts(ctx, params)
 				if err != nil {
 					return Err[listAlertsOutput](algaErr(err))
 				}
-				alerts := resp.All()
-				return OK(listAlertsOutput{Alerts: alerts, Total: resp.Total, Count: len(alerts)})
+				return OK(listAlertsOutput{Alerts: alerts, Count: len(alerts)})
 			},
 			WithCategory[listAlertsInput, listAlertsOutput](algaCategory),
 		),

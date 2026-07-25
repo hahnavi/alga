@@ -19,10 +19,6 @@ type fakeAlgaClient struct {
 	// alerts
 	alerts   []alga.Alert
 	gotAlert *alga.Alert
-	// inv
-	invs       []alga.Investigation
-	gotInv     *alga.Investigation
-	postedType string
 	// messaging
 	sentText string
 	lastCmd  alga.InvestigationCommand
@@ -32,37 +28,24 @@ type fakeAlgaClient struct {
 	notes    []alga.KnowledgeNote
 	memories []alga.Memory
 	// incident / tasks
-	incident *alga.Incident
+	incident *alga.IncidentContext
 	tasks    []alga.CoordinationTask
 	// catalog
 	services []alga.Service
-	oncall   map[string]any
+	oncall   []alga.OnCallEntry
 
 	// captures
 	capturedChatID string
 }
 
-func (f *fakeAlgaClient) ListAlerts(_ context.Context, params map[string]string) (*alga.AlertListResponse, error) {
-	return &alga.AlertListResponse{Alerts: f.alerts, Total: len(f.alerts)}, nil
+func (f *fakeAlgaClient) ListAlerts(_ context.Context, params map[string]string) ([]alga.Alert, error) {
+	return f.alerts, nil
 }
 func (f *fakeAlgaClient) GetAlert(_ context.Context, fp string) (*alga.Alert, error) {
 	if f.gotAlert != nil {
 		return f.gotAlert, nil
 	}
 	return &alga.Alert{Fingerprint: fp}, nil
-}
-func (f *fakeAlgaClient) ListInvestigations(_ context.Context, _ map[string]string) (*alga.InvestigationListResponse, error) {
-	return &alga.InvestigationListResponse{Investigations: f.invs, Total: len(f.invs)}, nil
-}
-func (f *fakeAlgaClient) GetInvestigation(_ context.Context, id string) (*alga.Investigation, error) {
-	if f.gotInv != nil {
-		return f.gotInv, nil
-	}
-	return &alga.Investigation{ID: id, InvestigationID: id}, nil
-}
-func (f *fakeAlgaClient) PostUpdate(_ context.Context, id, t, _ string) (*alga.Investigation, error) {
-	f.postedType = t
-	return &alga.Investigation{ID: id, InvestigationID: id, Status: "investigating"}, nil
 }
 func (f *fakeAlgaClient) SendMessage(_ context.Context, chatID, text string, _ []string) (*alga.SendMessageResponse, error) {
 	f.capturedChatID = chatID
@@ -83,32 +66,34 @@ func (f *fakeAlgaClient) SendCommand(_ context.Context, chatID string, cmd alga.
 	return &resp, nil
 }
 func (f *fakeAlgaClient) ListKnowledge(_ context.Context, _ map[string]string) (*alga.KnowledgeListResponse, error) {
-	return &alga.KnowledgeListResponse{Notes: f.notes, Total: len(f.notes)}, nil
+	return &alga.KnowledgeListResponse{Items: f.notes, Total: int64(len(f.notes))}, nil
 }
 func (f *fakeAlgaClient) CreateKnowledge(_ context.Context, _ map[string]any) (*alga.KnowledgeNote, error) {
 	return &alga.KnowledgeNote{ID: "k1"}, nil
 }
 func (f *fakeAlgaClient) ListMemories(_ context.Context, _ map[string]string) (*alga.MemoryListResponse, error) {
-	return &alga.MemoryListResponse{Memories: f.memories, Total: len(f.memories)}, nil
+	return &alga.MemoryListResponse{Items: f.memories, Total: int64(len(f.memories))}, nil
 }
 func (f *fakeAlgaClient) CreateMemory(_ context.Context, _ map[string]any) (*alga.Memory, error) {
 	return &alga.Memory{ID: "mem1"}, nil
 }
 func (f *fakeAlgaClient) DeleteMemory(_ context.Context, _ string) error { return nil }
-func (f *fakeAlgaClient) GetIncident(_ context.Context, id string) (*alga.Incident, error) {
+func (f *fakeAlgaClient) GetIncident(_ context.Context, n int64) (*alga.IncidentContext, error) {
 	if f.incident != nil {
 		return f.incident, nil
 	}
-	return &alga.Incident{ID: id}, nil
+	return &alga.IncidentContext{Incident: alga.Incident{IncidentNumber: n}}, nil
 }
-func (f *fakeAlgaClient) AddIncidentTimeline(_ context.Context, _, _, _ string) error { return nil }
-func (f *fakeAlgaClient) ListServices(_ context.Context) ([]alga.Service, error) {
-	return f.services, nil
+func (f *fakeAlgaClient) AddIncidentTimeline(_ context.Context, _ int64, _, _ string) error {
+	return nil
 }
-func (f *fakeAlgaClient) WhoIsOnCall(_ context.Context) (map[string]any, error) {
+func (f *fakeAlgaClient) ListServices(_ context.Context, _ map[string]string) (*alga.ServiceListResponse, error) {
+	return &alga.ServiceListResponse{Items: f.services, Total: int64(len(f.services))}, nil
+}
+func (f *fakeAlgaClient) WhoIsOnCall(_ context.Context) ([]alga.OnCallEntry, error) {
 	return f.oncall, nil
 }
-func (f *fakeAlgaClient) ListIncidentTasks(_ context.Context, _ int64) ([]alga.CoordinationTask, error) {
+func (f *fakeAlgaClient) ListIncidentTasks(_ context.Context, _ int64, _ map[string]string) ([]alga.CoordinationTask, error) {
 	return f.tasks, nil
 }
 
@@ -122,7 +107,6 @@ func TestAlgaToolRegistryShape(t *testing.T) {
 
 	wantTools := []string{
 		"alga_list_alerts", "alga_get_alert", "alga_resolve_alert", "alga_reopen_alert",
-		"alga_list_investigations", "alga_get_investigation", "alga_post_update",
 		"alga_send_message", "alga_set_outcome", "alga_cancel_investigation",
 		"alga_triage_feedback", "alga_promote_to_incident",
 		"alga_get_incident", "alga_add_incident_timeline",
@@ -177,13 +161,12 @@ func TestAlgaListAlerts(t *testing.T) {
 	}
 }
 
-// TestAlgaListAlertsDualKey verifies the .All() normalization surfaces
-// alerts populated under either JSON key.
-func TestAlgaListAlertsDualKey(t *testing.T) {
+// TestAlgaListAlertsEnvelope verifies the SDK decodes the backend's
+// {"data": [...]} success envelope end-to-end through the tool.
+func TestAlgaListAlertsEnvelope(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		// Note the "items" key, not "alerts" — verifies normalization.
-		_, _ = w.Write([]byte(`{"items":[{"fingerprint":"fp-from-items"}]}`))
+		_, _ = w.Write([]byte(`{"data":[{"fingerprint":"fp-from-envelope"}]}`))
 	}))
 	defer srv.Close()
 	client := alga.NewAlgaClient(srv.URL, "tok", alga.WithMaxRESTRetries(0))
@@ -193,8 +176,8 @@ func TestAlgaListAlertsDualKey(t *testing.T) {
 
 	tool, _ := reg.Get("alga_list_alerts")
 	out, _ := tool.Execute(context.Background(), json.RawMessage(`{}`))
-	if !strings.Contains(out, "fp-from-items") {
-		t.Errorf("expected normalized output to include fp-from-items: %s", out)
+	if !strings.Contains(out, "fp-from-envelope") {
+		t.Errorf("expected envelope-decoded output to include fp-from-envelope: %s", out)
 	}
 }
 
@@ -223,13 +206,13 @@ func TestAlgaResolveAlertChatIDFromContext(t *testing.T) {
 	RegisterAlgaTools(reg, fc)
 
 	tool, _ := reg.Get("alga_resolve_alert")
-	ctx := WithCallContext(context.Background(), CallContext{ChatID: "investigation_42"})
+	ctx := WithCallContext(context.Background(), CallContext{ChatID: "alert_42"})
 	_, err := tool.Execute(ctx, json.RawMessage(`{"fingerprint":"fp"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if fc.capturedChatID != "investigation_42" {
-		t.Errorf("chat_id = %q, want investigation_42", fc.capturedChatID)
+	if fc.capturedChatID != "alert_42" {
+		t.Errorf("chat_id = %q, want alert_42", fc.capturedChatID)
 	}
 	if fc.lastCmd.Op != "resolve_alert" || fc.lastCmd.Fingerprint != "fp" {
 		t.Errorf("cmd = %+v", fc.lastCmd)
@@ -244,7 +227,7 @@ func TestAlgaSendCommandSDKError(t *testing.T) {
 	RegisterAlgaTools(reg, fc)
 
 	tool, _ := reg.Get("alga_resolve_alert")
-	ctx := WithCallContext(context.Background(), CallContext{ChatID: "investigation_1"})
+	ctx := WithCallContext(context.Background(), CallContext{ChatID: "alert_1"})
 	out, _ := tool.Execute(ctx, json.RawMessage(`{"fingerprint":"fp"}`))
 	if strings.Contains(out, `"ok":true`) {
 		t.Errorf("expected failure envelope, got %s", out)
@@ -298,7 +281,8 @@ func TestAlgaToolCapabilityGating(t *testing.T) {
 	investigateOnly := reg.ListForCapabilities([]string{"investigate"})
 	for _, tool := range investigateOnly {
 		if tool.Name() == "alga_dispatch_task" || tool.Name() == "alga_synthesize_findings" ||
-			tool.Name() == "alga_resolve_incident" || tool.Name() == "alga_mitigate_incident" {
+			tool.Name() == "alga_resolve_incident" || tool.Name() == "alga_mitigate_incident" ||
+			tool.Name() == "alga_add_incident_timeline" {
 			t.Errorf("investigate-only agent should not see %s", tool.Name())
 		}
 	}
@@ -368,7 +352,7 @@ func TestAlgaSendCommandWithRealBackendHTTP(t *testing.T) {
 	RegisterAlgaTools(reg, client)
 
 	tool, _ := reg.Get("alga_resolve_alert")
-	ctx := WithCallContext(context.Background(), CallContext{ChatID: "investigation_1"})
+	ctx := WithCallContext(context.Background(), CallContext{ChatID: "alert_1"})
 	out, err := tool.Execute(ctx, json.RawMessage(`{"fingerprint":"fp"}`))
 	if err != nil {
 		t.Fatal(err)
@@ -379,7 +363,7 @@ func TestAlgaSendCommandWithRealBackendHTTP(t *testing.T) {
 	if sawOp != "resolve_alert" {
 		t.Errorf("op = %q", sawOp)
 	}
-	if sawChat != "investigation_1" {
+	if sawChat != "alert_1" {
 		t.Errorf("chat_id = %q", sawChat)
 	}
 	if !strings.HasPrefix(sawIdem, "alga-") {
@@ -395,7 +379,7 @@ func TestAlgaListIncidentTasks(t *testing.T) {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"tasks":[{"task_id":"t1","kind":"investigate","goal":"g","status":"claimed"}],"total":1}`))
+		_, _ = w.Write([]byte(`{"data":[{"task_id":"t1","kind":"investigate","goal":"g","status":"claimed"}]}`))
 	}))
 	defer srv.Close()
 

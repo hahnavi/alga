@@ -41,14 +41,17 @@ type SSEClient struct {
 	OnConnected           func(ConnectedEvent)
 	OnMessage             func(MessageEvent)
 	OnTyping              func(TypingEvent)
-	OnInvestigationCancel func(InvestigationSignalEvent)
-	OnInvestigationPause  func(InvestigationSignalEvent)
 	OnInvestigationResume func(InvestigationSignalEvent)
 	OnPeerFinding         func(PeerFindingEvent)
 	OnPeerAsk             func(PeerAskEvent)
 	OnPeerReply           func(PeerReplyEvent)
-	OnAgentPresence       func(AgentPresenceEvent)
 	OnCoordinationTask    func(CoordinationTaskEvent)
+	OnSummarizeIncident   func(SummarizeIncidentEvent)
+	OnAlertAutoResolved   func(AlertAutoResolvedEvent)
+	OnIncidentCommsStale  func(IncidentCommsStaleEvent)
+	// OnUnknownEvent fires for any event type without a dedicated callback,
+	// letting callers observe new backend event types without an SDK update.
+	OnUnknownEvent func(eventType string, data []byte)
 }
 
 // SSEOption configures an SSEClient.
@@ -146,15 +149,18 @@ func (c *SSEClient) isClosing() bool {
 
 func (c *SSEClient) sseLoop(ctx context.Context) {
 	backoff := 2 * time.Second
-	successCount := 0
-	const successThreshold = 3
 
 	for {
 		if ctx.Err() != nil || c.isClosing() {
 			return
 		}
 
-		err := c.connectAndServe(ctx)
+		connected, err := c.connectAndServe(ctx)
+		if connected {
+			// Any successful connection resets the backoff so a later blip
+			// starts from 2s again rather than a stale 60s ceiling.
+			backoff = 2 * time.Second
+		}
 		if err != nil {
 			var authErr *AlgaAuthError
 			if errors.As(err, &authErr) {
@@ -181,16 +187,7 @@ func (c *SSEClient) sseLoop(ctx context.Context) {
 			case <-time.After(jitter):
 			}
 
-			backoff *= 2
-			if backoff > 60*time.Second {
-				backoff = 60 * time.Second
-			}
-		} else {
-			successCount++
-			if successCount >= successThreshold {
-				backoff = 2 * time.Second
-				successCount = 0
-			}
+			backoff = min(backoff*2, 60*time.Second)
 		}
 
 		if ctx.Err() != nil || c.isClosing() {
@@ -199,12 +196,12 @@ func (c *SSEClient) sseLoop(ctx context.Context) {
 	}
 }
 
-func (c *SSEClient) connectAndServe(ctx context.Context) error {
+func (c *SSEClient) connectAndServe(ctx context.Context) (connected bool, err error) {
 	url := c.httpBase + "/api/v1/agent/events"
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return &AlgaConnectionError{Err: err}
+		return false, &AlgaConnectionError{Err: err}
 	}
 	req.Header.Set("Accept", "text/event-stream")
 	req.Header.Set("Authorization", "Bearer "+c.token)
@@ -212,15 +209,15 @@ func (c *SSEClient) connectAndServe(ctx context.Context) error {
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return &AlgaConnectionError{Err: err}
+		return false, &AlgaConnectionError{Err: err}
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-		return &AlgaAuthError{StatusCode: resp.StatusCode, Message: "authentication failed"}
+		return false, &AlgaAuthError{StatusCode: resp.StatusCode, Message: "authentication failed"}
 	}
 	if resp.StatusCode != http.StatusOK {
-		return &AlgaAPIError{
+		return false, &AlgaAPIError{
 			StatusCode: resp.StatusCode,
 			Message:    "unexpected status code",
 			RetryAfter: parseRetryAfter(resp.Header),
@@ -238,7 +235,7 @@ func (c *SSEClient) connectAndServe(ctx context.Context) error {
 	for scanner.Scan() {
 		select {
 		case <-ctx.Done():
-			return nil
+			return true, nil
 		default:
 		}
 
@@ -286,9 +283,11 @@ func (c *SSEClient) connectAndServe(ctx context.Context) error {
 	if err := scanner.Err(); err != nil {
 		// Scanner errors are typically network resets; surface them so the
 		// outer loop backs off and reconnects.
-		return &AlgaConnectionError{Err: err}
+		return true, &AlgaConnectionError{Err: err}
 	}
-	return nil
+	// Stream closed cleanly without scanner error. Return a connection error
+	// so sseLoop applies backoff/reconnect instead of treating this as success.
+	return true, &AlgaConnectionError{Err: errors.New("sse stream closed")}
 }
 
 func (c *SSEClient) dispatch(eventType, data string) {
@@ -327,22 +326,6 @@ func (c *SSEClient) dispatch(eventType, data string) {
 			}
 		}
 
-	case "investigation_cancel":
-		if c.OnInvestigationCancel != nil {
-			var evt InvestigationSignalEvent
-			if json.Unmarshal([]byte(data), &evt) == nil {
-				c.OnInvestigationCancel(evt)
-			}
-		}
-
-	case "investigation_pause":
-		if c.OnInvestigationPause != nil {
-			var evt InvestigationSignalEvent
-			if json.Unmarshal([]byte(data), &evt) == nil {
-				c.OnInvestigationPause(evt)
-			}
-		}
-
 	case "investigation_resume":
 		if c.OnInvestigationResume != nil {
 			var evt InvestigationSignalEvent
@@ -375,20 +358,41 @@ func (c *SSEClient) dispatch(eventType, data string) {
 			}
 		}
 
-	case "agent_presence":
-		if c.OnAgentPresence != nil {
-			var evt AgentPresenceEvent
-			if json.Unmarshal([]byte(data), &evt) == nil {
-				c.OnAgentPresence(evt)
-			}
-		}
-
 	case "coordination_task_dispatched":
 		if c.OnCoordinationTask != nil {
 			var evt CoordinationTaskEvent
 			if json.Unmarshal([]byte(data), &evt) == nil {
 				c.OnCoordinationTask(evt)
 			}
+		}
+
+	case "summarize_incident":
+		if c.OnSummarizeIncident != nil {
+			var evt SummarizeIncidentEvent
+			if json.Unmarshal([]byte(data), &evt) == nil {
+				c.OnSummarizeIncident(evt)
+			}
+		}
+
+	case "alert_auto_resolved":
+		if c.OnAlertAutoResolved != nil {
+			var evt AlertAutoResolvedEvent
+			if json.Unmarshal([]byte(data), &evt) == nil {
+				c.OnAlertAutoResolved(evt)
+			}
+		}
+
+	case "incident_comms_stale":
+		if c.OnIncidentCommsStale != nil {
+			var evt IncidentCommsStaleEvent
+			if json.Unmarshal([]byte(data), &evt) == nil {
+				c.OnIncidentCommsStale(evt)
+			}
+		}
+
+	default:
+		if c.OnUnknownEvent != nil {
+			c.OnUnknownEvent(eventType, []byte(data))
 		}
 	}
 }
@@ -406,6 +410,17 @@ func (c *SSEClient) heartbeatLoop(ctx context.Context) {
 				var authErr *AlgaAuthError
 				if errors.As(err, &authErr) {
 					c.logger.Error("heartbeat auth failure, stopping", "status", authErr.StatusCode)
+					select {
+					case c.ErrChan <- authErr:
+					default:
+					}
+					// Cancel the shared connection context so the SSE loop and
+					// AlgaChannel terminate immediately.
+					c.mu.Lock()
+					if c.cancel != nil {
+						c.cancel()
+					}
+					c.mu.Unlock()
 					return
 				}
 				// Non-auth errors are logged and survived; the SSE loop will

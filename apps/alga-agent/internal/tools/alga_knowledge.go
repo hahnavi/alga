@@ -16,7 +16,7 @@ type searchKnowledgeInput struct {
 
 type searchKnowledgeOutput struct {
 	Notes []alga.KnowledgeNote `json:"notes"`
-	Total int                  `json:"total"`
+	Total int64                `json:"total"`
 	Count int                  `json:"count"`
 }
 
@@ -62,8 +62,7 @@ func knowledgeMemoryTools(c AlgaClient) []Tool {
 				if err != nil {
 					return Err[searchKnowledgeOutput](algaErr(err))
 				}
-				notes := resp.All()
-				return OK(searchKnowledgeOutput{Notes: notes, Total: resp.Total, Count: len(notes)})
+				return OK(searchKnowledgeOutput{Notes: resp.Items, Total: resp.Total, Count: len(resp.Items)})
 			},
 			WithCategory[searchKnowledgeInput, searchKnowledgeOutput](algaCategory),
 		),

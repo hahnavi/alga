@@ -9,13 +9,13 @@ import (
 // --- Incident tools ---
 
 type getIncidentInput struct {
-	IncidentID string `json:"incident_id,omitempty" desc:"Incident id (omit in Alga threads with incident context)"`
+	IncidentNumber int64 `json:"incident_number,omitempty" desc:"Incident number (omit in Alga incident threads; the context number is used)"`
 }
 
 type addIncidentTimelineInput struct {
-	IncidentID string `json:"incident_id,omitempty"`
-	Message    string `json:"message"`
-	EventType  string `json:"event_type" desc:"e.g. detection, mitigation, escalation, note"`
+	IncidentNumber int64  `json:"incident_number,omitempty"`
+	Message        string `json:"message"`
+	EventType      string `json:"event_type" desc:"e.g. detection, mitigation, escalation, note"`
 }
 
 // incidentNumberInput is the shared schema for incident-scoped command tools.
@@ -28,55 +28,59 @@ type incidentNumberInput struct {
 func incidentTools(c AlgaClient) []Tool {
 	return []Tool{
 		NewTypedTool("alga_get_incident",
-			"Get incident details by id.",
-			func(ctx context.Context, in getIncidentInput) Result[*alga.Incident] {
-				id, err := incidentIDFromCtx(ctx, map[string]string{"incident_id": in.IncidentID})
+			"Get incident details (record plus active role assignments) by incident number.",
+			func(ctx context.Context, in getIncidentInput) Result[*alga.IncidentContext] {
+				n, err := incidentNumberFromCtx(ctx, in.IncidentNumber)
 				if err != nil {
-					return Err[*alga.Incident](err)
+					return Err[*alga.IncidentContext](err)
 				}
-				inc, err := c.GetIncident(ctx, id)
+				inc, err := c.GetIncident(ctx, n)
 				if err != nil {
-					return Err[*alga.Incident](algaErr(err))
+					return Err[*alga.IncidentContext](algaErr(err))
 				}
 				return OK(inc)
 			},
-			WithCategory[getIncidentInput, *alga.Incident](algaCategory),
+			WithCategory[getIncidentInput, *alga.IncidentContext](algaCategory),
 		),
 
 		NewTypedTool("alga_add_incident_timeline",
 			"Add a timeline entry to an incident.",
 			func(ctx context.Context, in addIncidentTimelineInput) Result[struct {
-				IncidentID string `json:"incident_id"`
-				OK         bool   `json:"ok"`
+				IncidentNumber int64 `json:"incident_number"`
+				OK             bool  `json:"ok"`
 			}] {
 				if in.Message == "" || in.EventType == "" {
 					return ErrMsg[struct {
-						IncidentID string `json:"incident_id"`
-						OK         bool   `json:"ok"`
+						IncidentNumber int64 `json:"incident_number"`
+						OK             bool  `json:"ok"`
 					}]("message and event_type are required")
 				}
-				id, err := incidentIDFromCtx(ctx, map[string]string{"incident_id": in.IncidentID})
+				n, err := incidentNumberFromCtx(ctx, in.IncidentNumber)
 				if err != nil {
 					return Err[struct {
-						IncidentID string `json:"incident_id"`
-						OK         bool   `json:"ok"`
+						IncidentNumber int64 `json:"incident_number"`
+						OK             bool  `json:"ok"`
 					}](err)
 				}
-				if err := c.AddIncidentTimeline(ctx, id, in.Message, in.EventType); err != nil {
+				if err := c.AddIncidentTimeline(ctx, n, in.Message, in.EventType); err != nil {
 					return Err[struct {
-						IncidentID string `json:"incident_id"`
-						OK         bool   `json:"ok"`
+						IncidentNumber int64 `json:"incident_number"`
+						OK             bool  `json:"ok"`
 					}](algaErr(err))
 				}
 				return OK(struct {
-					IncidentID string `json:"incident_id"`
-					OK         bool   `json:"ok"`
-				}{IncidentID: id, OK: true})
+					IncidentNumber int64 `json:"incident_number"`
+					OK             bool  `json:"ok"`
+				}{IncidentNumber: n, OK: true})
 			},
 			WithCategory[addIncidentTimelineInput, struct {
-				IncidentID string `json:"incident_id"`
-				OK         bool   `json:"ok"`
+				IncidentNumber int64 `json:"incident_number"`
+				OK             bool  `json:"ok"`
 			}](algaCategory),
+			WithCapability[addIncidentTimelineInput, struct {
+				IncidentNumber int64 `json:"incident_number"`
+				OK             bool  `json:"ok"`
+			}]("command"),
 		),
 
 		incidentCommandTool(c, "alga_trigger_escalation",

@@ -11,34 +11,6 @@ go get github.com/alga/agent-sdk-go
 
 No external dependencies — stdlib only.
 
-## What's new (modernization)
-
-The SDK has been modernized to support the latest backend features and to be
-production-grade out of the box:
-
-- **Coordination tasks**: `DispatchTask`, `ClaimTask`, `CompleteTask`,
-  `SynthesizeFindings`, `PostInvestigationThreadMessage` builders mirror the
-  backend's commander/responder/communicator task subsystem. The
-  `post_handoff` flow is deprecated in favor of dispatch + complete.
-- **Idempotency-Key auto-injection**: every state-changing REST call gets a
-  stable Idempotency-Key so a retry of the same logical call replays the
-  cached response rather than double-firing the mutation. Callers driving
-  their own outbox can pass an explicit key via `SendCommandWithKey`.
-- **REST retries with exponential backoff**: transient failures (429, 5xx,
-  network) are retried automatically. Honors `Retry-After`. Auth errors fail
-  fast.
-- **Structured logger**: inject `slog`-backed loggers via `WithLogger`. The
-  legacy `Logf` shim is retained for backward compatibility but deprecated.
-- **Functional options**: `WithHTTPClient`, `WithDedup`, `WithUserAgent`,
-  `WithMaxRESTRetries`, `WithHeartbeatInterval`.
-- **CoordinationTaskEvent**: SSE now surfaces `coordination_task_dispatched`
-  events via `OnCoordinationTask`.
-- **Normalized list responses**: `AlertListResponse.All()`,
-  `InvestigationListResponse.All()`, `KnowledgeListResponse.All()` return the
-  resources regardless of which JSON key the backend populated.
-- **Truly stdlib-only**: the `google/uuid` dependency is gone. IDs are
-  surfaced as opaque strings.
-
 ## Quick Start
 
 ```go
@@ -46,6 +18,7 @@ package main
 
 import (
     "context"
+    "fmt"
     "log/slog"
     "os"
     "os/signal"
@@ -64,21 +37,20 @@ func main() {
     )
 
     client.OnMessage = func(evt alga.MessageEvent) {
-        // Every call gets an auto-injected Idempotency-Key so a transient
-        // 503 retry is replayed from the backend cache rather than double-
-        // delivered.
+        // Only act on actionable deliveries; "observe" is context-only.
+        if evt.Trigger == "observe" {
+            return
+        }
         _, _ = client.SendMessage(context.Background(), evt.ChatID, "Got it!", nil)
     }
 
     // Receive a coordination task from the incident commander.
     client.OnCoordinationTask = func(evt alga.CoordinationTaskEvent) {
+        coordChat := fmt.Sprintf("incident_coord_%d", evt.IncidentNumber)
         // Claim → do the work → complete.
-        _, _ = client.SendCommand(context.Background(),
-            "incident_coord_"+itoa(evt.IncidentNumber),
-            alga.ClaimTask(evt.TaskID))
+        _, _ = client.SendCommand(context.Background(), coordChat, alga.ClaimTask(evt.TaskID))
         // ... do the investigation/communication work ...
-        _, _ = client.SendCommand(context.Background(),
-            "incident_coord_"+itoa(evt.IncidentNumber),
+        _, _ = client.SendCommand(context.Background(), coordChat,
             alga.CompleteTask(evt.TaskID, map[string]any{"finding": "leaky bucket"}))
     }
 
@@ -90,22 +62,14 @@ func main() {
 
     sigCh := make(chan os.Signal, 1)
     signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-    <-sigCh
+    select {
+    case <-sigCh:
+    case err := <-client.Err():
+        // Terminal error (e.g. revoked token): the client has stopped
+        // reconnecting. Obtain a valid token and Connect again.
+        fmt.Fprintln(os.Stderr, "terminal error:", err)
+    }
     client.Disconnect()
-}
-
-func itoa(n int64) string {
-    if n == 0 {
-        return "0"
-    }
-    var b [20]byte
-    i := len(b)
-    for n > 0 {
-        i--
-        b[i] = byte('0' + n%10)
-        n /= 10
-    }
-    return string(b[i:])
 }
 ```
 
@@ -124,27 +88,39 @@ client := alga.NewAlgaClient(serverURL, token,
 )
 ```
 
+### Chat ID grammar
+
+| Prefix | Thread |
+|--------|--------|
+| `alert_<number>` | Alert investigation chat |
+| `incident_coord_<number>` | Incident coordination thread |
+| `incident_inv_<number>` | Incident-scoped investigation chat |
+
 ### REST Methods
 
 | Method | Description |
 |--------|-------------|
-| `ListAlerts(ctx, params)` | List alerts |
+| `ListAlerts(ctx, params)` | List alerts (returns `[]Alert`) |
 | `GetAlert(ctx, fingerprint)` | Get alert by fingerprint |
 | `ResolveAlert(ctx, fingerprint)` | Resolve alert |
 | `ReopenAlert(ctx, fingerprint)` | Reopen resolved alert |
-| `ListInvestigations(ctx, params)` | List investigations |
-| `GetInvestigation(ctx, id)` | Get investigation by ID |
-| `PostUpdate(ctx, id, type, message)` | Post investigation update |
-| `ListIncidentTasks(ctx, incidentNumber)` | List coordination tasks for an incident |
 | `SendMessage(ctx, chatID, text, mentions)` | Send text message (auto Idempotency-Key) |
 | `SendMessageWithKey(ctx, chatID, text, mentions, key)` | Send text with explicit Idempotency-Key |
 | `SendCommand(ctx, chatID, cmd)` | Send investigation command (auto Idempotency-Key) |
 | `SendCommandWithKey(ctx, chatID, cmd, key)` | Send command with explicit Idempotency-Key |
+| `SendIncidentSummary(ctx, incidentNumber, text)` | Post `incident_summary` into the coordination thread |
+| `SendDraft(ctx, chatID, draftID, text)` | Stream a partial (draft) message |
 | `EditMessage(ctx, messageID, chatID, text)` | Edit message |
 | `DeleteMessage(ctx, messageID, chatID)` | Delete message |
 | `SendTyping(ctx, chatID, active)` | Send typing indicator |
 | `SendHeartbeat(ctx)` | Send heartbeat |
+| `GetIncident(ctx, incidentNumber)` | Get incident + role assignments |
+| `GetIncidentTimeline(ctx, incidentNumber)` | Read incident timeline |
+| `AddIncidentTimeline(ctx, incidentNumber, message, eventType)` | Add incident timeline entry |
+| `UpdateIncidentSummary(ctx, incidentNumber, summary)` | Patch incident summary |
+| `ListIncidentTasks(ctx, incidentNumber, params)` | List coordination tasks for an incident |
 | `ListKnowledge(ctx, params)` | List knowledge notes |
+| `GetKnowledge(ctx, id)` | Get knowledge note |
 | `CreateKnowledge(ctx, params)` | Create knowledge note |
 | `ListMemories(ctx, params)` | List memories |
 | `CreateMemory(ctx, params)` | Create memory |
@@ -155,14 +131,24 @@ client := alga.NewAlgaClient(serverURL, token,
 | `GetPeerAsk(ctx, id)` | Get peer ask |
 | `ReplyPeerAsk(ctx, id, reply)` | Reply to peer ask |
 | `CancelPeerAsk(ctx, id)` | Cancel peer ask |
-| `GetIncident(ctx, id)` | Get incident |
-| `AddIncidentTimeline(ctx, id, message, eventType)` | Add incident timeline entry |
-| `ListServices(ctx)` | List services |
+| `ListServices(ctx, params)` | List services |
 | `WhoIsOnCall(ctx)` | Get current on-call |
-| `GetCapabilities(ctx)` | Get agent capability catalog |
 | `GetPlaybooks(ctx, alertFingerprint)` | Get playbooks |
-| `SendIncidentSummary(ctx, incidentID, text)` | Send incident summary |
-| `UploadMedia(ctx, filePath)` | Upload media file |
+| `GetSecret(ctx, secretID)` | Fetch an allow-listed shared secret |
+
+Responses use the backend's `{"data": ...}` envelope; the SDK unwraps it (and
+falls back to flat bodies where the backend writes them).
+
+### Idempotency & retries
+
+The backend honors `Idempotency-Key` only on `POST /api/v1/agent/messages`.
+The SDK auto-generates a key there, so transient failures (429, 5xx, network)
+are retried safely — a replay returns the cached response instead of
+double-delivering. `Retry-After` is honored; auth errors fail fast.
+
+All other mutations have no replay cache and are executed **exactly once**:
+they are never auto-retried, even with `WithMaxRESTRetries(n)`. GETs are
+always retried up to the configured budget.
 
 ### SSE Events
 
@@ -171,16 +157,22 @@ Register callbacks on the client before calling `Connect`:
 | Callback | Event Type | Description |
 |----------|-----------|-------------|
 | `OnConnected` | `connected` | SSE connection established |
-| `OnMessage` | `message` | Incoming chat message |
+| `OnMessage` | `message` | Incoming chat message (`Trigger`: `dispatch`/`mention` = act, `observe` = context only) |
 | `OnTyping` | `typing` | Typing indicator |
-| `OnInvestigationCancel` | `investigation_cancel` | Investigation cancelled |
-| `OnInvestigationPause` | `investigation_pause` | Investigation paused |
 | `OnInvestigationResume` | `investigation_resume` | Investigation resumed |
 | `OnPeerFinding` | `peer_finding` | Peer agent finding |
 | `OnPeerAsk` | `peer_ask` | Peer ask request |
 | `OnPeerReply` | `peer_reply` | Peer ask reply |
-| `OnAgentPresence` | `agent_presence` | Agent online/offline |
 | `OnCoordinationTask` | `coordination_task_dispatched` | Incident commander dispatched a task |
+| `OnSummarizeIncident` | `summarize_incident` | Backend requests an incident summary |
+| `OnAlertAutoResolved` | `alert_auto_resolved` | An investigated alert auto-resolved |
+| `OnIncidentCommsStale` | `incident_comms_stale` | Incident comms went quiet past threshold |
+| `OnUnknownEvent` | *(any other)* | Raw hook for event types the SDK doesn't know |
+
+Terminal errors (revoked token, from either the SSE loop or the heartbeat
+loop) arrive on `client.Err()`; after one arrives the client has stopped
+reconnecting. Reconnect backoff is exponential 2s→60s with jitter and resets
+after every successful connection.
 
 ### Command Builders
 
@@ -194,7 +186,6 @@ Register callbacks on the client before calling `Connect`:
 | `TriageFeedback(...)` | `triage_feedback` |
 | `AssignInvestigation(targetAgentID)` | `assign_investigation` |
 | `PromoteToIncident(title, severity, priority)` | `promote_to_incident` |
-| `PostInvestigationThreadMessage(message, internal)` | `post_investigation_thread_message` |
 | `SetIncidentPriority(incidentNumber, priority)` | `set_incident_priority` |
 | `SetIncidentSeverity(incidentNumber, severity)` | `set_incident_severity` |
 | `TriggerEscalation(incidentNumber)` | `trigger_escalation` |
@@ -202,7 +193,8 @@ Register callbacks on the client before calling `Connect`:
 | `ResolveIncident(incidentNumber, reason)` | `resolve_incident` |
 | `BeginTriage(incidentNumber)` | `begin_triage` |
 | `PromoteIncident(incidentNumber)` | `promote_incident` |
-| `AssignIncidentRole(incidentNumber, role, user, token, scope)` | `assign_incident_role` |
+| `AssignIncidentRoleToUser(incidentNumber, role, userID, scope)` | `assign_incident_role` |
+| `AssignIncidentRoleToAgent(incidentNumber, role, agentTokenID, scope)` | `assign_incident_role` |
 | `PostHandoff(incidentNumber, msg, audience, urgency)` *(deprecated)* | `post_handoff` |
 | `PublishStatusUpdate(incidentNumber, msg, level)` | `publish_status_update` |
 | `SetIncidentResolutionDocs(...)` | `set_incident_resolution_docs` |
@@ -215,13 +207,17 @@ Register callbacks on the client before calling `Connect`:
 Task kinds: `TaskKindInvestigate`, `TaskKindCommunicate`, `TaskKindVerify`,
 `TaskKindMitigate`.
 
+Command failures (unknown op, unauthorized chat, validation) surface as
+`*AlgaAPIError` with status 404/422/500 and the backend outcome JSON in
+`Message`.
+
 ### Error Types
 
 | Type | Retryable? | Description |
 |------|------------|-------------|
 | `*AlgaAuthError` | Never | 401/403 — token is invalid, revoked, or expired |
 | `*AlgaAPIError` | `IsRetryable()` | 4xx/5xx with status, body, RetryAfter |
-| `*AlgaConnectionError` | `IsRetryable()` | Transport (DNS/TCP/TLS) failure |
+| `*AlgaConnectionError` | `IsRetryable()` | Transport failure; not retryable when caused by context cancellation |
 
 Use `alga.IsAuthError(err)` to detect a bad token; use
 `alga.IsRetryableError(err)` to decide whether to retry.

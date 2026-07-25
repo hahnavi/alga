@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	alga "github.com/alga/agent-sdk-go"
@@ -13,11 +14,8 @@ import (
 // satisfied directly by *alga.AlgaClient (no adapter needed); tests may
 // substitute a fake.
 type AlgaClient interface {
-	ListAlerts(ctx context.Context, params map[string]string) (*alga.AlertListResponse, error)
+	ListAlerts(ctx context.Context, params map[string]string) ([]alga.Alert, error)
 	GetAlert(ctx context.Context, fingerprint string) (*alga.Alert, error)
-	ListInvestigations(ctx context.Context, params map[string]string) (*alga.InvestigationListResponse, error)
-	GetInvestigation(ctx context.Context, id string) (*alga.Investigation, error)
-	PostUpdate(ctx context.Context, id, updateType, message string) (*alga.Investigation, error)
 	SendMessage(ctx context.Context, chatID, text string, mentions []string) (*alga.SendMessageResponse, error)
 	SendCommand(ctx context.Context, chatID string, cmd alga.InvestigationCommand) (*alga.CommandResponse, error)
 	ListKnowledge(ctx context.Context, params map[string]string) (*alga.KnowledgeListResponse, error)
@@ -25,11 +23,11 @@ type AlgaClient interface {
 	ListMemories(ctx context.Context, params map[string]string) (*alga.MemoryListResponse, error)
 	CreateMemory(ctx context.Context, params map[string]any) (*alga.Memory, error)
 	DeleteMemory(ctx context.Context, id string) error
-	GetIncident(ctx context.Context, id string) (*alga.Incident, error)
-	AddIncidentTimeline(ctx context.Context, id, message, eventType string) error
-	ListServices(ctx context.Context) ([]alga.Service, error)
-	WhoIsOnCall(ctx context.Context) (map[string]any, error)
-	ListIncidentTasks(ctx context.Context, incidentNumber int64) ([]alga.CoordinationTask, error)
+	GetIncident(ctx context.Context, incidentNumber int64) (*alga.IncidentContext, error)
+	AddIncidentTimeline(ctx context.Context, incidentNumber int64, message, eventType string) error
+	ListServices(ctx context.Context, params map[string]string) (*alga.ServiceListResponse, error)
+	WhoIsOnCall(ctx context.Context) ([]alga.OnCallEntry, error)
+	ListIncidentTasks(ctx context.Context, incidentNumber int64, params map[string]string) ([]alga.CoordinationTask, error)
 }
 
 // *alga.AlgaClient satisfies AlgaClient at compile time. If the SDK ever
@@ -64,29 +62,19 @@ func chatIDFromCtx(ctx context.Context, args map[string]string) (string, error) 
 	return "", errors.New("chat_id is required (not running inside an Alga thread)")
 }
 
-// invIDFromCtx resolves an investigation id from Alga context, falling back to
-// the "investigation_id" argument. This implements the ID resolution policy
-// from SPEC §6.1.
-func invIDFromCtx(ctx context.Context, args map[string]string) (string, error) {
-	if v := args["investigation_id"]; v != "" {
-		return v, nil
-	}
-	if cc, ok := CallContextFrom(ctx); ok && cc.AlgaInvestigationID != "" {
-		return cc.AlgaInvestigationID, nil
-	}
-	return "", errors.New("investigation_id is required (provide it explicitly, e.g. inv_<id>)")
-}
-
-// incidentIDFromCtx resolves an incident id from Alga context, falling back to
-// the explicit argument.
-func incidentIDFromCtx(ctx context.Context, args map[string]string) (string, error) {
-	if v := args["incident_id"]; v != "" {
-		return v, nil
+// incidentNumberFromCtx resolves an incident number from the explicit argument,
+// falling back to Alga context (populated from incident_coord_<n> /
+// incident_inv_<n> chat ids).
+func incidentNumberFromCtx(ctx context.Context, explicit int64) (int64, error) {
+	if explicit > 0 {
+		return explicit, nil
 	}
 	if cc, ok := CallContextFrom(ctx); ok && cc.AlgaIncidentID != "" {
-		return cc.AlgaIncidentID, nil
+		if n, err := strconv.ParseInt(cc.AlgaIncidentID, 10, 64); err == nil && n > 0 {
+			return n, nil
+		}
 	}
-	return "", errors.New("incident_id is required")
+	return 0, errors.New("incident_number is required")
 }
 
 // algaErr converts an SDK error into a descriptive Go error, surfacing auth

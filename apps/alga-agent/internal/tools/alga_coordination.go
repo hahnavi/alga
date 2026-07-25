@@ -148,7 +148,7 @@ func coordinationTools(c AlgaClient) []Tool {
 						Count int                     `json:"count"`
 					}]("incident_number is required")
 				}
-				tasks, err := c.ListIncidentTasks(ctx, in.IncidentNumber)
+				tasks, err := c.ListIncidentTasks(ctx, in.IncidentNumber, nil)
 				if err != nil {
 					return Err[struct {
 						Tasks []alga.CoordinationTask `json:"tasks"`

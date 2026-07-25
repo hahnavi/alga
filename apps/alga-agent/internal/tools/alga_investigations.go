@@ -7,29 +7,9 @@ import (
 )
 
 // --- Investigation tools ---
-
-type listInvestigationsInput struct {
-	Status   string `json:"status,omitempty" desc:"Filter by status (detected, triaging, active, mitigated, resolved, closed)"`
-	Severity string `json:"severity,omitempty" desc:"Filter by severity"`
-	Limit    int    `json:"limit,omitempty" desc:"Maximum investigations to return"`
-	Skip     int    `json:"skip,omitempty" desc:"Pagination offset"`
-}
-
-type listInvestigationsOutput struct {
-	Investigations []alga.Investigation `json:"investigations"`
-	Total          int                  `json:"total"`
-	Count          int                  `json:"count"`
-}
-
-type getInvestigationInput struct {
-	InvestigationID string `json:"investigation_id,omitempty" desc:"Investigation id (omit when in an Alga thread; the context id is used)"`
-}
-
-type postUpdateInput struct {
-	InvestigationID string `json:"investigation_id,omitempty" desc:"Investigation id (omit in Alga threads)"`
-	Type            string `json:"type,omitempty" desc:"Update type: note, finding, status, question, etc."`
-	Message         string `json:"message" desc:"The update message text"`
-}
+//
+// Investigation reads/updates flow through chat messages and inv_tool
+// commands; the backend has no standalone investigation REST endpoints.
 
 type sendMessageInput struct {
 	ChatID   string   `json:"chat_id,omitempty" desc:"Target chat id (omit in Alga threads)"`
@@ -66,89 +46,6 @@ type promoteToIncidentInput struct {
 
 func investigationTools(c AlgaClient) []Tool {
 	return []Tool{
-		NewTypedTool("alga_list_investigations",
-			"List investigations with optional filters.",
-			func(ctx context.Context, in listInvestigationsInput) Result[listInvestigationsOutput] {
-				params := map[string]string{}
-				if in.Status != "" {
-					params["status"] = in.Status
-				}
-				if in.Severity != "" {
-					params["severity"] = in.Severity
-				}
-				if in.Limit > 0 {
-					params["limit"] = itoa(in.Limit)
-				}
-				if in.Skip > 0 {
-					params["skip"] = itoa(in.Skip)
-				}
-				resp, err := c.ListInvestigations(ctx, params)
-				if err != nil {
-					return Err[listInvestigationsOutput](algaErr(err))
-				}
-				invs := resp.All()
-				return OK(listInvestigationsOutput{Investigations: invs, Total: resp.Total, Count: len(invs)})
-			},
-			WithCategory[listInvestigationsInput, listInvestigationsOutput](algaCategory),
-		),
-
-		NewTypedTool("alga_get_investigation",
-			"Get full details for a single investigation by id.",
-			func(ctx context.Context, in getInvestigationInput) Result[*alga.Investigation] {
-				id, err := invIDFromCtx(ctx, map[string]string{"investigation_id": in.InvestigationID})
-				if err != nil {
-					return Err[*alga.Investigation](err)
-				}
-				inv, err := c.GetInvestigation(ctx, id)
-				if err != nil {
-					return Err[*alga.Investigation](algaErr(err))
-				}
-				return OK(inv)
-			},
-			WithCategory[getInvestigationInput, *alga.Investigation](algaCategory),
-		),
-
-		NewTypedTool("alga_post_update",
-			"Post an update note to an investigation thread.",
-			func(ctx context.Context, in postUpdateInput) Result[struct {
-				InvestigationID string `json:"investigation_id"`
-				Status          string `json:"status"`
-			}] {
-				if in.Message == "" {
-					return ErrMsg[struct {
-						InvestigationID string `json:"investigation_id"`
-						Status          string `json:"status"`
-					}]("message is required")
-				}
-				ut := in.Type
-				if ut == "" {
-					ut = "note"
-				}
-				id, err := invIDFromCtx(ctx, map[string]string{"investigation_id": in.InvestigationID})
-				if err != nil {
-					return Err[struct {
-						InvestigationID string `json:"investigation_id"`
-						Status          string `json:"status"`
-					}](err)
-				}
-				inv, err := c.PostUpdate(ctx, id, ut, in.Message)
-				if err != nil {
-					return Err[struct {
-						InvestigationID string `json:"investigation_id"`
-						Status          string `json:"status"`
-					}](algaErr(err))
-				}
-				return OK(struct {
-					InvestigationID string `json:"investigation_id"`
-					Status          string `json:"status"`
-				}{InvestigationID: id, Status: inv.Status})
-			},
-			WithCategory[postUpdateInput, struct {
-				InvestigationID string `json:"investigation_id"`
-				Status          string `json:"status"`
-			}](algaCategory),
-		),
-
 		NewTypedTool("alga_send_message",
 			"Send a message to an Alga chat (e.g. a coordination channel).",
 			func(ctx context.Context, in sendMessageInput) Result[*alga.SendMessageResponse] {

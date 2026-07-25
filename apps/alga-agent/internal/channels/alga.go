@@ -39,9 +39,9 @@ type AlgaChannel struct {
 type AlgaSDKClient interface {
 	Connect(ctx context.Context) error
 	Disconnect()
+	Err() <-chan error
 	SendMessage(ctx context.Context, chatID, text string, mentions []string) (*alga.SendMessageResponse, error)
 	SendTyping(ctx context.Context, chatID string, active bool) error
-	GetInvestigation(ctx context.Context, id string) (*alga.Investigation, error)
 }
 
 // algaStreamState tracks per-chat outbound state (for typing indicators).
@@ -100,6 +100,23 @@ func (a *AlgaChannel) Start(ctx context.Context) error {
 	// successful (re)connection.
 	go a.watchdog(innerCtx)
 
+	// Terminal-error watcher: the SDK stops reconnecting on auth failures
+	// (revoked token) and surfaces the error on Err(). Mark the channel
+	// unhealthy so the operator is alerted; a new token requires a restart.
+	go func() {
+		select {
+		case <-innerCtx.Done():
+		case err, ok := <-a.client.Err():
+			if !ok || err == nil {
+				return
+			}
+			a.logger.Error("alga SSE terminal error, channel stopped reconnecting", "err", err)
+			a.mu.Lock()
+			a.healthy = false
+			a.mu.Unlock()
+		}
+	}()
+
 	return nil
 }
 
@@ -148,15 +165,19 @@ func (a *AlgaChannel) registerCallbacks() {
 		c.OnMessage = a.onMessage
 		c.OnPeerAsk = a.onPeerAsk
 		c.OnPeerFinding = a.onPeerFinding
-		c.OnInvestigationCancel = a.onInvestigationCancel
-		c.OnInvestigationPause = a.onInvestigationPause
 		c.OnInvestigationResume = a.onInvestigationResume
 	}
 }
 
-// onMessage handles inbound investigation thread messages.
+// onMessage handles inbound chat messages.
 func (a *AlgaChannel) onMessage(ev alga.MessageEvent) {
 	if ev.Text == "" {
+		return
+	}
+	// "observe" deliveries are context-only: the backend sends them so the
+	// agent can see the transcript, not so it acts. Only dispatch/mention
+	// (and legacy events without a trigger) wake the agent.
+	if ev.Trigger == "observe" {
 		return
 	}
 	// Skip internal/system messages (leading 🔒 per SDK convention).
@@ -171,8 +192,8 @@ func (a *AlgaChannel) onMessage(ev alga.MessageEvent) {
 	// shutdown cancels in-flight Alga work. Previously this used
 	// context.Background(), which leaked work past shutdown.
 	ctx := a.dispatchCtx()
-	// Derive Alga context from the chat id. Alga chat IDs for investigation
-	// threads follow the pattern "investigation_<id>"; extract it.
+	// Derive Alga context from the chat id grammar (alert_<n>,
+	// incident_inv_<n>, incident_coord_<n>).
 	algaCtx := algaContextFromChatID(chatID)
 
 	sessionID := SessionIDFor("alga", chatID)
@@ -200,6 +221,10 @@ func (a *AlgaChannel) dispatchCtx() context.Context {
 }
 
 // onPeerAsk handles peer-agent questions directed at this agent.
+//
+// Known limitation: the reply is routed back through the normal message path
+// using a synthetic chat id derived from the investigation UUID; proper
+// ReplyPeerAsk wiring is a separate feature.
 func (a *AlgaChannel) onPeerAsk(ev alga.PeerAskEvent) {
 	ctx := a.dispatchCtx()
 	chatID := investigationChatID(ev.InvestigationID)
@@ -228,20 +253,12 @@ func (a *AlgaChannel) onPeerFinding(ev alga.PeerFindingEvent) {
 		"text", ev.Text)
 }
 
-// onInvestigationCancel stops the agent immediately for that investigation.
-func (a *AlgaChannel) onInvestigationCancel(ev alga.InvestigationSignalEvent) {
-	a.logger.Info("alga investigation cancelled", "investigation_id", ev.InvestigationID, "reason", ev.Reason, "actor", ev.Actor)
-	// Clearing the session discards in-flight context.
-	sessionID := SessionIDFor("alga", investigationChatID(ev.InvestigationID))
-	a.router.agent.Store().Clear(sessionID)
-}
-
-func (a *AlgaChannel) onInvestigationPause(ev alga.InvestigationSignalEvent) {
-	a.logger.Info("alga investigation paused", "investigation_id", ev.InvestigationID, "reason", ev.Reason, "actor", ev.Actor)
-}
-
 func (a *AlgaChannel) onInvestigationResume(ev alga.InvestigationSignalEvent) {
-	a.logger.Info("alga investigation resumed", "investigation_id", ev.InvestigationID, "reason", ev.Reason, "actor", ev.Actor)
+	invID := ev.InvestigationID
+	if invID == "" {
+		invID = ev.AlertInvestigationID
+	}
+	a.logger.Info("alga investigation resumed", "investigation_id", invID, "reason", ev.Reason, "actor", ev.Actor)
 }
 
 // --- ResponseSink implementation ---
@@ -309,20 +326,23 @@ func (a *AlgaChannel) Stop() error {
 // failure counter. The watchdog goroutine monitors liveness and logs when the
 // channel has been unable to reconnect for sustained periods.
 
-// algaContextFromChatID derives an AlgaContext from the chat id convention
-// "investigation_<id>" or "incident_coord_<id>".
+// algaContextFromChatID derives an AlgaContext from the backend chat id
+// grammar: alert_<n> (alert investigation thread), incident_inv_<n>
+// (incident investigation thread), incident_coord_<n> (coordination thread).
+// Alert chats carry no investigation UUID, so InvestigationID stays empty and
+// tools that need it require an explicit argument.
 func algaContextFromChatID(chatID string) agent.AlgaContext {
 	var ctx agent.AlgaContext
-	if invID, ok := stripPrefix(chatID, "investigation_"); ok {
-		ctx.InvestigationID = invID
-	}
-	if incID, ok := stripPrefix(chatID, "incident_coord_"); ok {
-		ctx.IncidentID = incID
+	if n, ok := stripPrefix(chatID, "incident_inv_"); ok {
+		ctx.IncidentID = n
+	} else if n, ok := stripPrefix(chatID, "incident_coord_"); ok {
+		ctx.IncidentID = n
 	}
 	return ctx
 }
 
-// investigationChatID constructs the chat id for an investigation thread.
+// investigationChatID constructs a synthetic session/chat key for peer-ask
+// dispatch. This is not a backend chat id (see onPeerAsk).
 func investigationChatID(invID string) string {
 	if invID == "" {
 		return ""

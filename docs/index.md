@@ -5,6 +5,9 @@ hero:
   name: "Alga"
   text: "AI-Powered Incident Management"
   tagline: The open-source, self-hosted platform that ingests alerts, investigates them autonomously, orchestrates incident response, and routes to the right responder — so your team spends less time triaging noise and more time resolving what matters.
+  image:
+    src: /logo.svg
+    alt: Alga logo
   actions:
     - theme: brand
       text: Get Started
@@ -17,42 +20,58 @@ hero:
       link: https://github.com/hahnavi/alga
 
 features:
-  - icon: 🚨
+  - icon:
+      src: /icons/alerts.svg
+      alt: ""
     title: Alert Ingestion & Dedup
     details: Receive alerts from Grafana, Prometheus, or any webhook source. Fingerprint-based deduplication with partial unique database indexes guarantees one open alert per issue — no duplicates, no noise.
     link: /core-features/alerts
     linkText: Learn about alerts →
-  - icon: 🤖
+  - icon:
+      src: /icons/investigation.svg
+      alt: ""
     title: Autonomous AI Investigation
     details: Built-in SRE agents (Hermes or OpenClaw) investigate every alert — querying knowledge, correlating signals, and producing structured root-cause analyses in parallel with human oversight.
     link: /core-features/investigation
     linkText: How investigation works →
-  - icon: 🔥
+  - icon:
+      src: /icons/incident.svg
+      alt: ""
     title: Incident Management with ICS
     details: Full incident lifecycle with formal Incident Command System roles, SLA tracking, automated escalation, Google Meet war rooms, and structured post-mortems with action items.
     link: /incident-management/
     linkText: Explore incidents →
-  - icon: 📅
+  - icon:
+      src: /icons/oncall.svg
+      alt: ""
     title: On-Call & Escalation
     details: Multi-layer schedules with follow-the-sun support, overrides, structured handoffs with acknowledgment, and policy-driven multi-tier escalation that loops until someone responds.
     link: /on-call/schedules
     linkText: Set up schedules →
-  - icon: 🧠
+  - icon:
+      src: /icons/memory.svg
+      alt: ""
     title: Agent Memory & Knowledge
     details: A pgvector-backed memory system extracts learnings from completed investigations. Agents recall past solutions via semantic search. Knowledge compounds over time — every incident makes the next one faster.
     link: /core-features/agent-memory
     linkText: How memory works →
-  - icon: 🎯
+  - icon:
+      src: /icons/triage.svg
+      alt: ""
     title: Triage & Noise Suppression
     details: Rule-based and LLM-powered triage classifies, prioritizes, and suppresses noise before it reaches a human. Agents provide feedback that improves accuracy over time.
     link: /core-features/triage
     linkText: Understand triage →
-  - icon: 📋
+  - icon:
+      src: /icons/playbooks.svg
+      alt: ""
     title: Playbooks & Routing
     details: Label-selector-matched playbooks inject step-by-step response procedures into every investigation. Rule-based routing directs alerts to the right channel, team, or agent.
     link: /core-features/playbooks
     linkText: Create playbooks →
-  - icon: 🔐
+  - icon:
+      src: /icons/security.svg
+      alt: ""
     title: Secure & Self-Hosted
     details: Argon2id password hashing, AES-256-GCM envelope encryption, CSRF protection, ASVS Level 2 hardening, and constant-time comparisons. Your data stays on your infrastructure. MIT licensed.
     link: /configuration/security

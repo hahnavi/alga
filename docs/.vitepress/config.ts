@@ -8,8 +8,18 @@ export default defineConfig({
   head: [
     ["link", { rel: "icon", type: "image/svg+xml", href: "/logo.svg" }],
   ],
+  lastUpdated: true,
   themeConfig: {
     siteTitle: "Alga",
+    logo: "/logo.svg",
+    outline: {
+      level: [2, 3],
+      label: "On this page",
+    },
+    editLink: {
+      pattern: "https://github.com/hahnavi/alga/edit/main/docs/:path",
+      text: "Edit this page on GitHub",
+    },
     nav: [
       { text: "Docs", link: "/getting-started" },
       { text: "API", link: "/api-reference" },
@@ -29,7 +39,7 @@ export default defineConfig({
       },
       {
         text: "Configuration",
-        collapsed: false,
+        collapsed: true,
         items: [
           { text: "Environment Variables", link: "/configuration/environment-variables" },
           { text: "System Configuration API", link: "/configuration/system-config" },
@@ -38,7 +48,7 @@ export default defineConfig({
       },
       {
         text: "Integrations",
-        collapsed: false,
+        collapsed: true,
         items: [
           { text: "Overview", link: "/integrations/" },
           { text: "Hermes Agent", link: "/integrations/hermes" },
@@ -55,7 +65,7 @@ export default defineConfig({
       },
       {
         text: "Core Features",
-        collapsed: false,
+        collapsed: true,
         items: [
           { text: "Alerts", link: "/core-features/alerts" },
           { text: "Routing", link: "/core-features/routing" },
@@ -74,7 +84,7 @@ export default defineConfig({
       },
       {
         text: "Incident Management",
-        collapsed: false,
+        collapsed: true,
         items: [
           { text: "Overview", link: "/incident-management/" },
           { text: "Lifecycle & States", link: "/incident-management/lifecycle" },
@@ -87,14 +97,14 @@ export default defineConfig({
       },
       {
         text: "Service Management",
-        collapsed: false,
+        collapsed: true,
         items: [
           { text: "Service Catalog", link: "/service-management/" },
         ],
       },
       {
         text: "On-Call & Escalation",
-        collapsed: false,
+        collapsed: true,
         items: [
           { text: "Teams", link: "/on-call/" },
           { text: "On-Call Schedules", link: "/on-call/schedules" },
@@ -104,7 +114,7 @@ export default defineConfig({
       },
       {
         text: "Operations",
-        collapsed: false,
+        collapsed: true,
         items: [
           { text: "Architecture", link: "/operations/architecture" },
           { text: "Deployment", link: "/operations/deployment" },
@@ -118,14 +128,14 @@ export default defineConfig({
       },
       {
         text: "API Reference",
-        collapsed: false,
+        collapsed: true,
         items: [
           { text: "Overview", link: "/api-reference/" },
         ],
       },
       {
         text: "Resources",
-        collapsed: false,
+        collapsed: true,
         items: [
           { text: "Use Cases", link: "/resources/use-cases" },
           { text: "Contributing", link: "/resources/contributing" },

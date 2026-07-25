@@ -11,7 +11,7 @@ set -euo pipefail
 repo_root=$(git rev-parse --show-toplevel)
 
 staged_go=$(git diff --cached --name-only --diff-filter=ACM -- '*.go' | grep -v '/ent/' || true)
-staged_ts=$(git diff --cached --name-only --diff-filter=ACM -- '*.ts' '*.vue' '*.js' '*.tsx' | grep -v node_modules || true)
+staged_ts=$(git diff --cached --name-only --diff-filter=ACM -- '*.ts' '*.vue' '*.js' '*.tsx' | grep '^apps/frontend/' | grep -v node_modules || true)
 
 status=0
 

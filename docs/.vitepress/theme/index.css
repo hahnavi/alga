@@ -1,26 +1,127 @@
-.experimental-banner {
-  background-color: var(--vp-c-warning-1);
-  border-bottom: 1px solid var(--vp-c-warning-2);
-  padding: 10px 24px;
-  text-align: center;
-  font-size: 13px;
-  color: var(--vp-c-warning-3);
-  font-weight: 500;
-}
+/**
+ * Alga docs theme — brand colors derived from the app logo
+ * (violet #863bff, cyan #47bfff) and the app's near-black dark mode.
+ */
 
-.experimental-banner p {
-  margin: 0;
-  line-height: 1.5;
-}
-
+/* Brand palette */
 :root {
-  --vp-c-warning-1: #fff3cd;
-  --vp-c-warning-2: #ffc107;
-  --vp-c-warning-3: #664d03;
+  --alga-violet: #863bff;
+  --alga-violet-light: #9d63ff;
+  --alga-violet-dark: #6f1fe8;
+  --alga-cyan: #47bfff;
+
+  --vp-c-brand-1: var(--alga-violet-dark);
+  --vp-c-brand-2: var(--alga-violet);
+  --vp-c-brand-3: var(--alga-violet);
+  --vp-c-brand-soft: rgba(134, 59, 255, 0.14);
+
+  --vp-button-brand-bg: var(--alga-violet);
+  --vp-button-brand-hover-bg: var(--alga-violet-light);
+  --vp-button-brand-active-bg: var(--alga-violet-dark);
+  --vp-button-brand-border: transparent;
+  --vp-button-brand-hover-border: transparent;
+  --vp-button-brand-active-border: transparent;
 }
 
 .dark {
-  --vp-c-warning-1: #332701;
-  --vp-c-warning-2: #664d00;
-  --vp-c-warning-3: #ffc107;
+  --vp-c-brand-1: var(--alga-violet-light);
+  --vp-c-brand-2: var(--alga-violet);
+  --vp-c-brand-3: var(--alga-violet);
+  --vp-c-brand-soft: rgba(134, 59, 255, 0.18);
+
+  /* Near-black surfaces to match the Alga app */
+  --vp-c-bg: #0d0d11;
+  --vp-c-bg-alt: #09090c;
+  --vp-c-bg-soft: #16161c;
+  --vp-c-bg-elv: #16161c;
+  --vp-c-divider: #26262e;
+  --vp-c-gutter: #09090c;
+}
+
+/* Hero */
+:root {
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(
+    120deg,
+    var(--alga-violet) 30%,
+    var(--alga-cyan)
+  );
+  --vp-home-hero-image-background-image: linear-gradient(
+    -45deg,
+    rgba(134, 59, 255, 0.55) 40%,
+    rgba(71, 191, 255, 0.55) 60%
+  );
+  --vp-home-hero-image-filter: blur(48px);
+}
+
+@media (min-width: 640px) {
+  :root {
+    --vp-home-hero-image-filter: blur(60px);
+  }
+}
+
+@media (min-width: 960px) {
+  :root {
+    --vp-home-hero-image-filter: blur(72px);
+  }
+}
+
+/* Feature cards */
+.VPFeatures .VPFeature {
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 4px;
+  transition:
+    border-color 0.25s,
+    transform 0.25s,
+    box-shadow 0.25s;
+}
+
+.VPFeatures .VPFeature:hover {
+  border-color: var(--vp-c-brand-2);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(134, 59, 255, 0.12);
+}
+
+.VPFeature .VPImage {
+  width: 28px;
+  height: 28px;
+}
+
+/* Docs content polish */
+.vp-doc h2 {
+  border-top: 1px solid var(--vp-c-divider);
+}
+
+.vp-doc a {
+  text-underline-offset: 3px;
+}
+
+.vp-doc tr:hover td {
+  background-color: var(--vp-c-bg-soft);
+}
+
+.vp-doc div[class*="language-"] {
+  border-radius: 4px;
+}
+
+/* Squared-off corners across the theme */
+.VPButton,
+.vp-doc .custom-block,
+.VPNavBarSearch .DocSearch-Button,
+.VPLocalSearchBox .shell {
+  border-radius: 4px !important;
+}
+
+/* Visible keyboard focus */
+:focus-visible {
+  outline: 2px solid var(--vp-c-brand-2);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .VPFeatures .VPFeature,
+  .VPFeatures .VPFeature:hover {
+    transition: none;
+    transform: none;
+  }
 }

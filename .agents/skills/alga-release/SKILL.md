@@ -18,6 +18,8 @@ Before tagging, state: the last tag (or "first release"), the computed next vers
 - Commits since last tag: `git log --oneline <last-tag>..HEAD`.
 - Version wiring target: `apps/backend/main.go` (`var version string`).
 - Existing tags: `git tag --list 'v*'`.
+- Branch protection on `main`: `gh api repos/{owner}/{repo}/rules/refs/heads/main` (or observe a rejected push). If PRs are required, the wiring change and any fix land via PR merge — never a direct push to `main`.
+- Token reach: the credential must let you `gh run rerun`, create + merge PRs, and `git push <tag>`. Fine-grained PATs frequently lack `actions:write` / `pull-requests:write` / `contents:write`; surface a permission gap before starting, not mid-release.
 
 ## Version Decision (Conventional Commits)
 
@@ -55,12 +57,15 @@ Rejected examples: `v2026.07.25.1111` (4 components, leading zeros), `v1.2` (2 c
 
 Run all of these before tagging. Stop and report if any fail.
 
-1. **Clean working tree** — `git status --porcelain` must be empty. Stash or commit first.
-2. **On the release branch** — warn (do not block) if not on `main`; confirm the user intends to release from the current branch.
-3. **Synced with remote** — `git fetch origin && git status -uno` shows nothing to pull/push on the release branch.
-4. **Head commit is the one to tag** — confirm `git rev-parse HEAD` matches what CI last ran.
-5. **CI is green on HEAD** — `gh run list --branch main --limit 3`. If red, fix before tagging; a tag push triggers a fresh workflow but inherits broken code.
-6. **Version is wired into the binary** — see below.
+1. **Token can perform every step** — `gh run rerun`, PR create+merge, and `git push <tag>`. If any fails with `Resource not accessible by personal access token`, stop and ask for `actions:write` / `pull-requests:write` / `contents:write` before proceeding.
+2. **Clean working tree** — `git status --porcelain` must be empty. Stash or commit first.
+3. **On the release branch** — warn (do not block) if not on `main`; confirm the user intends to release from the current branch.
+4. **Synced with remote** — `git fetch origin && git status -uno` shows nothing to pull/push on the release branch.
+5. **Head commit is the one to tag** — confirm `git rev-parse HEAD` matches what CI last ran.
+6. **CI is green on the exact commit you'll tag** — `gh run list --branch main --limit 3`. Distinguish `startup_failure` (no logs → almost always transient GitHub infra → `gh run rerun`, don't dig for a code cause) from a real `failure` (logs → diagnose and fix; a tag push inherits broken code).
+7. **Version is wired into the binary** — see below.
+
+On a **first release**, assume `main` may never have been green. A transient startup failure can mask a cascade of pre-existing breakage that surfaces one layer per CI run, so green-on-HEAD is earned, not assumed. Common first-release blockers to expect and batch-diagnose: Renovate/Dependabot major bumps that broke the build (e.g. a toolchain bump past what a peer supports), accumulated scanner false positives (gitleaks/gosec/Trivy) never addressed because CI never ran, and deprecated-API lint findings. Fix these on `main` (via PR) before tagging — they are not optional release steps.
 
 ### Wire `var version string` (one-time setup)
 
@@ -88,6 +93,8 @@ func init() {
 ```
 
 The workflow's `-X main.version` overrides `"dev"` in release builds. Keep the default `"dev"` so local `go run .` and `go build` still work. Do not hardcode a version string in source — the tag is the source of truth.
+
+On a PR-gated `main`, this wiring lands via a PR merge, not a direct push. After that PR merges, a fresh CI run fires on the merge commit — wait for that run (see Execute) before tagging.
 
 ## Generate Release Notes
 
@@ -124,6 +131,8 @@ After pre-flight passes and the version is confirmed:
 git tag v<X.Y.Z>
 git push origin v<X.Y.Z>
 ```
+
+If the version wiring (or any fix) just landed via PR, tag only after `main`'s CI goes green on the **merge commit** — the PR branch's green run is not on the commit you tag. Confirm with `gh run list --branch main --limit 1` that the head SHA matches `git rev-parse HEAD` and the conclusion is `success`.
 
 The tag push triggers `release.yml`. Monitor:
 

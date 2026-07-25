@@ -310,7 +310,7 @@ func attributeValueToOTLP(v attribute.Value) map[string]any {
 	case attribute.STRING:
 		return map[string]any{"stringValue": v.AsString()}
 	default:
-		return map[string]any{"stringValue": v.Emit()}
+		return map[string]any{"stringValue": v.String()}
 	}
 }
 

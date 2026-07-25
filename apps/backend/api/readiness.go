@@ -1,11 +1,5 @@
 package api
 
-import (
-	"net/http"
-
-	"alga/metrics"
-)
-
 // Readiness describes optional pipeline components (for operators / probes).
 type Readiness struct {
 	CorrelatorEnabled        bool               `json:"correlator_enabled"`
@@ -61,45 +55,4 @@ func (s *Server) SetReadiness(r Readiness) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.readiness = r
-}
-
-func (s *Server) handleReadiness(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
-		return
-	}
-	s.mu.RLock()
-	out := s.readiness
-	s.mu.RUnlock()
-	out.Scheduler = SchedulerSnapshot{
-		IsLeader:                   metrics.SchedulerIsLeader.Value() == 1,
-		PendingDepth:               metrics.SchedulerPending.Value(),
-		OnlineAgents:               metrics.SchedulerOnlineAgents.Value(),
-		CapacityUsed:               metrics.SchedulerAgentCapacityUse.Value(),
-		CapacityTotal:              metrics.SchedulerAgentCapacityMax.Value(),
-		ScheduledTotal:             metrics.SchedulerScheduledTotal.Value(),
-		NoCandidate:                metrics.SchedulerNoCandidateTotal.Value(),
-		BindFailedTotal:            metrics.SchedulerBindFailedTotal.Value(),
-		TickTotal:                  metrics.SchedulerTickTotal.Value(),
-		TickDurationMs:             metrics.SchedulerTickDurationMs.Value(),
-		NudgeTotal:                 metrics.SchedulerNudgeTotal.Value(),
-		StaleAlertsSwept:           metrics.SchedulerStaleAlertsSwept.Value(),
-		StaleInvestigationsCreated: metrics.SchedulerStaleInvestigationsMade.Value(),
-		StaleSweepTickTotal:        metrics.SchedulerStaleSweepTickTotal.Value(),
-	}
-	out.Correlator = CorrelatorSnapshot{
-		AlertsTotal:     metrics.CorrelatorAlertsTotal.Value(),
-		MergedTotal:     metrics.CorrelatorMergedTotal.Value(),
-		PublishedTotal:  metrics.CorrelatorPublishedTotal.Value(),
-		DroppedTotal:    metrics.CorrelatorDroppedTotal.Value(),
-		WindowOpenTotal: metrics.CorrelatorWindowOpenTotal.Value(),
-		FlushTotal:      metrics.CorrelatorFlushTotal.Value(),
-		FailClosedTotal: metrics.CorrelatorFailClosedTotal.Value(),
-	}
-	out.Triage = TriageSnapshot{
-		Enabled:       s.cfg.TriageEnabled,
-		LLMConfigured: s.cfg.TriageLLMURL != "",
-		MaxConcurrent: s.cfg.TriageMaxConcurrent,
-	}
-	writeData(w, http.StatusOK, out)
 }

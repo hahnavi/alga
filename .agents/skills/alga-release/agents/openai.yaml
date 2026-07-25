@@ -1,0 +1,4 @@
+interface:
+  display_name: "Alga Release"
+  short_description: "Decide the SemVer tag from Conventional Commits, run pre-flight checks, and push a release tag"
+  default_prompt: "Use Alga Release when cutting a release — picking the SemVer version, validating the tag format, running pre-flight checks, generating release notes, wiring version into the binary, and pushing a tag to trigger release.yml."

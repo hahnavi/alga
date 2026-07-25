@@ -9,6 +9,7 @@ This is the operating guide for Alga agents. Keep it short, current, and biased 
 - Use `alga-security-checklist` for any change touching routes, auth, RBAC, sessions, secrets, tokens, user-scoped data, integrations, or mutations.
 - Use `alga-testing-patterns` for test scope and verification commands.
 - Use `alga-dev-environment` for setup, build, test, format, migration, or troubleshooting commands.
+- Use `alga-release` for cutting a release — picking the SemVer tag from Conventional Commits, pre-flight checks, release notes, version wiring, and pushing a `v*` tag to trigger `release.yml`.
 - Follow nearby code first; if this guide and code disagree, update this guide or remove stale guidance.
 
 ## Non-Negotiable Principles

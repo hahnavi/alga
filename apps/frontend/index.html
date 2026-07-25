@@ -7,24 +7,15 @@
     <meta name="description" content="Alga on-call and incident management" />
     <meta name="theme-color" content="#0a0a0a" />
     <!--
-      Strict CSP. The SSE/proxy host must be added to `connect-src` at deploy
-      time (e.g. via response header). This meta tag covers browsers that
-      don't inherit the response CSP during navigation. `unsafe-inline` on
-      style-src is required by Tailwind/v-tokens injected styles; revisit if
-      the build adopts nonces.
+      The Content-Security-Policy is delivered exclusively via the response
+      header (rendered from security-headers.conf.template at container
+      startup, extendable per deployment through env vars / Helm values).
+      Do NOT add a CSP <meta> tag here: browsers
+      enforce the intersection of every policy present, so a meta tag would
+      make deploy-time adjustments (e.g. allowing a CDN-injected analytics
+      script) impossible without rebuilding the image. The dev server injects
+      its own relaxed meta CSP via the alga-csp-dev plugin in vite.config.ts.
     -->
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="default-src 'self';
-               script-src 'self';
-               style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-               font-src 'self' https://fonts.gstatic.com data:;
-               img-src 'self' data: blob:;
-               connect-src 'self';
-               frame-ancestors 'none';
-               base-uri 'self';
-               form-action 'self';"
-    />
     <title>Alga</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

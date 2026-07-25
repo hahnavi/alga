@@ -66,5 +66,5 @@ func retryExpiration(retryCount int) (time.Duration, bool) {
 // by RabbitMQ's min(queueTTL, messageExpiration) rule. It is the single source
 // of truth for the retry-queue x-message-ttl values declared in the topology.
 func retryTTLms(stage int) int32 {
-	return int32(jitterCeil(RetrySchedule[stage]).Milliseconds())
+	return int32(jitterCeil(RetrySchedule[stage]).Milliseconds()) //#nosec G115 -- RetrySchedule bounded to <=1h; jitterCeil <=+20% => <=4.32M ms, well under math.MaxInt32
 }

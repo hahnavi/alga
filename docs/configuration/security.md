@@ -7,6 +7,28 @@ description: Alga's security model — login, SSO (Google, Slack, OIDC), RBAC ro
 
 Alga uses session-based authentication with HTTP-only cookies, CSRF protection, and role-based access control.
 
+## Authentication Models
+
+Alga supports three authentication models depending on the caller:
+
+| Model | Mechanism | Use Case |
+|-------|-----------|----------|
+| Session cookie | `alga_session` cookie + CSRF token | Browser / web UI |
+| Personal Access Token | `Authorization: Bearer alga_pat_...` | Automation, scripting |
+| Agent token | `Authorization: Bearer <agent-token>` | AI agent API and SSE |
+
+### Session Authentication
+
+The web UI authenticates via session cookies. State-changing methods (POST, PUT, PATCH, DELETE) require a CSRF token in the `X-CSRF-Token` header that matches the `alga_csrf` cookie (double-submit cookie pattern).
+
+### Personal Access Tokens (PAT)
+
+PATs use `Bearer alga_pat_...` and bypass CSRF validation (intended for machine-to-machine use). A PAT's effective permissions are the intersection of the PAT's granted scopes and the owning user's role permissions — a PAT can never grant access beyond what the user already has.
+
+### Agent Tokens
+
+Agent tokens use `Bearer <agent-token>` with capability checks. Agent routes are protected by `agentBearerMiddleware` with per-agent-token rate limiting and do not rely on CSRF cookies.
+
 ## Login
 
 Authenticate via the API or the web UI:
@@ -27,7 +49,7 @@ Alga supports Google Sign-In via standard OAuth 2.0. When configured, users can 
 
 ### Configuration
 
-Set the following environment variables:
+Set the following environment variables (or configure at runtime via [System Configuration API](/configuration/system-config)):
 
 | Variable | Required | Description |
 |----------|----------|-------------|
@@ -55,11 +77,13 @@ When `GOOGLE_CLIENT_ID` is set, the login page displays a "Sign in with Google" 
 
 ## Slack Sign-In
 
-Users can authenticate by linking their Slack identity, configured from **Settings → Integrations** per user (`/api/v1/users/me/slack/*`). A workspace-level Slack app is a prerequisite. The endpoints are `/api/v1/auth/slack/enabled`, `/api/v1/auth/slack`, and `/api/v1/auth/slack/callback`.
+Users can authenticate by linking their Slack identity, configured from **Settings > Integrations** per user (`/api/v1/users/me/slack/*`). A workspace-level Slack app is a prerequisite. The endpoints are `/api/v1/auth/slack/enabled`, `/api/v1/auth/slack`, and `/api/v1/auth/slack/callback`.
 
 ## OIDC SSO
 
-Alga supports multiple generic OIDC identity providers (e.g. Okta, Keycloak, Google, Auth0) configured from **System → Authentication**. See [OIDC SSO](/integrations/oidc-sso) for setup.
+Alga supports generic OIDC identity providers (e.g. Okta, Keycloak, Google, Auth0) using the Authorization Code flow with PKCE. Login state (including the PKCE verifier and provider ID) is stored in Valkey as a single-use record with a 10-minute TTL, preventing replay of authorization codes.
+
+Configure from **System > Authentication** or via the [System Configuration API](/configuration/system-config). See [OIDC SSO](/integrations/oidc-sso) for setup.
 
 ## Password Recovery
 
@@ -86,6 +110,8 @@ Alga provides a self-service password reset flow via email.
 5. Frontend submits the token and new password to `/api/v1/auth/reset-password`
 6. Alga validates the token (not expired, not used), checks the password against the [password policy](#password-policy), and updates the password
 
+Reset tokens are hashed before storage and expire after use.
+
 ### Request Password Reset
 
 ```sh
@@ -102,9 +128,13 @@ curl -X POST http://localhost:8080/api/v1/auth/reset-password \
   -d '{"token": "reset-token-from-email", "new_password": "NewP@ssw0rd!"}'
 ```
 
+## Account Lockout
+
+Failed login attempts are tracked per account (`failed_login_attempts`). After the threshold is reached, the account is locked (`locked_until`) for a cooldown period. Successful authentication resets the counter.
+
 ## Roles & Permissions
 
-Alga has three built-in roles. Every authenticated request is checked against the route's required permission.
+Alga has three built-in roles and 52 permissions. Every authenticated request is checked against the route's required permission using OR semantics — if a route accepts multiple permissions, having any one of them grants access.
 
 ### Admin
 
@@ -122,52 +152,47 @@ Read-only access across all operational resources.
 
 | Permission | Admin | Operator | Viewer |
 |------------|:-----:|:--------:|:------:|
-| `alerts:read` / `alerts:write` | ✅ | ✅ | 👁️ / — |
-| `alerts:delete` | ✅ | — | — |
-| `knowledge:read` / `knowledge:write` | ✅ | ✅ | 👁️ / — |
-| `knowledge:delete` | ✅ | — | — |
-| `memories:read` / `memories:write` | ✅ | ✅ | 👁️ / — |
-| `memories:delete` | ✅ | — | — |
-| `routes:read` | ✅ | ✅ | 👁️ |
-| `routes:write` | ✅ | — | — |
-| `integrations:read` | ✅ | ✅ | 👁️ |
-| `integrations:write` | ✅ | — | — |
-| `integrations:test` | ✅ | ✅ | — |
-| `users:manage` | ✅ | ✅ | — |
-| `tokens:manage` | ✅ | — | — |
-| `dashboard:read` | ✅ | ✅ | 👁️ |
-| `channels:read` | ✅ | ✅ | 👁️ |
-| `audit:read` | ✅ | ✅ | — |
-| `notifications:read` | ✅ | ✅ | 👁️ |
-| `notifications:write` | ✅ | ✅ | 👁️ |
-| `system:read` / `system:write` | ✅ | — | — |
-| `triage:read` / `triage:write` | ✅ | ✅ | 👁️ / — |
-| `triage:override` | ✅ | ✅ | — |
-| `incidents:read` / `incidents:write` | ✅ | ✅ | 👁️ / — |
-| `incidents:command` | ✅ | ✅ | — |
-| `incidents:delete` | ✅ | — | — |
-| `services:read` | ✅ | ✅ | 👁️ |
-| `services:write` | ✅ | — | — |
-| `oncall:read` | ✅ | ✅ | 👁️ |
-| `oncall:write` | ✅ | — | — |
-| `escalation:read` | ✅ | ✅ | 👁️ |
-| `escalation:write` | ✅ | — | — |
-| `postmortems:read` / `postmortems:write` | ✅ | ✅ | 👁️ / — |
-| `postmortems:delete` | ✅ | — | — |
-| `playbooks:read` / `playbooks:write` | ✅ | ✅ | 👁️ / — |
-| `playbooks:delete` | ✅ | — | — |
-| `heartbeats:read` / `heartbeats:write` | ✅ | ✅ | 👁️ / — |
-| `heartbeats:delete` | ✅ | — | — |
-| `statuspages:read` / `statuspages:write` | ✅ | ✅ | 👁️ / — |
-| `statuspages:delete` | ✅ | — | — |
-| `oidc:manage` | ✅ | — | — |
-| `credentials:read` | ✅ | ✅ | — |
-| `credentials:manage` | ✅ | ✅ | — |
-| `admin:access` | ✅ | — | — |
-
-## SSO Providers
-
-In addition to Google Sign-In, Alga supports generic OIDC SSO and Slack Sign-In. See [OIDC SSO](/integrations/oidc-sso) for configuring multiple identity providers.
+| `alerts:read` / `alerts:write` | Yes | Yes | Read only |
+| `alerts:delete` | Yes | — | — |
+| `knowledge:read` / `knowledge:write` | Yes | Yes | Read only |
+| `knowledge:delete` | Yes | — | — |
+| `memories:read` / `memories:write` | Yes | Yes | Read only |
+| `memories:delete` | Yes | — | — |
+| `routes:read` | Yes | Yes | Yes |
+| `routes:write` | Yes | — | — |
+| `integrations:read` | Yes | Yes | Yes |
+| `integrations:write` | Yes | — | — |
+| `integrations:test` | Yes | Yes | — |
+| `users:manage` | Yes | Yes | — |
+| `tokens:manage` | Yes | — | — |
+| `dashboard:read` | Yes | Yes | Yes |
+| `channels:read` | Yes | Yes | Yes |
+| `audit:read` | Yes | Yes | — |
+| `notifications:read` / `notifications:write` | Yes | Yes | Read only |
+| `system:read` / `system:write` | Yes | — | — |
+| `triage:read` / `triage:write` | Yes | Yes | Read only |
+| `triage:override` | Yes | Yes | — |
+| `incidents:read` / `incidents:write` | Yes | Yes | Read only |
+| `incidents:command` | Yes | Yes | — |
+| `incidents:delete` | Yes | — | — |
+| `services:read` | Yes | Yes | Yes |
+| `services:write` | Yes | — | — |
+| `oncall:read` | Yes | Yes | Yes |
+| `oncall:write` | Yes | — | — |
+| `escalation:read` | Yes | Yes | Yes |
+| `escalation:write` | Yes | — | — |
+| `postmortems:read` / `postmortems:write` | Yes | Yes | Read only |
+| `postmortems:delete` | Yes | — | — |
+| `playbooks:read` / `playbooks:write` | Yes | Yes | Read only |
+| `playbooks:delete` | Yes | — | — |
+| `heartbeats:read` / `heartbeats:write` | Yes | Yes | Read only |
+| `heartbeats:delete` | Yes | — | — |
+| `statuspages:read` / `statuspages:write` | Yes | Yes | Read only |
+| `statuspages:delete` | Yes | — | — |
+| `oidc:manage` | Yes | — | — |
+| `credentials:read` | Yes | Yes | — |
+| `credentials:manage` | Yes | Yes | — |
+| `admin:access` | Yes | — | — |
 
 ## Password Policy
 
@@ -178,20 +203,22 @@ Alga enforces the following password requirements:
 - At least one digit
 - At least one special character
 
-Passwords are hashed with Argon2id (OWASP 2026 baseline: 64 MiB memory, 3 iterations, parallelism 2) with a server-side HMAC pepper pre-hash.
+Passwords are hashed with Argon2id (OWASP baseline: 64 MiB memory, 3 iterations, parallelism 2, 16-byte salt, 32-byte key) with a server-side HMAC pepper pre-hash (`SECRET_PEPPER`).
 
 ## Session Management
 
-- Sessions expire after `SESSION_EXPIRY_HOURS` (default: 24 hours)
+- Sessions expire after `SESSION_EXPIRY_HOURS` (default: 24 hours, max: 720)
 - Refresh tokens enable seamless session renewal
-- Refresh token reuse detection revokes the entire session family
+- Refresh tokens rotate on every use; the previous token hash is recorded (`prev_refresh_token_hashes`) within a session family (`family_id`)
+- Reuse of a previously-rotated refresh token is detected as replay and revokes the entire session family
 - When `SECURE_COOKIES=true`, cookies are only sent over HTTPS
+- Cookie-side session IDs and refresh tokens are HMAC-SHA-256 hashed before persistence
 
 ## API Tokens
 
 ### Webhook Tokens
 
-Bearer tokens for alert ingestion endpoints:
+Bearer tokens for alert ingestion endpoints. Tokens are shown exactly once on creation and stored as HMAC-SHA-256 hashes with a non-secret `lookup_prefix` for efficient lookup:
 
 ```sh
 curl -X POST http://localhost:8080/webhooks/alerts \
@@ -225,18 +252,33 @@ Personal Access Tokens (PATs) allow users to authenticate API requests for autom
 
 See [Personal Access Tokens](/operations/personal-access-tokens) for details.
 
+## Cryptographic Primitives
+
+| Primitive | Algorithm | Configuration |
+|-----------|-----------|---------------|
+| Password hashing | Argon2id | 64 MiB memory, time 3, parallelism 2, 16-byte salt, 32-byte key |
+| Envelope encryption | AES-256-GCM | `ENCRYPTION_KEYS` (comma-separated `kid:base64-key` pairs, supports key rotation via kid) |
+| Token hashing | HMAC-SHA-256 | `SECRET_PEPPER` as the HMAC key |
+| Secret comparison | Constant-time | `crypto/subtle` for all secret, token, and signature checks |
+
 ## Security Features
 
-- **CSRF Protection** — Double-submit cookie pattern (`alga_csrf` + `X-CSRF-Token` header)
+- **CSRF Protection** — Double-submit cookie pattern (`alga_csrf` cookie + `X-CSRF-Token` header) for state-changing methods
 - **Secure Cookies** — HttpOnly, Secure (HTTPS), SameSite=Strict
-- **Password Hashing** — Argon2id with server-side HMAC pepper pre-hash
-- **Encryption at Rest** — AES-256-GCM for integration secrets
+- **Fail-Closed Startup** — Refuses to start without `ENCRYPTION_KEYS` (or `ENCRYPTION_KEY`) AND `SECRET_PEPPER` in **every** environment, not only production
+- **HSTS** — `Strict-Transport-Security` emitted on all HTTPS responses regardless of the `SecureCookies` flag
+- **Encryption at Rest** — AES-256-GCM envelope encryption for integration secrets and auth secrets (Google/OIDC client secrets in system config)
 - **Constant-Time Comparison** — All secret checks use `crypto/subtle`
-- **Rate Limiting** — Login attempts limited to 5 per 15 minutes, per-IP request rate limiting
-- **Account Lockout** — 30-minute lockout after 5 failed attempts
-- **Audit Logging** — All auth, alert, investigation, knowledge, and peer-ask events recorded in PostgreSQL
-- **Session Secrets** — Cookie-side session IDs and refresh tokens are HMAC-SHA-256 hashed before persistence
-- **Refresh Token Rotation** — Atomic rotation with reuse detection via family tracking
-- **Bearer Token Storage** — Tokens stored as HMAC-SHA-256 + non-secret `lookup_prefix`
-- **Production Fail-Closed** — Refuses to start without `ENCRYPTION_KEYS` (or `ENCRYPTION_KEY`) AND `SECRET_PEPPER` in **every** environment, not only production. HSTS is emitted on HTTPS regardless of the `SecureCookies` flag
+- **Rate Limiting** — Per-IP rate limiting for public endpoints; per-agent-token rate limiting for agent endpoints; login attempts limited to 5 per 15 minutes
+- **Account Lockout** — Failed login tracking with time-based lockout
+- **Audit Logging** — Fire-and-forget audit trail for every create, update, delete, command, and state transition; must not block request success
+- **Idempotency-Key** — Optional replay protection for mutating requests (requires Valkey); first request executes, subsequent requests with the same key return the cached response
+- **Bearer Token Storage** — Tokens stored as HMAC-SHA-256 hashes with non-secret `lookup_prefix` for indexed lookup; never stored in plaintext
+- **Webhook Tokens** — Shown exactly once on creation; cannot be retrieved afterward
+- **OIDC Security** — Authorization Code + PKCE flow; Valkey-backed single-use login state with 10-minute TTL prevents authorization code replay
+- **Password Reset** — Token-based, hashed before storage, time-limited expiry
+- **Session Rotation** — Refresh tokens rotate on use; family-based replay detection revokes the entire session family on reuse
+- **Security Headers** — Middleware emits standard security headers on all responses
+- **Trusted Proxies** — `TRUSTED_PROXIES` configures which upstream proxy IPs are trusted for `X-Forwarded-For` client IP extraction
+- **SMTP TLS** — `SMTP_SKIP_TLS_VERIFY=true` disables TLS certificate verification for outgoing email; logs a loud warning at startup due to MITM risk. Use only for testing.
 - **SSO** — Google Sign-In, Slack Sign-In, and multi-provider OIDC SSO (see [OIDC SSO](/integrations/oidc-sso))

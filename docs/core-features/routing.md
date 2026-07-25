@@ -54,30 +54,24 @@ By default, conditions match against alert labels. Use the `source` field to mat
 
 Rules with `silenced: true` suppress matching alerts entirely — no routing, no notifications, no investigation triggers. This is useful for permanently ignoring known noise without deleting the rule.
 
-## Correlation Rules
+## Correlation
 
-By default, Alga correlates alerts using a combination of deployment name and alertname within the configured `CORRELATION_WINDOW`. Correlation rules let you customize the correlation key per alertname so that related alerts are grouped together for investigation.
+Before routing, Alga correlates related alerts into a single investigation. The correlation key is derived deterministically from the alert's labels: the first workload-identity label found (`deployment`, `statefulset`, `daemonset`, or `job`) combined with `namespace` and `alertname`. Alerts that share a key within the configured `CORRELATION_WINDOW` are grouped into the same investigation rather than spawning duplicate work.
 
-For example, you can correlate all alerts from the same namespace and service regardless of alertname, or keep strict per-alertname correlation for noisy alerts.
+Correlation is automatic and not configured per-rule. To stop alerts from generating investigations at all, use one of the suppression mechanisms below.
 
-Correlation rules are configured alongside routing rules and apply during the alert correlation phase, before investigation dispatch.
+## Suppressing Alerts
 
-## Suppression Rules
+There are two user-facing ways to suppress alerts:
 
-Suppression rules allow you to suppress alerts based on label matchers before they enter the routing and notification pipeline. Suppressed alerts are still ingested and stored, but they do not trigger:
+- **Silenced routing rules** — a rule with `silenced: true` drops matching alerts before routing (see above).
+- **Maintenance windows** — time-boxed, label-matched suppression for planned maintenance (see below).
 
-- Routing to any destination
-- Notification dispatch
-- Investigation triggers
-- Alert correlation
-
-This is useful for temporarily silencing known issues during maintenance or for permanently dropping noise from specific sources.
-
-Suppression rules differ from silenced routing rules in that they are evaluated earlier in the pipeline and can be managed separately from routing configuration.
+In both cases the alert is still ingested and stored, but it does not trigger routing, notification dispatch, or investigation creation.
 
 ## Multiple Conditions
 
-When a rule has multiple conditions, ALL must match (AND logic).
+When a rule has multiple conditions, the `match_mode` field controls how they combine — `"all"` (default) requires every condition to match, while `"any"` requires at least one. See [Match Mode](#match-mode) above.
 
 ## Default Destinations
 
@@ -87,7 +81,7 @@ When no rule matches, alerts are sent to the configured default destinations:
 
 ## Maintenance Windows
 
-Create maintenance windows to suppress alerts during planned maintenance:
+Create maintenance windows to suppress alerts during planned maintenance (see [Maintenance Windows](/core-features/maintenance-windows) for the full reference):
 
 1. Go to **Maintenance** in the sidebar
 2. Create a window with:

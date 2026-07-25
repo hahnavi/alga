@@ -25,14 +25,18 @@ When an event triggers a notification, Alga checks the user's preference rules f
 
 | Channel | Description | Requires |
 |----------|-------------|----------|
-| **In-App** | Notifications appear in the notification bell dropdown | Nothing (always available) |
-| **Email** | Sent via the configured SMTP server | [Email integration](/integrations/email) set up |
-| **Mattermost** | Sent to your linked Mattermost account | [Mattermost integration](/integrations/mattermost) + account linked |
-| **Slack** | Sent to your linked Slack account via DM | [Slack integration](/integrations/slack) + account linked |
-| **Voice** | Phone call with IVR menu to acknowledge | [Twilio](/integrations/twilio) or [Telnyx](/integrations/telnyx) configured |
+| **In-App** (`in_app`) | Notifications appear in the notification bell dropdown | Nothing (always available) |
+| **Email** (`email`) | Sent via the configured SMTP server | [Email integration](/integrations/email) set up |
+| **Slack** (`slack`) | Sent to your linked Slack account via DM | [Slack integration](/integrations/slack) + account linked |
+| **Voice** (`voice`) | Phone call with IVR menu to acknowledge | [Twilio](/integrations/twilio) or [Telnyx](/integrations/telnyx) configured |
+| **Mattermost** (`mattermost`) | Placeholder — accepted in rules but not yet delivered | [Mattermost integration](/integrations/mattermost) |
 
 ::: tip Link your accounts first
-Mattermost and Slack channels only work if you've linked your personal chat account. Go to **Profile → Connected Accounts** to link Slack or Mattermost before configuring those channels in your preferences.
+The Slack channel only works if you've linked your personal Slack account. Go to **Profile → Connected Accounts** to link Slack before configuring that channel in your preferences.
+:::
+
+::: warning Voice opt-out
+Each user has a separate **voice opt-out** flag (`voice_opt_out`). When enabled, voice calls are suppressed for that user even if a rule or escalation level includes the `voice` channel — useful for cost control or personal preference. Voice calls also require a phone number on file.
 :::
 
 ## Preference Structure
@@ -79,8 +83,8 @@ These are the most commonly configured notification types. The full list is avai
 5. Click **Save Preferences**
 6. Use **Send Test** to verify in-app delivery works
 
-::: warning Test notifications are limited
-The **Send Test** button only verifies in-app delivery — it does not test the full email, Slack, or Mattermost pipeline. To verify those channels are working, trigger a real notification (e.g., create a test incident assigned to yourself).
+::: warning Test notifications are in-app only
+The **Send Test** button (`POST /api/v1/users/me/notification-preferences/test`) is idempotent and creates an in-app test notification — it does not exercise the email, Slack, or voice pipelines. To verify those channels are working, trigger a real notification (e.g., create a test incident assigned to yourself).
 :::
 
 ## Best Practices
@@ -96,7 +100,7 @@ The **Send Test** button only verifies in-app delivery — it does not test the 
 |--------|------|------|-------------|
 | `GET` | `/api/v1/users/me/notification-preferences` | Session | Get current user's preferences |
 | `PUT` | `/api/v1/users/me/notification-preferences` | Session | Update preferences |
-| `POST` | `/api/v1/users/me/notification-preferences/test` | Session | Send test notification (in-app only) |
+| `POST` | `/api/v1/users/me/notification-preferences/test` | Session | Send test notification (in-app only, idempotent) |
 
 ## See Also
 

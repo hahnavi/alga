@@ -58,27 +58,83 @@ The frontend provides:
 - **Purpose:** Distributed state, caching, and coordination
 - **Features:**
   - Session storage (preferred)
-  - Alert deduplication
-  - Rate limiting
-  - Agent presence tracking
-  - Leader election
-  - Pub/sub for SSE fan-out
-  - SLA tracking (dedup keys)
-  - On-call caching
-  - Correlation windows
-  - Agent grace locks
+  - Agent presence (SSE session tracking, `AGENT_PRESENCE_TTL`)
+  - Leader election (investigation scheduler lease)
+  - Escalation state (sorted-set timers driving the escalation sweep)
+  - Idempotency replay cache (investigation dedup)
+  - Correlation cooldown (prevents duplicate investigations)
+  - Stuck-investigation dedup
+  - Cancel set (investigation cancellation)
+  - Pub/sub for cross-replica SSE fan-out
 
 #### RabbitMQ
 - **Purpose:** Async message queue with retry topology
 - **Features:**
-  - Alert processing
-  - Notification dispatch
-  - Audit logging
-  - SRE agent investigations
-  - Three retry levels with TTL backoff
-  - Dead-letter queue for failed messages
+  - 12 exchanges (one per async domain plus a dead-letter exchange)
+  - One processing queue per exchange, plus `alga.dead_letter`
+  - 4-stage retry queues per domain with TTL-based dead-lettering back to the main exchange
+  - Retry schedule of 1m → 5m → 15m → 1h with ±20% jitter
+  - Dead-letter queue for messages that exhaust retries
+
+## Workers
+
+Background processing is split between **queue-consuming workers** (driven by RabbitMQ deliveries) and **sweep workers** (timer-based loops). All workers are managed by a single `WorkerSet` that owns consumption, QoS prefetch, and reconnect backoff.
+
+### Queue-Consuming Workers
+
+| Worker | Queue | Prefetch | Responsibility |
+|--------|-------|----------|----------------|
+| **AlertWorker** | `alga.alert.process` | 10 | Processes inbound webhook alerts; 4x retry with backoff |
+| **AuditWorker** | `alga.audit.log` | 10 | Persists audit events |
+| **NotificationWorker** | `alga.notification.send` | 10 | Legacy stub; immediately acks (superseded by NotificationDispatchWorker) |
+| **InvestigateWorker** | `alga.investigate.process` | `MaxConcurrentInvestigations` | Creates investigation records, resolves threads, posts cross-provider links, publishes SSE. Two-layer idempotency (Valkey SETNX + PG unique index). Retry via `alga.investigate.retry.{1-4}` |
+| **IncidentWorker** | `alga.incident.process` | 1 | Creates incidents from correlated alerts, reserves number, computes priority/SLA, links alerts, creates timeline, auto-assigns IC from on-call, triggers escalation |
+| **EscalationWorker** | `alga.escalation.process` | 5 | Evaluates an escalation policy level, dispatches notifications, seeds Valkey state for the sweep |
+| **SLAWorker** | `alga.sla.sweep` | 1 | Sweeps SLA-eligible incidents for response/resolve breaches; triggers escalation on breach |
+| **NotificationDispatchWorker** | `alga.notification-dispatch.process` | 10 | Creates in-app notifications, publishes SSE, dispatches via email/Slack DM/voice/Mattermost; 4x retry |
+| **EmailWorker** | `alga.email.send` | 10 | Sends email via SMTP; 3x retry with linear backoff |
+| **ICSWorker** | `alga.ics-provision.process` | 1 | Provisions the war room (ICS channels/roles); 3x retry |
+
+### Sweep Workers (Timer-Based)
+
+| Worker | Tick | Responsibility |
+|--------|------|----------------|
+| **EscalationSweepWorker** | 10s | Claims expired entries from the Valkey sorted set and advances the escalation level |
+| **ActionItemSweepWorker** | 5min | Lists overdue action items |
+| **HeartbeatSweepWorker** | 30s | Finds expired heartbeats, marks agents unhealthy, ingests a synthetic alert |
+| **StuckInvestigationEscalationWorker** | 30s | Detects stuck investigations and escalates via policy |
+| **OutboxWorker** | 5s | Drains the transactional outbox, publishes to RabbitMQ, prunes old rows |
+
+### Investigation Scheduler
+
+The investigation scheduler dispatches pending investigations to online agents and runs the maintenance sub-loops that keep the pipeline healthy.
+
+- **Leader election:** Valkey lease (`SCHEDULER_LEADER_TTL`); only the leader runs scheduling ticks
+- **Main tick (5s):** dispatches pending investigations to online agents via **Filter → Score → Bind**
+- **Role assignment (every 3rd tick):** maps agent capabilities to ICS roles
+- **Sub-loops:** stale-alert sweep, data-retention prune, dispatch-attempt purge, on-call handoff detection, incident summary sweep, incident investigation sweep, coordination task sweep
+- **AgentHealthTracker:** sliding-window circuit breaker per agent
 
 ## Data Flow
+
+### End-to-End Pipeline
+
+The full path from alert ingestion to notification dispatch:
+
+```
+Webhook
+  └─► AlertWorker ──► dedup / route / deliver
+                        └─► correlate ──► triage
+                                            └─► InvestigateWorker
+                                                  └─► scheduler dispatch
+                                                        └─► agent SSE ──► agent API
+                                                                            └─► complete / promote
+                                                                                  └─► IncidentWorker
+                                                                                        └─► ICSWorker
+                                                                                              └─► EscalationWorker
+                                                                                                    └─► NotificationDispatchWorker
+                                                                                                          └─► EmailWorker
+```
 
 ### Alert Lifecycle
 
@@ -155,6 +211,15 @@ The frontend provides:
          │
          ▼
 ┌─────────────────┐
+│ InvestigateWorker│
+│ (Create record,  │
+│  idempotency,    │
+│  threads, links, │
+│  publish SSE)    │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
 │  Scheduler       │
 │  (Filter/Score/Bind)│
 └────────┬────────┘
@@ -210,17 +275,23 @@ The frontend provides:
 │  (Create incident)│
 └────────┬────────┘
          │
+         ├───► Reserve incident number
+         │
+         ├───► Compute priority + SLA targets
+         │
          ├───► Link alerts/investigations
          │
-         ├───► Resolve on-call responder
+         ├───► Create timeline
          │
-         ├───► Assign escalation policy
+         ├───► Auto-assign IC from on-call
          │
-         ├───► Compute SLA targets
+         └───► Trigger escalation
          │
-         ├───► ICS Role Assignment (IC, Operations Lead, Comms Lead)
-         │
-         └───► Slack Channel Provisioning (war room)
+         ▼
+┌─────────────────┐
+│  ICSWorker      │
+│  (Provision war room: channels/roles)│
+└────────┬────────┘
          │
          ▼
 ┌─────────────────┐
@@ -301,22 +372,22 @@ Playbooks are matched to investigations automatically during scheduling via **la
 
 RabbitMQ uses the following exchanges to route messages through the async pipeline:
 
-| Exchange | Purpose |
-|----------|---------|
-| `alga.alerts` | Alert webhook processing |
-| `alga.notifications` | Alert notification delivery |
-| `alga.audit` | Audit log persistence |
-| `alga.investigate` | Investigation dispatch |
-| `alga.triage` | Alert triage |
-| `alga.incidents` | Incident creation |
-| `alga.escalation` | Escalation execution |
-| `alga.sla` | SLA breach detection |
-| `alga.email` | Email delivery |
-| `alga.notification-dispatch` | Per-user notification dispatch |
-| `alga.ics-provision` | ICS war room provisioning |
-| `alga.dlx` | Dead letter collection |
+| Exchange | Type | Purpose |
+|----------|------|---------|
+| `alga.alerts` | direct | Alert webhook processing |
+| `alga.notifications` | direct | Alert notification delivery |
+| `alga.audit` | fanout | Audit log persistence |
+| `alga.email` | direct | Email delivery |
+| `alga.investigate` | direct | Investigation dispatch |
+| `alga.triage` | direct | Alert triage |
+| `alga.incidents` | direct | Incident creation |
+| `alga.escalation` | direct | Escalation execution |
+| `alga.sla` | direct | SLA breach detection |
+| `alga.notification-dispatch` | direct | Per-user notification dispatch |
+| `alga.ics-provision` | direct | ICS war room provisioning |
+| `alga.dlx` | direct | Dead letter collection |
 
-Each exchange routes to dedicated queues with retry topology (three retry levels with TTL backoff before dead-lettering).
+Each exchange routes to a dedicated processing queue plus `alga.dead_letter`. Domains that support retries (alert, investigate, triage, incident, escalation, notification-dispatch) add four retry queues (`<domain>.retry.{1-4}`). Failed messages are dead-lettered into the appropriate retry queue with a per-message TTL; when the TTL expires they return to the main exchange for reprocessing. The retry schedule is 1m → 5m → 15m → 1h with ±20% jitter, after which messages land in `alga.dead_letter`.
 
 ## Technology Stack
 
@@ -413,12 +484,15 @@ Alga is designed to scale horizontally when Valkey and RabbitMQ are configured:
 
 ### Retry Topology
 
-RabbitMQ retry queues with three levels:
+RabbitMQ retry queues use four stages per domain. Each stage dead-letters back to the main exchange after a jittered TTL:
 
-1. **Immediate retry:** Short delay (30s)
-2. **Short backoff:** Medium delay (2min)
-3. **Long backoff:** Long delay (5min)
-4. **Dead-letter:** Final failure, manual intervention required
+1. **Stage 1:** 1 minute
+2. **Stage 2:** 5 minutes
+3. **Stage 3:** 15 minutes
+4. **Stage 4:** 1 hour
+5. **Dead-letter:** final failure lands in `alga.dead_letter` for manual intervention
+
+Each delay is adjusted by ±20% jitter to avoid retry storms.
 
 ### Session Management
 

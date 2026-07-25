@@ -35,6 +35,8 @@ services:
 
   postgres:
     restart: always
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASS:?set POSTGRES_PASS in .env}
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -47,6 +49,7 @@ services:
 
   valkey:
     restart: always
+    command: valkey-server --save 60 1 --loglevel warning --requirepass ${VALKEY_PASSWORD:?set VALKEY_PASSWORD in .env}
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -59,6 +62,8 @@ services:
 
   rabbitmq:
     restart: always
+    environment:
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:?set RABBITMQ_PASS in .env}
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -71,6 +76,17 @@ services:
 
   backend:
     ports: !override []
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - SECURE_COOKIES=${SECURE_COOKIES:-false}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_FORMAT=json
+      - SESSION_EXPIRY_HOURS=${SESSION_EXPIRY_HOURS:-24}
+      - ENCRYPTION_KEYS=${ENCRYPTION_KEYS:?set ENCRYPTION_KEYS in .env}
+      - SECRET_PEPPER=${SECRET_PEPPER:?set SECRET_PEPPER in .env}
+      - POSTGRES_PASS=${POSTGRES_PASS:?set POSTGRES_PASS in .env}
+      - VALKEY_PASSWORD=${VALKEY_PASSWORD:?set VALKEY_PASSWORD in .env}
+      - RABBITMQ_PASS=${RABBITMQ_PASS:?set RABBITMQ_PASS in .env}
     security_opt:
       - no-new-privileges:true
     cap_drop:

@@ -15,8 +15,41 @@ Alga follows the Opsgenie deduplication model:
 
 Key concepts:
 - **Fingerprint** is a dedup key, not a unique identifier. Multiple resolved alerts can share the same fingerprint.
-- **Alert Number** is the true unique identifier for each alert.
-- Resolved alerts are never reopened *automatically* by the system, but they **can** be manually reopened via the API (`POST /api/v1/alerts/{alert_number}/reopen`) or the UI. A new firing alert with the same fingerprint creates a fresh alert record.
+- **Alert Number** is the true unique identifier for each alert, assigned sequentially via the counters table.
+- Resolved alerts are never reopened *automatically* by the system, but they **can** be manually reopened via the API (`POST /api/v1/alerts/{alert_number}/reopen`) or the UI. Reopening resets the alert from `resolved` back to `firing` and can revive a terminal investigation (except `promoted` — a promoted investigation is irreversible). A new firing alert with the same fingerprint creates a fresh alert record.
+
+### Alert Fields
+
+| Field | Description |
+|-------|-------------|
+| `alert_number` | Sequential unique identifier (from counters table) |
+| `fingerprint` | Dedup key for correlating related alerts |
+| `status` | `firing` or `resolved` |
+| `acknowledged` | Whether the alert has been acknowledged |
+| `silenced` | Whether the alert is silenced |
+| `labels` | Key-value label map (e.g., alertname, severity, namespace) |
+| `annotations` | Key-value annotation map (e.g., summary, description) |
+| `values` | Metric values associated with the alert |
+| `starts_at` | When the alert started firing |
+| `ends_at` | When the alert was resolved |
+| `generator_url` | Link back to the source (e.g., Grafana) |
+| `triage_result_id` | Linked triage result (if triaged) |
+| `enrichment` | Enriched metadata from triage or agents |
+| `triage_category` | Category assigned by triage |
+| `severity_classified` | Severity determined by triage |
+| `deleted_at` | Soft-delete tombstone timestamp (null if active) |
+
+### Soft Delete
+
+Alerts use a **soft delete** model: deleting an alert sets the `deleted_at` timestamp rather than removing the row. Soft-deleted alerts are excluded from normal queries but remain in the database for audit and retention purposes.
+
+### Partial Unique Index
+
+A partial unique index enforces **one open alert per fingerprint**: only one alert with a given fingerprint may exist where `status != resolved AND deleted_at IS NULL`. This prevents duplicate firing alerts for the same source while allowing historical resolved records to accumulate.
+
+### Resolve Cascade
+
+Resolving an incident automatically resolves all linked firing alerts associated with that incident.
 
 ## Ingestion
 
@@ -115,6 +148,18 @@ The `source` field defaults to `grafana` for webhook alerts. Manual alerts use `
 
 Agent endpoints use fingerprint-based routing — see [Agent REST API](/api-reference/#agent-rest-api).
 
+## Alert Events
+
+Each alert tracks a timeline of events (acknowledge, resolve, reopen, investigate, etc.). Each event records:
+
+| Field | Description |
+|-------|-------------|
+| `type` | Event type (e.g., `acknowledged`, `resolved`, `reopened`, `investigation_started`) |
+| `timestamp` | When the event occurred |
+| `actor_type` | Who performed the action (`user`, `agent`, `system`) |
+| `actor_id` | Identifier of the actor |
+| `source` | Origin of the event (e.g., `api`, `webhook`, `scheduler`) |
+
 ## Alert Search
 
 Full-text search across alert summaries, labels, and annotations:
@@ -127,12 +172,13 @@ The `search` query parameter matches against alert summaries, label values, and 
 
 ## Alert Threads
 
-Each alert has a dedicated owner thread for operator discussion. Thread messages support real-time updates via SSE.
+Each alert has a dedicated **owner-thread** for operator discussion. Thread messages support real-time updates via SSE.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/api/v1/alerts/{alert_number}/thread` | Get thread with messages |
 | `POST` | `/api/v1/alerts/{alert_number}/thread/messages` | Add a message to the thread |
+| `POST` | `/api/v1/alerts/{alert_number}/thread/typing` | Typing indicator |
 
 New messages are pushed to connected clients over the SSE stream (`GET /api/v1/events`), so the thread UI updates in real time without polling.
 
@@ -154,13 +200,24 @@ The correlator:
 1. Buffers incoming alerts by correlation key
 2. Waits for the window to expire
 3. Creates a single investigation covering all correlated alerts
-4. Honors `CORRELATION_COOLDOWN_TTL` to prevent duplicate investigations
+4. Honors `CORRELATION_COOLDOWN_TTL` (default `30m`) to prevent duplicate investigations on the same key
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CORRELATION_WINDOW` | `0` (disabled) | Time window for grouping related alerts |
+| `CORRELATION_COOLDOWN_TTL` | `30m` | Cooldown before a new investigation opens on the same correlation key |
 
 ## Delivery Targets
 
 Alerts track where they were delivered — Mattermost post IDs, Slack message timestamps, and other delivery references. This enables bidirectional sync: replies in Mattermost or Slack threads are reflected back into Alga, and Alga updates are pushed to the original channel post.
 
-The `delivery_targets` relation on each alert stores the provider, channel, and external post/message ID for each delivery.
+Each delivery target stores:
+
+| Field | Description |
+|-------|-------------|
+| `provider` | Delivery provider (e.g., `mattermost`, `slack`) |
+| `channel` | Channel or conversation ID |
+| `post_id` | External post/message ID in the provider |
 
 ## Maintenance Window Suppression
 
@@ -176,6 +233,15 @@ Configure maintenance windows under **Routes → Maintenance Windows** or via th
 | `DELETE` | `/api/v1/maintenance-windows/{id}` | Delete maintenance window |
 
 Each window has a start time, end time, and optional label selectors to scope suppression to specific alerts.
+
+## Stale Alert Sweep
+
+A background sweeper detects firing alerts that have not been investigated within a configurable threshold and marks them as stale candidates for re-investigation.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `STALE_ALERT_THRESHOLD` | `15m` | Alert age before the stale sweep considers it uninvestigated |
+| `STALE_ALERT_SWEEP_INTERVAL` | `5m` | How often the stale sweep runs |
 
 ## Data Retention
 

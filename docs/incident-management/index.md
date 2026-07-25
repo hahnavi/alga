@@ -13,40 +13,39 @@ Incidents follow a state machine from creation through closure:
 
 ```
 detected → triaging → active → mitigated → resolved → closed
-              ↘ active ↗
-active → cancelled
-mitigated → active (reopened)
-resolved → active (reopened)
-closed → active (reopened)
+active → cancelled (terminal)
 ```
+
+`resolved`, `closed`, and `cancelled` are terminal states. Status transitions use optimistic concurrency (`WHERE status IN fromStatuses`), so concurrent transitions fail with a conflict instead of corrupting state. Deletion is a soft delete via a `deleted_at` tombstone.
 
 See [Lifecycle & States](/incident-management/lifecycle) for the full state machine, transition triggers, and automatic actions.
 
 ## Key Concepts
 
 - **Detected State**: Incidents start in `detected` state, awaiting triage
-- **Triage Flow**: Detected incidents undergo triage before being promoted to active — see [Triage](#triage)
-- **SLA Targets**: Computed from severity or service config (`sla_target_respond_at`, `sla_target_resolve_at`)
-- **Escalation**: Policy-driven multi-tier escalation with configurable delays. Acknowledgement stops escalation
-- **Service Status**: Incident transitions update affected service status (operational → degraded → major_outage)
-- **Dependency Cascade**: Incidents on a service auto-create timeline entries for dependent services
-- **ICS Role Assignments**: Formal ICS (Incident Command System) roles for structured command — see [ICS Roles](/incident-management/ics-roles)
-- **Coordination Threads**: Real-time coordination messages between incident responders — see [Coordination](/incident-management/coordination)
-- **Incident Documents**: Structured documents attached to incidents for runbooks, notes, and reference material
-- **Status Updates**: Formal status updates posted during incident response for stakeholder communication
-- **IC Handoffs**: Structured handoff process for transferring incident commander responsibility — see [Handoffs](/incident-management/handoffs)
+- **Triage Flow**: `begin-triage` moves a detected incident to `triaging`; `promote` moves a triaging incident to `active`
+- **SLA Targets**: `sla_target_respond_at` and `sla_target_resolve_at` are computed from the service SLA config at creation
+- **Escalation**: Policy-driven multi-tier escalation. The SLA worker triggers escalation on a response breach; acknowledgement stops escalation
+- **ICS Role Assignments**: Formal ICS (Incident Command System) roles — commander, communicator, responder — for structured command. Users and agents can hold roles. See [ICS Roles](/incident-management/ics-roles)
+- **Coordination**: Real-time coordination messages, typed coordination tasks, and public status updates — see [Coordination](/incident-management/coordination)
+- **Incident Documents**: Section-based collaborative documents (current status, impact, root cause, resolution, etc.) with per-section versioning
+- **IC Handoffs**: Structured handoff process for transferring on-call responsibility — see [Handoffs](/incident-management/handoffs)
+- **Alert Linking**: Alerts can be linked to and unlinked from incidents; resolving an incident cascades `resolved` to linked firing alerts
+- **Incident Investigations**: Investigations scoped to an incident with their own lifecycle; only one active investigation per incident is enforced
 
 ## Creating Incidents
 
 Incidents can be created:
-1. **Automatically** via the triage worker when correlated alerts are classified as incident-worthy
-2. **Manually** via `POST /api/v1/incidents` or the Incidents page
+1. **Manually** via `POST /api/v1/incidents` or the Incidents page
+2. **By promotion** — `promote` creates an incident from an alert investigation/triage flow
 
 ## Incident Roles
 
-Alga uses the Incident Command System (ICS) for structured incident response — Incident Commander, Comms Lead, and Responder. See [ICS Roles](/incident-management/ics-roles).
+Alga uses the Incident Command System (ICS) for structured incident response — Incident Commander, Communicator, and Responder. Both users and agents can be assigned roles. See [ICS Roles](/incident-management/ics-roles).
 
 ## API Endpoints
+
+Incident routes are addressed by `incident_number` (the human-readable unique number), not the internal UUID.
 
 ### Incident Management
 | Method | Path | Auth | Permission | Description |
@@ -55,18 +54,24 @@ Alga uses the Incident Command System (ICS) for structured incident response —
 | `POST` | `/api/v1/incidents` | Session | `incidents:write` | Create manual incident |
 | `GET` | `/api/v1/incidents/{id}` | Session | `incidents:read` | Get incident with timeline, roles, linked items |
 | `PATCH` | `/api/v1/incidents/{id}` | Session | `incidents:write` | Update (title, description, severity, custom_fields) |
-| `DELETE` | `/api/v1/incidents/{id}` | Session | `incidents:delete` | Delete incident |
+| `DELETE` | `/api/v1/incidents/{id}` | Session | `incidents:delete` | Soft-delete incident (`deleted_at` tombstone) |
 
 ### Incident Actions
 | Method | Path | Auth | Permission | Description |
 |--------|------|------|------------|-------------|
-| `POST` | `/api/v1/incidents/{id}/acknowledge` | Session | `incidents:command` | Acknowledge (stops escalation, starts SLA clock) |
-| `POST` | `/api/v1/incidents/{id}/mitigate` | Session | `incidents:command` | Mark mitigated |
-| `POST` | `/api/v1/incidents/{id}/resolve` | Session | `incidents:command` | Mark resolved |
-| `POST` | `/api/v1/incidents/{id}/close` | Session | `incidents:command` | Mark closed |
-| `POST` | `/api/v1/incidents/{id}/reopen` | Session | `incidents:command` | Reopen resolved/mitigated |
-| `POST` | `/api/v1/incidents/{id}/cancel` | Session | `incidents:command` | Cancel (false alarm) |
+| `POST` | `/api/v1/incidents/{id}/acknowledge` | Session | `incidents:command` | Acknowledge (stops escalation, sets `sla_acknowledged_at`) |
+| `POST` | `/api/v1/incidents/{id}/mitigate` | Session | `incidents:command` | Mark mitigated (sets `mitigated_at`) |
+| `POST` | `/api/v1/incidents/{id}/resolve` | Session | `incidents:command` | Mark resolved (sets `resolved_at`/`sla_resolved_at`, cascades to linked alerts) |
+| `POST` | `/api/v1/incidents/{id}/close` | Session | `incidents:command` | Mark closed (sets `closed_at`) |
+| `POST` | `/api/v1/incidents/{id}/reopen` | Session | `incidents:command` | Reopen a resolved/mitigated/closed incident |
+| `POST` | `/api/v1/incidents/{id}/cancel` | Session | `incidents:command` | Cancel (terminal, false alarm) |
 | `POST` | `/api/v1/incidents/{id}/escalate` | Session | `incidents:command` | Manual escalation trigger |
+
+### Triage
+| Method | Path | Auth | Permission | Description |
+|--------|------|------|------------|-------------|
+| `POST` | `/api/v1/incidents/{id}/begin-triage` | Session | `incidents:command` | Begin triage (`detected` → `triaging`) |
+| `POST` | `/api/v1/incidents/{id}/promote` | Session | `incidents:command` | Promote to active (`triaging` → `active`) |
 
 ### Timeline
 | Method | Path | Auth | Permission | Description |
@@ -74,26 +79,31 @@ Alga uses the Incident Command System (ICS) for structured incident response —
 | `GET` | `/api/v1/incidents/{id}/timeline` | Session | `incidents:read` | Get structured timeline |
 | `POST` | `/api/v1/incidents/{id}/timeline` | Session | `incidents:write` | Add manual timeline entry |
 
-### Linked Items
+Timeline entries carry `event_type`, `actor_id`, `actor_type` (`system`/`user`/`agent`), `message`, `metadata`, and an optional `ics_event_type`.
+
+### Linked Alerts
 | Method | Path | Auth | Permission | Description |
 |--------|------|------|------------|-------------|
 | `GET` | `/api/v1/incidents/{id}/alerts` | Session | `incidents:read` | List linked alerts |
 | `POST` | `/api/v1/incidents/{id}/alerts` | Session | `incidents:write` | Link alert |
-| `DELETE` | `/api/v1/incidents/{id}/alerts/{fp}` | Session | `incidents:write` | Unlink alert |
+| `DELETE` | `/api/v1/incidents/{id}/alerts/{alert_number}` | Session | `incidents:write` | Unlink alert |
+
+### Incident Investigations
+| Method | Path | Auth | Permission | Description |
+|--------|------|------|------------|-------------|
 | `GET` | `/api/v1/incidents/{id}/investigations` | Session | `incidents:read` | List investigations under incident |
 | `POST` | `/api/v1/incidents/{id}/investigations` | Session | `incidents:write` | Create investigation under incident |
+| `PATCH` | `/api/v1/incident-investigations/{id}/assign` | Session | `incidents:write` | Assign an incident investigation |
+
+Incident investigations follow `pending → assigned → investigating → complete/cancelled/paused/coordinating`. Only one active investigation per incident is enforced, and parent/child investigations are supported.
 
 ### Coordination
 | Method | Path | Auth | Permission | Description |
 |--------|------|------|------------|-------------|
-| `GET` | `/api/v1/incidents/{id}/coordination` | Session | `incidents:read` | List coordination messages |
-| `POST` | `/api/v1/incidents/{id}/coordination` | Session | `incidents:write` | Add coordination message |
-
-### Investigation Thread
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `GET` | `/api/v1/incidents/{id}/thread` | Session | `incidents:read` | Get investigation thread |
-| `POST` | `/api/v1/incidents/{id}/thread/messages` | Session | `incidents:write` | Add thread message |
+| `GET` | `/api/v1/incidents/{id}/coordination/messages` | Session | `incidents:read` | List coordination messages |
+| `POST` | `/api/v1/incidents/{id}/coordination/messages` | Session | `incidents:write` | Add coordination message |
+| `GET` | `/api/v1/incidents/{id}/coordination/tasks` | Session | `incidents:read` | List coordination tasks |
+| `POST` | `/api/v1/incidents/{id}/coordination/tasks` | Session | `incidents:write` | Create coordination task |
 
 ### Status Updates
 | Method | Path | Auth | Permission | Description |
@@ -101,31 +111,31 @@ Alga uses the Incident Command System (ICS) for structured incident response —
 | `GET` | `/api/v1/incidents/{id}/status-updates` | Session | `incidents:read` | List status updates |
 | `POST` | `/api/v1/incidents/{id}/status-updates` | Session | `incidents:command` | Create status update |
 
-### Incident Document
+### Incident Document (ICS)
 | Method | Path | Auth | Permission | Description |
 |--------|------|------|------------|-------------|
-| `GET` | `/api/v1/incidents/{id}/document` | Session | `incidents:read` | Get document |
-| `PATCH` | `/api/v1/incidents/{id}/document/{section}` | Session | `incidents:write` | Update section |
+| `GET` | `/api/v1/incidents/{id}/ics/document` | Session | `incidents:read` | Get all document sections |
+| `PUT` | `/api/v1/incidents/{id}/ics/document/{section}` | Session | `incidents:write` | Update a single section (version-checked) |
 
 ### ICS Roles
 | Method | Path | Auth | Permission | Description |
 |--------|------|------|------------|-------------|
 | `GET` | `/api/v1/incidents/{id}/ics/roles` | Session | `incidents:read` | List ICS role assignments |
 | `POST` | `/api/v1/incidents/{id}/ics/roles` | Session | `incidents:command` | Assign ICS role |
-| `POST` | `/api/v1/incidents/{id}/ics/handoff` | Session | `incidents:command` | IC handoff |
-| `POST` | `/api/v1/incidents/{id}/ics/handoff/{handoffId}/acknowledge` | Session | `incidents:command` | Acknowledge handoff |
-
-### Triage
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `POST` | `/api/v1/incidents/{id}/begin-triage` | Session | `incidents:command` | Begin triage |
-| `POST` | `/api/v1/incidents/{id}/promote` | Session | `incidents:command` | Promote to active |
+| `PATCH` | `/api/v1/incidents/{id}/ics/roles/{roleId}` | Session | `incidents:command` | Update ICS role assignment |
+| `DELETE` | `/api/v1/incidents/{id}/ics/roles/{roleId}` | Session | `incidents:command` | End ICS role assignment |
 
 ### Slack Incident Channels
 | Method | Path | Auth | Permission | Description |
 |--------|------|------|------------|-------------|
-| `POST` | `/api/v1/incidents/{id}/slack-channel` | Session | `incidents:command` | Create Slack channel for incident |
-| `DELETE` | `/api/v1/incidents/{id}/slack-channel` | Session | `incidents:command` | Unlink Slack channel from incident |
+| `POST` | `/api/v1/incidents/{id}/slack-channel` | Session | `incidents:command` | Create dedicated Slack channel |
+| `DELETE` | `/api/v1/incidents/{id}/slack-channel` | Session | `incidents:command` | Delete/unlink Slack channel |
+
+### Google Meet
+| Method | Path | Auth | Permission | Description |
+|--------|------|------|------------|-------------|
+| `POST` | `/api/v1/incidents/{id}/google-meet` | Session | `incidents:command` | Create Google Meet space |
+| `DELETE` | `/api/v1/incidents/{id}/google-meet` | Session | `incidents:command` | Unlink Google Meet space |
 
 ### Metrics
 | Method | Path | Auth | Permission | Description |
@@ -134,20 +144,23 @@ Alga uses the Incident Command System (ICS) for structured incident response —
 
 ## SLA Tracking
 
-Alga tracks SLA compliance using Valkey sorted sets — see [SLA Tracking](/incident-management/sla) for configuration and breach detection.
+Alga computes SLA deadlines at creation and a background SLA worker sweeps for breaches — see [SLA Tracking](/incident-management/sla) for configuration and breach detection.
 
 ## Agent API Endpoints
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | `GET` | `/api/v1/agent/incidents/{id}` | Bearer | Get incident context |
+| `GET` | `/api/v1/agent/incidents/{id}/timeline` | Bearer | Get incident timeline |
 | `POST` | `/api/v1/agent/incidents/{id}/timeline` | Bearer | Add timeline entry |
+| `GET` | `/api/v1/agent/incidents/{id}/tasks` | Bearer | List coordination tasks for the agent |
+| `PATCH` | `/api/v1/agent/incidents/{id}` | Bearer | Update incident (requires investigate capability) |
 
 ## See Also
 
 - [Lifecycle & States](/incident-management/lifecycle) — state machine and transitions
 - [ICS Roles](/incident-management/ics-roles) — ICS role assignments and handoffs
-- [Coordination](/incident-management/coordination) — coordination threads
-- [Handoffs](/incident-management/handoffs) — IC handoff process
+- [Coordination](/incident-management/coordination) — coordination messages, tasks, and status updates
+- [Handoffs](/incident-management/handoffs) — on-call handoff process
 - [SLA Tracking](/incident-management/sla) — SLA configuration and breach detection
 - [Post-Mortems](/incident-management/post-mortems) — structured post-incident review

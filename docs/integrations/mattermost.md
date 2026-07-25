@@ -97,6 +97,21 @@ When the plugin is installed and configured:
 
 This means your team can collaborate on an alert entirely from Mattermost, and everything they say is preserved in the Alga investigation record.
 
+## Bot Methods
+
+The Mattermost integration exposes these internal methods:
+
+| Method | Description |
+|--------|-------------|
+| `CreatePost` | Post a message to a channel |
+| `ReplyToPost` | Post a threaded reply under an existing post |
+| `GetChannelByName` | Resolve a channel by name within the configured team |
+| `TestConnection` | Verify the server URL and webhook secret are valid |
+
+## Webhook Inbound
+
+Thread replies from Mattermost are delivered to Alga via the inbound webhook handler (`webhook/mattermost.go`). The Mattermost plugin forwards post events to Alga, authenticated by the shared `MATTERMOST_WEBHOOK_SECRET`.
+
 ## User-Level Binding
 
 Individual users can link their personal Mattermost account to receive DM notifications. Go to **Profile → Connected Accounts** to link your Mattermost account. Once linked, [notification preferences](/on-call/notification-preferences) can route specific notification types to Mattermost DMs.

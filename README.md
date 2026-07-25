@@ -63,6 +63,9 @@ docker compose up -d
 
 Open [http://localhost:3000](http://localhost:3000) and complete the setup wizard to create the initial admin account (email, password, and full name). The wizard is only available the first time, before any admin exists.
 
+> **Contributors:** to build images from source instead of pulling from GHCR, use
+> `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build`.
+
 ### Send a test alert
 
 1. Create a webhook token from the dashboard under **Tokens** (or via `alga webhook-token generate`).

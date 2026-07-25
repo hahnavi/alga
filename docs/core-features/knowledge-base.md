@@ -40,10 +40,14 @@ curl -b cookies.txt -X POST http://localhost:8080/api/v1/knowledge \
 
 | Field | Description |
 |-------|-------------|
+| `kind` | Note category (e.g., operator note vs episodic knowledge) |
 | `title` | Human-readable title |
 | `body_markdown` | Markdown content with details, steps, and context |
 | `tags` | Labels for categorization and search |
 | `selectors` | Array of condition objects (e.g., `[{"field": "namespace", "operator": "exact", "value": "production"}]`) for matching alert labels |
+| `author_id` / `author_type` / `author_name` | Who authored the note (`author_type` is `user` or `agent`) |
+| `source_investigation_id` | Investigation the note was derived from (for agent-authored notes) |
+| `confidence` | Optional confidence score (0–1) for agent-authored notes |
 | `expires_at` | Optional expiry timestamp (RFC3339 format, auto-deletes after this time) |
 
 ### Search Notes

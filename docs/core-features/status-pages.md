@@ -13,7 +13,7 @@ When an incident is active, stakeholders want answers: *What's affected? How bad
 
 ## Concepts
 
-- **Status Page** — a named page with a unique slug, visibility setting, and an owning team
+- **Status Page** — a named page with a unique slug, optional description, visibility setting, an `enabled` toggle, and an owning team
 - **Component** — a trackable item on the page (e.g., "API", "Web Dashboard", "Database"). Each component has its own status and can optionally reference a [service](/service-management/) via `service_id`
 - **Overall status** — derived automatically as the **worst** component status on the page
 
@@ -37,10 +37,16 @@ Component statuses are set explicitly via the API or UI. Linking a component to 
 
 ## Visibility
 
-| Visibility | Who Can See It | Use Case |
-|------------|----------------|----------|
-| `internal` | Authenticated Alga users only (default) | Internal operations dashboard, team-awareness pages |
-| `public` | Anyone with the URL — no auth required | Customer-facing status page, stakeholder updates |
+Each page carries a `visibility` of `internal` (default) or `public`. This marks the page's intended audience:
+
+| Visibility | Intended Audience | Use Case |
+|------------|-------------------|----------|
+| `internal` | Operators | Internal operations dashboard, team-awareness pages |
+| `public` | Customers / stakeholders | Customer-facing status page, stakeholder updates |
+
+::: warning Public access is not yet unauthenticated
+All status page API routes currently require authentication (a session or personal access token) and the `statuspages:read` permission. The `public` visibility is a classification marker; Alga does not yet serve an unauthenticated public endpoint for `public` pages.
+:::
 
 ## Creating a Status Page
 

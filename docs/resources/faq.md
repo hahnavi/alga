@@ -176,17 +176,20 @@ curl -X POST http://localhost:8080/api/v1/alerts \
 
 **API:** `POST /api/v1/alerts/{alert_number}/acknowledge`
 **Web UI:** Click "Acknowledge" button
-**Slack:** Use `/alga ack {fingerprint}` command
+**Slack:** Click the **Acknowledge** button on the alert notification message
 
 ### How do I set up on-call schedules?
 
+On-call schedules are **auto-provisioned one per team** — creating a team creates its schedule. You configure coverage by editing the schedule's rotation layers:
+
 **API:**
 ```bash
-curl -X POST http://localhost:8080/api/v1/on-call/schedules \
-  -d '{"name": "Primary", "rotation_period_days": 7}'
+curl -X PATCH http://localhost:8080/api/v1/on-call/schedules/{schedule_id} \
+  -H "Content-Type: application/json" \
+  -d '{"layers": [{"name": "Primary", "rotation_type": "weekly", "user_ids": ["<user_id>"]}]}'
 ```
 
-**Web UI:** Navigate to On-Call page → "Create Schedule"
+**Web UI:** Navigate to On-Call → Schedules and edit the team's schedule layers.
 
 ### How do escalation policies work?
 
@@ -196,14 +199,14 @@ Multi-tier escalation with delays:
 {
   "name": "Critical Escalation",
   "levels": [
-    {"delay_minutes": 5, "targets": [{"type": "on_call"}]},
-    {"delay_minutes": 10, "targets": [{"type": "team"}]},
-    {"delay_minutes": 15, "targets": [{"type": "user"}]}
+    {"level_number": 1, "delay_minutes": 5, "targets": [{"target_type": "team", "target_team_id": "<team_id>"}]},
+    {"level_number": 2, "delay_minutes": 10, "targets": [{"target_type": "team", "target_team_id": "<team_id>"}]},
+    {"level_number": 3, "delay_minutes": 15, "targets": [{"target_type": "user", "target_user_id": "<user_id>"}]}
   ]
 }
 ```
 
-Escalation stops when incident is acknowledged.
+A `team` target resolves to whoever is currently on call for that team's schedule. Escalation stops when the incident is acknowledged.
 
 ### What are playbooks?
 
@@ -219,7 +222,7 @@ When an investigation fails repeatedly, it passes through Alga's RabbitMQ retry 
 
 ### How do handoffs work?
 
-**Handoffs** provide structured on-call shift transitions. When an on-call engineer's shift ends, Alga can generate a handoff summary that includes: active incidents and their current status, ongoing investigations and their progress, any pending escalations, and freeform notes from the outgoing engineer. Handoffs are triggered based on the on-call schedule configuration and `ON_CALL_REMIND_ENABLED` / `ON_CALL_REMIND_MINUTES` settings. The incoming engineer receives the handoff via their configured notification channels (in-app, email, Slack, or Mattermost).
+**Handoffs** provide structured on-call shift transitions. A background detector watches each team's on-call schedule; when the resolved on-call user changes (a shift transition), Alga generates a handoff record capturing the outgoing and incoming responders, an incident summary, and space for notes. The outgoing engineer can save outgoing notes (open issues, items to watch), the incoming engineer saves incoming notes, and the incoming engineer explicitly acknowledges the handoff. Pending (unacknowledged) handoffs are surfaced prominently. The incoming engineer is notified through their configured notification channels (in-app, email, Slack, or voice).
 
 ### What are personal access tokens?
 
@@ -244,7 +247,7 @@ Performance depends on database indexing, RabbitMQ sizing, and network bandwidth
 
 ### How do I monitor Alga performance?
 
-Alga exposes metrics at `/debug/vars`:
+Alga exposes Prometheus metrics at `/metrics`:
 
 - `alga_correlator_*` - Correlator metrics
 - `alga_scheduler_*` - Scheduler metrics
@@ -331,14 +334,9 @@ Yes! The MIT License permits commercial use without licensing fees.
 4. Verify routing rules match your alerts
 5. Check logs for Slack delivery errors
 
-### How do I use Slack slash commands?
+### How do I act on alerts from Slack?
 
-Alga supports these commands:
-
-- `/alga ack {fingerprint}` - Acknowledge alert
-- `/alga resolve {fingerprint}` - Resolve alert
-- `/alga investigate {fingerprint}` - Trigger investigation
-- `/alga status` - Show status
+Alga attaches **interactive buttons** to alert notification messages in Slack (e.g., **Acknowledge**, **Resolve**). Click a button to perform the action — no slash commands are required. Button clicks are routed back to Alga via the Slack interaction endpoint.
 
 ### Why is Slack text truncated?
 

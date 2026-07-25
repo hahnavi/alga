@@ -53,6 +53,20 @@ SMTP-based email notifications for alert delivery, investigation updates, and pa
 
 - [OIDC SSO](/integrations/oidc-sso) — Single sign-on via Okta, Keycloak, Google, Auth0, and other OIDC IdPs
 
+## Notification Dispatcher
+
+Alga uses a central notification dispatcher that resolves per-user preferences and fans out to multiple channels:
+
+| Channel | Delivery | Notes |
+|---------|----------|-------|
+| `in_app` | SSE (real-time browser push) | Always available |
+| `email` | SMTP via `EmailWorker` | Requires `SMTP_HOST` |
+| `slack` | DM to user's linked Slack account | Requires user-level Slack binding |
+| `voice` | Phone call via Twilio or Telnyx | Per-incident-user-level Valkey dedup; users can opt out |
+| `mattermost` | Placeholder | Not yet fully implemented |
+
+Users configure which channels receive which notification types via **Profile → Notification Preferences**.
+
 ## Alert Sources
 
 Alga accepts alerts from any source that can send HTTP webhooks. Built-in compatibility with:

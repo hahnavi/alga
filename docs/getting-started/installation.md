@@ -16,17 +16,19 @@ cd alga
 docker compose up -d
 ```
 
-`setup.sh` generates `ENCRYPTION_KEY` and `SECRET_PEPPER` in `apps/backend/.env`. The admin account is **not** seeded automatically: on first boot with no users in the database, open `http://localhost:3000` and complete the setup wizard to create the initial admin account (email, password, and full name).
+`setup.sh` generates `ENCRYPTION_KEYS` and `SECRET_PEPPER` in `apps/backend/.env`. The admin account is **not** seeded automatically: on first boot with no users in the database, open `http://localhost:3000` and complete the setup wizard to create the initial admin account (email, password, and full name).
 
 ### Services
 
 | Service | Image | Port | Purpose |
 |---------|-------|------|---------|
-| `postgres` | postgres:18-alpine | 5432 | PostgreSQL database |
+| `postgres` | pgvector/pgvector:pg18 | 5432 | PostgreSQL database (with pgvector) |
 | `valkey` | valkey/valkey:9.1-alpine | 6379 | Sessions, caching, leader election |
 | `rabbitmq` | rabbitmq:4.3.3-management-alpine | 5672, 15672 | Async message queue |
-| `backend` | Built locally | 8080 | Go API server |
-| `frontend` | Built locally | 3000 | Vue web UI (nginx) |
+| `backend` | ghcr.io/hahnavi/alga-backend | 8080 | Go API server |
+| `frontend` | ghcr.io/hahnavi/alga-frontend | 3000 | Vue web UI (nginx) |
+
+Pin a specific release by setting `ALGA_VERSION=v1.2.3` in `.env`.
 
 ### Verify
 
@@ -36,6 +38,14 @@ curl http://localhost:8080/health
 ```
 
 Open `http://localhost:3000` and complete the setup wizard to create the initial admin account. The onboarding wizard then walks you through connecting integrations and configuring routing rules.
+
+### Building from Source
+
+Contributors who need to build images locally:
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+```
 
 ## Manual Installation
 

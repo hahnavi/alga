@@ -39,12 +39,13 @@ Each notification is dispatched to all channels enabled in the user's preference
 
 | Channel | Description |
 |---------|-------------|
-| In-app | Notification bell dropdown, pushed via SSE |
-| Email | SMTP-delivered email notification |
-| Mattermost DM | Direct message via Mattermost plugin |
-| Slack DM | Direct message via Slack bot |
+| In-app (`in_app`) | Notification bell dropdown, pushed via SSE |
+| Email (`email`) | SMTP-delivered email notification |
+| Slack DM (`slack`) | Direct message via Slack bot |
+| Voice (`voice`) | Phone call with IVR menu (requires a phone number; respects voice opt-out) |
+| Mattermost (`mattermost`) | Placeholder — accepted but not yet delivered |
 
-The dispatcher resolves each user's preferences and dispatches to all enabled channels in parallel. If a channel is unavailable (e.g., Slack not configured), it is silently skipped.
+The dispatcher resolves each user's preferences and dispatches to all enabled channels. If a channel is unavailable (e.g., Slack not configured), it is skipped and logged.
 
 ## @Mentions
 
@@ -73,13 +74,7 @@ Notifications are pushed to the frontend in real-time via SSE (`GET /api/v1/even
 
 ## Notification Preferences
 
-Each user configures their own preferences:
-
-| Setting | Options |
-|---------|---------|
-| Channels | In-app, email, Mattermost, Slack |
-| Severity filter | info, warning, critical |
-| Quiet hours | Suppress non-critical during specific times |
+Each user configures their own preferences as a set of rules mapping a `notification_type` to one or more channels (`in_app`, `email`, `slack`, `voice`), with a `default_channel` fallback for types without an explicit rule. A separate per-user **voice opt-out** flag suppresses voice calls regardless of rules.
 
 | Method | Path | Description |
 |--------|------|-------------|

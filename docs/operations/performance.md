@@ -88,30 +88,25 @@ For production:
 | Queue | Purpose | Prefetch |
 |-------|---------|----------|
 | `alga.alert.process` | Alert processing | 10 |
-| `alga.investigate.process` | Investigation dispatch | 3 |
-| `alga.triage.process` | Triage decisions | 10 |
-| `alga.incident.process` | Incident management | 10 |
-| `alga.escalation.process` | Escalation processing | 10 |
-| `alga.sla.sweep` | SLA breach detection | 10 |
+| `alga.investigate.process` | Investigation dispatch | `MAX_CONCURRENT_INVESTIGATIONS` (default 5) |
+| `alga.triage.process` | Triage decisions | 5 |
+| `alga.incident.process` | Incident management | 1 |
+| `alga.escalation.process` | Escalation processing | 5 |
+| `alga.sla.sweep` | SLA breach detection | 1 |
 | `alga.email.send` | Email delivery | 10 |
 | `alga.notification-dispatch.process` | Notification dispatching | 10 |
 | `alga.notification.send` | Notification sending | 10 |
-| `alga.audit.log` | Audit logging | 20 |
+| `alga.audit.log` | Audit logging | 10 |
 
 ### Retry Topology
 
-Per-domain retry chains with TTL values:
+Every domain (alert, investigate, triage, incident, escalation, notification-dispatch) shares a single authoritative retry schedule: four retry queues with exponential backoff, after which the message is dead-lettered to the terminal DLQ.
 
-| Domain | retry.1 | retry.2 | retry.3 | DLQ |
-|--------|---------|---------|---------|-----|
-| Alert | 30s | 2min | 5min | Dead-letter |
-| Investigate | 60s | 5min | 15min | Dead-letter |
-| Triage | 30s | 2min | 5min | Dead-letter |
-| Incident | 60s | 5min | 15min | Dead-letter |
-| Escalation | 30s | 2min | 5min | Dead-letter |
-| Notification-dispatch | 30s | 2min | 5min | Dead-letter |
+| Stage | retry.1 | retry.2 | retry.3 | retry.4 | Then |
+|-------|---------|---------|---------|---------|------|
+| Backoff | 1min | 5min | 15min | 1h | Dead-letter |
 
-Tune retry counts and TTLs based on your error patterns.
+Each backoff has ±20% jitter applied so correlated failures do not re-deliver in lockstep. Tune retry behavior by adjusting the shared `RetrySchedule` in the RabbitMQ topology.
 
 ### Consumer Scaling
 

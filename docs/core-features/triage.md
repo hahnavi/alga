@@ -9,13 +9,21 @@ Alga's triage system evaluates correlated alerts and decides whether they should
 
 ## How Triage Works
 
+Triage is a **two-stage pipeline**: rules first, then LLM.
+
 ```
-Correlated Alerts → Triage Rules (ordered) → Decision → Incident or Dismiss
+Correlated Alerts → Triage Rules (ordered, deterministic) → Match? → Decision
+                                                              │
+                                                         No match
+                                                              ↓
+                                                    LLM Evaluation (smart, costs tokens)
+                                                              ↓
+                                                          Decision
 ```
 
 1. **Correlation** groups related alerts within the `CORRELATION_WINDOW` (see [AI Investigation](./investigation.md))
-2. **Triage engine** evaluates the correlated alert group against ordered triage rules
-3. **First matching rule** determines the decision
+2. **Stage 1 — Rules**: The triage engine evaluates the correlated alert group against ordered triage rules. Rules are deterministic, fast, and free (no token cost). The first matching rule determines the decision.
+3. **Stage 2 — LLM**: If no rule matches, the group is sent to the configured LLM for intelligent classification. The LLM returns a decision with confidence, reasoning, and suggested actions. This stage costs tokens and is gated by `TRIAGE_ENABLED`.
 4. **Result is stored** with confidence score, reasoning, and suggested actions
 5. **If the decision is `investigate` or `escalate`**, an investigation is dispatched automatically (not an incident). Incidents are created separately by the incident worker for correlated critical-severity alerts.
 6. **Operators can override** any triage decision after review
@@ -212,6 +220,36 @@ Triage Stats:
   Accuracy: 95.5%
   By decision: map[investigate:89 suppress:38 escalate:15]
 ```
+
+## Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TRIAGE_ENABLED` | `true` | Enable/disable the triage pipeline |
+| `TRIAGE_LLM_URL` | — | LLM endpoint URL for stage-2 evaluation |
+| `TRIAGE_LLM_API_KEY` | — | API key for the LLM provider |
+| `TRIAGE_LLM_MODEL` | — | Model name to use for LLM triage |
+| `TRIAGE_MAX_CONCURRENT` | `3` | Maximum concurrent LLM triage evaluations |
+| `TRIAGE_CONFIDENCE_THRESHOLD` | `0.7` | Minimum confidence for non-investigate decisions; below this, decisions downgrade to `enrich_only` |
+| `TRIAGE_AUTO_RESOLVE_ENABLED` | `true` | Gate for the `auto_resolve` decision |
+| `TRIAGE_SUPPRESS_ENABLED` | `true` | Gate for the `suppress` decision |
+| `TRIAGE_CONTEXT_EPISODIC_LIMIT` | `3` | Max episodic memories injected into LLM context |
+| `TRIAGE_CONTEXT_NOTES_LIMIT` | `3` | Max knowledge notes injected into LLM context |
+| `TRIAGE_CONTEXT_MEMORIES_LIMIT` | `5` | Max agent memories injected into LLM context |
+| `TRIAGE_AUTO_PROMOTE_CONFIRMED_COUNT` | `3` | After N confirmed decisions of the same type, auto-promote the triage pattern |
+| `MaxConcurrentTriage` | `5` | Config-level concurrency cap for triage worker (config file default) |
+
+### Context Injection
+
+When the LLM stage runs, the triage engine injects contextual data to improve classification accuracy:
+
+- **Episodic memory** — up to `TRIAGE_CONTEXT_EPISODIC_LIMIT` past investigations with the same correlation key
+- **Knowledge notes** — up to `TRIAGE_CONTEXT_NOTES_LIMIT` matching operator-authored notes
+- **Agent memories** — up to `TRIAGE_CONTEXT_MEMORIES_LIMIT` semantically-relevant memories from past investigations
+
+### Auto-Promote
+
+When `TRIAGE_AUTO_PROMOTE_CONFIRMED_COUNT` (default 3) triage results of the same decision type are confirmed by operators for the same correlation pattern, the system auto-promotes the pattern — future matches skip the LLM stage and apply the confirmed decision directly.
 
 ## API Endpoints
 

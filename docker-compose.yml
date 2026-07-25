@@ -67,11 +67,7 @@ services:
       - app-network
 
   backend:
-    # Alga backend API server
-    # Integrates with Slack and Mattermost for alert delivery and bidirectional chat
-    build:
-      context: .
-      dockerfile: apps/backend/Dockerfile
+    image: ghcr.io/hahnavi/alga-backend:${ALGA_VERSION:-latest}
     restart: unless-stopped
     env_file:
       - .env
@@ -100,11 +96,7 @@ services:
           cpus: "1.0"
 
   frontend:
-    # Alga frontend UI
-    # Connects to backend API for alert management and Slack/Mattermost integration
-    build:
-      context: .
-      dockerfile: apps/frontend/Dockerfile
+    image: ghcr.io/hahnavi/alga-frontend:${ALGA_VERSION:-latest}
     restart: unless-stopped
     ports:
       - "3000:80"

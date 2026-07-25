@@ -1,6 +1,6 @@
 ---
 title: Incident Lifecycle & States
-description: The incident state machine — detected, triaging, active, mitigated, resolved, closed — with transitions, automatic actions, and API endpoints.
+description: The incident state machine — detected, triaging, active, mitigated, resolved, closed, cancelled — with transitions, automatic timestamps, and API endpoints.
 ---
 
 # Incident Lifecycle & States
@@ -11,98 +11,80 @@ Incidents follow a strict state machine that coordinates team response from crea
 
 ```
 detected → triaging → active → mitigated → resolved → closed
-             ↘ active ↗
-active → cancelled
-mitigated → active (reopened)
-resolved → active (reopened)
-closed → active (reopened)
+detected → active (acknowledge)
+detected/active → mitigated
+detected/active/mitigated → resolved
+mitigated/resolved/closed → active (reopen)
+detected/active → cancelled
 ```
+
+`resolved`, `closed`, and `cancelled` are terminal states. Deletion is a soft delete via a `deleted_at` tombstone — rows are never hard-deleted.
 
 ## States
 
-| Status | Description | Trigger |
-|--------|-------------|---------|
-| `detected` | Initial creation, awaiting triage | Auto-created by triage worker or manually |
+| Status | Description | Typical Trigger |
+|--------|-------------|-----------------|
+| `detected` | Initial creation, awaiting triage or acknowledgement | Manual creation or promotion from an alert investigation |
 | `triaging` | Undergoing triage assessment | `POST /api/v1/incidents/{id}/begin-triage` |
-| `active` | Acknowledged, active response | `POST /api/v1/incidents/{id}/acknowledge` or promote |
-| `mitigated` | Root cause fixed, monitoring | `POST /api/v1/incidents/{id}/mitigate` |
-| `resolved` | Fully resolved | `POST /api/v1/incidents/{id}/resolve` |
-| `closed` | Post-mortem complete | `POST /api/v1/incidents/{id}/close` |
-| `cancelled` | False alarm | `POST /api/v1/incidents/{id}/cancel` |
+| `active` | Acknowledged, active response underway | `acknowledge`, or `promote` from triaging |
+| `mitigated` | Contained/fix in place, monitoring | `POST /api/v1/incidents/{id}/mitigate` |
+| `resolved` | Fully resolved (terminal) | `POST /api/v1/incidents/{id}/resolve` |
+| `closed` | Finalized after resolution (terminal) | `POST /api/v1/incidents/{id}/close` |
+| `cancelled` | False alarm (terminal) | `POST /api/v1/incidents/{id}/cancel` |
 
-> **Creation nuance:** Auto-created incidents (generated from correlated critical alerts) are created in `detected` and then immediately auto-transition to `active` (auto-acknowledged) — they do not await manual triage. Manually-created incidents start in `detected` and await triage or direct acknowledgment. The state machine itself (detected → triaging → active → mitigated → resolved → closed, plus `cancelled`) is unchanged.
+## Optimistic Concurrency
+
+Every transition goes through `TransitionIncidentStatus`, which guards the update with `WHERE status IN (fromStatuses)`. If the incident is no longer in an allowed source state, the update affects zero rows and the API returns a conflict (`incident status changed concurrently`) instead of corrupting state. This makes concurrent commands safe.
 
 ## Transitions
 
-### Detected → Triaging (Begin Triage)
+Each row lists the source states accepted by the action and the resulting state.
 
-When triage begins on a detected incident:
-- Status transitions to `triaging`
-- Triage assessment is initiated
-- Timeline entry recorded
+| Action | From | To | Notes |
+|--------|------|----|-------|
+| Begin Triage | `detected` | `triaging` | Initializes the incident document sections |
+| Promote | `triaging` | `active` | Propagates service status |
+| Acknowledge | `detected` | `active` | Sets `sla_acknowledged_at`, stops escalation |
+| Mitigate | `detected`, `active` | `mitigated` | Sets `mitigated_at`, propagates service status |
+| Resolve | `detected`, `active`, `mitigated` | `resolved` | Requires resolution docs (see below); cascades `resolved` to linked firing alerts |
+| Close | `resolved` | `closed` | Sets `closed_at` |
+| Reopen | `mitigated`, `resolved`, `closed` | `active` | Returns incident to active response |
+| Cancel | `detected`, `active` | `cancelled` | Terminal false-alarm state |
 
-### Triaging → Active (Promote)
+### Resolution Requirements
 
-When triage determines the incident is valid:
-- Incident is promoted to `active`
-- Updates service status to `degraded` or `major_outage`
-- Notifies on-call responders
-- SLA clocks start
+`resolve` is rejected unless the incident has a non-empty `summary` and the following incident-document sections are filled in:
 
-### Detected → Active (Acknowledge)
+- `impact_assessment`
+- `root_cause`
+- `resolution`
 
-When the incident is acknowledged directly from detected:
-- Transitions to `active` (skips triaging)
-- Updates service status to `degraded` or `major_outage`
-- Notifies on-call responders
+If any are missing, the API returns a validation error listing the missing fields.
 
-### Active → Mitigated
+## Automatic Timestamps
 
-When the root cause is fixed:
-- SLA resolution clock stops
-- Service status begins recovery
-- Timeline entry recorded automatically
+`applyStatusTimestamps` stamps lifecycle fields as each transition lands:
 
-### Mitigated → Resolved
+| Transition To | Timestamp(s) Set |
+|---------------|------------------|
+| `triaging` | `triaged_at` |
+| `active` | `sla_acknowledged_at` |
+| `mitigated` | `mitigated_at` |
+| `resolved` | `resolved_at` and `sla_resolved_at` |
+| `closed` | `closed_at` |
 
-When the incident is fully resolved:
-- SLA metrics computed (MTTA, MTTR, MTTM)
-- Service status returns to `operational`
-- Post-mortem can be created
+These timestamps drive the SLA metrics (MTTA, MTTR, MTTM) reported by the metrics API.
 
-### Resolved → Closed
+## Side Effects
 
-After post-mortem is published and action items are tracked:
-- Final metrics recorded
-- Incident marked as closed
+Beyond timestamps, transitions trigger:
 
-### Reopen
-
-Mitigated, resolved, or closed incidents can be reopened:
-- Service status reverts to impacted state
-- SLA clocks restart
-- Escalation resumes if configured
-
-### Cancel
-
-Cancel is available from `detected`, `triaging`, and `active` states. Cancelled incidents are treated as false alarms:
-- Service status returns to `operational`
-- Linked alerts are unlinked
-- No post-mortem required
-
-## Automatic Actions
-
-Each transition triggers:
-
-| Transition | Automatic Actions |
-|-----------|-------------------|
-| → `triaging` | Record timeline entry, begin assessment |
-| → `active` | Update service status, notify responders, start SLA clocks |
-| → `mitigated` | Compute MTTM, update service status, notify stakeholders |
-| → `resolved` | Compute MTTR, restore service status, enable post-mortem creation |
-| → `closed` | Compute final metrics, archive incident |
-| → `cancelled` | Restore service status, clear escalation state |
-| → `reopened` | Restart SLA, re-escalate, update service status |
+- **Timeline entries** — each action records a structured timeline entry (with an ICS event type for triage/promote/document changes)
+- **Service status propagation** — promote, mitigate, resolve, and reopen update the affected service status
+- **Alert cascade** — resolving an incident cascades `resolved` to linked firing alerts
+- **Audit events** — every transition writes a fire-and-forget audit event
+- **Incident channel updates** — when Slack incident channels are enabled, status changes are posted to the incident channel
+- **SLA escalation** — the SLA worker triggers escalation on a response breach; acknowledgement stops it
 
 ## API Endpoints
 
@@ -121,6 +103,6 @@ Each transition triggers:
 ## See Also
 
 - [Incident Overview](/incident-management/) — creation, linking, and management
-- [ICS Roles](/incident-management/ics-roles) — ICS role assignments and handoffs
+- [ICS Roles](/incident-management/ics-roles) — ICS role assignments
 - [SLA Tracking](/incident-management/sla) — SLA configuration and breach detection
 - [Post-Mortems](/incident-management/post-mortems) — structured post-incident review

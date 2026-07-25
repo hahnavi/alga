@@ -1,0 +1,5 @@
+# GO-2026-5932: golang.org/x/crypto/openpgp is unmaintained and unsafe by design.
+# We only import golang.org/x/crypto/argon2 — the openpgp sub-package is never
+# used. No fixed version exists (v0.54.0 is latest). Suppress until the Go team
+# removes openpgp from the module or we migrate argon2 elsewhere.
+GO-2026-5932

@@ -280,6 +280,7 @@ jobs:
           format: sarif
           output: trivy-backend-results.sarif
           exit-code: "0"
+          trivyignores: .trivyignore
       - name: Trivy frontend image → SARIF
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
         with:
@@ -287,6 +288,7 @@ jobs:
           format: sarif
           output: trivy-frontend-results.sarif
           exit-code: "0"
+          trivyignores: .trivyignore
       - name: Upload Trivy backend SARIF
         # Non-fatal: code scanning (GHAS) is unavailable on free private
         # repos, so the upload is rejected until the repo is public or
@@ -314,6 +316,7 @@ jobs:
           exit-code: "1"
           ignore-unfixed: true
           format: table
+          trivyignores: .trivyignore
       - name: Trivy frontend image gate (HIGH + CRITICAL block)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
         with:
@@ -322,6 +325,7 @@ jobs:
           exit-code: "1"
           ignore-unfixed: true
           format: table
+          trivyignores: .trivyignore
 
   # ─────────────────────────────── Source & dependency scanning ──────────
   # govulncheck + gosec + gitleaks + pnpm audit scan source and dependencies,

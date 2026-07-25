@@ -19,6 +19,40 @@ spec:
         app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/component: backend
     spec:
+      {{- if or .Values.postgresql.enabled .Values.valkey.enabled .Values.rabbitmq.enabled }}
+      # Helm applies all manifests at once and cannot wait for the bundled
+      # services to become ready, so block startup here instead of letting
+      # the backend crash-loop on fresh installs.
+      initContainers:
+        - name: wait-for-deps
+          image: busybox:1.37
+          command:
+            - sh
+            - -c
+            - |
+              wait_for() {
+                elapsed=0
+                until nc -z -w 2 "$1" "$2"; do
+                  if [ "$elapsed" -ge 300 ]; then
+                    echo "timed out after ${elapsed}s waiting for dependency $1:$2" >&2
+                    exit 1
+                  fi
+                  echo "waiting for $1:$2..."
+                  sleep 2
+                  elapsed=$((elapsed + 4))
+                done
+                echo "$1:$2 is reachable"
+              }
+              {{- if .Values.postgresql.enabled }}
+              wait_for {{ include "alga.fullname" . }}-postgresql 5432
+              {{- end }}
+              {{- if .Values.valkey.enabled }}
+              wait_for {{ include "alga.fullname" . }}-valkey 6379
+              {{- end }}
+              {{- if .Values.rabbitmq.enabled }}
+              wait_for {{ include "alga.fullname" . }}-rabbitmq 5672
+              {{- end }}
+      {{- end }}
       containers:
         - name: backend
           image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
@@ -33,9 +67,37 @@ spec:
             - secretRef:
                 name: {{ include "alga.fullname" . }}-backend
                 optional: true
+          {{- if or .Values.postgresql.enabled .Values.valkey.enabled .Values.rabbitmq.enabled }}
+          # Explicit env entries take precedence over envFrom, so bundled
+          # services win over any external values in backend.secrets.
+          env:
+            {{- if .Values.postgresql.enabled }}
+            - name: POSTGRES_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "alga.fullname" . }}-postgresql
+                  key: backend-dsn
+            {{- end }}
+            {{- if .Values.valkey.enabled }}
+            - name: VALKEY_ADDR
+              value: {{ printf "%s-valkey:6379" (include "alga.fullname" .) | quote }}
+            - name: VALKEY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "alga.fullname" . }}-valkey
+                  key: password
+            {{- end }}
+            {{- if .Values.rabbitmq.enabled }}
+            - name: RABBITMQ_URI
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "alga.fullname" . }}-rabbitmq
+                  key: backend-uri
+            {{- end }}
+          {{- end }}
           livenessProbe:
             httpGet:
-              path: /health
+              path: /live
               port: http
             initialDelaySeconds: 10
             periodSeconds: 30

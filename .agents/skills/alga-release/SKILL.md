@@ -146,8 +146,8 @@ Never force-push or delete a tag that has already been released. If a release wo
 ### Post-Release Sanity
 
 - GitHub Release exists at the tag with the binary and `checksums-<version>.txt`.
-- Docker images appear at `ghcr.io/<owner>/<repo>/alga-backend:<version>` and `.../alga-frontend:<version>`.
-- `docker run --rm ghcr.io/<owner>/<repo>/alga-backend:<version> version` prints `<version>` (confirms the `-X main.version` wiring).
+- Docker images appear at `ghcr.io/<owner>/alga-backend:<version>` and `.../alga-frontend:<version>`.
+- `docker run --rm ghcr.io/<owner>/alga-backend:<version> version` prints `<version>` (confirms the `-X main.version` wiring).
 
 ## Verify
 

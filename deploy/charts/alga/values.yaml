@@ -18,7 +18,9 @@ backend:
     sessionExpiryHours: 24
     postgresAutoMigrate: true
   secrets:
-    encryptionKey: ""
+    # Comma-separated `kid:base64(32-byte key)` pairs, e.g. "1:<base64-32B>".
+    # Generate a key with: openssl rand -base64 32
+    encryptionKeys: ""
     secretPepper: ""
     postgresDSN: ""
     valkeyAddr: ""
@@ -59,20 +61,58 @@ ingress:
       hosts:
         - alga.example.com
 
+# ── Bundled data services ────────────────────────────────────────────────
+# Each service below is deployed by this chart when `enabled: true`.
+# To use an externally managed instance instead, set `enabled: false` and
+# provide the matching connection settings under backend.secrets
+# (postgresDSN, valkeyAddr/valkeyPassword, rabbitmqURI).
+# When a bundled service is enabled, its auth.password must be set to a
+# pinned value; installs fail otherwise. Pinned passwords keep renders
+# deterministic and stay valid across upgrades and retained volumes.
+
 postgresql:
   enabled: true
+  # pgvector-enabled image; the backend startup migration requires the
+  # `vector` extension.
+  image:
+    repository: pgvector/pgvector
+    tag: pg17
+    pullPolicy: IfNotPresent
   auth:
     username: alga
     password: ""
     database: alga
+  persistence:
+    enabled: true
+    storageClass: ""
+    size: 5Gi
+  resources: {}
 
 valkey:
   enabled: true
+  image:
+    repository: valkey/valkey
+    tag: 8-alpine
+    pullPolicy: IfNotPresent
   auth:
     password: ""
+  persistence:
+    enabled: true
+    storageClass: ""
+    size: 1Gi
+  resources: {}
 
 rabbitmq:
   enabled: true
+  image:
+    repository: rabbitmq
+    tag: 4-alpine
+    pullPolicy: IfNotPresent
   auth:
     username: alga
     password: ""
+  persistence:
+    enabled: true
+    storageClass: ""
+    size: 1Gi
+  resources: {}

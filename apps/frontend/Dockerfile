@@ -1,4 +1,4 @@
-FROM node:lts-alpine3.23 AS builder
+FROM node:24-alpine3.23 AS builder
 RUN corepack enable && corepack prepare pnpm@11.17.0 --activate
 
 WORKDIR /app

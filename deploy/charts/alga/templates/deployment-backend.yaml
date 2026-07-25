@@ -33,6 +33,34 @@ spec:
             - secretRef:
                 name: {{ include "alga.fullname" . }}-backend
                 optional: true
+          {{- if or .Values.postgresql.enabled .Values.valkey.enabled .Values.rabbitmq.enabled }}
+          # Explicit env entries take precedence over envFrom, so bundled
+          # services win over any external values in backend.secrets.
+          env:
+            {{- if .Values.postgresql.enabled }}
+            - name: POSTGRES_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "alga.fullname" . }}-postgresql
+                  key: backend-dsn
+            {{- end }}
+            {{- if .Values.valkey.enabled }}
+            - name: VALKEY_ADDR
+              value: {{ printf "%s-valkey:6379" (include "alga.fullname" .) | quote }}
+            - name: VALKEY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "alga.fullname" . }}-valkey
+                  key: password
+            {{- end }}
+            {{- if .Values.rabbitmq.enabled }}
+            - name: RABBITMQ_URI
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "alga.fullname" . }}-rabbitmq
+                  key: backend-uri
+            {{- end }}
+          {{- end }}
           livenessProbe:
             httpGet:
               path: /live

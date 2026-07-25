@@ -61,6 +61,57 @@ ingress:
       hosts:
         - alga.example.com
 
-# PostgreSQL, Valkey, and RabbitMQ are not bundled with this chart.
-# Point the backend at externally managed instances via backend.secrets
+# ── Bundled data services ────────────────────────────────────────────────
+# Each service below is deployed by this chart when `enabled: true`.
+# To use an externally managed instance instead, set `enabled: false` and
+# provide the matching connection settings under backend.secrets
 # (postgresDSN, valkeyAddr/valkeyPassword, rabbitmqURI).
+# When a bundled service is enabled and its password is left empty, a random
+# password is generated at install time and reused across upgrades.
+
+postgresql:
+  enabled: true
+  # pgvector-enabled image; the backend startup migration requires the
+  # `vector` extension.
+  image:
+    repository: pgvector/pgvector
+    tag: pg17
+    pullPolicy: IfNotPresent
+  auth:
+    username: alga
+    password: ""
+    database: alga
+  persistence:
+    enabled: true
+    storageClass: ""
+    size: 5Gi
+  resources: {}
+
+valkey:
+  enabled: true
+  image:
+    repository: valkey/valkey
+    tag: 8-alpine
+    pullPolicy: IfNotPresent
+  auth:
+    password: ""
+  persistence:
+    enabled: true
+    storageClass: ""
+    size: 1Gi
+  resources: {}
+
+rabbitmq:
+  enabled: true
+  image:
+    repository: rabbitmq
+    tag: 4-alpine
+    pullPolicy: IfNotPresent
+  auth:
+    username: alga
+    password: ""
+  persistence:
+    enabled: true
+    storageClass: ""
+    size: 1Gi
+  resources: {}

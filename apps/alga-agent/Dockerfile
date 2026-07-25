@@ -11,11 +11,14 @@ FROM golang:1.26-alpine AS builder
 
 WORKDIR /src
 
-# Copy the Go workspace manifests and the local SDK first for layer caching.
-COPY go.work go.work.sum* ./
+# Copy the module manifests and the local SDK first for layer caching.
+# GOWORK=off: the repo's go.work references modules outside this build
+# context (apps/backend, the Mattermost plugin); build from the agent's
+# standalone module instead — its replace directive resolves the local SDK.
 COPY apps/alga-agent/go.mod apps/alga-agent/go.sum apps/alga-agent/
 COPY integrations/alga-agent-sdk-go/ integrations/alga-agent-sdk-go/
 
+ENV GOWORK=off
 WORKDIR /src/apps/alga-agent
 RUN go mod download
 

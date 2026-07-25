@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -8,6 +9,8 @@ import (
 
 	"alga/app"
 )
+
+var version = "dev"
 
 func main() {
 	if err := rootCmd.Execute(); err != nil {
@@ -28,4 +31,16 @@ var rootCmd = &cobra.Command{
 			log.Fatalf("Application error: %v", err)
 		}
 	},
+}
+
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Print the Alga version",
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println(version)
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(versionCmd)
 }

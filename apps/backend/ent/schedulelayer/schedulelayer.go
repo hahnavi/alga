@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -42,8 +43,17 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// EdgeSchedule holds the string denoting the schedule edge name in mutations.
+	EdgeSchedule = "schedule"
 	// Table holds the table name of the schedulelayer in the database.
 	Table = "schedule_layers"
+	// ScheduleTable is the table that holds the schedule relation/edge.
+	ScheduleTable = "schedule_layers"
+	// ScheduleInverseTable is the table name for the OnCallSchedule entity.
+	// It exists in this package in order to avoid circular dependency with the "oncallschedule" package.
+	ScheduleInverseTable = "on_call_schedules"
+	// ScheduleColumn is the table column denoting the schedule relation/edge.
+	ScheduleColumn = "schedule_id"
 )
 
 // Columns holds all SQL columns for schedulelayer fields.
@@ -82,6 +92,8 @@ var (
 	DefaultRotationType string
 	// DefaultRotationInterval holds the default value on creation for the "rotation_interval" field.
 	DefaultRotationInterval int
+	// RotationIntervalValidator is a validator for the "rotation_interval" field. It is called by the builders before save.
+	RotationIntervalValidator func(int) error
 	// DefaultStartDate holds the default value on creation for the "start_date" field.
 	DefaultStartDate func() time.Time
 	// DefaultTimezone holds the default value on creation for the "timezone" field.
@@ -94,6 +106,8 @@ var (
 	DefaultDaysOfWeek []string
 	// DefaultPriority holds the default value on creation for the "priority" field.
 	DefaultPriority int
+	// PriorityValidator is a validator for the "priority" field. It is called by the builders before save.
+	PriorityValidator func(int) error
 	// DefaultUserIds holds the default value on creation for the "user_ids" field.
 	DefaultUserIds []string
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
@@ -172,4 +186,18 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByScheduleField orders the results by schedule field.
+func ByScheduleField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newScheduleStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newScheduleStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ScheduleInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, ScheduleTable, ScheduleColumn),
+	)
 }

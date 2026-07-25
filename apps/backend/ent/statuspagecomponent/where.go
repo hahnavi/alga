@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -113,26 +114,6 @@ func StatusPageIDIn(vs ...uuid.UUID) predicate.StatusPageComponent {
 // StatusPageIDNotIn applies the NotIn predicate on the "status_page_id" field.
 func StatusPageIDNotIn(vs ...uuid.UUID) predicate.StatusPageComponent {
 	return predicate.StatusPageComponent(sql.FieldNotIn(FieldStatusPageID, vs...))
-}
-
-// StatusPageIDGT applies the GT predicate on the "status_page_id" field.
-func StatusPageIDGT(v uuid.UUID) predicate.StatusPageComponent {
-	return predicate.StatusPageComponent(sql.FieldGT(FieldStatusPageID, v))
-}
-
-// StatusPageIDGTE applies the GTE predicate on the "status_page_id" field.
-func StatusPageIDGTE(v uuid.UUID) predicate.StatusPageComponent {
-	return predicate.StatusPageComponent(sql.FieldGTE(FieldStatusPageID, v))
-}
-
-// StatusPageIDLT applies the LT predicate on the "status_page_id" field.
-func StatusPageIDLT(v uuid.UUID) predicate.StatusPageComponent {
-	return predicate.StatusPageComponent(sql.FieldLT(FieldStatusPageID, v))
-}
-
-// StatusPageIDLTE applies the LTE predicate on the "status_page_id" field.
-func StatusPageIDLTE(v uuid.UUID) predicate.StatusPageComponent {
-	return predicate.StatusPageComponent(sql.FieldLTE(FieldStatusPageID, v))
 }
 
 // NameEQ applies the EQ predicate on the "name" field.
@@ -283,26 +264,6 @@ func ServiceIDIn(vs ...uuid.UUID) predicate.StatusPageComponent {
 // ServiceIDNotIn applies the NotIn predicate on the "service_id" field.
 func ServiceIDNotIn(vs ...uuid.UUID) predicate.StatusPageComponent {
 	return predicate.StatusPageComponent(sql.FieldNotIn(FieldServiceID, vs...))
-}
-
-// ServiceIDGT applies the GT predicate on the "service_id" field.
-func ServiceIDGT(v uuid.UUID) predicate.StatusPageComponent {
-	return predicate.StatusPageComponent(sql.FieldGT(FieldServiceID, v))
-}
-
-// ServiceIDGTE applies the GTE predicate on the "service_id" field.
-func ServiceIDGTE(v uuid.UUID) predicate.StatusPageComponent {
-	return predicate.StatusPageComponent(sql.FieldGTE(FieldServiceID, v))
-}
-
-// ServiceIDLT applies the LT predicate on the "service_id" field.
-func ServiceIDLT(v uuid.UUID) predicate.StatusPageComponent {
-	return predicate.StatusPageComponent(sql.FieldLT(FieldServiceID, v))
-}
-
-// ServiceIDLTE applies the LTE predicate on the "service_id" field.
-func ServiceIDLTE(v uuid.UUID) predicate.StatusPageComponent {
-	return predicate.StatusPageComponent(sql.FieldLTE(FieldServiceID, v))
 }
 
 // ServiceIDIsNil applies the IsNil predicate on the "service_id" field.
@@ -498,6 +459,52 @@ func UpdatedAtLT(v time.Time) predicate.StatusPageComponent {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.StatusPageComponent {
 	return predicate.StatusPageComponent(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// HasStatusPage applies the HasEdge predicate on the "status_page" edge.
+func HasStatusPage() predicate.StatusPageComponent {
+	return predicate.StatusPageComponent(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, StatusPageTable, StatusPageColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasStatusPageWith applies the HasEdge predicate on the "status_page" edge with a given conditions (other predicates).
+func HasStatusPageWith(preds ...predicate.StatusPage) predicate.StatusPageComponent {
+	return predicate.StatusPageComponent(func(s *sql.Selector) {
+		step := newStatusPageStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasService applies the HasEdge predicate on the "service" edge.
+func HasService() predicate.StatusPageComponent {
+	return predicate.StatusPageComponent(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, ServiceTable, ServiceColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasServiceWith applies the HasEdge predicate on the "service" edge with a given conditions (other predicates).
+func HasServiceWith(preds ...predicate.Service) predicate.StatusPageComponent {
+	return predicate.StatusPageComponent(func(s *sql.Selector) {
+		step := newServiceStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

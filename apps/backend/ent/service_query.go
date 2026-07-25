@@ -3,9 +3,15 @@
 package ent
 
 import (
+	"alga/ent/escalationpolicy"
+	"alga/ent/incident"
 	"alga/ent/predicate"
 	"alga/ent/service"
+	"alga/ent/servicedependency"
+	"alga/ent/statuspagecomponent"
+	"alga/ent/team"
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -19,10 +25,16 @@ import (
 // ServiceQuery is the builder for querying Service entities.
 type ServiceQuery struct {
 	config
-	ctx        *QueryContext
-	order      []service.OrderOption
-	inters     []Interceptor
-	predicates []predicate.Service
+	ctx                      *QueryContext
+	order                    []service.OrderOption
+	inters                   []Interceptor
+	predicates               []predicate.Service
+	withDependencies         *ServiceDependencyQuery
+	withDependedOnBy         *ServiceDependencyQuery
+	withStatusPageComponents *StatusPageComponentQuery
+	withIncidents            *IncidentQuery
+	withOwnerTeam            *TeamQuery
+	withEscalationPolicy     *EscalationPolicyQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -57,6 +69,138 @@ func (_q *ServiceQuery) Unique(unique bool) *ServiceQuery {
 func (_q *ServiceQuery) Order(o ...service.OrderOption) *ServiceQuery {
 	_q.order = append(_q.order, o...)
 	return _q
+}
+
+// QueryDependencies chains the current query on the "dependencies" edge.
+func (_q *ServiceQuery) QueryDependencies() *ServiceDependencyQuery {
+	query := (&ServiceDependencyClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(service.Table, service.FieldID, selector),
+			sqlgraph.To(servicedependency.Table, servicedependency.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, service.DependenciesTable, service.DependenciesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryDependedOnBy chains the current query on the "depended_on_by" edge.
+func (_q *ServiceQuery) QueryDependedOnBy() *ServiceDependencyQuery {
+	query := (&ServiceDependencyClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(service.Table, service.FieldID, selector),
+			sqlgraph.To(servicedependency.Table, servicedependency.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, service.DependedOnByTable, service.DependedOnByColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryStatusPageComponents chains the current query on the "status_page_components" edge.
+func (_q *ServiceQuery) QueryStatusPageComponents() *StatusPageComponentQuery {
+	query := (&StatusPageComponentClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(service.Table, service.FieldID, selector),
+			sqlgraph.To(statuspagecomponent.Table, statuspagecomponent.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, service.StatusPageComponentsTable, service.StatusPageComponentsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryIncidents chains the current query on the "incidents" edge.
+func (_q *ServiceQuery) QueryIncidents() *IncidentQuery {
+	query := (&IncidentClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(service.Table, service.FieldID, selector),
+			sqlgraph.To(incident.Table, incident.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, service.IncidentsTable, service.IncidentsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryOwnerTeam chains the current query on the "owner_team" edge.
+func (_q *ServiceQuery) QueryOwnerTeam() *TeamQuery {
+	query := (&TeamClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(service.Table, service.FieldID, selector),
+			sqlgraph.To(team.Table, team.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, service.OwnerTeamTable, service.OwnerTeamColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryEscalationPolicy chains the current query on the "escalation_policy" edge.
+func (_q *ServiceQuery) QueryEscalationPolicy() *EscalationPolicyQuery {
+	query := (&EscalationPolicyClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(service.Table, service.FieldID, selector),
+			sqlgraph.To(escalationpolicy.Table, escalationpolicy.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, service.EscalationPolicyTable, service.EscalationPolicyColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first Service entity from the query.
@@ -246,15 +390,87 @@ func (_q *ServiceQuery) Clone() *ServiceQuery {
 		return nil
 	}
 	return &ServiceQuery{
-		config:     _q.config,
-		ctx:        _q.ctx.Clone(),
-		order:      append([]service.OrderOption{}, _q.order...),
-		inters:     append([]Interceptor{}, _q.inters...),
-		predicates: append([]predicate.Service{}, _q.predicates...),
+		config:                   _q.config,
+		ctx:                      _q.ctx.Clone(),
+		order:                    append([]service.OrderOption{}, _q.order...),
+		inters:                   append([]Interceptor{}, _q.inters...),
+		predicates:               append([]predicate.Service{}, _q.predicates...),
+		withDependencies:         _q.withDependencies.Clone(),
+		withDependedOnBy:         _q.withDependedOnBy.Clone(),
+		withStatusPageComponents: _q.withStatusPageComponents.Clone(),
+		withIncidents:            _q.withIncidents.Clone(),
+		withOwnerTeam:            _q.withOwnerTeam.Clone(),
+		withEscalationPolicy:     _q.withEscalationPolicy.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
+}
+
+// WithDependencies tells the query-builder to eager-load the nodes that are connected to
+// the "dependencies" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ServiceQuery) WithDependencies(opts ...func(*ServiceDependencyQuery)) *ServiceQuery {
+	query := (&ServiceDependencyClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withDependencies = query
+	return _q
+}
+
+// WithDependedOnBy tells the query-builder to eager-load the nodes that are connected to
+// the "depended_on_by" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ServiceQuery) WithDependedOnBy(opts ...func(*ServiceDependencyQuery)) *ServiceQuery {
+	query := (&ServiceDependencyClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withDependedOnBy = query
+	return _q
+}
+
+// WithStatusPageComponents tells the query-builder to eager-load the nodes that are connected to
+// the "status_page_components" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ServiceQuery) WithStatusPageComponents(opts ...func(*StatusPageComponentQuery)) *ServiceQuery {
+	query := (&StatusPageComponentClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withStatusPageComponents = query
+	return _q
+}
+
+// WithIncidents tells the query-builder to eager-load the nodes that are connected to
+// the "incidents" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ServiceQuery) WithIncidents(opts ...func(*IncidentQuery)) *ServiceQuery {
+	query := (&IncidentClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withIncidents = query
+	return _q
+}
+
+// WithOwnerTeam tells the query-builder to eager-load the nodes that are connected to
+// the "owner_team" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ServiceQuery) WithOwnerTeam(opts ...func(*TeamQuery)) *ServiceQuery {
+	query := (&TeamClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withOwnerTeam = query
+	return _q
+}
+
+// WithEscalationPolicy tells the query-builder to eager-load the nodes that are connected to
+// the "escalation_policy" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ServiceQuery) WithEscalationPolicy(opts ...func(*EscalationPolicyQuery)) *ServiceQuery {
+	query := (&EscalationPolicyClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withEscalationPolicy = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -333,8 +549,16 @@ func (_q *ServiceQuery) prepareQuery(ctx context.Context) error {
 
 func (_q *ServiceQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Service, error) {
 	var (
-		nodes = []*Service{}
-		_spec = _q.querySpec()
+		nodes       = []*Service{}
+		_spec       = _q.querySpec()
+		loadedTypes = [6]bool{
+			_q.withDependencies != nil,
+			_q.withDependedOnBy != nil,
+			_q.withStatusPageComponents != nil,
+			_q.withIncidents != nil,
+			_q.withOwnerTeam != nil,
+			_q.withEscalationPolicy != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Service).scanValues(nil, columns)
@@ -342,6 +566,7 @@ func (_q *ServiceQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Serv
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Service{config: _q.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -353,7 +578,240 @@ func (_q *ServiceQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Serv
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := _q.withDependencies; query != nil {
+		if err := _q.loadDependencies(ctx, query, nodes,
+			func(n *Service) { n.Edges.Dependencies = []*ServiceDependency{} },
+			func(n *Service, e *ServiceDependency) { n.Edges.Dependencies = append(n.Edges.Dependencies, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withDependedOnBy; query != nil {
+		if err := _q.loadDependedOnBy(ctx, query, nodes,
+			func(n *Service) { n.Edges.DependedOnBy = []*ServiceDependency{} },
+			func(n *Service, e *ServiceDependency) { n.Edges.DependedOnBy = append(n.Edges.DependedOnBy, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withStatusPageComponents; query != nil {
+		if err := _q.loadStatusPageComponents(ctx, query, nodes,
+			func(n *Service) { n.Edges.StatusPageComponents = []*StatusPageComponent{} },
+			func(n *Service, e *StatusPageComponent) {
+				n.Edges.StatusPageComponents = append(n.Edges.StatusPageComponents, e)
+			}); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withIncidents; query != nil {
+		if err := _q.loadIncidents(ctx, query, nodes,
+			func(n *Service) { n.Edges.Incidents = []*Incident{} },
+			func(n *Service, e *Incident) { n.Edges.Incidents = append(n.Edges.Incidents, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withOwnerTeam; query != nil {
+		if err := _q.loadOwnerTeam(ctx, query, nodes, nil,
+			func(n *Service, e *Team) { n.Edges.OwnerTeam = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withEscalationPolicy; query != nil {
+		if err := _q.loadEscalationPolicy(ctx, query, nodes, nil,
+			func(n *Service, e *EscalationPolicy) { n.Edges.EscalationPolicy = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (_q *ServiceQuery) loadDependencies(ctx context.Context, query *ServiceDependencyQuery, nodes []*Service, init func(*Service), assign func(*Service, *ServiceDependency)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Service)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(servicedependency.FieldServiceID)
+	}
+	query.Where(predicate.ServiceDependency(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(service.DependenciesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ServiceID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "service_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *ServiceQuery) loadDependedOnBy(ctx context.Context, query *ServiceDependencyQuery, nodes []*Service, init func(*Service), assign func(*Service, *ServiceDependency)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Service)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(servicedependency.FieldDependentOnServiceID)
+	}
+	query.Where(predicate.ServiceDependency(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(service.DependedOnByColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.DependentOnServiceID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "dependent_on_service_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *ServiceQuery) loadStatusPageComponents(ctx context.Context, query *StatusPageComponentQuery, nodes []*Service, init func(*Service), assign func(*Service, *StatusPageComponent)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Service)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(statuspagecomponent.FieldServiceID)
+	}
+	query.Where(predicate.StatusPageComponent(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(service.StatusPageComponentsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ServiceID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "service_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "service_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *ServiceQuery) loadIncidents(ctx context.Context, query *IncidentQuery, nodes []*Service, init func(*Service), assign func(*Service, *Incident)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Service)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(incident.FieldServiceID)
+	}
+	query.Where(predicate.Incident(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(service.IncidentsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ServiceID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "service_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "service_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *ServiceQuery) loadOwnerTeam(ctx context.Context, query *TeamQuery, nodes []*Service, init func(*Service), assign func(*Service, *Team)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Service)
+	for i := range nodes {
+		if nodes[i].OwnerTeamID == nil {
+			continue
+		}
+		fk := *nodes[i].OwnerTeamID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(team.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "owner_team_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *ServiceQuery) loadEscalationPolicy(ctx context.Context, query *EscalationPolicyQuery, nodes []*Service, init func(*Service), assign func(*Service, *EscalationPolicy)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Service)
+	for i := range nodes {
+		if nodes[i].EscalationPolicyID == nil {
+			continue
+		}
+		fk := *nodes[i].EscalationPolicyID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(escalationpolicy.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "escalation_policy_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
 }
 
 func (_q *ServiceQuery) sqlCount(ctx context.Context) (int, error) {
@@ -380,6 +838,12 @@ func (_q *ServiceQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != service.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if _q.withOwnerTeam != nil {
+			_spec.Node.AddColumnOnce(service.FieldOwnerTeamID)
+		}
+		if _q.withEscalationPolicy != nil {
+			_spec.Node.AddColumnOnce(service.FieldEscalationPolicyID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -48,8 +49,17 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// EdgeAgent holds the string denoting the agent edge name in mutations.
+	EdgeAgent = "agent"
 	// Table holds the table name of the agentmemory in the database.
 	Table = "agent_memories"
+	// AgentTable is the table that holds the agent relation/edge.
+	AgentTable = "agent_memories"
+	// AgentInverseTable is the table name for the AgentToken entity.
+	// It exists in this package in order to avoid circular dependency with the "agenttoken" package.
+	AgentInverseTable = "agent_tokens"
+	// AgentColumn is the table column denoting the agent relation/edge.
+	AgentColumn = "agent_id"
 )
 
 // Columns holds all SQL columns for agentmemory fields.
@@ -99,8 +109,12 @@ var (
 	DefaultInvestigationID string
 	// DefaultCorrelationKey holds the default value on creation for the "correlation_key" field.
 	DefaultCorrelationKey string
+	// ConfidenceValidator is a validator for the "confidence" field. It is called by the builders before save.
+	ConfidenceValidator func(float64) error
 	// DefaultAccessCount holds the default value on creation for the "access_count" field.
 	DefaultAccessCount int
+	// AccessCountValidator is a validator for the "access_count" field. It is called by the builders before save.
+	AccessCountValidator func(int) error
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
@@ -182,4 +196,18 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByAgentField orders the results by agent field.
+func ByAgentField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAgentStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newAgentStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AgentInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, AgentTable, AgentColumn),
+	)
 }

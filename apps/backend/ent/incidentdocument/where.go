@@ -76,6 +76,16 @@ func UpdatedAt(v time.Time) predicate.IncidentDocument {
 	return predicate.IncidentDocument(sql.FieldEQ(FieldUpdatedAt, v))
 }
 
+// IncidentID applies equality check predicate on the "incident_id" field. It's identical to IncidentIDEQ.
+func IncidentID(v uuid.UUID) predicate.IncidentDocument {
+	return predicate.IncidentDocument(sql.FieldEQ(FieldIncidentID, v))
+}
+
+// UpdatedByID applies equality check predicate on the "updated_by_id" field. It's identical to UpdatedByIDEQ.
+func UpdatedByID(v uuid.UUID) predicate.IncidentDocument {
+	return predicate.IncidentDocument(sql.FieldEQ(FieldUpdatedByID, v))
+}
+
 // SectionEQ applies the EQ predicate on the "section" field.
 func SectionEQ(v string) predicate.IncidentDocument {
 	return predicate.IncidentDocument(sql.FieldEQ(FieldSection, v))
@@ -284,6 +294,56 @@ func UpdatedAtLT(v time.Time) predicate.IncidentDocument {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.IncidentDocument {
 	return predicate.IncidentDocument(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// IncidentIDEQ applies the EQ predicate on the "incident_id" field.
+func IncidentIDEQ(v uuid.UUID) predicate.IncidentDocument {
+	return predicate.IncidentDocument(sql.FieldEQ(FieldIncidentID, v))
+}
+
+// IncidentIDNEQ applies the NEQ predicate on the "incident_id" field.
+func IncidentIDNEQ(v uuid.UUID) predicate.IncidentDocument {
+	return predicate.IncidentDocument(sql.FieldNEQ(FieldIncidentID, v))
+}
+
+// IncidentIDIn applies the In predicate on the "incident_id" field.
+func IncidentIDIn(vs ...uuid.UUID) predicate.IncidentDocument {
+	return predicate.IncidentDocument(sql.FieldIn(FieldIncidentID, vs...))
+}
+
+// IncidentIDNotIn applies the NotIn predicate on the "incident_id" field.
+func IncidentIDNotIn(vs ...uuid.UUID) predicate.IncidentDocument {
+	return predicate.IncidentDocument(sql.FieldNotIn(FieldIncidentID, vs...))
+}
+
+// UpdatedByIDEQ applies the EQ predicate on the "updated_by_id" field.
+func UpdatedByIDEQ(v uuid.UUID) predicate.IncidentDocument {
+	return predicate.IncidentDocument(sql.FieldEQ(FieldUpdatedByID, v))
+}
+
+// UpdatedByIDNEQ applies the NEQ predicate on the "updated_by_id" field.
+func UpdatedByIDNEQ(v uuid.UUID) predicate.IncidentDocument {
+	return predicate.IncidentDocument(sql.FieldNEQ(FieldUpdatedByID, v))
+}
+
+// UpdatedByIDIn applies the In predicate on the "updated_by_id" field.
+func UpdatedByIDIn(vs ...uuid.UUID) predicate.IncidentDocument {
+	return predicate.IncidentDocument(sql.FieldIn(FieldUpdatedByID, vs...))
+}
+
+// UpdatedByIDNotIn applies the NotIn predicate on the "updated_by_id" field.
+func UpdatedByIDNotIn(vs ...uuid.UUID) predicate.IncidentDocument {
+	return predicate.IncidentDocument(sql.FieldNotIn(FieldUpdatedByID, vs...))
+}
+
+// UpdatedByIDIsNil applies the IsNil predicate on the "updated_by_id" field.
+func UpdatedByIDIsNil() predicate.IncidentDocument {
+	return predicate.IncidentDocument(sql.FieldIsNull(FieldUpdatedByID))
+}
+
+// UpdatedByIDNotNil applies the NotNil predicate on the "updated_by_id" field.
+func UpdatedByIDNotNil() predicate.IncidentDocument {
+	return predicate.IncidentDocument(sql.FieldNotNull(FieldUpdatedByID))
 }
 
 // HasIncident applies the HasEdge predicate on the "incident" edge.

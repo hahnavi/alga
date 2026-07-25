@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -48,8 +49,17 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// EdgeOwnerTeam holds the string denoting the owner_team edge name in mutations.
+	EdgeOwnerTeam = "owner_team"
 	// Table holds the table name of the heartbeat in the database.
 	Table = "heartbeats"
+	// OwnerTeamTable is the table that holds the owner_team relation/edge.
+	OwnerTeamTable = "heartbeats"
+	// OwnerTeamInverseTable is the table name for the Team entity.
+	// It exists in this package in order to avoid circular dependency with the "team" package.
+	OwnerTeamInverseTable = "teams"
+	// OwnerTeamColumn is the table column denoting the owner_team relation/edge.
+	OwnerTeamColumn = "owner_team_id"
 )
 
 // Columns holds all SQL columns for heartbeat fields.
@@ -201,4 +211,18 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByOwnerTeamField orders the results by owner_team field.
+func ByOwnerTeamField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newOwnerTeamStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newOwnerTeamStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(OwnerTeamInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, OwnerTeamTable, OwnerTeamColumn),
+	)
 }

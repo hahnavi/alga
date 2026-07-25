@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"alga/ent/oidcidentity"
 	"alga/ent/oidcprovider"
 	"alga/ent/predicate"
 	"context"
@@ -14,6 +15,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 )
 
 // OIDCProviderUpdate is the builder for updating OIDCProvider entities.
@@ -131,9 +133,45 @@ func (_u *OIDCProviderUpdate) SetUpdatedAt(v time.Time) *OIDCProviderUpdate {
 	return _u
 }
 
+// AddOidcIdentityIDs adds the "oidc_identities" edge to the OIDCIdentity entity by IDs.
+func (_u *OIDCProviderUpdate) AddOidcIdentityIDs(ids ...uuid.UUID) *OIDCProviderUpdate {
+	_u.mutation.AddOidcIdentityIDs(ids...)
+	return _u
+}
+
+// AddOidcIdentities adds the "oidc_identities" edges to the OIDCIdentity entity.
+func (_u *OIDCProviderUpdate) AddOidcIdentities(v ...*OIDCIdentity) *OIDCProviderUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddOidcIdentityIDs(ids...)
+}
+
 // Mutation returns the OIDCProviderMutation object of the builder.
 func (_u *OIDCProviderUpdate) Mutation() *OIDCProviderMutation {
 	return _u.mutation
+}
+
+// ClearOidcIdentities clears all "oidc_identities" edges to the OIDCIdentity entity.
+func (_u *OIDCProviderUpdate) ClearOidcIdentities() *OIDCProviderUpdate {
+	_u.mutation.ClearOidcIdentities()
+	return _u
+}
+
+// RemoveOidcIdentityIDs removes the "oidc_identities" edge to OIDCIdentity entities by IDs.
+func (_u *OIDCProviderUpdate) RemoveOidcIdentityIDs(ids ...uuid.UUID) *OIDCProviderUpdate {
+	_u.mutation.RemoveOidcIdentityIDs(ids...)
+	return _u
+}
+
+// RemoveOidcIdentities removes "oidc_identities" edges to OIDCIdentity entities.
+func (_u *OIDCProviderUpdate) RemoveOidcIdentities(v ...*OIDCIdentity) *OIDCProviderUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveOidcIdentityIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -232,6 +270,51 @@ func (_u *OIDCProviderUpdate) sqlSave(ctx context.Context) (_node int, err error
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(oidcprovider.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.OidcIdentitiesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   oidcprovider.OidcIdentitiesTable,
+			Columns: []string{oidcprovider.OidcIdentitiesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oidcidentity.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedOidcIdentitiesIDs(); len(nodes) > 0 && !_u.mutation.OidcIdentitiesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   oidcprovider.OidcIdentitiesTable,
+			Columns: []string{oidcprovider.OidcIdentitiesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oidcidentity.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OidcIdentitiesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   oidcprovider.OidcIdentitiesTable,
+			Columns: []string{oidcprovider.OidcIdentitiesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oidcidentity.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -355,9 +438,45 @@ func (_u *OIDCProviderUpdateOne) SetUpdatedAt(v time.Time) *OIDCProviderUpdateOn
 	return _u
 }
 
+// AddOidcIdentityIDs adds the "oidc_identities" edge to the OIDCIdentity entity by IDs.
+func (_u *OIDCProviderUpdateOne) AddOidcIdentityIDs(ids ...uuid.UUID) *OIDCProviderUpdateOne {
+	_u.mutation.AddOidcIdentityIDs(ids...)
+	return _u
+}
+
+// AddOidcIdentities adds the "oidc_identities" edges to the OIDCIdentity entity.
+func (_u *OIDCProviderUpdateOne) AddOidcIdentities(v ...*OIDCIdentity) *OIDCProviderUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddOidcIdentityIDs(ids...)
+}
+
 // Mutation returns the OIDCProviderMutation object of the builder.
 func (_u *OIDCProviderUpdateOne) Mutation() *OIDCProviderMutation {
 	return _u.mutation
+}
+
+// ClearOidcIdentities clears all "oidc_identities" edges to the OIDCIdentity entity.
+func (_u *OIDCProviderUpdateOne) ClearOidcIdentities() *OIDCProviderUpdateOne {
+	_u.mutation.ClearOidcIdentities()
+	return _u
+}
+
+// RemoveOidcIdentityIDs removes the "oidc_identities" edge to OIDCIdentity entities by IDs.
+func (_u *OIDCProviderUpdateOne) RemoveOidcIdentityIDs(ids ...uuid.UUID) *OIDCProviderUpdateOne {
+	_u.mutation.RemoveOidcIdentityIDs(ids...)
+	return _u
+}
+
+// RemoveOidcIdentities removes "oidc_identities" edges to OIDCIdentity entities.
+func (_u *OIDCProviderUpdateOne) RemoveOidcIdentities(v ...*OIDCIdentity) *OIDCProviderUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveOidcIdentityIDs(ids...)
 }
 
 // Where appends a list predicates to the OIDCProviderUpdate builder.
@@ -486,6 +605,51 @@ func (_u *OIDCProviderUpdateOne) sqlSave(ctx context.Context) (_node *OIDCProvid
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(oidcprovider.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.OidcIdentitiesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   oidcprovider.OidcIdentitiesTable,
+			Columns: []string{oidcprovider.OidcIdentitiesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oidcidentity.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedOidcIdentitiesIDs(); len(nodes) > 0 && !_u.mutation.OidcIdentitiesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   oidcprovider.OidcIdentitiesTable,
+			Columns: []string{oidcprovider.OidcIdentitiesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oidcidentity.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OidcIdentitiesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   oidcprovider.OidcIdentitiesTable,
+			Columns: []string{oidcprovider.OidcIdentitiesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oidcidentity.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &OIDCProvider{config: _u.config}
 	_spec.Assign = _node.assignValues

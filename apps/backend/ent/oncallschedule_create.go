@@ -4,6 +4,9 @@ package ent
 
 import (
 	"alga/ent/oncallschedule"
+	"alga/ent/schedulelayer"
+	"alga/ent/scheduleoverride"
+	"alga/ent/team"
 	"context"
 	"errors"
 	"fmt"
@@ -75,6 +78,41 @@ func (_c *OnCallScheduleCreate) SetNillableID(v *uuid.UUID) *OnCallScheduleCreat
 		_c.SetID(*v)
 	}
 	return _c
+}
+
+// SetTeam sets the "team" edge to the Team entity.
+func (_c *OnCallScheduleCreate) SetTeam(v *Team) *OnCallScheduleCreate {
+	return _c.SetTeamID(v.ID)
+}
+
+// AddLayerIDs adds the "layers" edge to the ScheduleLayer entity by IDs.
+func (_c *OnCallScheduleCreate) AddLayerIDs(ids ...uuid.UUID) *OnCallScheduleCreate {
+	_c.mutation.AddLayerIDs(ids...)
+	return _c
+}
+
+// AddLayers adds the "layers" edges to the ScheduleLayer entity.
+func (_c *OnCallScheduleCreate) AddLayers(v ...*ScheduleLayer) *OnCallScheduleCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddLayerIDs(ids...)
+}
+
+// AddOverrideIDs adds the "overrides" edge to the ScheduleOverride entity by IDs.
+func (_c *OnCallScheduleCreate) AddOverrideIDs(ids ...uuid.UUID) *OnCallScheduleCreate {
+	_c.mutation.AddOverrideIDs(ids...)
+	return _c
+}
+
+// AddOverrides adds the "overrides" edges to the ScheduleOverride entity.
+func (_c *OnCallScheduleCreate) AddOverrides(v ...*ScheduleOverride) *OnCallScheduleCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddOverrideIDs(ids...)
 }
 
 // Mutation returns the OnCallScheduleMutation object of the builder.
@@ -169,10 +207,6 @@ func (_c *OnCallScheduleCreate) createSpec() (*OnCallSchedule, *sqlgraph.CreateS
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := _c.mutation.TeamID(); ok {
-		_spec.SetField(oncallschedule.FieldTeamID, field.TypeUUID, value)
-		_node.TeamID = &value
-	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(oncallschedule.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -180,6 +214,55 @@ func (_c *OnCallScheduleCreate) createSpec() (*OnCallSchedule, *sqlgraph.CreateS
 	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(oncallschedule.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if nodes := _c.mutation.TeamIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   oncallschedule.TeamTable,
+			Columns: []string{oncallschedule.TeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.TeamID = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.LayersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   oncallschedule.LayersTable,
+			Columns: []string{oncallschedule.LayersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(schedulelayer.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.OverridesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   oncallschedule.OverridesTable,
+			Columns: []string{oncallschedule.OverridesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(scheduleoverride.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

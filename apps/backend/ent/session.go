@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/session"
+	"alga/ent/user"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -22,11 +23,11 @@ type Session struct {
 	// UserID holds the value of the "user_id" field.
 	UserID uuid.UUID `json:"user_id,omitempty"`
 	// IDHash holds the value of the "id_hash" field.
-	IDHash string `json:"id_hash,omitempty"`
+	IDHash string `json:"-"`
 	// RefreshTokenHash holds the value of the "refresh_token_hash" field.
-	RefreshTokenHash string `json:"refresh_token_hash,omitempty"`
+	RefreshTokenHash string `json:"-"`
 	// PrevRefreshTokenHashes holds the value of the "prev_refresh_token_hashes" field.
-	PrevRefreshTokenHashes []string `json:"prev_refresh_token_hashes,omitempty"`
+	PrevRefreshTokenHashes []string `json:"-"`
 	// FamilyID holds the value of the "family_id" field.
 	FamilyID string `json:"family_id,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -38,8 +39,31 @@ type Session struct {
 	// IP holds the value of the "ip" field.
 	IP string `json:"ip,omitempty"`
 	// UserAgent holds the value of the "user_agent" field.
-	UserAgent    string `json:"user_agent,omitempty"`
+	UserAgent string `json:"user_agent,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the SessionQuery when eager-loading is set.
+	Edges        SessionEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// SessionEdges holds the relations/edges for other nodes in the graph.
+type SessionEdges struct {
+	// User holds the value of the user edge.
+	User *User `json:"user,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// UserOrErr returns the User value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e SessionEdges) UserOrErr() (*User, error) {
+	if e.User != nil {
+		return e.User, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: user.Label}
+	}
+	return nil, &NotLoadedError{edge: "user"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -151,6 +175,11 @@ func (_m *Session) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
 }
 
+// QueryUser queries the "user" edge of the Session entity.
+func (_m *Session) QueryUser() *UserQuery {
+	return NewSessionClient(_m.config).QueryUser(_m)
+}
+
 // Update returns a builder for updating this Session.
 // Note that you need to call Session.Unwrap() before calling this method if this Session
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -177,14 +206,11 @@ func (_m *Session) String() string {
 	builder.WriteString("user_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.UserID))
 	builder.WriteString(", ")
-	builder.WriteString("id_hash=")
-	builder.WriteString(_m.IDHash)
+	builder.WriteString("id_hash=<sensitive>")
 	builder.WriteString(", ")
-	builder.WriteString("refresh_token_hash=")
-	builder.WriteString(_m.RefreshTokenHash)
+	builder.WriteString("refresh_token_hash=<sensitive>")
 	builder.WriteString(", ")
-	builder.WriteString("prev_refresh_token_hashes=")
-	builder.WriteString(fmt.Sprintf("%v", _m.PrevRefreshTokenHashes))
+	builder.WriteString("prev_refresh_token_hashes=<sensitive>")
 	builder.WriteString(", ")
 	builder.WriteString("family_id=")
 	builder.WriteString(_m.FamilyID)

@@ -93,6 +93,8 @@ const (
 	EdgePromotedIncident = "promoted_incident"
 	// EdgePromotedIncidentInvestigation holds the string denoting the promoted_incident_investigation edge name in mutations.
 	EdgePromotedIncidentInvestigation = "promoted_incident_investigation"
+	// EdgeTriageResult holds the string denoting the triage_result edge name in mutations.
+	EdgeTriageResult = "triage_result"
 	// Table holds the table name of the alertinvestigation in the database.
 	Table = "alert_investigations"
 	// AlertsTable is the table that holds the alerts relation/edge.
@@ -137,6 +139,13 @@ const (
 	PromotedIncidentInvestigationInverseTable = "incident_investigations"
 	// PromotedIncidentInvestigationColumn is the table column denoting the promoted_incident_investigation relation/edge.
 	PromotedIncidentInvestigationColumn = "promoted_incident_investigation_id"
+	// TriageResultTable is the table that holds the triage_result relation/edge.
+	TriageResultTable = "alert_investigations"
+	// TriageResultInverseTable is the table name for the TriageResult entity.
+	// It exists in this package in order to avoid circular dependency with the "triageresult" package.
+	TriageResultInverseTable = "triage_results"
+	// TriageResultColumn is the table column denoting the triage_result relation/edge.
+	TriageResultColumn = "triage_result_id"
 )
 
 // Columns holds all SQL columns for alertinvestigation fields.
@@ -462,6 +471,13 @@ func ByPromotedIncidentInvestigationField(field string, opts ...sql.OrderTermOpt
 		sqlgraph.OrderByNeighborTerms(s, newPromotedIncidentInvestigationStep(), sql.OrderByField(field, opts...))
 	}
 }
+
+// ByTriageResultField orders the results by triage_result field.
+func ByTriageResultField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newTriageResultStep(), sql.OrderByField(field, opts...))
+	}
+}
 func newAlertsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -502,5 +518,12 @@ func newPromotedIncidentInvestigationStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(PromotedIncidentInvestigationInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, PromotedIncidentInvestigationTable, PromotedIncidentInvestigationColumn),
+	)
+}
+func newTriageResultStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(TriageResultInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, TriageResultTable, TriageResultColumn),
 	)
 }

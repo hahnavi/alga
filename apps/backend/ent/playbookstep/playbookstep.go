@@ -68,6 +68,8 @@ func ValidColumn(column string) bool {
 }
 
 var (
+	// StepNumberValidator is a validator for the "step_number" field. It is called by the builders before save.
+	StepNumberValidator func(int) error
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.

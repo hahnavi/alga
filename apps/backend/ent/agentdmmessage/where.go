@@ -96,6 +96,11 @@ func UpdatedAt(v time.Time) predicate.AgentDMMessage {
 	return predicate.AgentDMMessage(sql.FieldEQ(FieldUpdatedAt, v))
 }
 
+// AgentTokenID applies equality check predicate on the "agent_token_id" field. It's identical to AgentTokenIDEQ.
+func AgentTokenID(v uuid.UUID) predicate.AgentDMMessage {
+	return predicate.AgentDMMessage(sql.FieldEQ(FieldAgentTokenID, v))
+}
+
 // ChatIDEQ applies the EQ predicate on the "chat_id" field.
 func ChatIDEQ(v string) predicate.AgentDMMessage {
 	return predicate.AgentDMMessage(sql.FieldEQ(FieldChatID, v))
@@ -529,6 +534,26 @@ func UpdatedAtLT(v time.Time) predicate.AgentDMMessage {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.AgentDMMessage {
 	return predicate.AgentDMMessage(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// AgentTokenIDEQ applies the EQ predicate on the "agent_token_id" field.
+func AgentTokenIDEQ(v uuid.UUID) predicate.AgentDMMessage {
+	return predicate.AgentDMMessage(sql.FieldEQ(FieldAgentTokenID, v))
+}
+
+// AgentTokenIDNEQ applies the NEQ predicate on the "agent_token_id" field.
+func AgentTokenIDNEQ(v uuid.UUID) predicate.AgentDMMessage {
+	return predicate.AgentDMMessage(sql.FieldNEQ(FieldAgentTokenID, v))
+}
+
+// AgentTokenIDIn applies the In predicate on the "agent_token_id" field.
+func AgentTokenIDIn(vs ...uuid.UUID) predicate.AgentDMMessage {
+	return predicate.AgentDMMessage(sql.FieldIn(FieldAgentTokenID, vs...))
+}
+
+// AgentTokenIDNotIn applies the NotIn predicate on the "agent_token_id" field.
+func AgentTokenIDNotIn(vs ...uuid.UUID) predicate.AgentDMMessage {
+	return predicate.AgentDMMessage(sql.FieldNotIn(FieldAgentTokenID, vs...))
 }
 
 // HasAgentToken applies the HasEdge predicate on the "agent_token" edge.

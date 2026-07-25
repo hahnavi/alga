@@ -84,6 +84,8 @@ type noopAuditStore struct{}
 
 func (noopAuditStore) Log(_ store.AuditEvent, _ *uuid.UUID, _, _, _ string, _ bool, _ map[string]any) {
 }
+func (noopAuditStore) LogEntity(_ store.AuditEvent, _ *uuid.UUID, _, _, _ string, _ bool, _ map[string]any, _ string, _ *uuid.UUID) {
+}
 func (noopAuditStore) Query(_ map[string]any) ([]store.AuditRecord, error) { return nil, nil }
 func (noopAuditStore) GetRecentEvents(_ int) ([]store.AuditRecord, error)  { return nil, nil }
 

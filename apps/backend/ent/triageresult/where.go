@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -905,26 +906,6 @@ func OverriddenByNotIn(vs ...uuid.UUID) predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldNotIn(FieldOverriddenBy, vs...))
 }
 
-// OverriddenByGT applies the GT predicate on the "overridden_by" field.
-func OverriddenByGT(v uuid.UUID) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldGT(FieldOverriddenBy, v))
-}
-
-// OverriddenByGTE applies the GTE predicate on the "overridden_by" field.
-func OverriddenByGTE(v uuid.UUID) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldGTE(FieldOverriddenBy, v))
-}
-
-// OverriddenByLT applies the LT predicate on the "overridden_by" field.
-func OverriddenByLT(v uuid.UUID) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldLT(FieldOverriddenBy, v))
-}
-
-// OverriddenByLTE applies the LTE predicate on the "overridden_by" field.
-func OverriddenByLTE(v uuid.UUID) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldLTE(FieldOverriddenBy, v))
-}
-
 // OverriddenByIsNil applies the IsNil predicate on the "overridden_by" field.
 func OverriddenByIsNil() predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldIsNull(FieldOverriddenBy))
@@ -1253,6 +1234,75 @@ func UpdatedAtLT(v time.Time) predicate.TriageResult {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// HasAlerts applies the HasEdge predicate on the "alerts" edge.
+func HasAlerts() predicate.TriageResult {
+	return predicate.TriageResult(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, AlertsTable, AlertsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAlertsWith applies the HasEdge predicate on the "alerts" edge with a given conditions (other predicates).
+func HasAlertsWith(preds ...predicate.Alert) predicate.TriageResult {
+	return predicate.TriageResult(func(s *sql.Selector) {
+		step := newAlertsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasAlertInvestigations applies the HasEdge predicate on the "alert_investigations" edge.
+func HasAlertInvestigations() predicate.TriageResult {
+	return predicate.TriageResult(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, AlertInvestigationsTable, AlertInvestigationsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAlertInvestigationsWith applies the HasEdge predicate on the "alert_investigations" edge with a given conditions (other predicates).
+func HasAlertInvestigationsWith(preds ...predicate.AlertInvestigation) predicate.TriageResult {
+	return predicate.TriageResult(func(s *sql.Selector) {
+		step := newAlertInvestigationsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasOverriddenByUser applies the HasEdge predicate on the "overridden_by_user" edge.
+func HasOverriddenByUser() predicate.TriageResult {
+	return predicate.TriageResult(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, OverriddenByUserTable, OverriddenByUserColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasOverriddenByUserWith applies the HasEdge predicate on the "overridden_by_user" edge with a given conditions (other predicates).
+func HasOverriddenByUserWith(preds ...predicate.User) predicate.TriageResult {
+	return predicate.TriageResult(func(s *sql.Selector) {
+		step := newOverriddenByUserStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

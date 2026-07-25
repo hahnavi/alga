@@ -6,6 +6,7 @@ import (
 	"entgo.io/ent/schema"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
 )
 
@@ -28,6 +29,7 @@ func (AlertEvent) Fields() []ent.Field {
 		field.String("actor_display_name").Optional().Default(""),
 		field.String("actor_user_id").Optional().Default(""),
 		field.String("source").Optional().Default(""),
+		field.UUID("alert_id", uuid.UUID{}),
 	}
 }
 
@@ -36,10 +38,13 @@ func (AlertEvent) Edges() []ent.Edge {
 		edge.From("alert", Alert.Type).
 			Ref("events").
 			Unique().
-			Required(),
+			Required().
+			Field("alert_id"),
 	}
 }
 
 func (AlertEvent) Indexes() []ent.Index {
-	return []ent.Index{}
+	return []ent.Index{
+		index.Fields("alert_id", "timestamp"),
+	}
 }

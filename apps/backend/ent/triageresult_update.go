@@ -3,8 +3,11 @@
 package ent
 
 import (
+	"alga/ent/alert"
+	"alga/ent/alertinvestigation"
 	"alga/ent/predicate"
 	"alga/ent/triageresult"
+	"alga/ent/user"
 	"context"
 	"errors"
 	"fmt"
@@ -428,9 +431,106 @@ func (_u *TriageResultUpdate) SetUpdatedAt(v time.Time) *TriageResultUpdate {
 	return _u
 }
 
+// AddAlertIDs adds the "alerts" edge to the Alert entity by IDs.
+func (_u *TriageResultUpdate) AddAlertIDs(ids ...uuid.UUID) *TriageResultUpdate {
+	_u.mutation.AddAlertIDs(ids...)
+	return _u
+}
+
+// AddAlerts adds the "alerts" edges to the Alert entity.
+func (_u *TriageResultUpdate) AddAlerts(v ...*Alert) *TriageResultUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAlertIDs(ids...)
+}
+
+// AddAlertInvestigationIDs adds the "alert_investigations" edge to the AlertInvestigation entity by IDs.
+func (_u *TriageResultUpdate) AddAlertInvestigationIDs(ids ...uuid.UUID) *TriageResultUpdate {
+	_u.mutation.AddAlertInvestigationIDs(ids...)
+	return _u
+}
+
+// AddAlertInvestigations adds the "alert_investigations" edges to the AlertInvestigation entity.
+func (_u *TriageResultUpdate) AddAlertInvestigations(v ...*AlertInvestigation) *TriageResultUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAlertInvestigationIDs(ids...)
+}
+
+// SetOverriddenByUserID sets the "overridden_by_user" edge to the User entity by ID.
+func (_u *TriageResultUpdate) SetOverriddenByUserID(id uuid.UUID) *TriageResultUpdate {
+	_u.mutation.SetOverriddenByUserID(id)
+	return _u
+}
+
+// SetNillableOverriddenByUserID sets the "overridden_by_user" edge to the User entity by ID if the given value is not nil.
+func (_u *TriageResultUpdate) SetNillableOverriddenByUserID(id *uuid.UUID) *TriageResultUpdate {
+	if id != nil {
+		_u = _u.SetOverriddenByUserID(*id)
+	}
+	return _u
+}
+
+// SetOverriddenByUser sets the "overridden_by_user" edge to the User entity.
+func (_u *TriageResultUpdate) SetOverriddenByUser(v *User) *TriageResultUpdate {
+	return _u.SetOverriddenByUserID(v.ID)
+}
+
 // Mutation returns the TriageResultMutation object of the builder.
 func (_u *TriageResultUpdate) Mutation() *TriageResultMutation {
 	return _u.mutation
+}
+
+// ClearAlerts clears all "alerts" edges to the Alert entity.
+func (_u *TriageResultUpdate) ClearAlerts() *TriageResultUpdate {
+	_u.mutation.ClearAlerts()
+	return _u
+}
+
+// RemoveAlertIDs removes the "alerts" edge to Alert entities by IDs.
+func (_u *TriageResultUpdate) RemoveAlertIDs(ids ...uuid.UUID) *TriageResultUpdate {
+	_u.mutation.RemoveAlertIDs(ids...)
+	return _u
+}
+
+// RemoveAlerts removes "alerts" edges to Alert entities.
+func (_u *TriageResultUpdate) RemoveAlerts(v ...*Alert) *TriageResultUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAlertIDs(ids...)
+}
+
+// ClearAlertInvestigations clears all "alert_investigations" edges to the AlertInvestigation entity.
+func (_u *TriageResultUpdate) ClearAlertInvestigations() *TriageResultUpdate {
+	_u.mutation.ClearAlertInvestigations()
+	return _u
+}
+
+// RemoveAlertInvestigationIDs removes the "alert_investigations" edge to AlertInvestigation entities by IDs.
+func (_u *TriageResultUpdate) RemoveAlertInvestigationIDs(ids ...uuid.UUID) *TriageResultUpdate {
+	_u.mutation.RemoveAlertInvestigationIDs(ids...)
+	return _u
+}
+
+// RemoveAlertInvestigations removes "alert_investigations" edges to AlertInvestigation entities.
+func (_u *TriageResultUpdate) RemoveAlertInvestigations(v ...*AlertInvestigation) *TriageResultUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAlertInvestigationIDs(ids...)
+}
+
+// ClearOverriddenByUser clears the "overridden_by_user" edge to the User entity.
+func (_u *TriageResultUpdate) ClearOverriddenByUser() *TriageResultUpdate {
+	_u.mutation.ClearOverriddenByUser()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -484,6 +584,11 @@ func (_u *TriageResultUpdate) check() error {
 	if v, ok := _u.mutation.Decision(); ok {
 		if err := triageresult.DecisionValidator(v); err != nil {
 			return &ValidationError{Name: "decision", err: fmt.Errorf(`ent: validator failed for field "TriageResult.decision": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.TriageDurationMs(); ok {
+		if err := triageresult.TriageDurationMsValidator(v); err != nil {
+			return &ValidationError{Name: "triage_duration_ms", err: fmt.Errorf(`ent: validator failed for field "TriageResult.triage_duration_ms": %w`, err)}
 		}
 	}
 	return nil
@@ -598,12 +703,6 @@ func (_u *TriageResultUpdate) sqlSave(ctx context.Context) (_node int, err error
 	if _u.mutation.OverriddenToCleared() {
 		_spec.ClearField(triageresult.FieldOverriddenTo, field.TypeString)
 	}
-	if value, ok := _u.mutation.OverriddenBy(); ok {
-		_spec.SetField(triageresult.FieldOverriddenBy, field.TypeUUID, value)
-	}
-	if _u.mutation.OverriddenByCleared() {
-		_spec.ClearField(triageresult.FieldOverriddenBy, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.OverriddenAt(); ok {
 		_spec.SetField(triageresult.FieldOverriddenAt, field.TypeTime, value)
 	}
@@ -633,6 +732,125 @@ func (_u *TriageResultUpdate) sqlSave(ctx context.Context) (_node int, err error
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(triageresult.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.AlertsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   triageresult.AlertsTable,
+			Columns: []string{triageresult.AlertsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(alert.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAlertsIDs(); len(nodes) > 0 && !_u.mutation.AlertsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   triageresult.AlertsTable,
+			Columns: []string{triageresult.AlertsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(alert.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AlertsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   triageresult.AlertsTable,
+			Columns: []string{triageresult.AlertsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(alert.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.AlertInvestigationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   triageresult.AlertInvestigationsTable,
+			Columns: []string{triageresult.AlertInvestigationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(alertinvestigation.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAlertInvestigationsIDs(); len(nodes) > 0 && !_u.mutation.AlertInvestigationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   triageresult.AlertInvestigationsTable,
+			Columns: []string{triageresult.AlertInvestigationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(alertinvestigation.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AlertInvestigationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   triageresult.AlertInvestigationsTable,
+			Columns: []string{triageresult.AlertInvestigationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(alertinvestigation.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.OverriddenByUserCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   triageresult.OverriddenByUserTable,
+			Columns: []string{triageresult.OverriddenByUserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OverriddenByUserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   triageresult.OverriddenByUserTable,
+			Columns: []string{triageresult.OverriddenByUserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -1052,9 +1270,106 @@ func (_u *TriageResultUpdateOne) SetUpdatedAt(v time.Time) *TriageResultUpdateOn
 	return _u
 }
 
+// AddAlertIDs adds the "alerts" edge to the Alert entity by IDs.
+func (_u *TriageResultUpdateOne) AddAlertIDs(ids ...uuid.UUID) *TriageResultUpdateOne {
+	_u.mutation.AddAlertIDs(ids...)
+	return _u
+}
+
+// AddAlerts adds the "alerts" edges to the Alert entity.
+func (_u *TriageResultUpdateOne) AddAlerts(v ...*Alert) *TriageResultUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAlertIDs(ids...)
+}
+
+// AddAlertInvestigationIDs adds the "alert_investigations" edge to the AlertInvestigation entity by IDs.
+func (_u *TriageResultUpdateOne) AddAlertInvestigationIDs(ids ...uuid.UUID) *TriageResultUpdateOne {
+	_u.mutation.AddAlertInvestigationIDs(ids...)
+	return _u
+}
+
+// AddAlertInvestigations adds the "alert_investigations" edges to the AlertInvestigation entity.
+func (_u *TriageResultUpdateOne) AddAlertInvestigations(v ...*AlertInvestigation) *TriageResultUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAlertInvestigationIDs(ids...)
+}
+
+// SetOverriddenByUserID sets the "overridden_by_user" edge to the User entity by ID.
+func (_u *TriageResultUpdateOne) SetOverriddenByUserID(id uuid.UUID) *TriageResultUpdateOne {
+	_u.mutation.SetOverriddenByUserID(id)
+	return _u
+}
+
+// SetNillableOverriddenByUserID sets the "overridden_by_user" edge to the User entity by ID if the given value is not nil.
+func (_u *TriageResultUpdateOne) SetNillableOverriddenByUserID(id *uuid.UUID) *TriageResultUpdateOne {
+	if id != nil {
+		_u = _u.SetOverriddenByUserID(*id)
+	}
+	return _u
+}
+
+// SetOverriddenByUser sets the "overridden_by_user" edge to the User entity.
+func (_u *TriageResultUpdateOne) SetOverriddenByUser(v *User) *TriageResultUpdateOne {
+	return _u.SetOverriddenByUserID(v.ID)
+}
+
 // Mutation returns the TriageResultMutation object of the builder.
 func (_u *TriageResultUpdateOne) Mutation() *TriageResultMutation {
 	return _u.mutation
+}
+
+// ClearAlerts clears all "alerts" edges to the Alert entity.
+func (_u *TriageResultUpdateOne) ClearAlerts() *TriageResultUpdateOne {
+	_u.mutation.ClearAlerts()
+	return _u
+}
+
+// RemoveAlertIDs removes the "alerts" edge to Alert entities by IDs.
+func (_u *TriageResultUpdateOne) RemoveAlertIDs(ids ...uuid.UUID) *TriageResultUpdateOne {
+	_u.mutation.RemoveAlertIDs(ids...)
+	return _u
+}
+
+// RemoveAlerts removes "alerts" edges to Alert entities.
+func (_u *TriageResultUpdateOne) RemoveAlerts(v ...*Alert) *TriageResultUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAlertIDs(ids...)
+}
+
+// ClearAlertInvestigations clears all "alert_investigations" edges to the AlertInvestigation entity.
+func (_u *TriageResultUpdateOne) ClearAlertInvestigations() *TriageResultUpdateOne {
+	_u.mutation.ClearAlertInvestigations()
+	return _u
+}
+
+// RemoveAlertInvestigationIDs removes the "alert_investigations" edge to AlertInvestigation entities by IDs.
+func (_u *TriageResultUpdateOne) RemoveAlertInvestigationIDs(ids ...uuid.UUID) *TriageResultUpdateOne {
+	_u.mutation.RemoveAlertInvestigationIDs(ids...)
+	return _u
+}
+
+// RemoveAlertInvestigations removes "alert_investigations" edges to AlertInvestigation entities.
+func (_u *TriageResultUpdateOne) RemoveAlertInvestigations(v ...*AlertInvestigation) *TriageResultUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAlertInvestigationIDs(ids...)
+}
+
+// ClearOverriddenByUser clears the "overridden_by_user" edge to the User entity.
+func (_u *TriageResultUpdateOne) ClearOverriddenByUser() *TriageResultUpdateOne {
+	_u.mutation.ClearOverriddenByUser()
+	return _u
 }
 
 // Where appends a list predicates to the TriageResultUpdate builder.
@@ -1121,6 +1436,11 @@ func (_u *TriageResultUpdateOne) check() error {
 	if v, ok := _u.mutation.Decision(); ok {
 		if err := triageresult.DecisionValidator(v); err != nil {
 			return &ValidationError{Name: "decision", err: fmt.Errorf(`ent: validator failed for field "TriageResult.decision": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.TriageDurationMs(); ok {
+		if err := triageresult.TriageDurationMsValidator(v); err != nil {
+			return &ValidationError{Name: "triage_duration_ms", err: fmt.Errorf(`ent: validator failed for field "TriageResult.triage_duration_ms": %w`, err)}
 		}
 	}
 	return nil
@@ -1252,12 +1572,6 @@ func (_u *TriageResultUpdateOne) sqlSave(ctx context.Context) (_node *TriageResu
 	if _u.mutation.OverriddenToCleared() {
 		_spec.ClearField(triageresult.FieldOverriddenTo, field.TypeString)
 	}
-	if value, ok := _u.mutation.OverriddenBy(); ok {
-		_spec.SetField(triageresult.FieldOverriddenBy, field.TypeUUID, value)
-	}
-	if _u.mutation.OverriddenByCleared() {
-		_spec.ClearField(triageresult.FieldOverriddenBy, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.OverriddenAt(); ok {
 		_spec.SetField(triageresult.FieldOverriddenAt, field.TypeTime, value)
 	}
@@ -1287,6 +1601,125 @@ func (_u *TriageResultUpdateOne) sqlSave(ctx context.Context) (_node *TriageResu
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(triageresult.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.AlertsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   triageresult.AlertsTable,
+			Columns: []string{triageresult.AlertsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(alert.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAlertsIDs(); len(nodes) > 0 && !_u.mutation.AlertsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   triageresult.AlertsTable,
+			Columns: []string{triageresult.AlertsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(alert.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AlertsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   triageresult.AlertsTable,
+			Columns: []string{triageresult.AlertsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(alert.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.AlertInvestigationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   triageresult.AlertInvestigationsTable,
+			Columns: []string{triageresult.AlertInvestigationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(alertinvestigation.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAlertInvestigationsIDs(); len(nodes) > 0 && !_u.mutation.AlertInvestigationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   triageresult.AlertInvestigationsTable,
+			Columns: []string{triageresult.AlertInvestigationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(alertinvestigation.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AlertInvestigationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   triageresult.AlertInvestigationsTable,
+			Columns: []string{triageresult.AlertInvestigationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(alertinvestigation.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.OverriddenByUserCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   triageresult.OverriddenByUserTable,
+			Columns: []string{triageresult.OverriddenByUserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OverriddenByUserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   triageresult.OverriddenByUserTable,
+			Columns: []string{triageresult.OverriddenByUserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &TriageResult{config: _u.config}
 	_spec.Assign = _node.assignValues

@@ -1836,26 +1836,6 @@ func TriageResultIDNotIn(vs ...uuid.UUID) predicate.AlertInvestigation {
 	return predicate.AlertInvestigation(sql.FieldNotIn(FieldTriageResultID, vs...))
 }
 
-// TriageResultIDGT applies the GT predicate on the "triage_result_id" field.
-func TriageResultIDGT(v uuid.UUID) predicate.AlertInvestigation {
-	return predicate.AlertInvestigation(sql.FieldGT(FieldTriageResultID, v))
-}
-
-// TriageResultIDGTE applies the GTE predicate on the "triage_result_id" field.
-func TriageResultIDGTE(v uuid.UUID) predicate.AlertInvestigation {
-	return predicate.AlertInvestigation(sql.FieldGTE(FieldTriageResultID, v))
-}
-
-// TriageResultIDLT applies the LT predicate on the "triage_result_id" field.
-func TriageResultIDLT(v uuid.UUID) predicate.AlertInvestigation {
-	return predicate.AlertInvestigation(sql.FieldLT(FieldTriageResultID, v))
-}
-
-// TriageResultIDLTE applies the LTE predicate on the "triage_result_id" field.
-func TriageResultIDLTE(v uuid.UUID) predicate.AlertInvestigation {
-	return predicate.AlertInvestigation(sql.FieldLTE(FieldTriageResultID, v))
-}
-
 // TriageResultIDIsNil applies the IsNil predicate on the "triage_result_id" field.
 func TriageResultIDIsNil() predicate.AlertInvestigation {
 	return predicate.AlertInvestigation(sql.FieldIsNull(FieldTriageResultID))
@@ -2196,6 +2176,29 @@ func HasPromotedIncidentInvestigation() predicate.AlertInvestigation {
 func HasPromotedIncidentInvestigationWith(preds ...predicate.IncidentInvestigation) predicate.AlertInvestigation {
 	return predicate.AlertInvestigation(func(s *sql.Selector) {
 		step := newPromotedIncidentInvestigationStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasTriageResult applies the HasEdge predicate on the "triage_result" edge.
+func HasTriageResult() predicate.AlertInvestigation {
+	return predicate.AlertInvestigation(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, TriageResultTable, TriageResultColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasTriageResultWith applies the HasEdge predicate on the "triage_result" edge with a given conditions (other predicates).
+func HasTriageResultWith(preds ...predicate.TriageResult) predicate.AlertInvestigation {
+	return predicate.AlertInvestigation(func(s *sql.Selector) {
+		step := newTriageResultStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

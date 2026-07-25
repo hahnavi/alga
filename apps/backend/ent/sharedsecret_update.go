@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"alga/ent/credentialprovider"
 	"alga/ent/predicate"
 	"alga/ent/sharedsecret"
 	"context"
@@ -166,9 +167,20 @@ func (_u *SharedSecretUpdate) SetUpdatedAt(v time.Time) *SharedSecretUpdate {
 	return _u
 }
 
+// SetProvider sets the "provider" edge to the CredentialProvider entity.
+func (_u *SharedSecretUpdate) SetProvider(v *CredentialProvider) *SharedSecretUpdate {
+	return _u.SetProviderID(v.ID)
+}
+
 // Mutation returns the SharedSecretMutation object of the builder.
 func (_u *SharedSecretUpdate) Mutation() *SharedSecretMutation {
 	return _u.mutation
+}
+
+// ClearProvider clears the "provider" edge to the CredentialProvider entity.
+func (_u *SharedSecretUpdate) ClearProvider() *SharedSecretUpdate {
+	_u.mutation.ClearProvider()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -219,6 +231,9 @@ func (_u *SharedSecretUpdate) check() error {
 			return &ValidationError{Name: "secret_id", err: fmt.Errorf(`ent: validator failed for field "SharedSecret.secret_id": %w`, err)}
 		}
 	}
+	if _u.mutation.ProviderCleared() && len(_u.mutation.ProviderIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "SharedSecret.provider"`)
+	}
 	return nil
 }
 
@@ -233,9 +248,6 @@ func (_u *SharedSecretUpdate) sqlSave(ctx context.Context) (_node int, err error
 				ps[i](selector)
 			}
 		}
-	}
-	if value, ok := _u.mutation.ProviderID(); ok {
-		_spec.SetField(sharedsecret.FieldProviderID, field.TypeUUID, value)
 	}
 	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(sharedsecret.FieldName, field.TypeString, value)
@@ -271,6 +283,35 @@ func (_u *SharedSecretUpdate) sqlSave(ctx context.Context) (_node int, err error
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(sharedsecret.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.ProviderCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   sharedsecret.ProviderTable,
+			Columns: []string{sharedsecret.ProviderColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credentialprovider.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ProviderIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   sharedsecret.ProviderTable,
+			Columns: []string{sharedsecret.ProviderColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credentialprovider.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -428,9 +469,20 @@ func (_u *SharedSecretUpdateOne) SetUpdatedAt(v time.Time) *SharedSecretUpdateOn
 	return _u
 }
 
+// SetProvider sets the "provider" edge to the CredentialProvider entity.
+func (_u *SharedSecretUpdateOne) SetProvider(v *CredentialProvider) *SharedSecretUpdateOne {
+	return _u.SetProviderID(v.ID)
+}
+
 // Mutation returns the SharedSecretMutation object of the builder.
 func (_u *SharedSecretUpdateOne) Mutation() *SharedSecretMutation {
 	return _u.mutation
+}
+
+// ClearProvider clears the "provider" edge to the CredentialProvider entity.
+func (_u *SharedSecretUpdateOne) ClearProvider() *SharedSecretUpdateOne {
+	_u.mutation.ClearProvider()
+	return _u
 }
 
 // Where appends a list predicates to the SharedSecretUpdate builder.
@@ -494,6 +546,9 @@ func (_u *SharedSecretUpdateOne) check() error {
 			return &ValidationError{Name: "secret_id", err: fmt.Errorf(`ent: validator failed for field "SharedSecret.secret_id": %w`, err)}
 		}
 	}
+	if _u.mutation.ProviderCleared() && len(_u.mutation.ProviderIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "SharedSecret.provider"`)
+	}
 	return nil
 }
 
@@ -525,9 +580,6 @@ func (_u *SharedSecretUpdateOne) sqlSave(ctx context.Context) (_node *SharedSecr
 				ps[i](selector)
 			}
 		}
-	}
-	if value, ok := _u.mutation.ProviderID(); ok {
-		_spec.SetField(sharedsecret.FieldProviderID, field.TypeUUID, value)
 	}
 	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(sharedsecret.FieldName, field.TypeString, value)
@@ -563,6 +615,35 @@ func (_u *SharedSecretUpdateOne) sqlSave(ctx context.Context) (_node *SharedSecr
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(sharedsecret.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.ProviderCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   sharedsecret.ProviderTable,
+			Columns: []string{sharedsecret.ProviderColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credentialprovider.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ProviderIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   sharedsecret.ProviderTable,
+			Columns: []string{sharedsecret.ProviderColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credentialprovider.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &SharedSecret{config: _u.config}
 	_spec.Assign = _node.assignValues

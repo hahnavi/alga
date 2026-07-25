@@ -4,6 +4,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -40,7 +41,11 @@ func (AgentAsk) Fields() []ent.Field {
 }
 
 func (AgentAsk) Edges() []ent.Edge {
-	return nil
+	return []ent.Edge{
+		edge.From("from_agent", AgentToken.Type).Ref("sent_asks").Field("from_agent_id").Unique().Required(),
+		edge.From("to_agent", AgentToken.Type).Ref("received_asks").Field("to_agent_id").Unique(),
+		edge.From("replied_by_agent", AgentToken.Type).Ref("replied_asks").Field("replied_by_agent_id").Unique(),
+	}
 }
 
 func (AgentAsk) Indexes() []ent.Index {
@@ -51,5 +56,6 @@ func (AgentAsk) Indexes() []ent.Index {
 		index.Fields("from_agent_id", "created_at"),
 		index.Fields("investigation_id"),
 		index.Fields("expires_at"),
+		index.Fields("replied_by_agent_id"),
 	}
 }

@@ -5,6 +5,7 @@ package ent
 import (
 	"alga/ent/predicate"
 	"alga/ent/session"
+	"alga/ent/user"
 	"context"
 	"errors"
 	"fmt"
@@ -192,9 +193,20 @@ func (_u *SessionUpdate) ClearUserAgent() *SessionUpdate {
 	return _u
 }
 
+// SetUser sets the "user" edge to the User entity.
+func (_u *SessionUpdate) SetUser(v *User) *SessionUpdate {
+	return _u.SetUserID(v.ID)
+}
+
 // Mutation returns the SessionMutation object of the builder.
 func (_u *SessionUpdate) Mutation() *SessionMutation {
 	return _u.mutation
+}
+
+// ClearUser clears the "user" edge to the User entity.
+func (_u *SessionUpdate) ClearUser() *SessionUpdate {
+	_u.mutation.ClearUser()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -236,6 +248,9 @@ func (_u *SessionUpdate) check() error {
 			return &ValidationError{Name: "family_id", err: fmt.Errorf(`ent: validator failed for field "Session.family_id": %w`, err)}
 		}
 	}
+	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "Session.user"`)
+	}
 	return nil
 }
 
@@ -250,9 +265,6 @@ func (_u *SessionUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 				ps[i](selector)
 			}
 		}
-	}
-	if value, ok := _u.mutation.UserID(); ok {
-		_spec.SetField(session.FieldUserID, field.TypeUUID, value)
 	}
 	if value, ok := _u.mutation.IDHash(); ok {
 		_spec.SetField(session.FieldIDHash, field.TypeString, value)
@@ -297,6 +309,35 @@ func (_u *SessionUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.UserAgentCleared() {
 		_spec.ClearField(session.FieldUserAgent, field.TypeString)
+	}
+	if _u.mutation.UserCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   session.UserTable,
+			Columns: []string{session.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.UserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   session.UserTable,
+			Columns: []string{session.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -480,9 +521,20 @@ func (_u *SessionUpdateOne) ClearUserAgent() *SessionUpdateOne {
 	return _u
 }
 
+// SetUser sets the "user" edge to the User entity.
+func (_u *SessionUpdateOne) SetUser(v *User) *SessionUpdateOne {
+	return _u.SetUserID(v.ID)
+}
+
 // Mutation returns the SessionMutation object of the builder.
 func (_u *SessionUpdateOne) Mutation() *SessionMutation {
 	return _u.mutation
+}
+
+// ClearUser clears the "user" edge to the User entity.
+func (_u *SessionUpdateOne) ClearUser() *SessionUpdateOne {
+	_u.mutation.ClearUser()
+	return _u
 }
 
 // Where appends a list predicates to the SessionUpdate builder.
@@ -537,6 +589,9 @@ func (_u *SessionUpdateOne) check() error {
 			return &ValidationError{Name: "family_id", err: fmt.Errorf(`ent: validator failed for field "Session.family_id": %w`, err)}
 		}
 	}
+	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "Session.user"`)
+	}
 	return nil
 }
 
@@ -568,9 +623,6 @@ func (_u *SessionUpdateOne) sqlSave(ctx context.Context) (_node *Session, err er
 				ps[i](selector)
 			}
 		}
-	}
-	if value, ok := _u.mutation.UserID(); ok {
-		_spec.SetField(session.FieldUserID, field.TypeUUID, value)
 	}
 	if value, ok := _u.mutation.IDHash(); ok {
 		_spec.SetField(session.FieldIDHash, field.TypeString, value)
@@ -615,6 +667,35 @@ func (_u *SessionUpdateOne) sqlSave(ctx context.Context) (_node *Session, err er
 	}
 	if _u.mutation.UserAgentCleared() {
 		_spec.ClearField(session.FieldUserAgent, field.TypeString)
+	}
+	if _u.mutation.UserCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   session.UserTable,
+			Columns: []string{session.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.UserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   session.UserTable,
+			Columns: []string{session.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &Session{config: _u.config}
 	_spec.Assign = _node.assignValues

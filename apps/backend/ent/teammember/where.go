@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -95,26 +96,6 @@ func TeamIDNotIn(vs ...uuid.UUID) predicate.TeamMember {
 	return predicate.TeamMember(sql.FieldNotIn(FieldTeamID, vs...))
 }
 
-// TeamIDGT applies the GT predicate on the "team_id" field.
-func TeamIDGT(v uuid.UUID) predicate.TeamMember {
-	return predicate.TeamMember(sql.FieldGT(FieldTeamID, v))
-}
-
-// TeamIDGTE applies the GTE predicate on the "team_id" field.
-func TeamIDGTE(v uuid.UUID) predicate.TeamMember {
-	return predicate.TeamMember(sql.FieldGTE(FieldTeamID, v))
-}
-
-// TeamIDLT applies the LT predicate on the "team_id" field.
-func TeamIDLT(v uuid.UUID) predicate.TeamMember {
-	return predicate.TeamMember(sql.FieldLT(FieldTeamID, v))
-}
-
-// TeamIDLTE applies the LTE predicate on the "team_id" field.
-func TeamIDLTE(v uuid.UUID) predicate.TeamMember {
-	return predicate.TeamMember(sql.FieldLTE(FieldTeamID, v))
-}
-
 // UserIDEQ applies the EQ predicate on the "user_id" field.
 func UserIDEQ(v uuid.UUID) predicate.TeamMember {
 	return predicate.TeamMember(sql.FieldEQ(FieldUserID, v))
@@ -133,26 +114,6 @@ func UserIDIn(vs ...uuid.UUID) predicate.TeamMember {
 // UserIDNotIn applies the NotIn predicate on the "user_id" field.
 func UserIDNotIn(vs ...uuid.UUID) predicate.TeamMember {
 	return predicate.TeamMember(sql.FieldNotIn(FieldUserID, vs...))
-}
-
-// UserIDGT applies the GT predicate on the "user_id" field.
-func UserIDGT(v uuid.UUID) predicate.TeamMember {
-	return predicate.TeamMember(sql.FieldGT(FieldUserID, v))
-}
-
-// UserIDGTE applies the GTE predicate on the "user_id" field.
-func UserIDGTE(v uuid.UUID) predicate.TeamMember {
-	return predicate.TeamMember(sql.FieldGTE(FieldUserID, v))
-}
-
-// UserIDLT applies the LT predicate on the "user_id" field.
-func UserIDLT(v uuid.UUID) predicate.TeamMember {
-	return predicate.TeamMember(sql.FieldLT(FieldUserID, v))
-}
-
-// UserIDLTE applies the LTE predicate on the "user_id" field.
-func UserIDLTE(v uuid.UUID) predicate.TeamMember {
-	return predicate.TeamMember(sql.FieldLTE(FieldUserID, v))
 }
 
 // RoleEQ applies the EQ predicate on the "role" field.
@@ -258,6 +219,52 @@ func CreatedAtLT(v time.Time) predicate.TeamMember {
 // CreatedAtLTE applies the LTE predicate on the "created_at" field.
 func CreatedAtLTE(v time.Time) predicate.TeamMember {
 	return predicate.TeamMember(sql.FieldLTE(FieldCreatedAt, v))
+}
+
+// HasTeam applies the HasEdge predicate on the "team" edge.
+func HasTeam() predicate.TeamMember {
+	return predicate.TeamMember(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, TeamTable, TeamColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasTeamWith applies the HasEdge predicate on the "team" edge with a given conditions (other predicates).
+func HasTeamWith(preds ...predicate.Team) predicate.TeamMember {
+	return predicate.TeamMember(func(s *sql.Selector) {
+		step := newTeamStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasUser applies the HasEdge predicate on the "user" edge.
+func HasUser() predicate.TeamMember {
+	return predicate.TeamMember(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, UserTable, UserColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasUserWith applies the HasEdge predicate on the "user" edge with a given conditions (other predicates).
+func HasUserWith(preds ...predicate.User) predicate.TeamMember {
+	return predicate.TeamMember(func(s *sql.Selector) {
+		step := newUserStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

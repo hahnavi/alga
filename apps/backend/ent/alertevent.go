@@ -31,10 +31,11 @@ type AlertEvent struct {
 	ActorUserID string `json:"actor_user_id,omitempty"`
 	// Source holds the value of the "source" field.
 	Source string `json:"source,omitempty"`
+	// AlertID holds the value of the "alert_id" field.
+	AlertID uuid.UUID `json:"alert_id,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the AlertEventQuery when eager-loading is set.
 	Edges        AlertEventEdges `json:"edges"`
-	alert_events *uuid.UUID
 	selectValues sql.SelectValues
 }
 
@@ -67,10 +68,8 @@ func (*AlertEvent) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case alertevent.FieldTimestamp:
 			values[i] = new(sql.NullTime)
-		case alertevent.FieldID:
+		case alertevent.FieldID, alertevent.FieldAlertID:
 			values[i] = new(uuid.UUID)
-		case alertevent.ForeignKeys[0]: // alert_events
-			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -128,12 +127,11 @@ func (_m *AlertEvent) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Source = value.String
 			}
-		case alertevent.ForeignKeys[0]:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field alert_events", values[i])
-			} else if value.Valid {
-				_m.alert_events = new(uuid.UUID)
-				*_m.alert_events = *value.S.(*uuid.UUID)
+		case alertevent.FieldAlertID:
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field alert_id", values[i])
+			} else if value != nil {
+				_m.AlertID = *value
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
@@ -193,6 +191,9 @@ func (_m *AlertEvent) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("source=")
 	builder.WriteString(_m.Source)
+	builder.WriteString(", ")
+	builder.WriteString("alert_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.AlertID))
 	builder.WriteByte(')')
 	return builder.String()
 }

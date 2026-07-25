@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -133,26 +134,6 @@ func ScheduleIDIn(vs ...uuid.UUID) predicate.ScheduleLayer {
 // ScheduleIDNotIn applies the NotIn predicate on the "schedule_id" field.
 func ScheduleIDNotIn(vs ...uuid.UUID) predicate.ScheduleLayer {
 	return predicate.ScheduleLayer(sql.FieldNotIn(FieldScheduleID, vs...))
-}
-
-// ScheduleIDGT applies the GT predicate on the "schedule_id" field.
-func ScheduleIDGT(v uuid.UUID) predicate.ScheduleLayer {
-	return predicate.ScheduleLayer(sql.FieldGT(FieldScheduleID, v))
-}
-
-// ScheduleIDGTE applies the GTE predicate on the "schedule_id" field.
-func ScheduleIDGTE(v uuid.UUID) predicate.ScheduleLayer {
-	return predicate.ScheduleLayer(sql.FieldGTE(FieldScheduleID, v))
-}
-
-// ScheduleIDLT applies the LT predicate on the "schedule_id" field.
-func ScheduleIDLT(v uuid.UUID) predicate.ScheduleLayer {
-	return predicate.ScheduleLayer(sql.FieldLT(FieldScheduleID, v))
-}
-
-// ScheduleIDLTE applies the LTE predicate on the "schedule_id" field.
-func ScheduleIDLTE(v uuid.UUID) predicate.ScheduleLayer {
-	return predicate.ScheduleLayer(sql.FieldLTE(FieldScheduleID, v))
 }
 
 // NameEQ applies the EQ predicate on the "name" field.
@@ -728,6 +709,29 @@ func UpdatedAtLT(v time.Time) predicate.ScheduleLayer {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.ScheduleLayer {
 	return predicate.ScheduleLayer(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// HasSchedule applies the HasEdge predicate on the "schedule" edge.
+func HasSchedule() predicate.ScheduleLayer {
+	return predicate.ScheduleLayer(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, ScheduleTable, ScheduleColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasScheduleWith applies the HasEdge predicate on the "schedule" edge with a given conditions (other predicates).
+func HasScheduleWith(preds ...predicate.OnCallSchedule) predicate.ScheduleLayer {
+	return predicate.ScheduleLayer(func(s *sql.Selector) {
+		step := newScheduleStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

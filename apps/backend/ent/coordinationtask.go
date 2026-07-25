@@ -5,6 +5,7 @@ package ent
 import (
 	"alga/ent/coordinationtask"
 	"alga/ent/incident"
+	"alga/ent/incidentinvestigation"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -78,9 +79,11 @@ type CoordinationTaskEdges struct {
 	ChildTasks []*CoordinationTask `json:"child_tasks,omitempty"`
 	// ParentTask holds the value of the parent_task edge.
 	ParentTask *CoordinationTask `json:"parent_task,omitempty"`
+	// LinkedInvestigation holds the value of the linked_investigation edge.
+	LinkedInvestigation *IncidentInvestigation `json:"linked_investigation,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [4]bool
 }
 
 // IncidentOrErr returns the Incident value or an error if the edge
@@ -112,6 +115,17 @@ func (e CoordinationTaskEdges) ParentTaskOrErr() (*CoordinationTask, error) {
 		return nil, &NotFoundError{label: coordinationtask.Label}
 	}
 	return nil, &NotLoadedError{edge: "parent_task"}
+}
+
+// LinkedInvestigationOrErr returns the LinkedInvestigation value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e CoordinationTaskEdges) LinkedInvestigationOrErr() (*IncidentInvestigation, error) {
+	if e.LinkedInvestigation != nil {
+		return e.LinkedInvestigation, nil
+	} else if e.loadedTypes[3] {
+		return nil, &NotFoundError{label: incidentinvestigation.Label}
+	}
+	return nil, &NotLoadedError{edge: "linked_investigation"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -322,6 +336,11 @@ func (_m *CoordinationTask) QueryChildTasks() *CoordinationTaskQuery {
 // QueryParentTask queries the "parent_task" edge of the CoordinationTask entity.
 func (_m *CoordinationTask) QueryParentTask() *CoordinationTaskQuery {
 	return NewCoordinationTaskClient(_m.config).QueryParentTask(_m)
+}
+
+// QueryLinkedInvestigation queries the "linked_investigation" edge of the CoordinationTask entity.
+func (_m *CoordinationTask) QueryLinkedInvestigation() *IncidentInvestigationQuery {
+	return NewCoordinationTaskClient(_m.config).QueryLinkedInvestigation(_m)
 }
 
 // Update returns a builder for updating this CoordinationTask.

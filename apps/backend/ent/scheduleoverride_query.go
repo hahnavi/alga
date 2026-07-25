@@ -3,8 +3,10 @@
 package ent
 
 import (
+	"alga/ent/oncallschedule"
 	"alga/ent/predicate"
 	"alga/ent/scheduleoverride"
+	"alga/ent/user"
 	"context"
 	"fmt"
 	"math"
@@ -19,10 +21,12 @@ import (
 // ScheduleOverrideQuery is the builder for querying ScheduleOverride entities.
 type ScheduleOverrideQuery struct {
 	config
-	ctx        *QueryContext
-	order      []scheduleoverride.OrderOption
-	inters     []Interceptor
-	predicates []predicate.ScheduleOverride
+	ctx          *QueryContext
+	order        []scheduleoverride.OrderOption
+	inters       []Interceptor
+	predicates   []predicate.ScheduleOverride
+	withSchedule *OnCallScheduleQuery
+	withUser     *UserQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -57,6 +61,50 @@ func (_q *ScheduleOverrideQuery) Unique(unique bool) *ScheduleOverrideQuery {
 func (_q *ScheduleOverrideQuery) Order(o ...scheduleoverride.OrderOption) *ScheduleOverrideQuery {
 	_q.order = append(_q.order, o...)
 	return _q
+}
+
+// QuerySchedule chains the current query on the "schedule" edge.
+func (_q *ScheduleOverrideQuery) QuerySchedule() *OnCallScheduleQuery {
+	query := (&OnCallScheduleClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(scheduleoverride.Table, scheduleoverride.FieldID, selector),
+			sqlgraph.To(oncallschedule.Table, oncallschedule.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, scheduleoverride.ScheduleTable, scheduleoverride.ScheduleColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryUser chains the current query on the "user" edge.
+func (_q *ScheduleOverrideQuery) QueryUser() *UserQuery {
+	query := (&UserClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(scheduleoverride.Table, scheduleoverride.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, scheduleoverride.UserTable, scheduleoverride.UserColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first ScheduleOverride entity from the query.
@@ -246,15 +294,39 @@ func (_q *ScheduleOverrideQuery) Clone() *ScheduleOverrideQuery {
 		return nil
 	}
 	return &ScheduleOverrideQuery{
-		config:     _q.config,
-		ctx:        _q.ctx.Clone(),
-		order:      append([]scheduleoverride.OrderOption{}, _q.order...),
-		inters:     append([]Interceptor{}, _q.inters...),
-		predicates: append([]predicate.ScheduleOverride{}, _q.predicates...),
+		config:       _q.config,
+		ctx:          _q.ctx.Clone(),
+		order:        append([]scheduleoverride.OrderOption{}, _q.order...),
+		inters:       append([]Interceptor{}, _q.inters...),
+		predicates:   append([]predicate.ScheduleOverride{}, _q.predicates...),
+		withSchedule: _q.withSchedule.Clone(),
+		withUser:     _q.withUser.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
+}
+
+// WithSchedule tells the query-builder to eager-load the nodes that are connected to
+// the "schedule" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ScheduleOverrideQuery) WithSchedule(opts ...func(*OnCallScheduleQuery)) *ScheduleOverrideQuery {
+	query := (&OnCallScheduleClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withSchedule = query
+	return _q
+}
+
+// WithUser tells the query-builder to eager-load the nodes that are connected to
+// the "user" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ScheduleOverrideQuery) WithUser(opts ...func(*UserQuery)) *ScheduleOverrideQuery {
+	query := (&UserClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withUser = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -333,8 +405,12 @@ func (_q *ScheduleOverrideQuery) prepareQuery(ctx context.Context) error {
 
 func (_q *ScheduleOverrideQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*ScheduleOverride, error) {
 	var (
-		nodes = []*ScheduleOverride{}
-		_spec = _q.querySpec()
+		nodes       = []*ScheduleOverride{}
+		_spec       = _q.querySpec()
+		loadedTypes = [2]bool{
+			_q.withSchedule != nil,
+			_q.withUser != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*ScheduleOverride).scanValues(nil, columns)
@@ -342,6 +418,7 @@ func (_q *ScheduleOverrideQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &ScheduleOverride{config: _q.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -353,7 +430,78 @@ func (_q *ScheduleOverrideQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := _q.withSchedule; query != nil {
+		if err := _q.loadSchedule(ctx, query, nodes, nil,
+			func(n *ScheduleOverride, e *OnCallSchedule) { n.Edges.Schedule = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withUser; query != nil {
+		if err := _q.loadUser(ctx, query, nodes, nil,
+			func(n *ScheduleOverride, e *User) { n.Edges.User = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (_q *ScheduleOverrideQuery) loadSchedule(ctx context.Context, query *OnCallScheduleQuery, nodes []*ScheduleOverride, init func(*ScheduleOverride), assign func(*ScheduleOverride, *OnCallSchedule)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*ScheduleOverride)
+	for i := range nodes {
+		fk := nodes[i].ScheduleID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(oncallschedule.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "schedule_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *ScheduleOverrideQuery) loadUser(ctx context.Context, query *UserQuery, nodes []*ScheduleOverride, init func(*ScheduleOverride), assign func(*ScheduleOverride, *User)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*ScheduleOverride)
+	for i := range nodes {
+		fk := nodes[i].UserID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(user.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "user_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
 }
 
 func (_q *ScheduleOverrideQuery) sqlCount(ctx context.Context) (int, error) {
@@ -380,6 +528,12 @@ func (_q *ScheduleOverrideQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != scheduleoverride.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if _q.withSchedule != nil {
+			_spec.Node.AddColumnOnce(scheduleoverride.FieldScheduleID)
+		}
+		if _q.withUser != nil {
+			_spec.Node.AddColumnOnce(scheduleoverride.FieldUserID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

@@ -28,12 +28,14 @@ type IncidentDocument struct {
 	Version int `json:"version,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// IncidentID holds the value of the "incident_id" field.
+	IncidentID uuid.UUID `json:"incident_id,omitempty"`
+	// UpdatedByID holds the value of the "updated_by_id" field.
+	UpdatedByID *uuid.UUID `json:"updated_by_id,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the IncidentDocumentQuery when eager-loading is set.
-	Edges               IncidentDocumentEdges `json:"edges"`
-	incident_documents  *uuid.UUID
-	user_document_edits *uuid.UUID
-	selectValues        sql.SelectValues
+	Edges        IncidentDocumentEdges `json:"edges"`
+	selectValues sql.SelectValues
 }
 
 // IncidentDocumentEdges holds the relations/edges for other nodes in the graph.
@@ -74,18 +76,16 @@ func (*IncidentDocument) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case incidentdocument.FieldUpdatedByID:
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case incidentdocument.FieldVersion:
 			values[i] = new(sql.NullInt64)
 		case incidentdocument.FieldSection, incidentdocument.FieldContent:
 			values[i] = new(sql.NullString)
 		case incidentdocument.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
-		case incidentdocument.FieldID:
+		case incidentdocument.FieldID, incidentdocument.FieldIncidentID:
 			values[i] = new(uuid.UUID)
-		case incidentdocument.ForeignKeys[0]: // incident_documents
-			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case incidentdocument.ForeignKeys[1]: // user_document_edits
-			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -131,19 +131,18 @@ func (_m *IncidentDocument) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.UpdatedAt = value.Time
 			}
-		case incidentdocument.ForeignKeys[0]:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field incident_documents", values[i])
-			} else if value.Valid {
-				_m.incident_documents = new(uuid.UUID)
-				*_m.incident_documents = *value.S.(*uuid.UUID)
+		case incidentdocument.FieldIncidentID:
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field incident_id", values[i])
+			} else if value != nil {
+				_m.IncidentID = *value
 			}
-		case incidentdocument.ForeignKeys[1]:
+		case incidentdocument.FieldUpdatedByID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field user_document_edits", values[i])
+				return fmt.Errorf("unexpected type %T for field updated_by_id", values[i])
 			} else if value.Valid {
-				_m.user_document_edits = new(uuid.UUID)
-				*_m.user_document_edits = *value.S.(*uuid.UUID)
+				_m.UpdatedByID = new(uuid.UUID)
+				*_m.UpdatedByID = *value.S.(*uuid.UUID)
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
@@ -202,6 +201,14 @@ func (_m *IncidentDocument) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
 	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("incident_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.IncidentID))
+	builder.WriteString(", ")
+	if v := _m.UpdatedByID; v != nil {
+		builder.WriteString("updated_by_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteByte(')')
 	return builder.String()
 }

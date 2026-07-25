@@ -3,7 +3,9 @@
 package ent
 
 import (
+	"alga/ent/team"
 	"alga/ent/teammember"
+	"alga/ent/user"
 	"context"
 	"errors"
 	"fmt"
@@ -75,6 +77,16 @@ func (_c *TeamMemberCreate) SetNillableID(v *uuid.UUID) *TeamMemberCreate {
 	return _c
 }
 
+// SetTeam sets the "team" edge to the Team entity.
+func (_c *TeamMemberCreate) SetTeam(v *Team) *TeamMemberCreate {
+	return _c.SetTeamID(v.ID)
+}
+
+// SetUser sets the "user" edge to the User entity.
+func (_c *TeamMemberCreate) SetUser(v *User) *TeamMemberCreate {
+	return _c.SetUserID(v.ID)
+}
+
 // Mutation returns the TeamMemberMutation object of the builder.
 func (_c *TeamMemberCreate) Mutation() *TeamMemberMutation {
 	return _c.mutation
@@ -138,6 +150,12 @@ func (_c *TeamMemberCreate) check() error {
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "TeamMember.created_at"`)}
 	}
+	if len(_c.mutation.TeamIDs()) == 0 {
+		return &ValidationError{Name: "team", err: errors.New(`ent: missing required edge "TeamMember.team"`)}
+	}
+	if len(_c.mutation.UserIDs()) == 0 {
+		return &ValidationError{Name: "user", err: errors.New(`ent: missing required edge "TeamMember.user"`)}
+	}
 	return nil
 }
 
@@ -173,14 +191,6 @@ func (_c *TeamMemberCreate) createSpec() (*TeamMember, *sqlgraph.CreateSpec) {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := _c.mutation.TeamID(); ok {
-		_spec.SetField(teammember.FieldTeamID, field.TypeUUID, value)
-		_node.TeamID = value
-	}
-	if value, ok := _c.mutation.UserID(); ok {
-		_spec.SetField(teammember.FieldUserID, field.TypeUUID, value)
-		_node.UserID = value
-	}
 	if value, ok := _c.mutation.Role(); ok {
 		_spec.SetField(teammember.FieldRole, field.TypeString, value)
 		_node.Role = value
@@ -188,6 +198,40 @@ func (_c *TeamMemberCreate) createSpec() (*TeamMember, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(teammember.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
+	}
+	if nodes := _c.mutation.TeamIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   teammember.TeamTable,
+			Columns: []string{teammember.TeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.TeamID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.UserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   teammember.UserTable,
+			Columns: []string{teammember.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.UserID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

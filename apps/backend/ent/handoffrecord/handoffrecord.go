@@ -40,6 +40,10 @@ const (
 	FieldUpdatedAt = "updated_at"
 	// EdgeSchedule holds the string denoting the schedule edge name in mutations.
 	EdgeSchedule = "schedule"
+	// EdgeOutgoingUser holds the string denoting the outgoing_user edge name in mutations.
+	EdgeOutgoingUser = "outgoing_user"
+	// EdgeIncomingUser holds the string denoting the incoming_user edge name in mutations.
+	EdgeIncomingUser = "incoming_user"
 	// Table holds the table name of the handoffrecord in the database.
 	Table = "handoff_records"
 	// ScheduleTable is the table that holds the schedule relation/edge.
@@ -49,6 +53,20 @@ const (
 	ScheduleInverseTable = "on_call_schedules"
 	// ScheduleColumn is the table column denoting the schedule relation/edge.
 	ScheduleColumn = "schedule_id"
+	// OutgoingUserTable is the table that holds the outgoing_user relation/edge.
+	OutgoingUserTable = "handoff_records"
+	// OutgoingUserInverseTable is the table name for the User entity.
+	// It exists in this package in order to avoid circular dependency with the "user" package.
+	OutgoingUserInverseTable = "users"
+	// OutgoingUserColumn is the table column denoting the outgoing_user relation/edge.
+	OutgoingUserColumn = "outgoing_user_id"
+	// IncomingUserTable is the table that holds the incoming_user relation/edge.
+	IncomingUserTable = "handoff_records"
+	// IncomingUserInverseTable is the table name for the User entity.
+	// It exists in this package in order to avoid circular dependency with the "user" package.
+	IncomingUserInverseTable = "users"
+	// IncomingUserColumn is the table column denoting the incoming_user relation/edge.
+	IncomingUserColumn = "incoming_user_id"
 )
 
 // Columns holds all SQL columns for handoffrecord fields.
@@ -183,10 +201,38 @@ func ByScheduleField(field string, opts ...sql.OrderTermOption) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newScheduleStep(), sql.OrderByField(field, opts...))
 	}
 }
+
+// ByOutgoingUserField orders the results by outgoing_user field.
+func ByOutgoingUserField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newOutgoingUserStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByIncomingUserField orders the results by incoming_user field.
+func ByIncomingUserField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newIncomingUserStep(), sql.OrderByField(field, opts...))
+	}
+}
 func newScheduleStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ScheduleInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, false, ScheduleTable, ScheduleColumn),
+	)
+}
+func newOutgoingUserStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(OutgoingUserInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, OutgoingUserTable, OutgoingUserColumn),
+	)
+}
+func newIncomingUserStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(IncomingUserInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, IncomingUserTable, IncomingUserColumn),
 	)
 }

@@ -3,8 +3,13 @@
 package ent
 
 import (
+	"alga/ent/heartbeat"
+	"alga/ent/oncallschedule"
 	"alga/ent/predicate"
+	"alga/ent/service"
+	"alga/ent/statuspage"
 	"alga/ent/team"
+	"alga/ent/teammember"
 	"context"
 	"errors"
 	"fmt"
@@ -13,6 +18,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 )
 
 // TeamUpdate is the builder for updating Team entities.
@@ -76,9 +82,189 @@ func (_u *TeamUpdate) SetUpdatedAt(v time.Time) *TeamUpdate {
 	return _u
 }
 
+// AddTeamMemberIDs adds the "team_members" edge to the TeamMember entity by IDs.
+func (_u *TeamUpdate) AddTeamMemberIDs(ids ...uuid.UUID) *TeamUpdate {
+	_u.mutation.AddTeamMemberIDs(ids...)
+	return _u
+}
+
+// AddTeamMembers adds the "team_members" edges to the TeamMember entity.
+func (_u *TeamUpdate) AddTeamMembers(v ...*TeamMember) *TeamUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddTeamMemberIDs(ids...)
+}
+
+// AddOwnedServiceIDs adds the "owned_services" edge to the Service entity by IDs.
+func (_u *TeamUpdate) AddOwnedServiceIDs(ids ...uuid.UUID) *TeamUpdate {
+	_u.mutation.AddOwnedServiceIDs(ids...)
+	return _u
+}
+
+// AddOwnedServices adds the "owned_services" edges to the Service entity.
+func (_u *TeamUpdate) AddOwnedServices(v ...*Service) *TeamUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddOwnedServiceIDs(ids...)
+}
+
+// AddOwnedStatusPageIDs adds the "owned_status_pages" edge to the StatusPage entity by IDs.
+func (_u *TeamUpdate) AddOwnedStatusPageIDs(ids ...uuid.UUID) *TeamUpdate {
+	_u.mutation.AddOwnedStatusPageIDs(ids...)
+	return _u
+}
+
+// AddOwnedStatusPages adds the "owned_status_pages" edges to the StatusPage entity.
+func (_u *TeamUpdate) AddOwnedStatusPages(v ...*StatusPage) *TeamUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddOwnedStatusPageIDs(ids...)
+}
+
+// AddOnCallScheduleIDs adds the "on_call_schedule" edge to the OnCallSchedule entity by IDs.
+func (_u *TeamUpdate) AddOnCallScheduleIDs(ids ...uuid.UUID) *TeamUpdate {
+	_u.mutation.AddOnCallScheduleIDs(ids...)
+	return _u
+}
+
+// AddOnCallSchedule adds the "on_call_schedule" edges to the OnCallSchedule entity.
+func (_u *TeamUpdate) AddOnCallSchedule(v ...*OnCallSchedule) *TeamUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddOnCallScheduleIDs(ids...)
+}
+
+// AddHeartbeatIDs adds the "heartbeats" edge to the Heartbeat entity by IDs.
+func (_u *TeamUpdate) AddHeartbeatIDs(ids ...uuid.UUID) *TeamUpdate {
+	_u.mutation.AddHeartbeatIDs(ids...)
+	return _u
+}
+
+// AddHeartbeats adds the "heartbeats" edges to the Heartbeat entity.
+func (_u *TeamUpdate) AddHeartbeats(v ...*Heartbeat) *TeamUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddHeartbeatIDs(ids...)
+}
+
 // Mutation returns the TeamMutation object of the builder.
 func (_u *TeamUpdate) Mutation() *TeamMutation {
 	return _u.mutation
+}
+
+// ClearTeamMembers clears all "team_members" edges to the TeamMember entity.
+func (_u *TeamUpdate) ClearTeamMembers() *TeamUpdate {
+	_u.mutation.ClearTeamMembers()
+	return _u
+}
+
+// RemoveTeamMemberIDs removes the "team_members" edge to TeamMember entities by IDs.
+func (_u *TeamUpdate) RemoveTeamMemberIDs(ids ...uuid.UUID) *TeamUpdate {
+	_u.mutation.RemoveTeamMemberIDs(ids...)
+	return _u
+}
+
+// RemoveTeamMembers removes "team_members" edges to TeamMember entities.
+func (_u *TeamUpdate) RemoveTeamMembers(v ...*TeamMember) *TeamUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveTeamMemberIDs(ids...)
+}
+
+// ClearOwnedServices clears all "owned_services" edges to the Service entity.
+func (_u *TeamUpdate) ClearOwnedServices() *TeamUpdate {
+	_u.mutation.ClearOwnedServices()
+	return _u
+}
+
+// RemoveOwnedServiceIDs removes the "owned_services" edge to Service entities by IDs.
+func (_u *TeamUpdate) RemoveOwnedServiceIDs(ids ...uuid.UUID) *TeamUpdate {
+	_u.mutation.RemoveOwnedServiceIDs(ids...)
+	return _u
+}
+
+// RemoveOwnedServices removes "owned_services" edges to Service entities.
+func (_u *TeamUpdate) RemoveOwnedServices(v ...*Service) *TeamUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveOwnedServiceIDs(ids...)
+}
+
+// ClearOwnedStatusPages clears all "owned_status_pages" edges to the StatusPage entity.
+func (_u *TeamUpdate) ClearOwnedStatusPages() *TeamUpdate {
+	_u.mutation.ClearOwnedStatusPages()
+	return _u
+}
+
+// RemoveOwnedStatusPageIDs removes the "owned_status_pages" edge to StatusPage entities by IDs.
+func (_u *TeamUpdate) RemoveOwnedStatusPageIDs(ids ...uuid.UUID) *TeamUpdate {
+	_u.mutation.RemoveOwnedStatusPageIDs(ids...)
+	return _u
+}
+
+// RemoveOwnedStatusPages removes "owned_status_pages" edges to StatusPage entities.
+func (_u *TeamUpdate) RemoveOwnedStatusPages(v ...*StatusPage) *TeamUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveOwnedStatusPageIDs(ids...)
+}
+
+// ClearOnCallSchedule clears all "on_call_schedule" edges to the OnCallSchedule entity.
+func (_u *TeamUpdate) ClearOnCallSchedule() *TeamUpdate {
+	_u.mutation.ClearOnCallSchedule()
+	return _u
+}
+
+// RemoveOnCallScheduleIDs removes the "on_call_schedule" edge to OnCallSchedule entities by IDs.
+func (_u *TeamUpdate) RemoveOnCallScheduleIDs(ids ...uuid.UUID) *TeamUpdate {
+	_u.mutation.RemoveOnCallScheduleIDs(ids...)
+	return _u
+}
+
+// RemoveOnCallSchedule removes "on_call_schedule" edges to OnCallSchedule entities.
+func (_u *TeamUpdate) RemoveOnCallSchedule(v ...*OnCallSchedule) *TeamUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveOnCallScheduleIDs(ids...)
+}
+
+// ClearHeartbeats clears all "heartbeats" edges to the Heartbeat entity.
+func (_u *TeamUpdate) ClearHeartbeats() *TeamUpdate {
+	_u.mutation.ClearHeartbeats()
+	return _u
+}
+
+// RemoveHeartbeatIDs removes the "heartbeats" edge to Heartbeat entities by IDs.
+func (_u *TeamUpdate) RemoveHeartbeatIDs(ids ...uuid.UUID) *TeamUpdate {
+	_u.mutation.RemoveHeartbeatIDs(ids...)
+	return _u
+}
+
+// RemoveHeartbeats removes "heartbeats" edges to Heartbeat entities.
+func (_u *TeamUpdate) RemoveHeartbeats(v ...*Heartbeat) *TeamUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveHeartbeatIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -151,6 +337,231 @@ func (_u *TeamUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(team.FieldUpdatedAt, field.TypeTime, value)
 	}
+	if _u.mutation.TeamMembersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   team.TeamMembersTable,
+			Columns: []string{team.TeamMembersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(teammember.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedTeamMembersIDs(); len(nodes) > 0 && !_u.mutation.TeamMembersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   team.TeamMembersTable,
+			Columns: []string{team.TeamMembersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(teammember.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TeamMembersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   team.TeamMembersTable,
+			Columns: []string{team.TeamMembersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(teammember.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.OwnedServicesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   team.OwnedServicesTable,
+			Columns: []string{team.OwnedServicesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedOwnedServicesIDs(); len(nodes) > 0 && !_u.mutation.OwnedServicesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   team.OwnedServicesTable,
+			Columns: []string{team.OwnedServicesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OwnedServicesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   team.OwnedServicesTable,
+			Columns: []string{team.OwnedServicesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.OwnedStatusPagesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   team.OwnedStatusPagesTable,
+			Columns: []string{team.OwnedStatusPagesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(statuspage.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedOwnedStatusPagesIDs(); len(nodes) > 0 && !_u.mutation.OwnedStatusPagesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   team.OwnedStatusPagesTable,
+			Columns: []string{team.OwnedStatusPagesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(statuspage.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OwnedStatusPagesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   team.OwnedStatusPagesTable,
+			Columns: []string{team.OwnedStatusPagesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(statuspage.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.OnCallScheduleCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   team.OnCallScheduleTable,
+			Columns: []string{team.OnCallScheduleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oncallschedule.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedOnCallScheduleIDs(); len(nodes) > 0 && !_u.mutation.OnCallScheduleCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   team.OnCallScheduleTable,
+			Columns: []string{team.OnCallScheduleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oncallschedule.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OnCallScheduleIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   team.OnCallScheduleTable,
+			Columns: []string{team.OnCallScheduleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oncallschedule.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.HeartbeatsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   team.HeartbeatsTable,
+			Columns: []string{team.HeartbeatsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(heartbeat.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedHeartbeatsIDs(); len(nodes) > 0 && !_u.mutation.HeartbeatsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   team.HeartbeatsTable,
+			Columns: []string{team.HeartbeatsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(heartbeat.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.HeartbeatsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   team.HeartbeatsTable,
+			Columns: []string{team.HeartbeatsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(heartbeat.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{team.Label}
@@ -219,9 +630,189 @@ func (_u *TeamUpdateOne) SetUpdatedAt(v time.Time) *TeamUpdateOne {
 	return _u
 }
 
+// AddTeamMemberIDs adds the "team_members" edge to the TeamMember entity by IDs.
+func (_u *TeamUpdateOne) AddTeamMemberIDs(ids ...uuid.UUID) *TeamUpdateOne {
+	_u.mutation.AddTeamMemberIDs(ids...)
+	return _u
+}
+
+// AddTeamMembers adds the "team_members" edges to the TeamMember entity.
+func (_u *TeamUpdateOne) AddTeamMembers(v ...*TeamMember) *TeamUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddTeamMemberIDs(ids...)
+}
+
+// AddOwnedServiceIDs adds the "owned_services" edge to the Service entity by IDs.
+func (_u *TeamUpdateOne) AddOwnedServiceIDs(ids ...uuid.UUID) *TeamUpdateOne {
+	_u.mutation.AddOwnedServiceIDs(ids...)
+	return _u
+}
+
+// AddOwnedServices adds the "owned_services" edges to the Service entity.
+func (_u *TeamUpdateOne) AddOwnedServices(v ...*Service) *TeamUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddOwnedServiceIDs(ids...)
+}
+
+// AddOwnedStatusPageIDs adds the "owned_status_pages" edge to the StatusPage entity by IDs.
+func (_u *TeamUpdateOne) AddOwnedStatusPageIDs(ids ...uuid.UUID) *TeamUpdateOne {
+	_u.mutation.AddOwnedStatusPageIDs(ids...)
+	return _u
+}
+
+// AddOwnedStatusPages adds the "owned_status_pages" edges to the StatusPage entity.
+func (_u *TeamUpdateOne) AddOwnedStatusPages(v ...*StatusPage) *TeamUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddOwnedStatusPageIDs(ids...)
+}
+
+// AddOnCallScheduleIDs adds the "on_call_schedule" edge to the OnCallSchedule entity by IDs.
+func (_u *TeamUpdateOne) AddOnCallScheduleIDs(ids ...uuid.UUID) *TeamUpdateOne {
+	_u.mutation.AddOnCallScheduleIDs(ids...)
+	return _u
+}
+
+// AddOnCallSchedule adds the "on_call_schedule" edges to the OnCallSchedule entity.
+func (_u *TeamUpdateOne) AddOnCallSchedule(v ...*OnCallSchedule) *TeamUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddOnCallScheduleIDs(ids...)
+}
+
+// AddHeartbeatIDs adds the "heartbeats" edge to the Heartbeat entity by IDs.
+func (_u *TeamUpdateOne) AddHeartbeatIDs(ids ...uuid.UUID) *TeamUpdateOne {
+	_u.mutation.AddHeartbeatIDs(ids...)
+	return _u
+}
+
+// AddHeartbeats adds the "heartbeats" edges to the Heartbeat entity.
+func (_u *TeamUpdateOne) AddHeartbeats(v ...*Heartbeat) *TeamUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddHeartbeatIDs(ids...)
+}
+
 // Mutation returns the TeamMutation object of the builder.
 func (_u *TeamUpdateOne) Mutation() *TeamMutation {
 	return _u.mutation
+}
+
+// ClearTeamMembers clears all "team_members" edges to the TeamMember entity.
+func (_u *TeamUpdateOne) ClearTeamMembers() *TeamUpdateOne {
+	_u.mutation.ClearTeamMembers()
+	return _u
+}
+
+// RemoveTeamMemberIDs removes the "team_members" edge to TeamMember entities by IDs.
+func (_u *TeamUpdateOne) RemoveTeamMemberIDs(ids ...uuid.UUID) *TeamUpdateOne {
+	_u.mutation.RemoveTeamMemberIDs(ids...)
+	return _u
+}
+
+// RemoveTeamMembers removes "team_members" edges to TeamMember entities.
+func (_u *TeamUpdateOne) RemoveTeamMembers(v ...*TeamMember) *TeamUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveTeamMemberIDs(ids...)
+}
+
+// ClearOwnedServices clears all "owned_services" edges to the Service entity.
+func (_u *TeamUpdateOne) ClearOwnedServices() *TeamUpdateOne {
+	_u.mutation.ClearOwnedServices()
+	return _u
+}
+
+// RemoveOwnedServiceIDs removes the "owned_services" edge to Service entities by IDs.
+func (_u *TeamUpdateOne) RemoveOwnedServiceIDs(ids ...uuid.UUID) *TeamUpdateOne {
+	_u.mutation.RemoveOwnedServiceIDs(ids...)
+	return _u
+}
+
+// RemoveOwnedServices removes "owned_services" edges to Service entities.
+func (_u *TeamUpdateOne) RemoveOwnedServices(v ...*Service) *TeamUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveOwnedServiceIDs(ids...)
+}
+
+// ClearOwnedStatusPages clears all "owned_status_pages" edges to the StatusPage entity.
+func (_u *TeamUpdateOne) ClearOwnedStatusPages() *TeamUpdateOne {
+	_u.mutation.ClearOwnedStatusPages()
+	return _u
+}
+
+// RemoveOwnedStatusPageIDs removes the "owned_status_pages" edge to StatusPage entities by IDs.
+func (_u *TeamUpdateOne) RemoveOwnedStatusPageIDs(ids ...uuid.UUID) *TeamUpdateOne {
+	_u.mutation.RemoveOwnedStatusPageIDs(ids...)
+	return _u
+}
+
+// RemoveOwnedStatusPages removes "owned_status_pages" edges to StatusPage entities.
+func (_u *TeamUpdateOne) RemoveOwnedStatusPages(v ...*StatusPage) *TeamUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveOwnedStatusPageIDs(ids...)
+}
+
+// ClearOnCallSchedule clears all "on_call_schedule" edges to the OnCallSchedule entity.
+func (_u *TeamUpdateOne) ClearOnCallSchedule() *TeamUpdateOne {
+	_u.mutation.ClearOnCallSchedule()
+	return _u
+}
+
+// RemoveOnCallScheduleIDs removes the "on_call_schedule" edge to OnCallSchedule entities by IDs.
+func (_u *TeamUpdateOne) RemoveOnCallScheduleIDs(ids ...uuid.UUID) *TeamUpdateOne {
+	_u.mutation.RemoveOnCallScheduleIDs(ids...)
+	return _u
+}
+
+// RemoveOnCallSchedule removes "on_call_schedule" edges to OnCallSchedule entities.
+func (_u *TeamUpdateOne) RemoveOnCallSchedule(v ...*OnCallSchedule) *TeamUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveOnCallScheduleIDs(ids...)
+}
+
+// ClearHeartbeats clears all "heartbeats" edges to the Heartbeat entity.
+func (_u *TeamUpdateOne) ClearHeartbeats() *TeamUpdateOne {
+	_u.mutation.ClearHeartbeats()
+	return _u
+}
+
+// RemoveHeartbeatIDs removes the "heartbeats" edge to Heartbeat entities by IDs.
+func (_u *TeamUpdateOne) RemoveHeartbeatIDs(ids ...uuid.UUID) *TeamUpdateOne {
+	_u.mutation.RemoveHeartbeatIDs(ids...)
+	return _u
+}
+
+// RemoveHeartbeats removes "heartbeats" edges to Heartbeat entities.
+func (_u *TeamUpdateOne) RemoveHeartbeats(v ...*Heartbeat) *TeamUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveHeartbeatIDs(ids...)
 }
 
 // Where appends a list predicates to the TeamUpdate builder.
@@ -323,6 +914,231 @@ func (_u *TeamUpdateOne) sqlSave(ctx context.Context) (_node *Team, err error) {
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(team.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.TeamMembersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   team.TeamMembersTable,
+			Columns: []string{team.TeamMembersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(teammember.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedTeamMembersIDs(); len(nodes) > 0 && !_u.mutation.TeamMembersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   team.TeamMembersTable,
+			Columns: []string{team.TeamMembersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(teammember.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TeamMembersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   team.TeamMembersTable,
+			Columns: []string{team.TeamMembersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(teammember.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.OwnedServicesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   team.OwnedServicesTable,
+			Columns: []string{team.OwnedServicesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedOwnedServicesIDs(); len(nodes) > 0 && !_u.mutation.OwnedServicesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   team.OwnedServicesTable,
+			Columns: []string{team.OwnedServicesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OwnedServicesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   team.OwnedServicesTable,
+			Columns: []string{team.OwnedServicesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.OwnedStatusPagesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   team.OwnedStatusPagesTable,
+			Columns: []string{team.OwnedStatusPagesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(statuspage.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedOwnedStatusPagesIDs(); len(nodes) > 0 && !_u.mutation.OwnedStatusPagesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   team.OwnedStatusPagesTable,
+			Columns: []string{team.OwnedStatusPagesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(statuspage.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OwnedStatusPagesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   team.OwnedStatusPagesTable,
+			Columns: []string{team.OwnedStatusPagesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(statuspage.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.OnCallScheduleCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   team.OnCallScheduleTable,
+			Columns: []string{team.OnCallScheduleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oncallschedule.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedOnCallScheduleIDs(); len(nodes) > 0 && !_u.mutation.OnCallScheduleCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   team.OnCallScheduleTable,
+			Columns: []string{team.OnCallScheduleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oncallschedule.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OnCallScheduleIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   team.OnCallScheduleTable,
+			Columns: []string{team.OnCallScheduleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oncallschedule.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.HeartbeatsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   team.HeartbeatsTable,
+			Columns: []string{team.HeartbeatsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(heartbeat.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedHeartbeatsIDs(); len(nodes) > 0 && !_u.mutation.HeartbeatsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   team.HeartbeatsTable,
+			Columns: []string{team.HeartbeatsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(heartbeat.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.HeartbeatsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   team.HeartbeatsTable,
+			Columns: []string{team.HeartbeatsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(heartbeat.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &Team{config: _u.config}
 	_spec.Assign = _node.assignValues

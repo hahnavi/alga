@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/session"
+	"alga/ent/user"
 	"context"
 	"errors"
 	"fmt"
@@ -135,6 +136,11 @@ func (_c *SessionCreate) SetNillableID(v *uuid.UUID) *SessionCreate {
 	return _c
 }
 
+// SetUser sets the "user" edge to the User entity.
+func (_c *SessionCreate) SetUser(v *User) *SessionCreate {
+	return _c.SetUserID(v.ID)
+}
+
 // Mutation returns the SessionMutation object of the builder.
 func (_c *SessionCreate) Mutation() *SessionMutation {
 	return _c.mutation
@@ -222,6 +228,9 @@ func (_c *SessionCreate) check() error {
 	if _, ok := _c.mutation.LastUsedAt(); !ok {
 		return &ValidationError{Name: "last_used_at", err: errors.New(`ent: missing required field "Session.last_used_at"`)}
 	}
+	if len(_c.mutation.UserIDs()) == 0 {
+		return &ValidationError{Name: "user", err: errors.New(`ent: missing required edge "Session.user"`)}
+	}
 	return nil
 }
 
@@ -256,10 +265,6 @@ func (_c *SessionCreate) createSpec() (*Session, *sqlgraph.CreateSpec) {
 	if id, ok := _c.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
-	}
-	if value, ok := _c.mutation.UserID(); ok {
-		_spec.SetField(session.FieldUserID, field.TypeUUID, value)
-		_node.UserID = value
 	}
 	if value, ok := _c.mutation.IDHash(); ok {
 		_spec.SetField(session.FieldIDHash, field.TypeString, value)
@@ -296,6 +301,23 @@ func (_c *SessionCreate) createSpec() (*Session, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.UserAgent(); ok {
 		_spec.SetField(session.FieldUserAgent, field.TypeString, value)
 		_node.UserAgent = value
+	}
+	if nodes := _c.mutation.UserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   session.UserTable,
+			Columns: []string{session.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.UserID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

@@ -54,11 +54,12 @@ type IncidentCoordinationMessage struct {
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// IncidentID holds the value of the "incident_id" field.
+	IncidentID uuid.UUID `json:"incident_id,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the IncidentCoordinationMessageQuery when eager-loading is set.
-	Edges                          IncidentCoordinationMessageEdges `json:"edges"`
-	incident_coordination_messages *uuid.UUID
-	selectValues                   sql.SelectValues
+	Edges        IncidentCoordinationMessageEdges `json:"edges"`
+	selectValues sql.SelectValues
 }
 
 // IncidentCoordinationMessageEdges holds the relations/edges for other nodes in the graph.
@@ -120,10 +121,8 @@ func (*IncidentCoordinationMessage) scanValues(columns []string) ([]any, error) 
 			values[i] = new(sql.NullString)
 		case incidentcoordinationmessage.FieldCreatedAt, incidentcoordinationmessage.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
-		case incidentcoordinationmessage.FieldID:
+		case incidentcoordinationmessage.FieldID, incidentcoordinationmessage.FieldIncidentID:
 			values[i] = new(uuid.UUID)
-		case incidentcoordinationmessage.ForeignKeys[0]: // incident_coordination_messages
-			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -252,12 +251,11 @@ func (_m *IncidentCoordinationMessage) assignValues(columns []string, values []a
 			} else if value.Valid {
 				_m.UpdatedAt = value.Time
 			}
-		case incidentcoordinationmessage.ForeignKeys[0]:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field incident_coordination_messages", values[i])
-			} else if value.Valid {
-				_m.incident_coordination_messages = new(uuid.UUID)
-				*_m.incident_coordination_messages = *value.S.(*uuid.UUID)
+		case incidentcoordinationmessage.FieldIncidentID:
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field incident_id", values[i])
+			} else if value != nil {
+				_m.IncidentID = *value
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
@@ -366,6 +364,9 @@ func (_m *IncidentCoordinationMessage) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
 	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("incident_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.IncidentID))
 	builder.WriteByte(')')
 	return builder.String()
 }

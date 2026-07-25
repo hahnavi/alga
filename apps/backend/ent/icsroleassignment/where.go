@@ -56,6 +56,26 @@ func IDLTE(id uuid.UUID) predicate.ICSRoleAssignment {
 	return predicate.ICSRoleAssignment(sql.FieldLTE(FieldID, id))
 }
 
+// ParentID applies equality check predicate on the "parent_id" field. It's identical to ParentIDEQ.
+func ParentID(v uuid.UUID) predicate.ICSRoleAssignment {
+	return predicate.ICSRoleAssignment(sql.FieldEQ(FieldParentID, v))
+}
+
+// IncidentID applies equality check predicate on the "incident_id" field. It's identical to IncidentIDEQ.
+func IncidentID(v uuid.UUID) predicate.ICSRoleAssignment {
+	return predicate.ICSRoleAssignment(sql.FieldEQ(FieldIncidentID, v))
+}
+
+// UserID applies equality check predicate on the "user_id" field. It's identical to UserIDEQ.
+func UserID(v uuid.UUID) predicate.ICSRoleAssignment {
+	return predicate.ICSRoleAssignment(sql.FieldEQ(FieldUserID, v))
+}
+
+// AgentTokenID applies equality check predicate on the "agent_token_id" field. It's identical to AgentTokenIDEQ.
+func AgentTokenID(v uuid.UUID) predicate.ICSRoleAssignment {
+	return predicate.ICSRoleAssignment(sql.FieldEQ(FieldAgentTokenID, v))
+}
+
 // RoleType applies equality check predicate on the "role_type" field. It's identical to RoleTypeEQ.
 func RoleType(v string) predicate.ICSRoleAssignment {
 	return predicate.ICSRoleAssignment(sql.FieldEQ(FieldRoleType, v))
@@ -89,6 +109,116 @@ func StartedAt(v time.Time) predicate.ICSRoleAssignment {
 // EndedAt applies equality check predicate on the "ended_at" field. It's identical to EndedAtEQ.
 func EndedAt(v time.Time) predicate.ICSRoleAssignment {
 	return predicate.ICSRoleAssignment(sql.FieldEQ(FieldEndedAt, v))
+}
+
+// ParentIDEQ applies the EQ predicate on the "parent_id" field.
+func ParentIDEQ(v uuid.UUID) predicate.ICSRoleAssignment {
+	return predicate.ICSRoleAssignment(sql.FieldEQ(FieldParentID, v))
+}
+
+// ParentIDNEQ applies the NEQ predicate on the "parent_id" field.
+func ParentIDNEQ(v uuid.UUID) predicate.ICSRoleAssignment {
+	return predicate.ICSRoleAssignment(sql.FieldNEQ(FieldParentID, v))
+}
+
+// ParentIDIn applies the In predicate on the "parent_id" field.
+func ParentIDIn(vs ...uuid.UUID) predicate.ICSRoleAssignment {
+	return predicate.ICSRoleAssignment(sql.FieldIn(FieldParentID, vs...))
+}
+
+// ParentIDNotIn applies the NotIn predicate on the "parent_id" field.
+func ParentIDNotIn(vs ...uuid.UUID) predicate.ICSRoleAssignment {
+	return predicate.ICSRoleAssignment(sql.FieldNotIn(FieldParentID, vs...))
+}
+
+// ParentIDIsNil applies the IsNil predicate on the "parent_id" field.
+func ParentIDIsNil() predicate.ICSRoleAssignment {
+	return predicate.ICSRoleAssignment(sql.FieldIsNull(FieldParentID))
+}
+
+// ParentIDNotNil applies the NotNil predicate on the "parent_id" field.
+func ParentIDNotNil() predicate.ICSRoleAssignment {
+	return predicate.ICSRoleAssignment(sql.FieldNotNull(FieldParentID))
+}
+
+// IncidentIDEQ applies the EQ predicate on the "incident_id" field.
+func IncidentIDEQ(v uuid.UUID) predicate.ICSRoleAssignment {
+	return predicate.ICSRoleAssignment(sql.FieldEQ(FieldIncidentID, v))
+}
+
+// IncidentIDNEQ applies the NEQ predicate on the "incident_id" field.
+func IncidentIDNEQ(v uuid.UUID) predicate.ICSRoleAssignment {
+	return predicate.ICSRoleAssignment(sql.FieldNEQ(FieldIncidentID, v))
+}
+
+// IncidentIDIn applies the In predicate on the "incident_id" field.
+func IncidentIDIn(vs ...uuid.UUID) predicate.ICSRoleAssignment {
+	return predicate.ICSRoleAssignment(sql.FieldIn(FieldIncidentID, vs...))
+}
+
+// IncidentIDNotIn applies the NotIn predicate on the "incident_id" field.
+func IncidentIDNotIn(vs ...uuid.UUID) predicate.ICSRoleAssignment {
+	return predicate.ICSRoleAssignment(sql.FieldNotIn(FieldIncidentID, vs...))
+}
+
+// UserIDEQ applies the EQ predicate on the "user_id" field.
+func UserIDEQ(v uuid.UUID) predicate.ICSRoleAssignment {
+	return predicate.ICSRoleAssignment(sql.FieldEQ(FieldUserID, v))
+}
+
+// UserIDNEQ applies the NEQ predicate on the "user_id" field.
+func UserIDNEQ(v uuid.UUID) predicate.ICSRoleAssignment {
+	return predicate.ICSRoleAssignment(sql.FieldNEQ(FieldUserID, v))
+}
+
+// UserIDIn applies the In predicate on the "user_id" field.
+func UserIDIn(vs ...uuid.UUID) predicate.ICSRoleAssignment {
+	return predicate.ICSRoleAssignment(sql.FieldIn(FieldUserID, vs...))
+}
+
+// UserIDNotIn applies the NotIn predicate on the "user_id" field.
+func UserIDNotIn(vs ...uuid.UUID) predicate.ICSRoleAssignment {
+	return predicate.ICSRoleAssignment(sql.FieldNotIn(FieldUserID, vs...))
+}
+
+// UserIDIsNil applies the IsNil predicate on the "user_id" field.
+func UserIDIsNil() predicate.ICSRoleAssignment {
+	return predicate.ICSRoleAssignment(sql.FieldIsNull(FieldUserID))
+}
+
+// UserIDNotNil applies the NotNil predicate on the "user_id" field.
+func UserIDNotNil() predicate.ICSRoleAssignment {
+	return predicate.ICSRoleAssignment(sql.FieldNotNull(FieldUserID))
+}
+
+// AgentTokenIDEQ applies the EQ predicate on the "agent_token_id" field.
+func AgentTokenIDEQ(v uuid.UUID) predicate.ICSRoleAssignment {
+	return predicate.ICSRoleAssignment(sql.FieldEQ(FieldAgentTokenID, v))
+}
+
+// AgentTokenIDNEQ applies the NEQ predicate on the "agent_token_id" field.
+func AgentTokenIDNEQ(v uuid.UUID) predicate.ICSRoleAssignment {
+	return predicate.ICSRoleAssignment(sql.FieldNEQ(FieldAgentTokenID, v))
+}
+
+// AgentTokenIDIn applies the In predicate on the "agent_token_id" field.
+func AgentTokenIDIn(vs ...uuid.UUID) predicate.ICSRoleAssignment {
+	return predicate.ICSRoleAssignment(sql.FieldIn(FieldAgentTokenID, vs...))
+}
+
+// AgentTokenIDNotIn applies the NotIn predicate on the "agent_token_id" field.
+func AgentTokenIDNotIn(vs ...uuid.UUID) predicate.ICSRoleAssignment {
+	return predicate.ICSRoleAssignment(sql.FieldNotIn(FieldAgentTokenID, vs...))
+}
+
+// AgentTokenIDIsNil applies the IsNil predicate on the "agent_token_id" field.
+func AgentTokenIDIsNil() predicate.ICSRoleAssignment {
+	return predicate.ICSRoleAssignment(sql.FieldIsNull(FieldAgentTokenID))
+}
+
+// AgentTokenIDNotNil applies the NotNil predicate on the "agent_token_id" field.
+func AgentTokenIDNotNil() predicate.ICSRoleAssignment {
+	return predicate.ICSRoleAssignment(sql.FieldNotNull(FieldAgentTokenID))
 }
 
 // RoleTypeEQ applies the EQ predicate on the "role_type" field.
@@ -595,12 +725,35 @@ func HasAgentTokenWith(preds ...predicate.AgentToken) predicate.ICSRoleAssignmen
 	})
 }
 
+// HasChildren applies the HasEdge predicate on the "children" edge.
+func HasChildren() predicate.ICSRoleAssignment {
+	return predicate.ICSRoleAssignment(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ChildrenTable, ChildrenColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasChildrenWith applies the HasEdge predicate on the "children" edge with a given conditions (other predicates).
+func HasChildrenWith(preds ...predicate.ICSRoleAssignment) predicate.ICSRoleAssignment {
+	return predicate.ICSRoleAssignment(func(s *sql.Selector) {
+		step := newChildrenStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasParent applies the HasEdge predicate on the "parent" edge.
 func HasParent() predicate.ICSRoleAssignment {
 	return predicate.ICSRoleAssignment(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, ParentTable, ParentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, ParentTable, ParentColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})

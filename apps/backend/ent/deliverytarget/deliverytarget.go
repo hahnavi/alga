@@ -21,6 +21,8 @@ const (
 	FieldChannelName = "channel_name"
 	// FieldPostID holds the string denoting the post_id field in the database.
 	FieldPostID = "post_id"
+	// FieldAlertID holds the string denoting the alert_id field in the database.
+	FieldAlertID = "alert_id"
 	// EdgeAlert holds the string denoting the alert edge name in mutations.
 	EdgeAlert = "alert"
 	// Table holds the table name of the deliverytarget in the database.
@@ -31,7 +33,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "alert" package.
 	AlertInverseTable = "alerts"
 	// AlertColumn is the table column denoting the alert relation/edge.
-	AlertColumn = "alert_delivery_targets"
+	AlertColumn = "alert_id"
 )
 
 // Columns holds all SQL columns for deliverytarget fields.
@@ -41,23 +43,13 @@ var Columns = []string{
 	FieldChannel,
 	FieldChannelName,
 	FieldPostID,
-}
-
-// ForeignKeys holds the SQL foreign-keys that are owned by the "delivery_targets"
-// table and are not defined as standalone fields in the schema.
-var ForeignKeys = []string{
-	"alert_delivery_targets",
+	FieldAlertID,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
-			return true
-		}
-	}
-	for i := range ForeignKeys {
-		if column == ForeignKeys[i] {
 			return true
 		}
 	}
@@ -103,6 +95,11 @@ func ByChannelName(opts ...sql.OrderTermOption) OrderOption {
 // ByPostID orders the results by the post_id field.
 func ByPostID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldPostID, opts...).ToFunc()
+}
+
+// ByAlertID orders the results by the alert_id field.
+func ByAlertID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAlertID, opts...).ToFunc()
 }
 
 // ByAlertField orders the results by alert field.

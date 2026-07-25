@@ -88,9 +88,11 @@ type IncidentInvestigationEdges struct {
 	SourceAlertInvestigation *AlertInvestigation `json:"source_alert_investigation,omitempty"`
 	// ParentInvestigation holds the value of the parent_investigation edge.
 	ParentInvestigation *IncidentInvestigation `json:"parent_investigation,omitempty"`
+	// LinkedCoordinationTasks holds the value of the linked_coordination_tasks edge.
+	LinkedCoordinationTasks []*CoordinationTask `json:"linked_coordination_tasks,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [6]bool
+	loadedTypes [7]bool
 }
 
 // UpdatesOrErr returns the Updates value or an error if the edge
@@ -151,6 +153,15 @@ func (e IncidentInvestigationEdges) ParentInvestigationOrErr() (*IncidentInvesti
 		return nil, &NotFoundError{label: incidentinvestigation.Label}
 	}
 	return nil, &NotLoadedError{edge: "parent_investigation"}
+}
+
+// LinkedCoordinationTasksOrErr returns the LinkedCoordinationTasks value or an error if the edge
+// was not loaded in eager-loading.
+func (e IncidentInvestigationEdges) LinkedCoordinationTasksOrErr() ([]*CoordinationTask, error) {
+	if e.loadedTypes[6] {
+		return e.LinkedCoordinationTasks, nil
+	}
+	return nil, &NotLoadedError{edge: "linked_coordination_tasks"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -382,6 +393,11 @@ func (_m *IncidentInvestigation) QuerySourceAlertInvestigation() *AlertInvestiga
 // QueryParentInvestigation queries the "parent_investigation" edge of the IncidentInvestigation entity.
 func (_m *IncidentInvestigation) QueryParentInvestigation() *IncidentInvestigationQuery {
 	return NewIncidentInvestigationClient(_m.config).QueryParentInvestigation(_m)
+}
+
+// QueryLinkedCoordinationTasks queries the "linked_coordination_tasks" edge of the IncidentInvestigation entity.
+func (_m *IncidentInvestigation) QueryLinkedCoordinationTasks() *CoordinationTaskQuery {
+	return NewIncidentInvestigationClient(_m.config).QueryLinkedCoordinationTasks(_m)
 }
 
 // Update returns a builder for updating this IncidentInvestigation.

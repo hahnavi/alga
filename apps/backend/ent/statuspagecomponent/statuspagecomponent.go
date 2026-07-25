@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -30,8 +31,26 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// EdgeStatusPage holds the string denoting the status_page edge name in mutations.
+	EdgeStatusPage = "status_page"
+	// EdgeService holds the string denoting the service edge name in mutations.
+	EdgeService = "service"
 	// Table holds the table name of the statuspagecomponent in the database.
 	Table = "status_page_components"
+	// StatusPageTable is the table that holds the status_page relation/edge.
+	StatusPageTable = "status_page_components"
+	// StatusPageInverseTable is the table name for the StatusPage entity.
+	// It exists in this package in order to avoid circular dependency with the "statuspage" package.
+	StatusPageInverseTable = "status_pages"
+	// StatusPageColumn is the table column denoting the status_page relation/edge.
+	StatusPageColumn = "status_page_id"
+	// ServiceTable is the table that holds the service relation/edge.
+	ServiceTable = "status_page_components"
+	// ServiceInverseTable is the table name for the Service entity.
+	// It exists in this package in order to avoid circular dependency with the "service" package.
+	ServiceInverseTable = "services"
+	// ServiceColumn is the table column denoting the service relation/edge.
+	ServiceColumn = "service_id"
 )
 
 // Columns holds all SQL columns for statuspagecomponent fields.
@@ -64,6 +83,8 @@ var (
 	DefaultDescription string
 	// DefaultDisplayOrder holds the default value on creation for the "display_order" field.
 	DefaultDisplayOrder int
+	// DisplayOrderValidator is a validator for the "display_order" field. It is called by the builders before save.
+	DisplayOrderValidator func(int) error
 	// DefaultStatus holds the default value on creation for the "status" field.
 	DefaultStatus string
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
@@ -122,4 +143,32 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByStatusPageField orders the results by status_page field.
+func ByStatusPageField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newStatusPageStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByServiceField orders the results by service field.
+func ByServiceField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newServiceStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newStatusPageStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(StatusPageInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, StatusPageTable, StatusPageColumn),
+	)
+}
+func newServiceStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ServiceInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, ServiceTable, ServiceColumn),
+	)
 }

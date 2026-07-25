@@ -25,7 +25,6 @@ type AlertEventQuery struct {
 	inters     []Interceptor
 	predicates []predicate.AlertEvent
 	withAlert  *AlertQuery
-	withFKs    bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -371,18 +370,11 @@ func (_q *AlertEventQuery) prepareQuery(ctx context.Context) error {
 func (_q *AlertEventQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*AlertEvent, error) {
 	var (
 		nodes       = []*AlertEvent{}
-		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
 		loadedTypes = [1]bool{
 			_q.withAlert != nil,
 		}
 	)
-	if _q.withAlert != nil {
-		withFKs = true
-	}
-	if withFKs {
-		_spec.Node.Columns = append(_spec.Node.Columns, alertevent.ForeignKeys...)
-	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*AlertEvent).scanValues(nil, columns)
 	}
@@ -414,10 +406,7 @@ func (_q *AlertEventQuery) loadAlert(ctx context.Context, query *AlertQuery, nod
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*AlertEvent)
 	for i := range nodes {
-		if nodes[i].alert_events == nil {
-			continue
-		}
-		fk := *nodes[i].alert_events
+		fk := nodes[i].AlertID
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -434,7 +423,7 @@ func (_q *AlertEventQuery) loadAlert(ctx context.Context, query *AlertQuery, nod
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "alert_events" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "alert_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -467,6 +456,9 @@ func (_q *AlertEventQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != alertevent.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if _q.withAlert != nil {
+			_spec.Node.AddColumnOnce(alertevent.FieldAlertID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

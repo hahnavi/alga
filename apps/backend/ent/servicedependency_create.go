@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"alga/ent/service"
 	"alga/ent/servicedependency"
 	"context"
 	"errors"
@@ -75,6 +76,16 @@ func (_c *ServiceDependencyCreate) SetNillableID(v *uuid.UUID) *ServiceDependenc
 	return _c
 }
 
+// SetService sets the "service" edge to the Service entity.
+func (_c *ServiceDependencyCreate) SetService(v *Service) *ServiceDependencyCreate {
+	return _c.SetServiceID(v.ID)
+}
+
+// SetDependentOnService sets the "dependent_on_service" edge to the Service entity.
+func (_c *ServiceDependencyCreate) SetDependentOnService(v *Service) *ServiceDependencyCreate {
+	return _c.SetDependentOnServiceID(v.ID)
+}
+
 // Mutation returns the ServiceDependencyMutation object of the builder.
 func (_c *ServiceDependencyCreate) Mutation() *ServiceDependencyMutation {
 	return _c.mutation
@@ -138,6 +149,12 @@ func (_c *ServiceDependencyCreate) check() error {
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "ServiceDependency.created_at"`)}
 	}
+	if len(_c.mutation.ServiceIDs()) == 0 {
+		return &ValidationError{Name: "service", err: errors.New(`ent: missing required edge "ServiceDependency.service"`)}
+	}
+	if len(_c.mutation.DependentOnServiceIDs()) == 0 {
+		return &ValidationError{Name: "dependent_on_service", err: errors.New(`ent: missing required edge "ServiceDependency.dependent_on_service"`)}
+	}
 	return nil
 }
 
@@ -173,14 +190,6 @@ func (_c *ServiceDependencyCreate) createSpec() (*ServiceDependency, *sqlgraph.C
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := _c.mutation.ServiceID(); ok {
-		_spec.SetField(servicedependency.FieldServiceID, field.TypeUUID, value)
-		_node.ServiceID = value
-	}
-	if value, ok := _c.mutation.DependentOnServiceID(); ok {
-		_spec.SetField(servicedependency.FieldDependentOnServiceID, field.TypeUUID, value)
-		_node.DependentOnServiceID = value
-	}
 	if value, ok := _c.mutation.DependencyType(); ok {
 		_spec.SetField(servicedependency.FieldDependencyType, field.TypeString, value)
 		_node.DependencyType = value
@@ -188,6 +197,40 @@ func (_c *ServiceDependencyCreate) createSpec() (*ServiceDependency, *sqlgraph.C
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(servicedependency.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
+	}
+	if nodes := _c.mutation.ServiceIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   servicedependency.ServiceTable,
+			Columns: []string{servicedependency.ServiceColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.ServiceID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.DependentOnServiceIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   servicedependency.DependentOnServiceTable,
+			Columns: []string{servicedependency.DependentOnServiceColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.DependentOnServiceID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

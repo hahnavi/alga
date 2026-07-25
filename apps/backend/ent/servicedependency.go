@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"alga/ent/service"
 	"alga/ent/servicedependency"
 	"fmt"
 	"strings"
@@ -25,8 +26,44 @@ type ServiceDependency struct {
 	// DependencyType holds the value of the "dependency_type" field.
 	DependencyType string `json:"dependency_type,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
-	CreatedAt    time.Time `json:"created_at,omitempty"`
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the ServiceDependencyQuery when eager-loading is set.
+	Edges        ServiceDependencyEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// ServiceDependencyEdges holds the relations/edges for other nodes in the graph.
+type ServiceDependencyEdges struct {
+	// Service holds the value of the service edge.
+	Service *Service `json:"service,omitempty"`
+	// DependentOnService holds the value of the dependent_on_service edge.
+	DependentOnService *Service `json:"dependent_on_service,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [2]bool
+}
+
+// ServiceOrErr returns the Service value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ServiceDependencyEdges) ServiceOrErr() (*Service, error) {
+	if e.Service != nil {
+		return e.Service, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: service.Label}
+	}
+	return nil, &NotLoadedError{edge: "service"}
+}
+
+// DependentOnServiceOrErr returns the DependentOnService value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ServiceDependencyEdges) DependentOnServiceOrErr() (*Service, error) {
+	if e.DependentOnService != nil {
+		return e.DependentOnService, nil
+	} else if e.loadedTypes[1] {
+		return nil, &NotFoundError{label: service.Label}
+	}
+	return nil, &NotLoadedError{edge: "dependent_on_service"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -96,6 +133,16 @@ func (_m *ServiceDependency) assignValues(columns []string, values []any) error 
 // This includes values selected through modifiers, order, etc.
 func (_m *ServiceDependency) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
+}
+
+// QueryService queries the "service" edge of the ServiceDependency entity.
+func (_m *ServiceDependency) QueryService() *ServiceQuery {
+	return NewServiceDependencyClient(_m.config).QueryService(_m)
+}
+
+// QueryDependentOnService queries the "dependent_on_service" edge of the ServiceDependency entity.
+func (_m *ServiceDependency) QueryDependentOnService() *ServiceQuery {
+	return NewServiceDependencyClient(_m.config).QueryDependentOnService(_m)
 }
 
 // Update returns a builder for updating this ServiceDependency.

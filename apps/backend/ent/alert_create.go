@@ -8,6 +8,7 @@ import (
 	"alga/ent/alertinvestigationalert"
 	"alga/ent/deliverytarget"
 	"alga/ent/incident"
+	"alga/ent/triageresult"
 	"context"
 	"errors"
 	"fmt"
@@ -311,6 +312,11 @@ func (_c *AlertCreate) AddDeliveryTargets(v ...*DeliveryTarget) *AlertCreate {
 	return _c.AddDeliveryTargetIDs(ids...)
 }
 
+// SetTriageResult sets the "triage_result" edge to the TriageResult entity.
+func (_c *AlertCreate) SetTriageResult(v *TriageResult) *AlertCreate {
+	return _c.SetTriageResultID(v.ID)
+}
+
 // Mutation returns the AlertMutation object of the builder.
 func (_c *AlertCreate) Mutation() *AlertMutation {
 	return _c.mutation
@@ -514,10 +520,6 @@ func (_c *AlertCreate) createSpec() (*Alert, *sqlgraph.CreateSpec) {
 		_spec.SetField(alert.FieldAlertNumber, field.TypeInt64, value)
 		_node.AlertNumber = value
 	}
-	if value, ok := _c.mutation.TriageResultID(); ok {
-		_spec.SetField(alert.FieldTriageResultID, field.TypeUUID, value)
-		_node.TriageResultID = &value
-	}
 	if value, ok := _c.mutation.Enrichment(); ok {
 		_spec.SetField(alert.FieldEnrichment, field.TypeJSON, value)
 		_node.Enrichment = value
@@ -604,6 +606,23 @@ func (_c *AlertCreate) createSpec() (*Alert, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.TriageResultIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   alert.TriageResultTable,
+			Columns: []string{alert.TriageResultColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(triageresult.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.TriageResultID = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

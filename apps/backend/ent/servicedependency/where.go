@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -95,26 +96,6 @@ func ServiceIDNotIn(vs ...uuid.UUID) predicate.ServiceDependency {
 	return predicate.ServiceDependency(sql.FieldNotIn(FieldServiceID, vs...))
 }
 
-// ServiceIDGT applies the GT predicate on the "service_id" field.
-func ServiceIDGT(v uuid.UUID) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldGT(FieldServiceID, v))
-}
-
-// ServiceIDGTE applies the GTE predicate on the "service_id" field.
-func ServiceIDGTE(v uuid.UUID) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldGTE(FieldServiceID, v))
-}
-
-// ServiceIDLT applies the LT predicate on the "service_id" field.
-func ServiceIDLT(v uuid.UUID) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldLT(FieldServiceID, v))
-}
-
-// ServiceIDLTE applies the LTE predicate on the "service_id" field.
-func ServiceIDLTE(v uuid.UUID) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldLTE(FieldServiceID, v))
-}
-
 // DependentOnServiceIDEQ applies the EQ predicate on the "dependent_on_service_id" field.
 func DependentOnServiceIDEQ(v uuid.UUID) predicate.ServiceDependency {
 	return predicate.ServiceDependency(sql.FieldEQ(FieldDependentOnServiceID, v))
@@ -133,26 +114,6 @@ func DependentOnServiceIDIn(vs ...uuid.UUID) predicate.ServiceDependency {
 // DependentOnServiceIDNotIn applies the NotIn predicate on the "dependent_on_service_id" field.
 func DependentOnServiceIDNotIn(vs ...uuid.UUID) predicate.ServiceDependency {
 	return predicate.ServiceDependency(sql.FieldNotIn(FieldDependentOnServiceID, vs...))
-}
-
-// DependentOnServiceIDGT applies the GT predicate on the "dependent_on_service_id" field.
-func DependentOnServiceIDGT(v uuid.UUID) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldGT(FieldDependentOnServiceID, v))
-}
-
-// DependentOnServiceIDGTE applies the GTE predicate on the "dependent_on_service_id" field.
-func DependentOnServiceIDGTE(v uuid.UUID) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldGTE(FieldDependentOnServiceID, v))
-}
-
-// DependentOnServiceIDLT applies the LT predicate on the "dependent_on_service_id" field.
-func DependentOnServiceIDLT(v uuid.UUID) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldLT(FieldDependentOnServiceID, v))
-}
-
-// DependentOnServiceIDLTE applies the LTE predicate on the "dependent_on_service_id" field.
-func DependentOnServiceIDLTE(v uuid.UUID) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldLTE(FieldDependentOnServiceID, v))
 }
 
 // DependencyTypeEQ applies the EQ predicate on the "dependency_type" field.
@@ -258,6 +219,52 @@ func CreatedAtLT(v time.Time) predicate.ServiceDependency {
 // CreatedAtLTE applies the LTE predicate on the "created_at" field.
 func CreatedAtLTE(v time.Time) predicate.ServiceDependency {
 	return predicate.ServiceDependency(sql.FieldLTE(FieldCreatedAt, v))
+}
+
+// HasService applies the HasEdge predicate on the "service" edge.
+func HasService() predicate.ServiceDependency {
+	return predicate.ServiceDependency(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, ServiceTable, ServiceColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasServiceWith applies the HasEdge predicate on the "service" edge with a given conditions (other predicates).
+func HasServiceWith(preds ...predicate.Service) predicate.ServiceDependency {
+	return predicate.ServiceDependency(func(s *sql.Selector) {
+		step := newServiceStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasDependentOnService applies the HasEdge predicate on the "dependent_on_service" edge.
+func HasDependentOnService() predicate.ServiceDependency {
+	return predicate.ServiceDependency(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, DependentOnServiceTable, DependentOnServiceColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasDependentOnServiceWith applies the HasEdge predicate on the "dependent_on_service" edge with a given conditions (other predicates).
+func HasDependentOnServiceWith(preds ...predicate.Service) predicate.ServiceDependency {
+	return predicate.ServiceDependency(func(s *sql.Selector) {
+		step := newDependentOnServiceStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

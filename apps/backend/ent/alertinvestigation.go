@@ -7,6 +7,7 @@ import (
 	"alga/ent/incident"
 	"alga/ent/incidentinvestigation"
 	"alga/ent/schema"
+	"alga/ent/triageresult"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -108,9 +109,11 @@ type AlertInvestigationEdges struct {
 	PromotedIncident *Incident `json:"promoted_incident,omitempty"`
 	// PromotedIncidentInvestigation holds the value of the promoted_incident_investigation edge.
 	PromotedIncidentInvestigation *IncidentInvestigation `json:"promoted_incident_investigation,omitempty"`
+	// TriageResult holds the value of the triage_result edge.
+	TriageResult *TriageResult `json:"triage_result,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [6]bool
+	loadedTypes [7]bool
 }
 
 // AlertsOrErr returns the Alerts value or an error if the edge
@@ -169,6 +172,17 @@ func (e AlertInvestigationEdges) PromotedIncidentInvestigationOrErr() (*Incident
 		return nil, &NotFoundError{label: incidentinvestigation.Label}
 	}
 	return nil, &NotLoadedError{edge: "promoted_incident_investigation"}
+}
+
+// TriageResultOrErr returns the TriageResult value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e AlertInvestigationEdges) TriageResultOrErr() (*TriageResult, error) {
+	if e.TriageResult != nil {
+		return e.TriageResult, nil
+	} else if e.loadedTypes[6] {
+		return nil, &NotFoundError{label: triageresult.Label}
+	}
+	return nil, &NotLoadedError{edge: "triage_result"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -462,6 +476,11 @@ func (_m *AlertInvestigation) QueryPromotedIncident() *IncidentQuery {
 // QueryPromotedIncidentInvestigation queries the "promoted_incident_investigation" edge of the AlertInvestigation entity.
 func (_m *AlertInvestigation) QueryPromotedIncidentInvestigation() *IncidentInvestigationQuery {
 	return NewAlertInvestigationClient(_m.config).QueryPromotedIncidentInvestigation(_m)
+}
+
+// QueryTriageResult queries the "triage_result" edge of the AlertInvestigation entity.
+func (_m *AlertInvestigation) QueryTriageResult() *TriageResultQuery {
+	return NewAlertInvestigationClient(_m.config).QueryTriageResult(_m)
 }
 
 // Update returns a builder for updating this AlertInvestigation.

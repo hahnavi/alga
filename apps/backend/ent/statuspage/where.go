@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -385,26 +386,6 @@ func OwnerTeamIDNotIn(vs ...uuid.UUID) predicate.StatusPage {
 	return predicate.StatusPage(sql.FieldNotIn(FieldOwnerTeamID, vs...))
 }
 
-// OwnerTeamIDGT applies the GT predicate on the "owner_team_id" field.
-func OwnerTeamIDGT(v uuid.UUID) predicate.StatusPage {
-	return predicate.StatusPage(sql.FieldGT(FieldOwnerTeamID, v))
-}
-
-// OwnerTeamIDGTE applies the GTE predicate on the "owner_team_id" field.
-func OwnerTeamIDGTE(v uuid.UUID) predicate.StatusPage {
-	return predicate.StatusPage(sql.FieldGTE(FieldOwnerTeamID, v))
-}
-
-// OwnerTeamIDLT applies the LT predicate on the "owner_team_id" field.
-func OwnerTeamIDLT(v uuid.UUID) predicate.StatusPage {
-	return predicate.StatusPage(sql.FieldLT(FieldOwnerTeamID, v))
-}
-
-// OwnerTeamIDLTE applies the LTE predicate on the "owner_team_id" field.
-func OwnerTeamIDLTE(v uuid.UUID) predicate.StatusPage {
-	return predicate.StatusPage(sql.FieldLTE(FieldOwnerTeamID, v))
-}
-
 // OwnerTeamIDIsNil applies the IsNil predicate on the "owner_team_id" field.
 func OwnerTeamIDIsNil() predicate.StatusPage {
 	return predicate.StatusPage(sql.FieldIsNull(FieldOwnerTeamID))
@@ -493,6 +474,52 @@ func UpdatedAtLT(v time.Time) predicate.StatusPage {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.StatusPage {
 	return predicate.StatusPage(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// HasComponents applies the HasEdge predicate on the "components" edge.
+func HasComponents() predicate.StatusPage {
+	return predicate.StatusPage(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ComponentsTable, ComponentsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasComponentsWith applies the HasEdge predicate on the "components" edge with a given conditions (other predicates).
+func HasComponentsWith(preds ...predicate.StatusPageComponent) predicate.StatusPage {
+	return predicate.StatusPage(func(s *sql.Selector) {
+		step := newComponentsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasOwnerTeam applies the HasEdge predicate on the "owner_team" edge.
+func HasOwnerTeam() predicate.StatusPage {
+	return predicate.StatusPage(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, OwnerTeamTable, OwnerTeamColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasOwnerTeamWith applies the HasEdge predicate on the "owner_team" edge with a given conditions (other predicates).
+func HasOwnerTeamWith(preds ...predicate.Team) predicate.StatusPage {
+	return predicate.StatusPage(func(s *sql.Selector) {
+		step := newOwnerTeamStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

@@ -51,26 +51,161 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// EdgeSessions holds the string denoting the sessions edge name in mutations.
+	EdgeSessions = "sessions"
+	// EdgePasswordResetTokens holds the string denoting the password_reset_tokens edge name in mutations.
+	EdgePasswordResetTokens = "password_reset_tokens"
+	// EdgePersonalAccessTokens holds the string denoting the personal_access_tokens edge name in mutations.
+	EdgePersonalAccessTokens = "personal_access_tokens"
+	// EdgeOidcIdentities holds the string denoting the oidc_identities edge name in mutations.
+	EdgeOidcIdentities = "oidc_identities"
+	// EdgeTeamMembers holds the string denoting the team_members edge name in mutations.
+	EdgeTeamMembers = "team_members"
 	// EdgeIcsRoleAssignments holds the string denoting the ics_role_assignments edge name in mutations.
 	EdgeIcsRoleAssignments = "ics_role_assignments"
 	// EdgeDocumentEdits holds the string denoting the document_edits edge name in mutations.
 	EdgeDocumentEdits = "document_edits"
+	// EdgeCommanderIncidents holds the string denoting the commander_incidents edge name in mutations.
+	EdgeCommanderIncidents = "commander_incidents"
+	// EdgeCommunicatorIncidents holds the string denoting the communicator_incidents edge name in mutations.
+	EdgeCommunicatorIncidents = "communicator_incidents"
+	// EdgeResponderIncidents holds the string denoting the responder_incidents edge name in mutations.
+	EdgeResponderIncidents = "responder_incidents"
+	// EdgeTriageOverrides holds the string denoting the triage_overrides edge name in mutations.
+	EdgeTriageOverrides = "triage_overrides"
+	// EdgeApprovedPostMortems holds the string denoting the approved_post_mortems edge name in mutations.
+	EdgeApprovedPostMortems = "approved_post_mortems"
+	// EdgeTriageRules holds the string denoting the triage_rules edge name in mutations.
+	EdgeTriageRules = "triage_rules"
+	// EdgeKnowledgeNotes holds the string denoting the knowledge_notes edge name in mutations.
+	EdgeKnowledgeNotes = "knowledge_notes"
+	// EdgeScheduleOverrides holds the string denoting the schedule_overrides edge name in mutations.
+	EdgeScheduleOverrides = "schedule_overrides"
+	// EdgeOutgoingHandoffs holds the string denoting the outgoing_handoffs edge name in mutations.
+	EdgeOutgoingHandoffs = "outgoing_handoffs"
+	// EdgeIncomingHandoffs holds the string denoting the incoming_handoffs edge name in mutations.
+	EdgeIncomingHandoffs = "incoming_handoffs"
 	// Table holds the table name of the user in the database.
 	Table = "users"
+	// SessionsTable is the table that holds the sessions relation/edge.
+	SessionsTable = "sessions"
+	// SessionsInverseTable is the table name for the Session entity.
+	// It exists in this package in order to avoid circular dependency with the "session" package.
+	SessionsInverseTable = "sessions"
+	// SessionsColumn is the table column denoting the sessions relation/edge.
+	SessionsColumn = "user_id"
+	// PasswordResetTokensTable is the table that holds the password_reset_tokens relation/edge.
+	PasswordResetTokensTable = "password_reset_tokens"
+	// PasswordResetTokensInverseTable is the table name for the PasswordResetToken entity.
+	// It exists in this package in order to avoid circular dependency with the "passwordresettoken" package.
+	PasswordResetTokensInverseTable = "password_reset_tokens"
+	// PasswordResetTokensColumn is the table column denoting the password_reset_tokens relation/edge.
+	PasswordResetTokensColumn = "user_id"
+	// PersonalAccessTokensTable is the table that holds the personal_access_tokens relation/edge.
+	PersonalAccessTokensTable = "personal_access_tokens"
+	// PersonalAccessTokensInverseTable is the table name for the PersonalAccessToken entity.
+	// It exists in this package in order to avoid circular dependency with the "personalaccesstoken" package.
+	PersonalAccessTokensInverseTable = "personal_access_tokens"
+	// PersonalAccessTokensColumn is the table column denoting the personal_access_tokens relation/edge.
+	PersonalAccessTokensColumn = "user_id"
+	// OidcIdentitiesTable is the table that holds the oidc_identities relation/edge.
+	OidcIdentitiesTable = "oidc_identities"
+	// OidcIdentitiesInverseTable is the table name for the OIDCIdentity entity.
+	// It exists in this package in order to avoid circular dependency with the "oidcidentity" package.
+	OidcIdentitiesInverseTable = "oidc_identities"
+	// OidcIdentitiesColumn is the table column denoting the oidc_identities relation/edge.
+	OidcIdentitiesColumn = "user_id"
+	// TeamMembersTable is the table that holds the team_members relation/edge.
+	TeamMembersTable = "team_members"
+	// TeamMembersInverseTable is the table name for the TeamMember entity.
+	// It exists in this package in order to avoid circular dependency with the "teammember" package.
+	TeamMembersInverseTable = "team_members"
+	// TeamMembersColumn is the table column denoting the team_members relation/edge.
+	TeamMembersColumn = "user_id"
 	// IcsRoleAssignmentsTable is the table that holds the ics_role_assignments relation/edge.
 	IcsRoleAssignmentsTable = "ics_role_assignments"
 	// IcsRoleAssignmentsInverseTable is the table name for the ICSRoleAssignment entity.
 	// It exists in this package in order to avoid circular dependency with the "icsroleassignment" package.
 	IcsRoleAssignmentsInverseTable = "ics_role_assignments"
 	// IcsRoleAssignmentsColumn is the table column denoting the ics_role_assignments relation/edge.
-	IcsRoleAssignmentsColumn = "user_ics_role_assignments"
+	IcsRoleAssignmentsColumn = "user_id"
 	// DocumentEditsTable is the table that holds the document_edits relation/edge.
 	DocumentEditsTable = "incident_documents"
 	// DocumentEditsInverseTable is the table name for the IncidentDocument entity.
 	// It exists in this package in order to avoid circular dependency with the "incidentdocument" package.
 	DocumentEditsInverseTable = "incident_documents"
 	// DocumentEditsColumn is the table column denoting the document_edits relation/edge.
-	DocumentEditsColumn = "user_document_edits"
+	DocumentEditsColumn = "updated_by_id"
+	// CommanderIncidentsTable is the table that holds the commander_incidents relation/edge.
+	CommanderIncidentsTable = "incidents"
+	// CommanderIncidentsInverseTable is the table name for the Incident entity.
+	// It exists in this package in order to avoid circular dependency with the "incident" package.
+	CommanderIncidentsInverseTable = "incidents"
+	// CommanderIncidentsColumn is the table column denoting the commander_incidents relation/edge.
+	CommanderIncidentsColumn = "commander_id"
+	// CommunicatorIncidentsTable is the table that holds the communicator_incidents relation/edge.
+	CommunicatorIncidentsTable = "incidents"
+	// CommunicatorIncidentsInverseTable is the table name for the Incident entity.
+	// It exists in this package in order to avoid circular dependency with the "incident" package.
+	CommunicatorIncidentsInverseTable = "incidents"
+	// CommunicatorIncidentsColumn is the table column denoting the communicator_incidents relation/edge.
+	CommunicatorIncidentsColumn = "communicator_id"
+	// ResponderIncidentsTable is the table that holds the responder_incidents relation/edge.
+	ResponderIncidentsTable = "incidents"
+	// ResponderIncidentsInverseTable is the table name for the Incident entity.
+	// It exists in this package in order to avoid circular dependency with the "incident" package.
+	ResponderIncidentsInverseTable = "incidents"
+	// ResponderIncidentsColumn is the table column denoting the responder_incidents relation/edge.
+	ResponderIncidentsColumn = "on_call_responder_id"
+	// TriageOverridesTable is the table that holds the triage_overrides relation/edge.
+	TriageOverridesTable = "triage_results"
+	// TriageOverridesInverseTable is the table name for the TriageResult entity.
+	// It exists in this package in order to avoid circular dependency with the "triageresult" package.
+	TriageOverridesInverseTable = "triage_results"
+	// TriageOverridesColumn is the table column denoting the triage_overrides relation/edge.
+	TriageOverridesColumn = "overridden_by"
+	// ApprovedPostMortemsTable is the table that holds the approved_post_mortems relation/edge.
+	ApprovedPostMortemsTable = "post_mortems"
+	// ApprovedPostMortemsInverseTable is the table name for the PostMortem entity.
+	// It exists in this package in order to avoid circular dependency with the "postmortem" package.
+	ApprovedPostMortemsInverseTable = "post_mortems"
+	// ApprovedPostMortemsColumn is the table column denoting the approved_post_mortems relation/edge.
+	ApprovedPostMortemsColumn = "approved_by_id"
+	// TriageRulesTable is the table that holds the triage_rules relation/edge.
+	TriageRulesTable = "triage_rules"
+	// TriageRulesInverseTable is the table name for the TriageRule entity.
+	// It exists in this package in order to avoid circular dependency with the "triagerule" package.
+	TriageRulesInverseTable = "triage_rules"
+	// TriageRulesColumn is the table column denoting the triage_rules relation/edge.
+	TriageRulesColumn = "created_by"
+	// KnowledgeNotesTable is the table that holds the knowledge_notes relation/edge.
+	KnowledgeNotesTable = "knowledge_notes"
+	// KnowledgeNotesInverseTable is the table name for the KnowledgeNote entity.
+	// It exists in this package in order to avoid circular dependency with the "knowledgenote" package.
+	KnowledgeNotesInverseTable = "knowledge_notes"
+	// KnowledgeNotesColumn is the table column denoting the knowledge_notes relation/edge.
+	KnowledgeNotesColumn = "author_id"
+	// ScheduleOverridesTable is the table that holds the schedule_overrides relation/edge.
+	ScheduleOverridesTable = "schedule_overrides"
+	// ScheduleOverridesInverseTable is the table name for the ScheduleOverride entity.
+	// It exists in this package in order to avoid circular dependency with the "scheduleoverride" package.
+	ScheduleOverridesInverseTable = "schedule_overrides"
+	// ScheduleOverridesColumn is the table column denoting the schedule_overrides relation/edge.
+	ScheduleOverridesColumn = "user_id"
+	// OutgoingHandoffsTable is the table that holds the outgoing_handoffs relation/edge.
+	OutgoingHandoffsTable = "handoff_records"
+	// OutgoingHandoffsInverseTable is the table name for the HandoffRecord entity.
+	// It exists in this package in order to avoid circular dependency with the "handoffrecord" package.
+	OutgoingHandoffsInverseTable = "handoff_records"
+	// OutgoingHandoffsColumn is the table column denoting the outgoing_handoffs relation/edge.
+	OutgoingHandoffsColumn = "outgoing_user_id"
+	// IncomingHandoffsTable is the table that holds the incoming_handoffs relation/edge.
+	IncomingHandoffsTable = "handoff_records"
+	// IncomingHandoffsInverseTable is the table name for the HandoffRecord entity.
+	// It exists in this package in order to avoid circular dependency with the "handoffrecord" package.
+	IncomingHandoffsInverseTable = "handoff_records"
+	// IncomingHandoffsColumn is the table column denoting the incoming_handoffs relation/edge.
+	IncomingHandoffsColumn = "incoming_user_id"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -236,6 +371,76 @@ func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
 }
 
+// BySessionsCount orders the results by sessions count.
+func BySessionsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newSessionsStep(), opts...)
+	}
+}
+
+// BySessions orders the results by sessions terms.
+func BySessions(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newSessionsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByPasswordResetTokensCount orders the results by password_reset_tokens count.
+func ByPasswordResetTokensCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newPasswordResetTokensStep(), opts...)
+	}
+}
+
+// ByPasswordResetTokens orders the results by password_reset_tokens terms.
+func ByPasswordResetTokens(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newPasswordResetTokensStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByPersonalAccessTokensCount orders the results by personal_access_tokens count.
+func ByPersonalAccessTokensCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newPersonalAccessTokensStep(), opts...)
+	}
+}
+
+// ByPersonalAccessTokens orders the results by personal_access_tokens terms.
+func ByPersonalAccessTokens(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newPersonalAccessTokensStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByOidcIdentitiesCount orders the results by oidc_identities count.
+func ByOidcIdentitiesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newOidcIdentitiesStep(), opts...)
+	}
+}
+
+// ByOidcIdentities orders the results by oidc_identities terms.
+func ByOidcIdentities(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newOidcIdentitiesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByTeamMembersCount orders the results by team_members count.
+func ByTeamMembersCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newTeamMembersStep(), opts...)
+	}
+}
+
+// ByTeamMembers orders the results by team_members terms.
+func ByTeamMembers(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newTeamMembersStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByIcsRoleAssignmentsCount orders the results by ics_role_assignments count.
 func ByIcsRoleAssignmentsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -263,6 +468,181 @@ func ByDocumentEdits(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newDocumentEditsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByCommanderIncidentsCount orders the results by commander_incidents count.
+func ByCommanderIncidentsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newCommanderIncidentsStep(), opts...)
+	}
+}
+
+// ByCommanderIncidents orders the results by commander_incidents terms.
+func ByCommanderIncidents(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCommanderIncidentsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByCommunicatorIncidentsCount orders the results by communicator_incidents count.
+func ByCommunicatorIncidentsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newCommunicatorIncidentsStep(), opts...)
+	}
+}
+
+// ByCommunicatorIncidents orders the results by communicator_incidents terms.
+func ByCommunicatorIncidents(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCommunicatorIncidentsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByResponderIncidentsCount orders the results by responder_incidents count.
+func ByResponderIncidentsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newResponderIncidentsStep(), opts...)
+	}
+}
+
+// ByResponderIncidents orders the results by responder_incidents terms.
+func ByResponderIncidents(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newResponderIncidentsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByTriageOverridesCount orders the results by triage_overrides count.
+func ByTriageOverridesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newTriageOverridesStep(), opts...)
+	}
+}
+
+// ByTriageOverrides orders the results by triage_overrides terms.
+func ByTriageOverrides(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newTriageOverridesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByApprovedPostMortemsCount orders the results by approved_post_mortems count.
+func ByApprovedPostMortemsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newApprovedPostMortemsStep(), opts...)
+	}
+}
+
+// ByApprovedPostMortems orders the results by approved_post_mortems terms.
+func ByApprovedPostMortems(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newApprovedPostMortemsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByTriageRulesCount orders the results by triage_rules count.
+func ByTriageRulesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newTriageRulesStep(), opts...)
+	}
+}
+
+// ByTriageRules orders the results by triage_rules terms.
+func ByTriageRules(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newTriageRulesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByKnowledgeNotesCount orders the results by knowledge_notes count.
+func ByKnowledgeNotesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newKnowledgeNotesStep(), opts...)
+	}
+}
+
+// ByKnowledgeNotes orders the results by knowledge_notes terms.
+func ByKnowledgeNotes(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newKnowledgeNotesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByScheduleOverridesCount orders the results by schedule_overrides count.
+func ByScheduleOverridesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newScheduleOverridesStep(), opts...)
+	}
+}
+
+// ByScheduleOverrides orders the results by schedule_overrides terms.
+func ByScheduleOverrides(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newScheduleOverridesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByOutgoingHandoffsCount orders the results by outgoing_handoffs count.
+func ByOutgoingHandoffsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newOutgoingHandoffsStep(), opts...)
+	}
+}
+
+// ByOutgoingHandoffs orders the results by outgoing_handoffs terms.
+func ByOutgoingHandoffs(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newOutgoingHandoffsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByIncomingHandoffsCount orders the results by incoming_handoffs count.
+func ByIncomingHandoffsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newIncomingHandoffsStep(), opts...)
+	}
+}
+
+// ByIncomingHandoffs orders the results by incoming_handoffs terms.
+func ByIncomingHandoffs(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newIncomingHandoffsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+func newSessionsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(SessionsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, SessionsTable, SessionsColumn),
+	)
+}
+func newPasswordResetTokensStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(PasswordResetTokensInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, PasswordResetTokensTable, PasswordResetTokensColumn),
+	)
+}
+func newPersonalAccessTokensStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(PersonalAccessTokensInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, PersonalAccessTokensTable, PersonalAccessTokensColumn),
+	)
+}
+func newOidcIdentitiesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(OidcIdentitiesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, OidcIdentitiesTable, OidcIdentitiesColumn),
+	)
+}
+func newTeamMembersStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(TeamMembersInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, TeamMembersTable, TeamMembersColumn),
+	)
+}
 func newIcsRoleAssignmentsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -275,5 +655,75 @@ func newDocumentEditsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(DocumentEditsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, DocumentEditsTable, DocumentEditsColumn),
+	)
+}
+func newCommanderIncidentsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CommanderIncidentsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, CommanderIncidentsTable, CommanderIncidentsColumn),
+	)
+}
+func newCommunicatorIncidentsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CommunicatorIncidentsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, CommunicatorIncidentsTable, CommunicatorIncidentsColumn),
+	)
+}
+func newResponderIncidentsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ResponderIncidentsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ResponderIncidentsTable, ResponderIncidentsColumn),
+	)
+}
+func newTriageOverridesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(TriageOverridesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, TriageOverridesTable, TriageOverridesColumn),
+	)
+}
+func newApprovedPostMortemsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ApprovedPostMortemsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ApprovedPostMortemsTable, ApprovedPostMortemsColumn),
+	)
+}
+func newTriageRulesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(TriageRulesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, TriageRulesTable, TriageRulesColumn),
+	)
+}
+func newKnowledgeNotesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(KnowledgeNotesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, KnowledgeNotesTable, KnowledgeNotesColumn),
+	)
+}
+func newScheduleOverridesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ScheduleOverridesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ScheduleOverridesTable, ScheduleOverridesColumn),
+	)
+}
+func newOutgoingHandoffsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(OutgoingHandoffsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, OutgoingHandoffsTable, OutgoingHandoffsColumn),
+	)
+}
+func newIncomingHandoffsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(IncomingHandoffsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, IncomingHandoffsTable, IncomingHandoffsColumn),
 	)
 }

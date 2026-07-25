@@ -36,14 +36,14 @@ func (CoordinationTask) Fields() []ent.Field {
 		field.JSON("result_schema", map[string]any{}).Optional(),
 		field.UUID("linked_investigation_id", uuid.UUID{}).Optional().Nillable(),
 		field.String("status").Default("pending"),
-		field.Int("priority").Default(0),
+		field.Int("priority").Default(0).NonNegative(),
 		field.Time("due_at").Optional().Nillable(),
 		field.Time("claimed_at").Optional().Nillable(),
 		field.Time("completed_at").Optional().Nillable(),
 		field.String("created_by_agent_id").Optional().Default(""),
 		field.String("created_by_name").Optional().Default(""),
 		field.String("failure_reason").Optional().Default(""),
-		field.Int("dispatch_attempts").Default(0),
+		field.Int("dispatch_attempts").Default(0).NonNegative(),
 		field.Time("created_at").Default(timeNow),
 		field.Time("updated_at").Default(timeNow).UpdateDefault(timeNow),
 	}
@@ -60,17 +60,19 @@ func (CoordinationTask) Edges() []ent.Edge {
 			Ref("child_tasks").
 			Unique().
 			Field("parent_task_id"),
+		edge.From("linked_investigation", IncidentInvestigation.Type).Ref("linked_coordination_tasks").Field("linked_investigation_id").Unique(),
 	}
 }
 
 func (CoordinationTask) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("incident_id"),
-		index.Fields("status"),
+		index.Fields("status", "priority", "created_at"),
 		index.Fields("assignee_agent_id", "status"),
 		index.Fields("parent_task_id"),
 		index.Fields("incident_id", "status"),
 		index.Fields("assignee_role", "status"),
 		index.Fields("due_at"),
+		index.Fields("linked_investigation_id"),
 	}
 }

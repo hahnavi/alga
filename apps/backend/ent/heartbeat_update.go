@@ -5,6 +5,7 @@ package ent
 import (
 	"alga/ent/heartbeat"
 	"alga/ent/predicate"
+	"alga/ent/team"
 	"context"
 	"errors"
 	"fmt"
@@ -301,9 +302,20 @@ func (_u *HeartbeatUpdate) SetUpdatedAt(v time.Time) *HeartbeatUpdate {
 	return _u
 }
 
+// SetOwnerTeam sets the "owner_team" edge to the Team entity.
+func (_u *HeartbeatUpdate) SetOwnerTeam(v *Team) *HeartbeatUpdate {
+	return _u.SetOwnerTeamID(v.ID)
+}
+
 // Mutation returns the HeartbeatMutation object of the builder.
 func (_u *HeartbeatUpdate) Mutation() *HeartbeatMutation {
 	return _u.mutation
+}
+
+// ClearOwnerTeam clears the "owner_team" edge to the Team entity.
+func (_u *HeartbeatUpdate) ClearOwnerTeam() *HeartbeatUpdate {
+	_u.mutation.ClearOwnerTeam()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -405,12 +417,6 @@ func (_u *HeartbeatUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.Enabled(); ok {
 		_spec.SetField(heartbeat.FieldEnabled, field.TypeBool, value)
 	}
-	if value, ok := _u.mutation.OwnerTeamID(); ok {
-		_spec.SetField(heartbeat.FieldOwnerTeamID, field.TypeUUID, value)
-	}
-	if _u.mutation.OwnerTeamIDCleared() {
-		_spec.ClearField(heartbeat.FieldOwnerTeamID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(heartbeat.FieldStatus, field.TypeString, value)
 	}
@@ -458,6 +464,35 @@ func (_u *HeartbeatUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(heartbeat.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.OwnerTeamCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   heartbeat.OwnerTeamTable,
+			Columns: []string{heartbeat.OwnerTeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OwnerTeamIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   heartbeat.OwnerTeamTable,
+			Columns: []string{heartbeat.OwnerTeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -751,9 +786,20 @@ func (_u *HeartbeatUpdateOne) SetUpdatedAt(v time.Time) *HeartbeatUpdateOne {
 	return _u
 }
 
+// SetOwnerTeam sets the "owner_team" edge to the Team entity.
+func (_u *HeartbeatUpdateOne) SetOwnerTeam(v *Team) *HeartbeatUpdateOne {
+	return _u.SetOwnerTeamID(v.ID)
+}
+
 // Mutation returns the HeartbeatMutation object of the builder.
 func (_u *HeartbeatUpdateOne) Mutation() *HeartbeatMutation {
 	return _u.mutation
+}
+
+// ClearOwnerTeam clears the "owner_team" edge to the Team entity.
+func (_u *HeartbeatUpdateOne) ClearOwnerTeam() *HeartbeatUpdateOne {
+	_u.mutation.ClearOwnerTeam()
+	return _u
 }
 
 // Where appends a list predicates to the HeartbeatUpdate builder.
@@ -885,12 +931,6 @@ func (_u *HeartbeatUpdateOne) sqlSave(ctx context.Context) (_node *Heartbeat, er
 	if value, ok := _u.mutation.Enabled(); ok {
 		_spec.SetField(heartbeat.FieldEnabled, field.TypeBool, value)
 	}
-	if value, ok := _u.mutation.OwnerTeamID(); ok {
-		_spec.SetField(heartbeat.FieldOwnerTeamID, field.TypeUUID, value)
-	}
-	if _u.mutation.OwnerTeamIDCleared() {
-		_spec.ClearField(heartbeat.FieldOwnerTeamID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(heartbeat.FieldStatus, field.TypeString, value)
 	}
@@ -938,6 +978,35 @@ func (_u *HeartbeatUpdateOne) sqlSave(ctx context.Context) (_node *Heartbeat, er
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(heartbeat.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.OwnerTeamCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   heartbeat.OwnerTeamTable,
+			Columns: []string{heartbeat.OwnerTeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OwnerTeamIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   heartbeat.OwnerTeamTable,
+			Columns: []string{heartbeat.OwnerTeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &Heartbeat{config: _u.config}
 	_spec.Assign = _node.assignValues

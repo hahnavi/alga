@@ -692,6 +692,98 @@ func HasIcsRolesWith(preds ...predicate.ICSRoleAssignment) predicate.AgentToken 
 	})
 }
 
+// HasMemories applies the HasEdge predicate on the "memories" edge.
+func HasMemories() predicate.AgentToken {
+	return predicate.AgentToken(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, MemoriesTable, MemoriesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasMemoriesWith applies the HasEdge predicate on the "memories" edge with a given conditions (other predicates).
+func HasMemoriesWith(preds ...predicate.AgentMemory) predicate.AgentToken {
+	return predicate.AgentToken(func(s *sql.Selector) {
+		step := newMemoriesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasSentAsks applies the HasEdge predicate on the "sent_asks" edge.
+func HasSentAsks() predicate.AgentToken {
+	return predicate.AgentToken(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, SentAsksTable, SentAsksColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasSentAsksWith applies the HasEdge predicate on the "sent_asks" edge with a given conditions (other predicates).
+func HasSentAsksWith(preds ...predicate.AgentAsk) predicate.AgentToken {
+	return predicate.AgentToken(func(s *sql.Selector) {
+		step := newSentAsksStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasReceivedAsks applies the HasEdge predicate on the "received_asks" edge.
+func HasReceivedAsks() predicate.AgentToken {
+	return predicate.AgentToken(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ReceivedAsksTable, ReceivedAsksColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasReceivedAsksWith applies the HasEdge predicate on the "received_asks" edge with a given conditions (other predicates).
+func HasReceivedAsksWith(preds ...predicate.AgentAsk) predicate.AgentToken {
+	return predicate.AgentToken(func(s *sql.Selector) {
+		step := newReceivedAsksStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasRepliedAsks applies the HasEdge predicate on the "replied_asks" edge.
+func HasRepliedAsks() predicate.AgentToken {
+	return predicate.AgentToken(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, RepliedAsksTable, RepliedAsksColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasRepliedAsksWith applies the HasEdge predicate on the "replied_asks" edge with a given conditions (other predicates).
+func HasRepliedAsksWith(preds ...predicate.AgentAsk) predicate.AgentToken {
+	return predicate.AgentToken(func(s *sql.Selector) {
+		step := newRepliedAsksStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.AgentToken) predicate.AgentToken {
 	return predicate.AgentToken(sql.AndPredicates(predicates...))

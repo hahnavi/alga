@@ -27,7 +27,6 @@ type IncidentDocumentQuery struct {
 	predicates    []predicate.IncidentDocument
 	withIncident  *IncidentQuery
 	withUpdatedBy *UserQuery
-	withFKs       bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -407,19 +406,12 @@ func (_q *IncidentDocumentQuery) prepareQuery(ctx context.Context) error {
 func (_q *IncidentDocumentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*IncidentDocument, error) {
 	var (
 		nodes       = []*IncidentDocument{}
-		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
 		loadedTypes = [2]bool{
 			_q.withIncident != nil,
 			_q.withUpdatedBy != nil,
 		}
 	)
-	if _q.withIncident != nil || _q.withUpdatedBy != nil {
-		withFKs = true
-	}
-	if withFKs {
-		_spec.Node.Columns = append(_spec.Node.Columns, incidentdocument.ForeignKeys...)
-	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*IncidentDocument).scanValues(nil, columns)
 	}
@@ -457,10 +449,7 @@ func (_q *IncidentDocumentQuery) loadIncident(ctx context.Context, query *Incide
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*IncidentDocument)
 	for i := range nodes {
-		if nodes[i].incident_documents == nil {
-			continue
-		}
-		fk := *nodes[i].incident_documents
+		fk := nodes[i].IncidentID
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -477,7 +466,7 @@ func (_q *IncidentDocumentQuery) loadIncident(ctx context.Context, query *Incide
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "incident_documents" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "incident_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -489,10 +478,10 @@ func (_q *IncidentDocumentQuery) loadUpdatedBy(ctx context.Context, query *UserQ
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*IncidentDocument)
 	for i := range nodes {
-		if nodes[i].user_document_edits == nil {
+		if nodes[i].UpdatedByID == nil {
 			continue
 		}
-		fk := *nodes[i].user_document_edits
+		fk := *nodes[i].UpdatedByID
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -509,7 +498,7 @@ func (_q *IncidentDocumentQuery) loadUpdatedBy(ctx context.Context, query *UserQ
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "user_document_edits" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "updated_by_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -542,6 +531,12 @@ func (_q *IncidentDocumentQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != incidentdocument.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if _q.withIncident != nil {
+			_spec.Node.AddColumnOnce(incidentdocument.FieldIncidentID)
+		}
+		if _q.withUpdatedBy != nil {
+			_spec.Node.AddColumnOnce(incidentdocument.FieldUpdatedByID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

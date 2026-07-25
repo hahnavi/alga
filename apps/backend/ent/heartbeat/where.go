@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -373,26 +374,6 @@ func OwnerTeamIDIn(vs ...uuid.UUID) predicate.Heartbeat {
 // OwnerTeamIDNotIn applies the NotIn predicate on the "owner_team_id" field.
 func OwnerTeamIDNotIn(vs ...uuid.UUID) predicate.Heartbeat {
 	return predicate.Heartbeat(sql.FieldNotIn(FieldOwnerTeamID, vs...))
-}
-
-// OwnerTeamIDGT applies the GT predicate on the "owner_team_id" field.
-func OwnerTeamIDGT(v uuid.UUID) predicate.Heartbeat {
-	return predicate.Heartbeat(sql.FieldGT(FieldOwnerTeamID, v))
-}
-
-// OwnerTeamIDGTE applies the GTE predicate on the "owner_team_id" field.
-func OwnerTeamIDGTE(v uuid.UUID) predicate.Heartbeat {
-	return predicate.Heartbeat(sql.FieldGTE(FieldOwnerTeamID, v))
-}
-
-// OwnerTeamIDLT applies the LT predicate on the "owner_team_id" field.
-func OwnerTeamIDLT(v uuid.UUID) predicate.Heartbeat {
-	return predicate.Heartbeat(sql.FieldLT(FieldOwnerTeamID, v))
-}
-
-// OwnerTeamIDLTE applies the LTE predicate on the "owner_team_id" field.
-func OwnerTeamIDLTE(v uuid.UUID) predicate.Heartbeat {
-	return predicate.Heartbeat(sql.FieldLTE(FieldOwnerTeamID, v))
 }
 
 // OwnerTeamIDIsNil applies the IsNil predicate on the "owner_team_id" field.
@@ -978,6 +959,29 @@ func UpdatedAtLT(v time.Time) predicate.Heartbeat {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.Heartbeat {
 	return predicate.Heartbeat(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// HasOwnerTeam applies the HasEdge predicate on the "owner_team" edge.
+func HasOwnerTeam() predicate.Heartbeat {
+	return predicate.Heartbeat(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, OwnerTeamTable, OwnerTeamColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasOwnerTeamWith applies the HasEdge predicate on the "owner_team" edge with a given conditions (other predicates).
+func HasOwnerTeamWith(preds ...predicate.Team) predicate.Heartbeat {
+	return predicate.Heartbeat(func(s *sql.Selector) {
+		step := newOwnerTeamStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

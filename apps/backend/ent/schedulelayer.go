@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"alga/ent/oncallschedule"
 	"alga/ent/schedulelayer"
 	"encoding/json"
 	"fmt"
@@ -46,8 +47,31 @@ type ScheduleLayer struct {
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt    time.Time `json:"updated_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the ScheduleLayerQuery when eager-loading is set.
+	Edges        ScheduleLayerEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// ScheduleLayerEdges holds the relations/edges for other nodes in the graph.
+type ScheduleLayerEdges struct {
+	// Schedule holds the value of the schedule edge.
+	Schedule *OnCallSchedule `json:"schedule,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// ScheduleOrErr returns the Schedule value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ScheduleLayerEdges) ScheduleOrErr() (*OnCallSchedule, error) {
+	if e.Schedule != nil {
+		return e.Schedule, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: oncallschedule.Label}
+	}
+	return nil, &NotLoadedError{edge: "schedule"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -186,6 +210,11 @@ func (_m *ScheduleLayer) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *ScheduleLayer) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
+}
+
+// QuerySchedule queries the "schedule" edge of the ScheduleLayer entity.
+func (_m *ScheduleLayer) QuerySchedule() *OnCallScheduleQuery {
+	return NewScheduleLayerClient(_m.config).QuerySchedule(_m)
 }
 
 // Update returns a builder for updating this ScheduleLayer.

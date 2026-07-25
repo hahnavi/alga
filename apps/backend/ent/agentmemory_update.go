@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/agentmemory"
+	"alga/ent/agenttoken"
 	"alga/ent/predicate"
 	"context"
 	"errors"
@@ -320,9 +321,20 @@ func (_u *AgentMemoryUpdate) SetUpdatedAt(v time.Time) *AgentMemoryUpdate {
 	return _u
 }
 
+// SetAgent sets the "agent" edge to the AgentToken entity.
+func (_u *AgentMemoryUpdate) SetAgent(v *AgentToken) *AgentMemoryUpdate {
+	return _u.SetAgentID(v.ID)
+}
+
 // Mutation returns the AgentMemoryMutation object of the builder.
 func (_u *AgentMemoryUpdate) Mutation() *AgentMemoryMutation {
 	return _u.mutation
+}
+
+// ClearAgent clears the "agent" edge to the AgentToken entity.
+func (_u *AgentMemoryUpdate) ClearAgent() *AgentMemoryUpdate {
+	_u.mutation.ClearAgent()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -373,6 +385,16 @@ func (_u *AgentMemoryUpdate) check() error {
 			return &ValidationError{Name: "hash", err: fmt.Errorf(`ent: validator failed for field "AgentMemory.hash": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Confidence(); ok {
+		if err := agentmemory.ConfidenceValidator(v); err != nil {
+			return &ValidationError{Name: "confidence", err: fmt.Errorf(`ent: validator failed for field "AgentMemory.confidence": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.AccessCount(); ok {
+		if err := agentmemory.AccessCountValidator(v); err != nil {
+			return &ValidationError{Name: "access_count", err: fmt.Errorf(`ent: validator failed for field "AgentMemory.access_count": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -407,12 +429,6 @@ func (_u *AgentMemoryUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	}
 	if _u.mutation.EmbeddingCleared() {
 		_spec.ClearField(agentmemory.FieldEmbedding, field.TypeJSON)
-	}
-	if value, ok := _u.mutation.AgentID(); ok {
-		_spec.SetField(agentmemory.FieldAgentID, field.TypeUUID, value)
-	}
-	if _u.mutation.AgentIDCleared() {
-		_spec.ClearField(agentmemory.FieldAgentID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.AgentName(); ok {
 		_spec.SetField(agentmemory.FieldAgentName, field.TypeString, value)
@@ -487,6 +503,35 @@ func (_u *AgentMemoryUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(agentmemory.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.AgentCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   agentmemory.AgentTable,
+			Columns: []string{agentmemory.AgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agenttoken.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AgentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   agentmemory.AgentTable,
+			Columns: []string{agentmemory.AgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agenttoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -798,9 +843,20 @@ func (_u *AgentMemoryUpdateOne) SetUpdatedAt(v time.Time) *AgentMemoryUpdateOne 
 	return _u
 }
 
+// SetAgent sets the "agent" edge to the AgentToken entity.
+func (_u *AgentMemoryUpdateOne) SetAgent(v *AgentToken) *AgentMemoryUpdateOne {
+	return _u.SetAgentID(v.ID)
+}
+
 // Mutation returns the AgentMemoryMutation object of the builder.
 func (_u *AgentMemoryUpdateOne) Mutation() *AgentMemoryMutation {
 	return _u.mutation
+}
+
+// ClearAgent clears the "agent" edge to the AgentToken entity.
+func (_u *AgentMemoryUpdateOne) ClearAgent() *AgentMemoryUpdateOne {
+	_u.mutation.ClearAgent()
+	return _u
 }
 
 // Where appends a list predicates to the AgentMemoryUpdate builder.
@@ -864,6 +920,16 @@ func (_u *AgentMemoryUpdateOne) check() error {
 			return &ValidationError{Name: "hash", err: fmt.Errorf(`ent: validator failed for field "AgentMemory.hash": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Confidence(); ok {
+		if err := agentmemory.ConfidenceValidator(v); err != nil {
+			return &ValidationError{Name: "confidence", err: fmt.Errorf(`ent: validator failed for field "AgentMemory.confidence": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.AccessCount(); ok {
+		if err := agentmemory.AccessCountValidator(v); err != nil {
+			return &ValidationError{Name: "access_count", err: fmt.Errorf(`ent: validator failed for field "AgentMemory.access_count": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -915,12 +981,6 @@ func (_u *AgentMemoryUpdateOne) sqlSave(ctx context.Context) (_node *AgentMemory
 	}
 	if _u.mutation.EmbeddingCleared() {
 		_spec.ClearField(agentmemory.FieldEmbedding, field.TypeJSON)
-	}
-	if value, ok := _u.mutation.AgentID(); ok {
-		_spec.SetField(agentmemory.FieldAgentID, field.TypeUUID, value)
-	}
-	if _u.mutation.AgentIDCleared() {
-		_spec.ClearField(agentmemory.FieldAgentID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.AgentName(); ok {
 		_spec.SetField(agentmemory.FieldAgentName, field.TypeString, value)
@@ -995,6 +1055,35 @@ func (_u *AgentMemoryUpdateOne) sqlSave(ctx context.Context) (_node *AgentMemory
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(agentmemory.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.AgentCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   agentmemory.AgentTable,
+			Columns: []string{agentmemory.AgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agenttoken.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AgentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   agentmemory.AgentTable,
+			Columns: []string{agentmemory.AgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agenttoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &AgentMemory{config: _u.config}
 	_spec.Assign = _node.assignValues

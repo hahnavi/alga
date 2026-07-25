@@ -4,6 +4,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -30,7 +31,7 @@ func (TriageRule) Fields() []ent.Field {
 		field.String("severity").Optional().Default(""),
 		field.String("category").Optional().Default(""),
 		field.JSON("enrichment", map[string]any{}).Optional(),
-		field.Int("priority").Default(0),
+		field.Int("priority").Default(0).NonNegative(),
 		field.Bool("enabled").Default(true),
 		field.UUID("created_by", uuid.UUID{}).Optional(),
 		field.Time("created_at").Default(timeNow),
@@ -38,11 +39,15 @@ func (TriageRule) Fields() []ent.Field {
 	}
 }
 
-func (TriageRule) Edges() []ent.Edge { return nil }
+func (TriageRule) Edges() []ent.Edge {
+	return []ent.Edge{
+		edge.From("created_by_user", User.Type).Ref("triage_rules").Field("created_by").Unique(),
+	}
+}
 
 func (TriageRule) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("priority"),
-		index.Fields("enabled"),
+		index.Fields("enabled", "priority"),
+		index.Fields("created_by"),
 	}
 }

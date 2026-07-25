@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/agentask"
+	"alga/ent/agenttoken"
 	"context"
 	"errors"
 	"fmt"
@@ -199,6 +200,21 @@ func (_c *AgentAskCreate) SetNillableID(v *uuid.UUID) *AgentAskCreate {
 	return _c
 }
 
+// SetFromAgent sets the "from_agent" edge to the AgentToken entity.
+func (_c *AgentAskCreate) SetFromAgent(v *AgentToken) *AgentAskCreate {
+	return _c.SetFromAgentID(v.ID)
+}
+
+// SetToAgent sets the "to_agent" edge to the AgentToken entity.
+func (_c *AgentAskCreate) SetToAgent(v *AgentToken) *AgentAskCreate {
+	return _c.SetToAgentID(v.ID)
+}
+
+// SetRepliedByAgent sets the "replied_by_agent" edge to the AgentToken entity.
+func (_c *AgentAskCreate) SetRepliedByAgent(v *AgentToken) *AgentAskCreate {
+	return _c.SetRepliedByAgentID(v.ID)
+}
+
 // Mutation returns the AgentAskMutation object of the builder.
 func (_c *AgentAskCreate) Mutation() *AgentAskMutation {
 	return _c.mutation
@@ -301,6 +317,9 @@ func (_c *AgentAskCreate) check() error {
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "AgentAsk.created_at"`)}
 	}
+	if len(_c.mutation.FromAgentIDs()) == 0 {
+		return &ValidationError{Name: "from_agent", err: errors.New(`ent: missing required edge "AgentAsk.from_agent"`)}
+	}
 	return nil
 }
 
@@ -336,10 +355,6 @@ func (_c *AgentAskCreate) createSpec() (*AgentAsk, *sqlgraph.CreateSpec) {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := _c.mutation.FromAgentID(); ok {
-		_spec.SetField(agentask.FieldFromAgentID, field.TypeUUID, value)
-		_node.FromAgentID = value
-	}
 	if value, ok := _c.mutation.FromAgentName(); ok {
 		_spec.SetField(agentask.FieldFromAgentName, field.TypeString, value)
 		_node.FromAgentName = value
@@ -352,10 +367,6 @@ func (_c *AgentAskCreate) createSpec() (*AgentAsk, *sqlgraph.CreateSpec) {
 		_spec.SetField(agentask.FieldInvestigationID, field.TypeString, value)
 		_node.InvestigationID = value
 	}
-	if value, ok := _c.mutation.ToAgentID(); ok {
-		_spec.SetField(agentask.FieldToAgentID, field.TypeUUID, value)
-		_node.ToAgentID = &value
-	}
 	if value, ok := _c.mutation.ToAgentType(); ok {
 		_spec.SetField(agentask.FieldToAgentType, field.TypeString, value)
 		_node.ToAgentType = value
@@ -367,10 +378,6 @@ func (_c *AgentAskCreate) createSpec() (*AgentAsk, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Reply(); ok {
 		_spec.SetField(agentask.FieldReply, field.TypeString, value)
 		_node.Reply = value
-	}
-	if value, ok := _c.mutation.RepliedByAgentID(); ok {
-		_spec.SetField(agentask.FieldRepliedByAgentID, field.TypeUUID, value)
-		_node.RepliedByAgentID = &value
 	}
 	if value, ok := _c.mutation.RepliedByAgentName(); ok {
 		_spec.SetField(agentask.FieldRepliedByAgentName, field.TypeString, value)
@@ -391,6 +398,57 @@ func (_c *AgentAskCreate) createSpec() (*AgentAsk, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.AnsweredAt(); ok {
 		_spec.SetField(agentask.FieldAnsweredAt, field.TypeTime, value)
 		_node.AnsweredAt = &value
+	}
+	if nodes := _c.mutation.FromAgentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   agentask.FromAgentTable,
+			Columns: []string{agentask.FromAgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agenttoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.FromAgentID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ToAgentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   agentask.ToAgentTable,
+			Columns: []string{agentask.ToAgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agenttoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.ToAgentID = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.RepliedByAgentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   agentask.RepliedByAgentTable,
+			Columns: []string{agentask.RepliedByAgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agenttoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.RepliedByAgentID = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

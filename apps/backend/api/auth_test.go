@@ -256,16 +256,22 @@ func newRecordingAuditStore() *recordingAuditStore {
 }
 
 func (r *recordingAuditStore) Log(event store.AuditEvent, userID *uuid.UUID, username, ip, userAgent string, success bool, details map[string]any) {
+	r.LogEntity(event, userID, username, ip, userAgent, success, details, "", nil)
+}
+
+func (r *recordingAuditStore) LogEntity(event store.AuditEvent, userID *uuid.UUID, username, ip, userAgent string, success bool, details map[string]any, entityType string, entityID *uuid.UUID) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.events = append(r.events, store.AuditRecord{
-		Event:     event,
-		UserID:    userID,
-		Username:  username,
-		IP:        ip,
-		UserAgent: userAgent,
-		Success:   success,
-		Details:   details,
+		Event:      event,
+		UserID:     userID,
+		Username:   username,
+		IP:         ip,
+		UserAgent:  userAgent,
+		Success:    success,
+		Details:    details,
+		EntityType: entityType,
+		EntityID:   entityID,
 	})
 }
 

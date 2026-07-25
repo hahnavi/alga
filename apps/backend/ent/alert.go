@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/alert"
+	"alga/ent/triageresult"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -71,9 +72,11 @@ type AlertEdges struct {
 	Events []*AlertEvent `json:"events,omitempty"`
 	// DeliveryTargets holds the value of the delivery_targets edge.
 	DeliveryTargets []*DeliveryTarget `json:"delivery_targets,omitempty"`
+	// TriageResult holds the value of the triage_result edge.
+	TriageResult *TriageResult `json:"triage_result,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [5]bool
 }
 
 // IncidentsOrErr returns the Incidents value or an error if the edge
@@ -110,6 +113,17 @@ func (e AlertEdges) DeliveryTargetsOrErr() ([]*DeliveryTarget, error) {
 		return e.DeliveryTargets, nil
 	}
 	return nil, &NotLoadedError{edge: "delivery_targets"}
+}
+
+// TriageResultOrErr returns the TriageResult value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e AlertEdges) TriageResultOrErr() (*TriageResult, error) {
+	if e.TriageResult != nil {
+		return e.TriageResult, nil
+	} else if e.loadedTypes[4] {
+		return nil, &NotFoundError{label: triageresult.Label}
+	}
+	return nil, &NotLoadedError{edge: "triage_result"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -302,6 +316,11 @@ func (_m *Alert) QueryEvents() *AlertEventQuery {
 // QueryDeliveryTargets queries the "delivery_targets" edge of the Alert entity.
 func (_m *Alert) QueryDeliveryTargets() *DeliveryTargetQuery {
 	return NewAlertClient(_m.config).QueryDeliveryTargets(_m)
+}
+
+// QueryTriageResult queries the "triage_result" edge of the Alert entity.
+func (_m *Alert) QueryTriageResult() *TriageResultQuery {
+	return NewAlertClient(_m.config).QueryTriageResult(_m)
 }
 
 // Update returns a builder for updating this Alert.

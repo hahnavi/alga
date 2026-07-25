@@ -57,9 +57,7 @@ func (AlertInvestigationAlert) Edges() []ent.Edge {
 func (AlertInvestigationAlert) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("fingerprint"),
-		index.Fields("alert_number"),
 		index.Fields("alert_investigation_uuid"),
-		index.Fields("alert_id"),
 		index.Fields("alert_number", "current").
 			Annotations(entsql.IndexWhere("current = true AND alert_number > 0")).
 			Unique(),

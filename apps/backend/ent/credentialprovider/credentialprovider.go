@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -28,8 +29,17 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// EdgeSharedSecrets holds the string denoting the shared_secrets edge name in mutations.
+	EdgeSharedSecrets = "shared_secrets"
 	// Table holds the table name of the credentialprovider in the database.
 	Table = "credential_providers"
+	// SharedSecretsTable is the table that holds the shared_secrets relation/edge.
+	SharedSecretsTable = "shared_secrets"
+	// SharedSecretsInverseTable is the table name for the SharedSecret entity.
+	// It exists in this package in order to avoid circular dependency with the "sharedsecret" package.
+	SharedSecretsInverseTable = "shared_secrets"
+	// SharedSecretsColumn is the table column denoting the shared_secrets relation/edge.
+	SharedSecretsColumn = "provider_id"
 )
 
 // Columns holds all SQL columns for credentialprovider fields.
@@ -116,4 +126,25 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// BySharedSecretsCount orders the results by shared_secrets count.
+func BySharedSecretsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newSharedSecretsStep(), opts...)
+	}
+}
+
+// BySharedSecrets orders the results by shared_secrets terms.
+func BySharedSecrets(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newSharedSecretsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+func newSharedSecretsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(SharedSecretsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, SharedSecretsTable, SharedSecretsColumn),
+	)
 }

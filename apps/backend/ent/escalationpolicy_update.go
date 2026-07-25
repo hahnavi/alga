@@ -4,8 +4,10 @@ package ent
 
 import (
 	"alga/ent/escalationpolicy"
+	"alga/ent/incident"
 	"alga/ent/predicate"
 	"alga/ent/schema"
+	"alga/ent/service"
 	"context"
 	"errors"
 	"fmt"
@@ -15,6 +17,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 )
 
 // EscalationPolicyUpdate is the builder for updating EscalationPolicy entities.
@@ -111,9 +114,81 @@ func (_u *EscalationPolicyUpdate) SetUpdatedAt(v time.Time) *EscalationPolicyUpd
 	return _u
 }
 
+// AddServiceIDs adds the "services" edge to the Service entity by IDs.
+func (_u *EscalationPolicyUpdate) AddServiceIDs(ids ...uuid.UUID) *EscalationPolicyUpdate {
+	_u.mutation.AddServiceIDs(ids...)
+	return _u
+}
+
+// AddServices adds the "services" edges to the Service entity.
+func (_u *EscalationPolicyUpdate) AddServices(v ...*Service) *EscalationPolicyUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddServiceIDs(ids...)
+}
+
+// AddIncidentIDs adds the "incidents" edge to the Incident entity by IDs.
+func (_u *EscalationPolicyUpdate) AddIncidentIDs(ids ...uuid.UUID) *EscalationPolicyUpdate {
+	_u.mutation.AddIncidentIDs(ids...)
+	return _u
+}
+
+// AddIncidents adds the "incidents" edges to the Incident entity.
+func (_u *EscalationPolicyUpdate) AddIncidents(v ...*Incident) *EscalationPolicyUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddIncidentIDs(ids...)
+}
+
 // Mutation returns the EscalationPolicyMutation object of the builder.
 func (_u *EscalationPolicyUpdate) Mutation() *EscalationPolicyMutation {
 	return _u.mutation
+}
+
+// ClearServices clears all "services" edges to the Service entity.
+func (_u *EscalationPolicyUpdate) ClearServices() *EscalationPolicyUpdate {
+	_u.mutation.ClearServices()
+	return _u
+}
+
+// RemoveServiceIDs removes the "services" edge to Service entities by IDs.
+func (_u *EscalationPolicyUpdate) RemoveServiceIDs(ids ...uuid.UUID) *EscalationPolicyUpdate {
+	_u.mutation.RemoveServiceIDs(ids...)
+	return _u
+}
+
+// RemoveServices removes "services" edges to Service entities.
+func (_u *EscalationPolicyUpdate) RemoveServices(v ...*Service) *EscalationPolicyUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveServiceIDs(ids...)
+}
+
+// ClearIncidents clears all "incidents" edges to the Incident entity.
+func (_u *EscalationPolicyUpdate) ClearIncidents() *EscalationPolicyUpdate {
+	_u.mutation.ClearIncidents()
+	return _u
+}
+
+// RemoveIncidentIDs removes the "incidents" edge to Incident entities by IDs.
+func (_u *EscalationPolicyUpdate) RemoveIncidentIDs(ids ...uuid.UUID) *EscalationPolicyUpdate {
+	_u.mutation.RemoveIncidentIDs(ids...)
+	return _u
+}
+
+// RemoveIncidents removes "incidents" edges to Incident entities.
+func (_u *EscalationPolicyUpdate) RemoveIncidents(v ...*Incident) *EscalationPolicyUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveIncidentIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -159,6 +234,11 @@ func (_u *EscalationPolicyUpdate) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "EscalationPolicy.name": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.RepeatCount(); ok {
+		if err := escalationpolicy.RepeatCountValidator(v); err != nil {
+			return &ValidationError{Name: "repeat_count", err: fmt.Errorf(`ent: validator failed for field "EscalationPolicy.repeat_count": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -199,6 +279,96 @@ func (_u *EscalationPolicyUpdate) sqlSave(ctx context.Context) (_node int, err e
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(escalationpolicy.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.ServicesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   escalationpolicy.ServicesTable,
+			Columns: []string{escalationpolicy.ServicesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedServicesIDs(); len(nodes) > 0 && !_u.mutation.ServicesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   escalationpolicy.ServicesTable,
+			Columns: []string{escalationpolicy.ServicesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ServicesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   escalationpolicy.ServicesTable,
+			Columns: []string{escalationpolicy.ServicesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.IncidentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   escalationpolicy.IncidentsTable,
+			Columns: []string{escalationpolicy.IncidentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedIncidentsIDs(); len(nodes) > 0 && !_u.mutation.IncidentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   escalationpolicy.IncidentsTable,
+			Columns: []string{escalationpolicy.IncidentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.IncidentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   escalationpolicy.IncidentsTable,
+			Columns: []string{escalationpolicy.IncidentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -301,9 +471,81 @@ func (_u *EscalationPolicyUpdateOne) SetUpdatedAt(v time.Time) *EscalationPolicy
 	return _u
 }
 
+// AddServiceIDs adds the "services" edge to the Service entity by IDs.
+func (_u *EscalationPolicyUpdateOne) AddServiceIDs(ids ...uuid.UUID) *EscalationPolicyUpdateOne {
+	_u.mutation.AddServiceIDs(ids...)
+	return _u
+}
+
+// AddServices adds the "services" edges to the Service entity.
+func (_u *EscalationPolicyUpdateOne) AddServices(v ...*Service) *EscalationPolicyUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddServiceIDs(ids...)
+}
+
+// AddIncidentIDs adds the "incidents" edge to the Incident entity by IDs.
+func (_u *EscalationPolicyUpdateOne) AddIncidentIDs(ids ...uuid.UUID) *EscalationPolicyUpdateOne {
+	_u.mutation.AddIncidentIDs(ids...)
+	return _u
+}
+
+// AddIncidents adds the "incidents" edges to the Incident entity.
+func (_u *EscalationPolicyUpdateOne) AddIncidents(v ...*Incident) *EscalationPolicyUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddIncidentIDs(ids...)
+}
+
 // Mutation returns the EscalationPolicyMutation object of the builder.
 func (_u *EscalationPolicyUpdateOne) Mutation() *EscalationPolicyMutation {
 	return _u.mutation
+}
+
+// ClearServices clears all "services" edges to the Service entity.
+func (_u *EscalationPolicyUpdateOne) ClearServices() *EscalationPolicyUpdateOne {
+	_u.mutation.ClearServices()
+	return _u
+}
+
+// RemoveServiceIDs removes the "services" edge to Service entities by IDs.
+func (_u *EscalationPolicyUpdateOne) RemoveServiceIDs(ids ...uuid.UUID) *EscalationPolicyUpdateOne {
+	_u.mutation.RemoveServiceIDs(ids...)
+	return _u
+}
+
+// RemoveServices removes "services" edges to Service entities.
+func (_u *EscalationPolicyUpdateOne) RemoveServices(v ...*Service) *EscalationPolicyUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveServiceIDs(ids...)
+}
+
+// ClearIncidents clears all "incidents" edges to the Incident entity.
+func (_u *EscalationPolicyUpdateOne) ClearIncidents() *EscalationPolicyUpdateOne {
+	_u.mutation.ClearIncidents()
+	return _u
+}
+
+// RemoveIncidentIDs removes the "incidents" edge to Incident entities by IDs.
+func (_u *EscalationPolicyUpdateOne) RemoveIncidentIDs(ids ...uuid.UUID) *EscalationPolicyUpdateOne {
+	_u.mutation.RemoveIncidentIDs(ids...)
+	return _u
+}
+
+// RemoveIncidents removes "incidents" edges to Incident entities.
+func (_u *EscalationPolicyUpdateOne) RemoveIncidents(v ...*Incident) *EscalationPolicyUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveIncidentIDs(ids...)
 }
 
 // Where appends a list predicates to the EscalationPolicyUpdate builder.
@@ -360,6 +602,11 @@ func (_u *EscalationPolicyUpdateOne) check() error {
 	if v, ok := _u.mutation.Name(); ok {
 		if err := escalationpolicy.NameValidator(v); err != nil {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "EscalationPolicy.name": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.RepeatCount(); ok {
+		if err := escalationpolicy.RepeatCountValidator(v); err != nil {
+			return &ValidationError{Name: "repeat_count", err: fmt.Errorf(`ent: validator failed for field "EscalationPolicy.repeat_count": %w`, err)}
 		}
 	}
 	return nil
@@ -419,6 +666,96 @@ func (_u *EscalationPolicyUpdateOne) sqlSave(ctx context.Context) (_node *Escala
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(escalationpolicy.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.ServicesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   escalationpolicy.ServicesTable,
+			Columns: []string{escalationpolicy.ServicesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedServicesIDs(); len(nodes) > 0 && !_u.mutation.ServicesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   escalationpolicy.ServicesTable,
+			Columns: []string{escalationpolicy.ServicesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ServicesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   escalationpolicy.ServicesTable,
+			Columns: []string{escalationpolicy.ServicesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.IncidentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   escalationpolicy.IncidentsTable,
+			Columns: []string{escalationpolicy.IncidentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedIncidentsIDs(); len(nodes) > 0 && !_u.mutation.IncidentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   escalationpolicy.IncidentsTable,
+			Columns: []string{escalationpolicy.IncidentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.IncidentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   escalationpolicy.IncidentsTable,
+			Columns: []string{escalationpolicy.IncidentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &EscalationPolicy{config: _u.config}
 	_spec.Assign = _node.assignValues

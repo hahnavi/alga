@@ -97,7 +97,7 @@ func TestHandoffGetPendingForUserIncludesOutgoingUser(t *testing.T) {
 	createHandoffTestSchedule(t, client, scheduleID)
 	s := newPGHandoffStore(client)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := mustCreateUser(t, client)
 
 	_, err := s.Create(ctx, &HandoffRecordRecord{
 		ScheduleID:     scheduleID,

@@ -3,7 +3,9 @@
 package ent
 
 import (
+	"alga/ent/escalationpolicy"
 	"alga/ent/service"
+	"alga/ent/team"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -40,8 +42,88 @@ type Service struct {
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt    time.Time `json:"updated_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the ServiceQuery when eager-loading is set.
+	Edges        ServiceEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// ServiceEdges holds the relations/edges for other nodes in the graph.
+type ServiceEdges struct {
+	// Dependencies holds the value of the dependencies edge.
+	Dependencies []*ServiceDependency `json:"dependencies,omitempty"`
+	// DependedOnBy holds the value of the depended_on_by edge.
+	DependedOnBy []*ServiceDependency `json:"depended_on_by,omitempty"`
+	// StatusPageComponents holds the value of the status_page_components edge.
+	StatusPageComponents []*StatusPageComponent `json:"status_page_components,omitempty"`
+	// Incidents holds the value of the incidents edge.
+	Incidents []*Incident `json:"incidents,omitempty"`
+	// OwnerTeam holds the value of the owner_team edge.
+	OwnerTeam *Team `json:"owner_team,omitempty"`
+	// EscalationPolicy holds the value of the escalation_policy edge.
+	EscalationPolicy *EscalationPolicy `json:"escalation_policy,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [6]bool
+}
+
+// DependenciesOrErr returns the Dependencies value or an error if the edge
+// was not loaded in eager-loading.
+func (e ServiceEdges) DependenciesOrErr() ([]*ServiceDependency, error) {
+	if e.loadedTypes[0] {
+		return e.Dependencies, nil
+	}
+	return nil, &NotLoadedError{edge: "dependencies"}
+}
+
+// DependedOnByOrErr returns the DependedOnBy value or an error if the edge
+// was not loaded in eager-loading.
+func (e ServiceEdges) DependedOnByOrErr() ([]*ServiceDependency, error) {
+	if e.loadedTypes[1] {
+		return e.DependedOnBy, nil
+	}
+	return nil, &NotLoadedError{edge: "depended_on_by"}
+}
+
+// StatusPageComponentsOrErr returns the StatusPageComponents value or an error if the edge
+// was not loaded in eager-loading.
+func (e ServiceEdges) StatusPageComponentsOrErr() ([]*StatusPageComponent, error) {
+	if e.loadedTypes[2] {
+		return e.StatusPageComponents, nil
+	}
+	return nil, &NotLoadedError{edge: "status_page_components"}
+}
+
+// IncidentsOrErr returns the Incidents value or an error if the edge
+// was not loaded in eager-loading.
+func (e ServiceEdges) IncidentsOrErr() ([]*Incident, error) {
+	if e.loadedTypes[3] {
+		return e.Incidents, nil
+	}
+	return nil, &NotLoadedError{edge: "incidents"}
+}
+
+// OwnerTeamOrErr returns the OwnerTeam value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ServiceEdges) OwnerTeamOrErr() (*Team, error) {
+	if e.OwnerTeam != nil {
+		return e.OwnerTeam, nil
+	} else if e.loadedTypes[4] {
+		return nil, &NotFoundError{label: team.Label}
+	}
+	return nil, &NotLoadedError{edge: "owner_team"}
+}
+
+// EscalationPolicyOrErr returns the EscalationPolicy value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ServiceEdges) EscalationPolicyOrErr() (*EscalationPolicy, error) {
+	if e.EscalationPolicy != nil {
+		return e.EscalationPolicy, nil
+	} else if e.loadedTypes[5] {
+		return nil, &NotFoundError{label: escalationpolicy.Label}
+	}
+	return nil, &NotLoadedError{edge: "escalation_policy"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -163,6 +245,36 @@ func (_m *Service) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *Service) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
+}
+
+// QueryDependencies queries the "dependencies" edge of the Service entity.
+func (_m *Service) QueryDependencies() *ServiceDependencyQuery {
+	return NewServiceClient(_m.config).QueryDependencies(_m)
+}
+
+// QueryDependedOnBy queries the "depended_on_by" edge of the Service entity.
+func (_m *Service) QueryDependedOnBy() *ServiceDependencyQuery {
+	return NewServiceClient(_m.config).QueryDependedOnBy(_m)
+}
+
+// QueryStatusPageComponents queries the "status_page_components" edge of the Service entity.
+func (_m *Service) QueryStatusPageComponents() *StatusPageComponentQuery {
+	return NewServiceClient(_m.config).QueryStatusPageComponents(_m)
+}
+
+// QueryIncidents queries the "incidents" edge of the Service entity.
+func (_m *Service) QueryIncidents() *IncidentQuery {
+	return NewServiceClient(_m.config).QueryIncidents(_m)
+}
+
+// QueryOwnerTeam queries the "owner_team" edge of the Service entity.
+func (_m *Service) QueryOwnerTeam() *TeamQuery {
+	return NewServiceClient(_m.config).QueryOwnerTeam(_m)
+}
+
+// QueryEscalationPolicy queries the "escalation_policy" edge of the Service entity.
+func (_m *Service) QueryEscalationPolicy() *EscalationPolicyQuery {
+	return NewServiceClient(_m.config).QueryEscalationPolicy(_m)
 }
 
 // Update returns a builder for updating this Service.

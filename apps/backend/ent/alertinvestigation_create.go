@@ -10,6 +10,7 @@ import (
 	"alga/ent/incident"
 	"alga/ent/incidentinvestigation"
 	"alga/ent/schema"
+	"alga/ent/triageresult"
 	"context"
 	"errors"
 	"fmt"
@@ -533,6 +534,11 @@ func (_c *AlertInvestigationCreate) SetPromotedIncidentInvestigation(v *Incident
 	return _c.SetPromotedIncidentInvestigationID(v.ID)
 }
 
+// SetTriageResult sets the "triage_result" edge to the TriageResult entity.
+func (_c *AlertInvestigationCreate) SetTriageResult(v *TriageResult) *AlertInvestigationCreate {
+	return _c.SetTriageResultID(v.ID)
+}
+
 // Mutation returns the AlertInvestigationMutation object of the builder.
 func (_c *AlertInvestigationCreate) Mutation() *AlertInvestigationMutation {
 	return _c.mutation
@@ -827,10 +833,6 @@ func (_c *AlertInvestigationCreate) createSpec() (*AlertInvestigation, *sqlgraph
 		_spec.SetField(alertinvestigation.FieldEscalationLevel, field.TypeString, value)
 		_node.EscalationLevel = value
 	}
-	if value, ok := _c.mutation.TriageResultID(); ok {
-		_spec.SetField(alertinvestigation.FieldTriageResultID, field.TypeUUID, value)
-		_node.TriageResultID = &value
-	}
 	if value, ok := _c.mutation.TriageDecision(); ok {
 		_spec.SetField(alertinvestigation.FieldTriageDecision, field.TypeString, value)
 		_node.TriageDecision = value
@@ -943,6 +945,23 @@ func (_c *AlertInvestigationCreate) createSpec() (*AlertInvestigation, *sqlgraph
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.PromotedIncidentInvestigationID = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.TriageResultIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   alertinvestigation.TriageResultTable,
+			Columns: []string{alertinvestigation.TriageResultColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(triageresult.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.TriageResultID = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

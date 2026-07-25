@@ -211,10 +211,30 @@ func init() {
 	agentmemoryDescCorrelationKey := agentmemoryFields[9].Descriptor()
 	// agentmemory.DefaultCorrelationKey holds the default value on creation for the correlation_key field.
 	agentmemory.DefaultCorrelationKey = agentmemoryDescCorrelationKey.Default.(string)
+	// agentmemoryDescConfidence is the schema descriptor for confidence field.
+	agentmemoryDescConfidence := agentmemoryFields[13].Descriptor()
+	// agentmemory.ConfidenceValidator is a validator for the "confidence" field. It is called by the builders before save.
+	agentmemory.ConfidenceValidator = func() func(float64) error {
+		validators := agentmemoryDescConfidence.Validators
+		fns := [...]func(float64) error{
+			validators[0].(func(float64) error),
+			validators[1].(func(float64) error),
+		}
+		return func(confidence float64) error {
+			for _, fn := range fns {
+				if err := fn(confidence); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
 	// agentmemoryDescAccessCount is the schema descriptor for access_count field.
 	agentmemoryDescAccessCount := agentmemoryFields[14].Descriptor()
 	// agentmemory.DefaultAccessCount holds the default value on creation for the access_count field.
 	agentmemory.DefaultAccessCount = agentmemoryDescAccessCount.Default.(int)
+	// agentmemory.AccessCountValidator is a validator for the "access_count" field. It is called by the builders before save.
+	agentmemory.AccessCountValidator = agentmemoryDescAccessCount.Validators[0].(func(int) error)
 	// agentmemoryDescCreatedAt is the schema descriptor for created_at field.
 	agentmemoryDescCreatedAt := agentmemoryFields[16].Descriptor()
 	// agentmemory.DefaultCreatedAt holds the default value on creation for the created_at field.
@@ -613,6 +633,10 @@ func init() {
 	auditlogDescRequestID := auditlogFields[9].Descriptor()
 	// auditlog.DefaultRequestID holds the default value on creation for the request_id field.
 	auditlog.DefaultRequestID = auditlogDescRequestID.Default.(string)
+	// auditlogDescEntityType is the schema descriptor for entity_type field.
+	auditlogDescEntityType := auditlogFields[10].Descriptor()
+	// auditlog.DefaultEntityType holds the default value on creation for the entity_type field.
+	auditlog.DefaultEntityType = auditlogDescEntityType.Default.(string)
 	// auditlogDescID is the schema descriptor for id field.
 	auditlogDescID := auditlogFields[0].Descriptor()
 	// auditlog.DefaultID holds the default value on creation for the id field.
@@ -651,6 +675,8 @@ func init() {
 	coordinationtaskDescPriority := coordinationtaskFields[13].Descriptor()
 	// coordinationtask.DefaultPriority holds the default value on creation for the priority field.
 	coordinationtask.DefaultPriority = coordinationtaskDescPriority.Default.(int)
+	// coordinationtask.PriorityValidator is a validator for the "priority" field. It is called by the builders before save.
+	coordinationtask.PriorityValidator = coordinationtaskDescPriority.Validators[0].(func(int) error)
 	// coordinationtaskDescCreatedByAgentID is the schema descriptor for created_by_agent_id field.
 	coordinationtaskDescCreatedByAgentID := coordinationtaskFields[17].Descriptor()
 	// coordinationtask.DefaultCreatedByAgentID holds the default value on creation for the created_by_agent_id field.
@@ -667,6 +693,8 @@ func init() {
 	coordinationtaskDescDispatchAttempts := coordinationtaskFields[20].Descriptor()
 	// coordinationtask.DefaultDispatchAttempts holds the default value on creation for the dispatch_attempts field.
 	coordinationtask.DefaultDispatchAttempts = coordinationtaskDescDispatchAttempts.Default.(int)
+	// coordinationtask.DispatchAttemptsValidator is a validator for the "dispatch_attempts" field. It is called by the builders before save.
+	coordinationtask.DispatchAttemptsValidator = coordinationtaskDescDispatchAttempts.Validators[0].(func(int) error)
 	// coordinationtaskDescCreatedAt is the schema descriptor for created_at field.
 	coordinationtaskDescCreatedAt := coordinationtaskFields[21].Descriptor()
 	// coordinationtask.DefaultCreatedAt holds the default value on creation for the created_at field.
@@ -687,6 +715,8 @@ func init() {
 	counterDescSeq := counterFields[1].Descriptor()
 	// counter.DefaultSeq holds the default value on creation for the seq field.
 	counter.DefaultSeq = counterDescSeq.Default.(int64)
+	// counter.SeqValidator is a validator for the "seq" field. It is called by the builders before save.
+	counter.SeqValidator = counterDescSeq.Validators[0].(func(int64) error)
 	// counterDescID is the schema descriptor for id field.
 	counterDescID := counterFields[0].Descriptor()
 	// counter.IDValidator is a validator for the "id" field. It is called by the builders before save.
@@ -763,6 +793,8 @@ func init() {
 	escalationpolicyDescRepeatCount := escalationpolicyFields[3].Descriptor()
 	// escalationpolicy.DefaultRepeatCount holds the default value on creation for the repeat_count field.
 	escalationpolicy.DefaultRepeatCount = escalationpolicyDescRepeatCount.Default.(int)
+	// escalationpolicy.RepeatCountValidator is a validator for the "repeat_count" field. It is called by the builders before save.
+	escalationpolicy.RepeatCountValidator = escalationpolicyDescRepeatCount.Validators[0].(func(int) error)
 	// escalationpolicyDescLevels is the schema descriptor for levels field.
 	escalationpolicyDescLevels := escalationpolicyFields[4].Descriptor()
 	// escalationpolicy.DefaultLevels holds the default value on creation for the levels field.
@@ -854,19 +886,19 @@ func init() {
 	icsroleassignmentFields := schema.ICSRoleAssignment{}.Fields()
 	_ = icsroleassignmentFields
 	// icsroleassignmentDescRoleType is the schema descriptor for role_type field.
-	icsroleassignmentDescRoleType := icsroleassignmentFields[1].Descriptor()
+	icsroleassignmentDescRoleType := icsroleassignmentFields[5].Descriptor()
 	// icsroleassignment.DefaultRoleType holds the default value on creation for the role_type field.
 	icsroleassignment.DefaultRoleType = icsroleassignmentDescRoleType.Default.(string)
 	// icsroleassignmentDescStatus is the schema descriptor for status field.
-	icsroleassignmentDescStatus := icsroleassignmentFields[2].Descriptor()
+	icsroleassignmentDescStatus := icsroleassignmentFields[6].Descriptor()
 	// icsroleassignment.DefaultStatus holds the default value on creation for the status field.
 	icsroleassignment.DefaultStatus = icsroleassignmentDescStatus.Default.(string)
 	// icsroleassignmentDescAssigneeType is the schema descriptor for assignee_type field.
-	icsroleassignmentDescAssigneeType := icsroleassignmentFields[3].Descriptor()
+	icsroleassignmentDescAssigneeType := icsroleassignmentFields[7].Descriptor()
 	// icsroleassignment.DefaultAssigneeType holds the default value on creation for the assignee_type field.
 	icsroleassignment.DefaultAssigneeType = icsroleassignmentDescAssigneeType.Default.(string)
 	// icsroleassignmentDescStartedAt is the schema descriptor for started_at field.
-	icsroleassignmentDescStartedAt := icsroleassignmentFields[6].Descriptor()
+	icsroleassignmentDescStartedAt := icsroleassignmentFields[10].Descriptor()
 	// icsroleassignment.DefaultStartedAt holds the default value on creation for the started_at field.
 	icsroleassignment.DefaultStartedAt = icsroleassignmentDescStartedAt.Default.(func() time.Time)
 	// icsroleassignmentDescID is the schema descriptor for id field.
@@ -1633,6 +1665,8 @@ func init() {
 	outboxDescRetryCount := outboxFields[8].Descriptor()
 	// outbox.DefaultRetryCount holds the default value on creation for the retry_count field.
 	outbox.DefaultRetryCount = outboxDescRetryCount.Default.(int)
+	// outbox.RetryCountValidator is a validator for the "retry_count" field. It is called by the builders before save.
+	outbox.RetryCountValidator = outboxDescRetryCount.Validators[0].(func(int) error)
 	// outboxDescCreatedAt is the schema descriptor for created_at field.
 	outboxDescCreatedAt := outboxFields[9].Descriptor()
 	// outbox.DefaultCreatedAt holds the default value on creation for the created_at field.
@@ -1717,6 +1751,10 @@ func init() {
 	playbook.DefaultID = playbookDescID.Default.(func() uuid.UUID)
 	playbookstepFields := schema.PlaybookStep{}.Fields()
 	_ = playbookstepFields
+	// playbookstepDescStepNumber is the schema descriptor for step_number field.
+	playbookstepDescStepNumber := playbookstepFields[2].Descriptor()
+	// playbookstep.StepNumberValidator is a validator for the "step_number" field. It is called by the builders before save.
+	playbookstep.StepNumberValidator = playbookstepDescStepNumber.Validators[0].(func(int) error)
 	// playbookstepDescCreatedAt is the schema descriptor for created_at field.
 	playbookstepDescCreatedAt := playbookstepFields[7].Descriptor()
 	// playbookstep.DefaultCreatedAt holds the default value on creation for the created_at field.
@@ -1813,6 +1851,8 @@ func init() {
 	schedulelayerDescRotationInterval := schedulelayerFields[4].Descriptor()
 	// schedulelayer.DefaultRotationInterval holds the default value on creation for the rotation_interval field.
 	schedulelayer.DefaultRotationInterval = schedulelayerDescRotationInterval.Default.(int)
+	// schedulelayer.RotationIntervalValidator is a validator for the "rotation_interval" field. It is called by the builders before save.
+	schedulelayer.RotationIntervalValidator = schedulelayerDescRotationInterval.Validators[0].(func(int) error)
 	// schedulelayerDescStartDate is the schema descriptor for start_date field.
 	schedulelayerDescStartDate := schedulelayerFields[5].Descriptor()
 	// schedulelayer.DefaultStartDate holds the default value on creation for the start_date field.
@@ -1837,6 +1877,8 @@ func init() {
 	schedulelayerDescPriority := schedulelayerFields[11].Descriptor()
 	// schedulelayer.DefaultPriority holds the default value on creation for the priority field.
 	schedulelayer.DefaultPriority = schedulelayerDescPriority.Default.(int)
+	// schedulelayer.PriorityValidator is a validator for the "priority" field. It is called by the builders before save.
+	schedulelayer.PriorityValidator = schedulelayerDescPriority.Validators[0].(func(int) error)
 	// schedulelayerDescUserIds is the schema descriptor for user_ids field.
 	schedulelayerDescUserIds := schedulelayerFields[12].Descriptor()
 	// schedulelayer.DefaultUserIds holds the default value on creation for the user_ids field.
@@ -1887,10 +1929,14 @@ func init() {
 	serviceDescSLAResponseMinutes := serviceFields[7].Descriptor()
 	// service.DefaultSLAResponseMinutes holds the default value on creation for the sla_response_minutes field.
 	service.DefaultSLAResponseMinutes = serviceDescSLAResponseMinutes.Default.(int)
+	// service.SLAResponseMinutesValidator is a validator for the "sla_response_minutes" field. It is called by the builders before save.
+	service.SLAResponseMinutesValidator = serviceDescSLAResponseMinutes.Validators[0].(func(int) error)
 	// serviceDescSLAResolveMinutes is the schema descriptor for sla_resolve_minutes field.
 	serviceDescSLAResolveMinutes := serviceFields[8].Descriptor()
 	// service.DefaultSLAResolveMinutes holds the default value on creation for the sla_resolve_minutes field.
 	service.DefaultSLAResolveMinutes = serviceDescSLAResolveMinutes.Default.(int)
+	// service.SLAResolveMinutesValidator is a validator for the "sla_resolve_minutes" field. It is called by the builders before save.
+	service.SLAResolveMinutesValidator = serviceDescSLAResolveMinutes.Validators[0].(func(int) error)
 	// serviceDescStatus is the schema descriptor for status field.
 	serviceDescStatus := serviceFields[9].Descriptor()
 	// service.DefaultStatus holds the default value on creation for the status field.
@@ -2043,6 +2089,8 @@ func init() {
 	statuspagecomponentDescDisplayOrder := statuspagecomponentFields[5].Descriptor()
 	// statuspagecomponent.DefaultDisplayOrder holds the default value on creation for the display_order field.
 	statuspagecomponent.DefaultDisplayOrder = statuspagecomponentDescDisplayOrder.Default.(int)
+	// statuspagecomponent.DisplayOrderValidator is a validator for the "display_order" field. It is called by the builders before save.
+	statuspagecomponent.DisplayOrderValidator = statuspagecomponentDescDisplayOrder.Validators[0].(func(int) error)
 	// statuspagecomponentDescStatus is the schema descriptor for status field.
 	statuspagecomponentDescStatus := statuspagecomponentFields[6].Descriptor()
 	// statuspagecomponent.DefaultStatus holds the default value on creation for the status field.
@@ -2165,6 +2213,8 @@ func init() {
 	triageresultDescTriageDurationMs := triageresultFields[20].Descriptor()
 	// triageresult.DefaultTriageDurationMs holds the default value on creation for the triage_duration_ms field.
 	triageresult.DefaultTriageDurationMs = triageresultDescTriageDurationMs.Default.(int64)
+	// triageresult.TriageDurationMsValidator is a validator for the "triage_duration_ms" field. It is called by the builders before save.
+	triageresult.TriageDurationMsValidator = triageresultDescTriageDurationMs.Validators[0].(func(int64) error)
 	// triageresultDescTraceID is the schema descriptor for trace_id field.
 	triageresultDescTraceID := triageresultFields[21].Descriptor()
 	// triageresult.DefaultTraceID holds the default value on creation for the trace_id field.
@@ -2213,6 +2263,8 @@ func init() {
 	triageruleDescPriority := triageruleFields[9].Descriptor()
 	// triagerule.DefaultPriority holds the default value on creation for the priority field.
 	triagerule.DefaultPriority = triageruleDescPriority.Default.(int)
+	// triagerule.PriorityValidator is a validator for the "priority" field. It is called by the builders before save.
+	triagerule.PriorityValidator = triageruleDescPriority.Validators[0].(func(int) error)
 	// triageruleDescEnabled is the schema descriptor for enabled field.
 	triageruleDescEnabled := triageruleFields[10].Descriptor()
 	// triagerule.DefaultEnabled holds the default value on creation for the enabled field.

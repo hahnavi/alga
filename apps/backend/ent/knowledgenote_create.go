@@ -5,6 +5,7 @@ package ent
 import (
 	"alga/ent/knowledgenote"
 	"alga/ent/schema"
+	"alga/ent/user"
 	"context"
 	"errors"
 	"fmt"
@@ -178,6 +179,11 @@ func (_c *KnowledgeNoteCreate) SetNillableID(v *uuid.UUID) *KnowledgeNoteCreate 
 	return _c
 }
 
+// SetAuthor sets the "author" edge to the User entity.
+func (_c *KnowledgeNoteCreate) SetAuthor(v *User) *KnowledgeNoteCreate {
+	return _c.SetAuthorID(v.ID)
+}
+
 // Mutation returns the KnowledgeNoteMutation object of the builder.
 func (_c *KnowledgeNoteCreate) Mutation() *KnowledgeNoteMutation {
 	return _c.mutation
@@ -329,10 +335,6 @@ func (_c *KnowledgeNoteCreate) createSpec() (*KnowledgeNote, *sqlgraph.CreateSpe
 		_spec.SetField(knowledgenote.FieldSelectors, field.TypeJSON, value)
 		_node.Selectors = value
 	}
-	if value, ok := _c.mutation.AuthorID(); ok {
-		_spec.SetField(knowledgenote.FieldAuthorID, field.TypeUUID, value)
-		_node.AuthorID = &value
-	}
 	if value, ok := _c.mutation.AuthorType(); ok {
 		_spec.SetField(knowledgenote.FieldAuthorType, field.TypeString, value)
 		_node.AuthorType = value
@@ -360,6 +362,23 @@ func (_c *KnowledgeNoteCreate) createSpec() (*KnowledgeNote, *sqlgraph.CreateSpe
 	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(knowledgenote.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if nodes := _c.mutation.AuthorIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   knowledgenote.AuthorTable,
+			Columns: []string{knowledgenote.AuthorColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.AuthorID = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

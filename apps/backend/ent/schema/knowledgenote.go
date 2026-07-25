@@ -4,6 +4,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -39,12 +40,15 @@ func (KnowledgeNote) Fields() []ent.Field {
 }
 
 func (KnowledgeNote) Edges() []ent.Edge {
-	return nil
+	return []ent.Edge{
+		edge.From("author", User.Type).Ref("knowledge_notes").Field("author_id").Unique(),
+	}
 }
 
 func (KnowledgeNote) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("kind", "updated_at"),
 		index.Fields("expires_at"),
+		index.Fields("author_id"),
 	}
 }

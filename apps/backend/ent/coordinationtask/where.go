@@ -596,26 +596,6 @@ func LinkedInvestigationIDNotIn(vs ...uuid.UUID) predicate.CoordinationTask {
 	return predicate.CoordinationTask(sql.FieldNotIn(FieldLinkedInvestigationID, vs...))
 }
 
-// LinkedInvestigationIDGT applies the GT predicate on the "linked_investigation_id" field.
-func LinkedInvestigationIDGT(v uuid.UUID) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldGT(FieldLinkedInvestigationID, v))
-}
-
-// LinkedInvestigationIDGTE applies the GTE predicate on the "linked_investigation_id" field.
-func LinkedInvestigationIDGTE(v uuid.UUID) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldGTE(FieldLinkedInvestigationID, v))
-}
-
-// LinkedInvestigationIDLT applies the LT predicate on the "linked_investigation_id" field.
-func LinkedInvestigationIDLT(v uuid.UUID) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldLT(FieldLinkedInvestigationID, v))
-}
-
-// LinkedInvestigationIDLTE applies the LTE predicate on the "linked_investigation_id" field.
-func LinkedInvestigationIDLTE(v uuid.UUID) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldLTE(FieldLinkedInvestigationID, v))
-}
-
 // LinkedInvestigationIDIsNil applies the IsNil predicate on the "linked_investigation_id" field.
 func LinkedInvestigationIDIsNil() predicate.CoordinationTask {
 	return predicate.CoordinationTask(sql.FieldIsNull(FieldLinkedInvestigationID))
@@ -1287,6 +1267,29 @@ func HasParentTask() predicate.CoordinationTask {
 func HasParentTaskWith(preds ...predicate.CoordinationTask) predicate.CoordinationTask {
 	return predicate.CoordinationTask(func(s *sql.Selector) {
 		step := newParentTaskStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasLinkedInvestigation applies the HasEdge predicate on the "linked_investigation" edge.
+func HasLinkedInvestigation() predicate.CoordinationTask {
+	return predicate.CoordinationTask(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, LinkedInvestigationTable, LinkedInvestigationColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasLinkedInvestigationWith applies the HasEdge predicate on the "linked_investigation" edge with a given conditions (other predicates).
+func HasLinkedInvestigationWith(preds ...predicate.IncidentInvestigation) predicate.CoordinationTask {
+	return predicate.CoordinationTask(func(s *sql.Selector) {
+		step := newLinkedInvestigationStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

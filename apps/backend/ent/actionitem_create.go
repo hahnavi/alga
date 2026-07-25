@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/actionitem"
+	"alga/ent/postmortem"
 	"context"
 	"errors"
 	"fmt"
@@ -159,6 +160,11 @@ func (_c *ActionItemCreate) SetNillableID(v *uuid.UUID) *ActionItemCreate {
 	return _c
 }
 
+// SetPostMortem sets the "post_mortem" edge to the PostMortem entity.
+func (_c *ActionItemCreate) SetPostMortem(v *PostMortem) *ActionItemCreate {
+	return _c.SetPostMortemID(v.ID)
+}
+
 // Mutation returns the ActionItemMutation object of the builder.
 func (_c *ActionItemCreate) Mutation() *ActionItemMutation {
 	return _c.mutation
@@ -252,6 +258,9 @@ func (_c *ActionItemCreate) check() error {
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "ActionItem.updated_at"`)}
 	}
+	if len(_c.mutation.PostMortemIDs()) == 0 {
+		return &ValidationError{Name: "post_mortem", err: errors.New(`ent: missing required edge "ActionItem.post_mortem"`)}
+	}
 	return nil
 }
 
@@ -286,10 +295,6 @@ func (_c *ActionItemCreate) createSpec() (*ActionItem, *sqlgraph.CreateSpec) {
 	if id, ok := _c.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
-	}
-	if value, ok := _c.mutation.PostMortemID(); ok {
-		_spec.SetField(actionitem.FieldPostMortemID, field.TypeUUID, value)
-		_node.PostMortemID = value
 	}
 	if value, ok := _c.mutation.Description(); ok {
 		_spec.SetField(actionitem.FieldDescription, field.TypeString, value)
@@ -326,6 +331,23 @@ func (_c *ActionItemCreate) createSpec() (*ActionItem, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(actionitem.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if nodes := _c.mutation.PostMortemIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   actionitem.PostMortemTable,
+			Columns: []string{actionitem.PostMortemColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(postmortem.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.PostMortemID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

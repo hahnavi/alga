@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -343,26 +344,6 @@ func AuthorIDIn(vs ...uuid.UUID) predicate.KnowledgeNote {
 // AuthorIDNotIn applies the NotIn predicate on the "author_id" field.
 func AuthorIDNotIn(vs ...uuid.UUID) predicate.KnowledgeNote {
 	return predicate.KnowledgeNote(sql.FieldNotIn(FieldAuthorID, vs...))
-}
-
-// AuthorIDGT applies the GT predicate on the "author_id" field.
-func AuthorIDGT(v uuid.UUID) predicate.KnowledgeNote {
-	return predicate.KnowledgeNote(sql.FieldGT(FieldAuthorID, v))
-}
-
-// AuthorIDGTE applies the GTE predicate on the "author_id" field.
-func AuthorIDGTE(v uuid.UUID) predicate.KnowledgeNote {
-	return predicate.KnowledgeNote(sql.FieldGTE(FieldAuthorID, v))
-}
-
-// AuthorIDLT applies the LT predicate on the "author_id" field.
-func AuthorIDLT(v uuid.UUID) predicate.KnowledgeNote {
-	return predicate.KnowledgeNote(sql.FieldLT(FieldAuthorID, v))
-}
-
-// AuthorIDLTE applies the LTE predicate on the "author_id" field.
-func AuthorIDLTE(v uuid.UUID) predicate.KnowledgeNote {
-	return predicate.KnowledgeNote(sql.FieldLTE(FieldAuthorID, v))
 }
 
 // AuthorIDIsNil applies the IsNil predicate on the "author_id" field.
@@ -768,6 +749,29 @@ func UpdatedAtLT(v time.Time) predicate.KnowledgeNote {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.KnowledgeNote {
 	return predicate.KnowledgeNote(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// HasAuthor applies the HasEdge predicate on the "author" edge.
+func HasAuthor() predicate.KnowledgeNote {
+	return predicate.KnowledgeNote(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, AuthorTable, AuthorColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAuthorWith applies the HasEdge predicate on the "author" edge with a given conditions (other predicates).
+func HasAuthorWith(preds ...predicate.User) predicate.KnowledgeNote {
+	return predicate.KnowledgeNote(func(s *sql.Selector) {
+		step := newAuthorStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

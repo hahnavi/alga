@@ -66,16 +66,16 @@ func (IncidentInvestigation) Edges() []ent.Edge {
 			Ref("child_investigations").
 			Unique().
 			Field("parent_investigation_id"),
+		edge.To("linked_coordination_tasks", CoordinationTask.Type).Annotations(entsql.Annotation{OnDelete: entsql.SetNull}),
 	}
 }
 
 func (IncidentInvestigation) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("incident_id"),
-		index.Fields("status"),
-		index.Fields("created_at"),
+		index.Fields("status", "created_at"),
 		index.Fields("source_alert_investigation_id"),
 		index.Fields("incident_id", "status"),
 		index.Fields("parent_investigation_id"),
+		index.Fields("assignee_type", "assignee_id", "status"),
 	}
 }

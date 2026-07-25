@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/agentask"
+	"alga/ent/agenttoken"
 	"alga/ent/predicate"
 	"context"
 	"fmt"
@@ -19,10 +20,13 @@ import (
 // AgentAskQuery is the builder for querying AgentAsk entities.
 type AgentAskQuery struct {
 	config
-	ctx        *QueryContext
-	order      []agentask.OrderOption
-	inters     []Interceptor
-	predicates []predicate.AgentAsk
+	ctx                *QueryContext
+	order              []agentask.OrderOption
+	inters             []Interceptor
+	predicates         []predicate.AgentAsk
+	withFromAgent      *AgentTokenQuery
+	withToAgent        *AgentTokenQuery
+	withRepliedByAgent *AgentTokenQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -57,6 +61,72 @@ func (_q *AgentAskQuery) Unique(unique bool) *AgentAskQuery {
 func (_q *AgentAskQuery) Order(o ...agentask.OrderOption) *AgentAskQuery {
 	_q.order = append(_q.order, o...)
 	return _q
+}
+
+// QueryFromAgent chains the current query on the "from_agent" edge.
+func (_q *AgentAskQuery) QueryFromAgent() *AgentTokenQuery {
+	query := (&AgentTokenClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(agentask.Table, agentask.FieldID, selector),
+			sqlgraph.To(agenttoken.Table, agenttoken.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, agentask.FromAgentTable, agentask.FromAgentColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryToAgent chains the current query on the "to_agent" edge.
+func (_q *AgentAskQuery) QueryToAgent() *AgentTokenQuery {
+	query := (&AgentTokenClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(agentask.Table, agentask.FieldID, selector),
+			sqlgraph.To(agenttoken.Table, agenttoken.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, agentask.ToAgentTable, agentask.ToAgentColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryRepliedByAgent chains the current query on the "replied_by_agent" edge.
+func (_q *AgentAskQuery) QueryRepliedByAgent() *AgentTokenQuery {
+	query := (&AgentTokenClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(agentask.Table, agentask.FieldID, selector),
+			sqlgraph.To(agenttoken.Table, agenttoken.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, agentask.RepliedByAgentTable, agentask.RepliedByAgentColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first AgentAsk entity from the query.
@@ -246,15 +316,51 @@ func (_q *AgentAskQuery) Clone() *AgentAskQuery {
 		return nil
 	}
 	return &AgentAskQuery{
-		config:     _q.config,
-		ctx:        _q.ctx.Clone(),
-		order:      append([]agentask.OrderOption{}, _q.order...),
-		inters:     append([]Interceptor{}, _q.inters...),
-		predicates: append([]predicate.AgentAsk{}, _q.predicates...),
+		config:             _q.config,
+		ctx:                _q.ctx.Clone(),
+		order:              append([]agentask.OrderOption{}, _q.order...),
+		inters:             append([]Interceptor{}, _q.inters...),
+		predicates:         append([]predicate.AgentAsk{}, _q.predicates...),
+		withFromAgent:      _q.withFromAgent.Clone(),
+		withToAgent:        _q.withToAgent.Clone(),
+		withRepliedByAgent: _q.withRepliedByAgent.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
+}
+
+// WithFromAgent tells the query-builder to eager-load the nodes that are connected to
+// the "from_agent" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *AgentAskQuery) WithFromAgent(opts ...func(*AgentTokenQuery)) *AgentAskQuery {
+	query := (&AgentTokenClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withFromAgent = query
+	return _q
+}
+
+// WithToAgent tells the query-builder to eager-load the nodes that are connected to
+// the "to_agent" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *AgentAskQuery) WithToAgent(opts ...func(*AgentTokenQuery)) *AgentAskQuery {
+	query := (&AgentTokenClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withToAgent = query
+	return _q
+}
+
+// WithRepliedByAgent tells the query-builder to eager-load the nodes that are connected to
+// the "replied_by_agent" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *AgentAskQuery) WithRepliedByAgent(opts ...func(*AgentTokenQuery)) *AgentAskQuery {
+	query := (&AgentTokenClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withRepliedByAgent = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -333,8 +439,13 @@ func (_q *AgentAskQuery) prepareQuery(ctx context.Context) error {
 
 func (_q *AgentAskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*AgentAsk, error) {
 	var (
-		nodes = []*AgentAsk{}
-		_spec = _q.querySpec()
+		nodes       = []*AgentAsk{}
+		_spec       = _q.querySpec()
+		loadedTypes = [3]bool{
+			_q.withFromAgent != nil,
+			_q.withToAgent != nil,
+			_q.withRepliedByAgent != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*AgentAsk).scanValues(nil, columns)
@@ -342,6 +453,7 @@ func (_q *AgentAskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Age
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &AgentAsk{config: _q.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -353,7 +465,119 @@ func (_q *AgentAskQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Age
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := _q.withFromAgent; query != nil {
+		if err := _q.loadFromAgent(ctx, query, nodes, nil,
+			func(n *AgentAsk, e *AgentToken) { n.Edges.FromAgent = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withToAgent; query != nil {
+		if err := _q.loadToAgent(ctx, query, nodes, nil,
+			func(n *AgentAsk, e *AgentToken) { n.Edges.ToAgent = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withRepliedByAgent; query != nil {
+		if err := _q.loadRepliedByAgent(ctx, query, nodes, nil,
+			func(n *AgentAsk, e *AgentToken) { n.Edges.RepliedByAgent = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (_q *AgentAskQuery) loadFromAgent(ctx context.Context, query *AgentTokenQuery, nodes []*AgentAsk, init func(*AgentAsk), assign func(*AgentAsk, *AgentToken)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*AgentAsk)
+	for i := range nodes {
+		fk := nodes[i].FromAgentID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(agenttoken.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "from_agent_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *AgentAskQuery) loadToAgent(ctx context.Context, query *AgentTokenQuery, nodes []*AgentAsk, init func(*AgentAsk), assign func(*AgentAsk, *AgentToken)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*AgentAsk)
+	for i := range nodes {
+		if nodes[i].ToAgentID == nil {
+			continue
+		}
+		fk := *nodes[i].ToAgentID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(agenttoken.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "to_agent_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *AgentAskQuery) loadRepliedByAgent(ctx context.Context, query *AgentTokenQuery, nodes []*AgentAsk, init func(*AgentAsk), assign func(*AgentAsk, *AgentToken)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*AgentAsk)
+	for i := range nodes {
+		if nodes[i].RepliedByAgentID == nil {
+			continue
+		}
+		fk := *nodes[i].RepliedByAgentID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(agenttoken.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "replied_by_agent_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
 }
 
 func (_q *AgentAskQuery) sqlCount(ctx context.Context) (int, error) {
@@ -380,6 +604,15 @@ func (_q *AgentAskQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != agentask.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if _q.withFromAgent != nil {
+			_spec.Node.AddColumnOnce(agentask.FieldFromAgentID)
+		}
+		if _q.withToAgent != nil {
+			_spec.Node.AddColumnOnce(agentask.FieldToAgentID)
+		}
+		if _q.withRepliedByAgent != nil {
+			_spec.Node.AddColumnOnce(agentask.FieldRepliedByAgentID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

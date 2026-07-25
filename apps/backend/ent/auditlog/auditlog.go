@@ -32,6 +32,10 @@ const (
 	FieldDetails = "details"
 	// FieldRequestID holds the string denoting the request_id field in the database.
 	FieldRequestID = "request_id"
+	// FieldEntityType holds the string denoting the entity_type field in the database.
+	FieldEntityType = "entity_type"
+	// FieldEntityID holds the string denoting the entity_id field in the database.
+	FieldEntityID = "entity_id"
 	// Table holds the table name of the auditlog in the database.
 	Table = "audit_logs"
 )
@@ -48,6 +52,8 @@ var Columns = []string{
 	FieldSuccess,
 	FieldDetails,
 	FieldRequestID,
+	FieldEntityType,
+	FieldEntityID,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -75,6 +81,8 @@ var (
 	DefaultSuccess bool
 	// DefaultRequestID holds the default value on creation for the "request_id" field.
 	DefaultRequestID string
+	// DefaultEntityType holds the default value on creation for the "entity_type" field.
+	DefaultEntityType string
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -125,4 +133,14 @@ func BySuccess(opts ...sql.OrderTermOption) OrderOption {
 // ByRequestID orders the results by the request_id field.
 func ByRequestID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRequestID, opts...).ToFunc()
+}
+
+// ByEntityType orders the results by the entity_type field.
+func ByEntityType(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEntityType, opts...).ToFunc()
+}
+
+// ByEntityID orders the results by the entity_id field.
+func ByEntityID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEntityID, opts...).ToFunc()
 }

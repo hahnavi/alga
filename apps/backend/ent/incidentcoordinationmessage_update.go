@@ -306,9 +306,17 @@ func (_u *IncidentCoordinationMessageUpdate) SetUpdatedAt(v time.Time) *Incident
 	return _u
 }
 
-// SetIncidentID sets the "incident" edge to the Incident entity by ID.
-func (_u *IncidentCoordinationMessageUpdate) SetIncidentID(id uuid.UUID) *IncidentCoordinationMessageUpdate {
-	_u.mutation.SetIncidentID(id)
+// SetIncidentID sets the "incident_id" field.
+func (_u *IncidentCoordinationMessageUpdate) SetIncidentID(v uuid.UUID) *IncidentCoordinationMessageUpdate {
+	_u.mutation.SetIncidentID(v)
+	return _u
+}
+
+// SetNillableIncidentID sets the "incident_id" field if the given value is not nil.
+func (_u *IncidentCoordinationMessageUpdate) SetNillableIncidentID(v *uuid.UUID) *IncidentCoordinationMessageUpdate {
+	if v != nil {
+		_u.SetIncidentID(*v)
+	}
 	return _u
 }
 
@@ -907,9 +915,17 @@ func (_u *IncidentCoordinationMessageUpdateOne) SetUpdatedAt(v time.Time) *Incid
 	return _u
 }
 
-// SetIncidentID sets the "incident" edge to the Incident entity by ID.
-func (_u *IncidentCoordinationMessageUpdateOne) SetIncidentID(id uuid.UUID) *IncidentCoordinationMessageUpdateOne {
-	_u.mutation.SetIncidentID(id)
+// SetIncidentID sets the "incident_id" field.
+func (_u *IncidentCoordinationMessageUpdateOne) SetIncidentID(v uuid.UUID) *IncidentCoordinationMessageUpdateOne {
+	_u.mutation.SetIncidentID(v)
+	return _u
+}
+
+// SetNillableIncidentID sets the "incident_id" field if the given value is not nil.
+func (_u *IncidentCoordinationMessageUpdateOne) SetNillableIncidentID(v *uuid.UUID) *IncidentCoordinationMessageUpdateOne {
+	if v != nil {
+		_u.SetIncidentID(*v)
+	}
 	return _u
 }
 

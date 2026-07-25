@@ -5,6 +5,7 @@ package ent
 import (
 	"alga/ent/predicate"
 	"alga/ent/triagerule"
+	"alga/ent/user"
 	"context"
 	"errors"
 	"fmt"
@@ -237,9 +238,34 @@ func (_u *TriageRuleUpdate) SetUpdatedAt(v time.Time) *TriageRuleUpdate {
 	return _u
 }
 
+// SetCreatedByUserID sets the "created_by_user" edge to the User entity by ID.
+func (_u *TriageRuleUpdate) SetCreatedByUserID(id uuid.UUID) *TriageRuleUpdate {
+	_u.mutation.SetCreatedByUserID(id)
+	return _u
+}
+
+// SetNillableCreatedByUserID sets the "created_by_user" edge to the User entity by ID if the given value is not nil.
+func (_u *TriageRuleUpdate) SetNillableCreatedByUserID(id *uuid.UUID) *TriageRuleUpdate {
+	if id != nil {
+		_u = _u.SetCreatedByUserID(*id)
+	}
+	return _u
+}
+
+// SetCreatedByUser sets the "created_by_user" edge to the User entity.
+func (_u *TriageRuleUpdate) SetCreatedByUser(v *User) *TriageRuleUpdate {
+	return _u.SetCreatedByUserID(v.ID)
+}
+
 // Mutation returns the TriageRuleMutation object of the builder.
 func (_u *TriageRuleUpdate) Mutation() *TriageRuleMutation {
 	return _u.mutation
+}
+
+// ClearCreatedByUser clears the "created_by_user" edge to the User entity.
+func (_u *TriageRuleUpdate) ClearCreatedByUser() *TriageRuleUpdate {
+	_u.mutation.ClearCreatedByUser()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -288,6 +314,11 @@ func (_u *TriageRuleUpdate) check() error {
 	if v, ok := _u.mutation.Decision(); ok {
 		if err := triagerule.DecisionValidator(v); err != nil {
 			return &ValidationError{Name: "decision", err: fmt.Errorf(`ent: validator failed for field "TriageRule.decision": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Priority(); ok {
+		if err := triagerule.PriorityValidator(v); err != nil {
+			return &ValidationError{Name: "priority", err: fmt.Errorf(`ent: validator failed for field "TriageRule.priority": %w`, err)}
 		}
 	}
 	return nil
@@ -358,17 +389,40 @@ func (_u *TriageRuleUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if value, ok := _u.mutation.Enabled(); ok {
 		_spec.SetField(triagerule.FieldEnabled, field.TypeBool, value)
 	}
-	if value, ok := _u.mutation.CreatedBy(); ok {
-		_spec.SetField(triagerule.FieldCreatedBy, field.TypeUUID, value)
-	}
-	if _u.mutation.CreatedByCleared() {
-		_spec.ClearField(triagerule.FieldCreatedBy, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.CreatedAt(); ok {
 		_spec.SetField(triagerule.FieldCreatedAt, field.TypeTime, value)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(triagerule.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.CreatedByUserCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   triagerule.CreatedByUserTable,
+			Columns: []string{triagerule.CreatedByUserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CreatedByUserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   triagerule.CreatedByUserTable,
+			Columns: []string{triagerule.CreatedByUserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -597,9 +651,34 @@ func (_u *TriageRuleUpdateOne) SetUpdatedAt(v time.Time) *TriageRuleUpdateOne {
 	return _u
 }
 
+// SetCreatedByUserID sets the "created_by_user" edge to the User entity by ID.
+func (_u *TriageRuleUpdateOne) SetCreatedByUserID(id uuid.UUID) *TriageRuleUpdateOne {
+	_u.mutation.SetCreatedByUserID(id)
+	return _u
+}
+
+// SetNillableCreatedByUserID sets the "created_by_user" edge to the User entity by ID if the given value is not nil.
+func (_u *TriageRuleUpdateOne) SetNillableCreatedByUserID(id *uuid.UUID) *TriageRuleUpdateOne {
+	if id != nil {
+		_u = _u.SetCreatedByUserID(*id)
+	}
+	return _u
+}
+
+// SetCreatedByUser sets the "created_by_user" edge to the User entity.
+func (_u *TriageRuleUpdateOne) SetCreatedByUser(v *User) *TriageRuleUpdateOne {
+	return _u.SetCreatedByUserID(v.ID)
+}
+
 // Mutation returns the TriageRuleMutation object of the builder.
 func (_u *TriageRuleUpdateOne) Mutation() *TriageRuleMutation {
 	return _u.mutation
+}
+
+// ClearCreatedByUser clears the "created_by_user" edge to the User entity.
+func (_u *TriageRuleUpdateOne) ClearCreatedByUser() *TriageRuleUpdateOne {
+	_u.mutation.ClearCreatedByUser()
+	return _u
 }
 
 // Where appends a list predicates to the TriageRuleUpdate builder.
@@ -661,6 +740,11 @@ func (_u *TriageRuleUpdateOne) check() error {
 	if v, ok := _u.mutation.Decision(); ok {
 		if err := triagerule.DecisionValidator(v); err != nil {
 			return &ValidationError{Name: "decision", err: fmt.Errorf(`ent: validator failed for field "TriageRule.decision": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Priority(); ok {
+		if err := triagerule.PriorityValidator(v); err != nil {
+			return &ValidationError{Name: "priority", err: fmt.Errorf(`ent: validator failed for field "TriageRule.priority": %w`, err)}
 		}
 	}
 	return nil
@@ -748,17 +832,40 @@ func (_u *TriageRuleUpdateOne) sqlSave(ctx context.Context) (_node *TriageRule, 
 	if value, ok := _u.mutation.Enabled(); ok {
 		_spec.SetField(triagerule.FieldEnabled, field.TypeBool, value)
 	}
-	if value, ok := _u.mutation.CreatedBy(); ok {
-		_spec.SetField(triagerule.FieldCreatedBy, field.TypeUUID, value)
-	}
-	if _u.mutation.CreatedByCleared() {
-		_spec.ClearField(triagerule.FieldCreatedBy, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.CreatedAt(); ok {
 		_spec.SetField(triagerule.FieldCreatedAt, field.TypeTime, value)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(triagerule.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.CreatedByUserCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   triagerule.CreatedByUserTable,
+			Columns: []string{triagerule.CreatedByUserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CreatedByUserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   triagerule.CreatedByUserTable,
+			Columns: []string{triagerule.CreatedByUserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &TriageRule{config: _u.config}
 	_spec.Assign = _node.assignValues

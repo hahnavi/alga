@@ -4,6 +4,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -30,7 +31,10 @@ func (TeamMember) Fields() []ent.Field {
 }
 
 func (TeamMember) Edges() []ent.Edge {
-	return nil
+	return []ent.Edge{
+		edge.From("team", Team.Type).Ref("team_members").Field("team_id").Unique().Required(),
+		edge.From("user", User.Type).Ref("team_members").Field("user_id").Unique().Required(),
+	}
 }
 
 func (TeamMember) Indexes() []ent.Index {

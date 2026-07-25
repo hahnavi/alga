@@ -5,6 +5,7 @@ package ent
 import (
 	"alga/ent/coordinationtask"
 	"alga/ent/incident"
+	"alga/ent/incidentinvestigation"
 	"context"
 	"errors"
 	"fmt"
@@ -337,6 +338,11 @@ func (_c *CoordinationTaskCreate) SetParentTask(v *CoordinationTask) *Coordinati
 	return _c.SetParentTaskID(v.ID)
 }
 
+// SetLinkedInvestigation sets the "linked_investigation" edge to the IncidentInvestigation entity.
+func (_c *CoordinationTaskCreate) SetLinkedInvestigation(v *IncidentInvestigation) *CoordinationTaskCreate {
+	return _c.SetLinkedInvestigationID(v.ID)
+}
+
 // Mutation returns the CoordinationTaskMutation object of the builder.
 func (_c *CoordinationTaskCreate) Mutation() *CoordinationTaskMutation {
 	return _c.mutation
@@ -455,8 +461,18 @@ func (_c *CoordinationTaskCreate) check() error {
 	if _, ok := _c.mutation.Priority(); !ok {
 		return &ValidationError{Name: "priority", err: errors.New(`ent: missing required field "CoordinationTask.priority"`)}
 	}
+	if v, ok := _c.mutation.Priority(); ok {
+		if err := coordinationtask.PriorityValidator(v); err != nil {
+			return &ValidationError{Name: "priority", err: fmt.Errorf(`ent: validator failed for field "CoordinationTask.priority": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.DispatchAttempts(); !ok {
 		return &ValidationError{Name: "dispatch_attempts", err: errors.New(`ent: missing required field "CoordinationTask.dispatch_attempts"`)}
+	}
+	if v, ok := _c.mutation.DispatchAttempts(); ok {
+		if err := coordinationtask.DispatchAttemptsValidator(v); err != nil {
+			return &ValidationError{Name: "dispatch_attempts", err: fmt.Errorf(`ent: validator failed for field "CoordinationTask.dispatch_attempts": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "CoordinationTask.created_at"`)}
@@ -530,10 +546,6 @@ func (_c *CoordinationTaskCreate) createSpec() (*CoordinationTask, *sqlgraph.Cre
 	if value, ok := _c.mutation.ResultSchema(); ok {
 		_spec.SetField(coordinationtask.FieldResultSchema, field.TypeJSON, value)
 		_node.ResultSchema = value
-	}
-	if value, ok := _c.mutation.LinkedInvestigationID(); ok {
-		_spec.SetField(coordinationtask.FieldLinkedInvestigationID, field.TypeUUID, value)
-		_node.LinkedInvestigationID = &value
 	}
 	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(coordinationtask.FieldStatus, field.TypeString, value)
@@ -627,6 +639,23 @@ func (_c *CoordinationTaskCreate) createSpec() (*CoordinationTask, *sqlgraph.Cre
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.ParentTaskID = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.LinkedInvestigationIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   coordinationtask.LinkedInvestigationTable,
+			Columns: []string{coordinationtask.LinkedInvestigationColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incidentinvestigation.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.LinkedInvestigationID = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"alga/ent/credentialprovider"
 	"alga/ent/sharedsecret"
 	"encoding/json"
 	"fmt"
@@ -30,7 +31,7 @@ type SharedSecret struct {
 	// RemoteRef holds the value of the "remote_ref" field.
 	RemoteRef string `json:"remote_ref,omitempty"`
 	// ValueEncrypted holds the value of the "value_encrypted" field.
-	ValueEncrypted string `json:"value_encrypted,omitempty"`
+	ValueEncrypted string `json:"-"`
 	// ValueConfigured holds the value of the "value_configured" field.
 	ValueConfigured bool `json:"value_configured,omitempty"`
 	// AllowedAgentIds holds the value of the "allowed_agent_ids" field.
@@ -38,8 +39,31 @@ type SharedSecret struct {
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt    time.Time `json:"updated_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the SharedSecretQuery when eager-loading is set.
+	Edges        SharedSecretEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// SharedSecretEdges holds the relations/edges for other nodes in the graph.
+type SharedSecretEdges struct {
+	// Provider holds the value of the provider edge.
+	Provider *CredentialProvider `json:"provider,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// ProviderOrErr returns the Provider value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e SharedSecretEdges) ProviderOrErr() (*CredentialProvider, error) {
+	if e.Provider != nil {
+		return e.Provider, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: credentialprovider.Label}
+	}
+	return nil, &NotLoadedError{edge: "provider"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -153,6 +177,11 @@ func (_m *SharedSecret) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
 }
 
+// QueryProvider queries the "provider" edge of the SharedSecret entity.
+func (_m *SharedSecret) QueryProvider() *CredentialProviderQuery {
+	return NewSharedSecretClient(_m.config).QueryProvider(_m)
+}
+
 // Update returns a builder for updating this SharedSecret.
 // Note that you need to call SharedSecret.Unwrap() before calling this method if this SharedSecret
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -191,8 +220,7 @@ func (_m *SharedSecret) String() string {
 	builder.WriteString("remote_ref=")
 	builder.WriteString(_m.RemoteRef)
 	builder.WriteString(", ")
-	builder.WriteString("value_encrypted=")
-	builder.WriteString(_m.ValueEncrypted)
+	builder.WriteString("value_encrypted=<sensitive>")
 	builder.WriteString(", ")
 	builder.WriteString("value_configured=")
 	builder.WriteString(fmt.Sprintf("%v", _m.ValueConfigured))

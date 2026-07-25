@@ -3,9 +3,21 @@
 package ent
 
 import (
+	"alga/ent/handoffrecord"
 	"alga/ent/icsroleassignment"
+	"alga/ent/incident"
 	"alga/ent/incidentdocument"
+	"alga/ent/knowledgenote"
+	"alga/ent/oidcidentity"
+	"alga/ent/passwordresettoken"
+	"alga/ent/personalaccesstoken"
+	"alga/ent/postmortem"
 	"alga/ent/predicate"
+	"alga/ent/scheduleoverride"
+	"alga/ent/session"
+	"alga/ent/teammember"
+	"alga/ent/triageresult"
+	"alga/ent/triagerule"
 	"alga/ent/user"
 	"context"
 	"database/sql/driver"
@@ -22,12 +34,27 @@ import (
 // UserQuery is the builder for querying User entities.
 type UserQuery struct {
 	config
-	ctx                    *QueryContext
-	order                  []user.OrderOption
-	inters                 []Interceptor
-	predicates             []predicate.User
-	withIcsRoleAssignments *ICSRoleAssignmentQuery
-	withDocumentEdits      *IncidentDocumentQuery
+	ctx                       *QueryContext
+	order                     []user.OrderOption
+	inters                    []Interceptor
+	predicates                []predicate.User
+	withSessions              *SessionQuery
+	withPasswordResetTokens   *PasswordResetTokenQuery
+	withPersonalAccessTokens  *PersonalAccessTokenQuery
+	withOidcIdentities        *OIDCIdentityQuery
+	withTeamMembers           *TeamMemberQuery
+	withIcsRoleAssignments    *ICSRoleAssignmentQuery
+	withDocumentEdits         *IncidentDocumentQuery
+	withCommanderIncidents    *IncidentQuery
+	withCommunicatorIncidents *IncidentQuery
+	withResponderIncidents    *IncidentQuery
+	withTriageOverrides       *TriageResultQuery
+	withApprovedPostMortems   *PostMortemQuery
+	withTriageRules           *TriageRuleQuery
+	withKnowledgeNotes        *KnowledgeNoteQuery
+	withScheduleOverrides     *ScheduleOverrideQuery
+	withOutgoingHandoffs      *HandoffRecordQuery
+	withIncomingHandoffs      *HandoffRecordQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -62,6 +89,116 @@ func (_q *UserQuery) Unique(unique bool) *UserQuery {
 func (_q *UserQuery) Order(o ...user.OrderOption) *UserQuery {
 	_q.order = append(_q.order, o...)
 	return _q
+}
+
+// QuerySessions chains the current query on the "sessions" edge.
+func (_q *UserQuery) QuerySessions() *SessionQuery {
+	query := (&SessionClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(session.Table, session.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.SessionsTable, user.SessionsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryPasswordResetTokens chains the current query on the "password_reset_tokens" edge.
+func (_q *UserQuery) QueryPasswordResetTokens() *PasswordResetTokenQuery {
+	query := (&PasswordResetTokenClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(passwordresettoken.Table, passwordresettoken.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.PasswordResetTokensTable, user.PasswordResetTokensColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryPersonalAccessTokens chains the current query on the "personal_access_tokens" edge.
+func (_q *UserQuery) QueryPersonalAccessTokens() *PersonalAccessTokenQuery {
+	query := (&PersonalAccessTokenClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(personalaccesstoken.Table, personalaccesstoken.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.PersonalAccessTokensTable, user.PersonalAccessTokensColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryOidcIdentities chains the current query on the "oidc_identities" edge.
+func (_q *UserQuery) QueryOidcIdentities() *OIDCIdentityQuery {
+	query := (&OIDCIdentityClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(oidcidentity.Table, oidcidentity.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.OidcIdentitiesTable, user.OidcIdentitiesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryTeamMembers chains the current query on the "team_members" edge.
+func (_q *UserQuery) QueryTeamMembers() *TeamMemberQuery {
+	query := (&TeamMemberClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(teammember.Table, teammember.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.TeamMembersTable, user.TeamMembersColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // QueryIcsRoleAssignments chains the current query on the "ics_role_assignments" edge.
@@ -101,6 +238,226 @@ func (_q *UserQuery) QueryDocumentEdits() *IncidentDocumentQuery {
 			sqlgraph.From(user.Table, user.FieldID, selector),
 			sqlgraph.To(incidentdocument.Table, incidentdocument.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, user.DocumentEditsTable, user.DocumentEditsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryCommanderIncidents chains the current query on the "commander_incidents" edge.
+func (_q *UserQuery) QueryCommanderIncidents() *IncidentQuery {
+	query := (&IncidentClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(incident.Table, incident.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.CommanderIncidentsTable, user.CommanderIncidentsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryCommunicatorIncidents chains the current query on the "communicator_incidents" edge.
+func (_q *UserQuery) QueryCommunicatorIncidents() *IncidentQuery {
+	query := (&IncidentClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(incident.Table, incident.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.CommunicatorIncidentsTable, user.CommunicatorIncidentsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryResponderIncidents chains the current query on the "responder_incidents" edge.
+func (_q *UserQuery) QueryResponderIncidents() *IncidentQuery {
+	query := (&IncidentClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(incident.Table, incident.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.ResponderIncidentsTable, user.ResponderIncidentsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryTriageOverrides chains the current query on the "triage_overrides" edge.
+func (_q *UserQuery) QueryTriageOverrides() *TriageResultQuery {
+	query := (&TriageResultClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(triageresult.Table, triageresult.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.TriageOverridesTable, user.TriageOverridesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryApprovedPostMortems chains the current query on the "approved_post_mortems" edge.
+func (_q *UserQuery) QueryApprovedPostMortems() *PostMortemQuery {
+	query := (&PostMortemClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(postmortem.Table, postmortem.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.ApprovedPostMortemsTable, user.ApprovedPostMortemsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryTriageRules chains the current query on the "triage_rules" edge.
+func (_q *UserQuery) QueryTriageRules() *TriageRuleQuery {
+	query := (&TriageRuleClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(triagerule.Table, triagerule.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.TriageRulesTable, user.TriageRulesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryKnowledgeNotes chains the current query on the "knowledge_notes" edge.
+func (_q *UserQuery) QueryKnowledgeNotes() *KnowledgeNoteQuery {
+	query := (&KnowledgeNoteClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(knowledgenote.Table, knowledgenote.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.KnowledgeNotesTable, user.KnowledgeNotesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryScheduleOverrides chains the current query on the "schedule_overrides" edge.
+func (_q *UserQuery) QueryScheduleOverrides() *ScheduleOverrideQuery {
+	query := (&ScheduleOverrideClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(scheduleoverride.Table, scheduleoverride.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.ScheduleOverridesTable, user.ScheduleOverridesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryOutgoingHandoffs chains the current query on the "outgoing_handoffs" edge.
+func (_q *UserQuery) QueryOutgoingHandoffs() *HandoffRecordQuery {
+	query := (&HandoffRecordClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(handoffrecord.Table, handoffrecord.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.OutgoingHandoffsTable, user.OutgoingHandoffsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryIncomingHandoffs chains the current query on the "incoming_handoffs" edge.
+func (_q *UserQuery) QueryIncomingHandoffs() *HandoffRecordQuery {
+	query := (&HandoffRecordClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(handoffrecord.Table, handoffrecord.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.IncomingHandoffsTable, user.IncomingHandoffsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -295,17 +652,87 @@ func (_q *UserQuery) Clone() *UserQuery {
 		return nil
 	}
 	return &UserQuery{
-		config:                 _q.config,
-		ctx:                    _q.ctx.Clone(),
-		order:                  append([]user.OrderOption{}, _q.order...),
-		inters:                 append([]Interceptor{}, _q.inters...),
-		predicates:             append([]predicate.User{}, _q.predicates...),
-		withIcsRoleAssignments: _q.withIcsRoleAssignments.Clone(),
-		withDocumentEdits:      _q.withDocumentEdits.Clone(),
+		config:                    _q.config,
+		ctx:                       _q.ctx.Clone(),
+		order:                     append([]user.OrderOption{}, _q.order...),
+		inters:                    append([]Interceptor{}, _q.inters...),
+		predicates:                append([]predicate.User{}, _q.predicates...),
+		withSessions:              _q.withSessions.Clone(),
+		withPasswordResetTokens:   _q.withPasswordResetTokens.Clone(),
+		withPersonalAccessTokens:  _q.withPersonalAccessTokens.Clone(),
+		withOidcIdentities:        _q.withOidcIdentities.Clone(),
+		withTeamMembers:           _q.withTeamMembers.Clone(),
+		withIcsRoleAssignments:    _q.withIcsRoleAssignments.Clone(),
+		withDocumentEdits:         _q.withDocumentEdits.Clone(),
+		withCommanderIncidents:    _q.withCommanderIncidents.Clone(),
+		withCommunicatorIncidents: _q.withCommunicatorIncidents.Clone(),
+		withResponderIncidents:    _q.withResponderIncidents.Clone(),
+		withTriageOverrides:       _q.withTriageOverrides.Clone(),
+		withApprovedPostMortems:   _q.withApprovedPostMortems.Clone(),
+		withTriageRules:           _q.withTriageRules.Clone(),
+		withKnowledgeNotes:        _q.withKnowledgeNotes.Clone(),
+		withScheduleOverrides:     _q.withScheduleOverrides.Clone(),
+		withOutgoingHandoffs:      _q.withOutgoingHandoffs.Clone(),
+		withIncomingHandoffs:      _q.withIncomingHandoffs.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
+}
+
+// WithSessions tells the query-builder to eager-load the nodes that are connected to
+// the "sessions" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithSessions(opts ...func(*SessionQuery)) *UserQuery {
+	query := (&SessionClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withSessions = query
+	return _q
+}
+
+// WithPasswordResetTokens tells the query-builder to eager-load the nodes that are connected to
+// the "password_reset_tokens" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithPasswordResetTokens(opts ...func(*PasswordResetTokenQuery)) *UserQuery {
+	query := (&PasswordResetTokenClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withPasswordResetTokens = query
+	return _q
+}
+
+// WithPersonalAccessTokens tells the query-builder to eager-load the nodes that are connected to
+// the "personal_access_tokens" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithPersonalAccessTokens(opts ...func(*PersonalAccessTokenQuery)) *UserQuery {
+	query := (&PersonalAccessTokenClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withPersonalAccessTokens = query
+	return _q
+}
+
+// WithOidcIdentities tells the query-builder to eager-load the nodes that are connected to
+// the "oidc_identities" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithOidcIdentities(opts ...func(*OIDCIdentityQuery)) *UserQuery {
+	query := (&OIDCIdentityClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withOidcIdentities = query
+	return _q
+}
+
+// WithTeamMembers tells the query-builder to eager-load the nodes that are connected to
+// the "team_members" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithTeamMembers(opts ...func(*TeamMemberQuery)) *UserQuery {
+	query := (&TeamMemberClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withTeamMembers = query
+	return _q
 }
 
 // WithIcsRoleAssignments tells the query-builder to eager-load the nodes that are connected to
@@ -327,6 +754,116 @@ func (_q *UserQuery) WithDocumentEdits(opts ...func(*IncidentDocumentQuery)) *Us
 		opt(query)
 	}
 	_q.withDocumentEdits = query
+	return _q
+}
+
+// WithCommanderIncidents tells the query-builder to eager-load the nodes that are connected to
+// the "commander_incidents" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithCommanderIncidents(opts ...func(*IncidentQuery)) *UserQuery {
+	query := (&IncidentClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withCommanderIncidents = query
+	return _q
+}
+
+// WithCommunicatorIncidents tells the query-builder to eager-load the nodes that are connected to
+// the "communicator_incidents" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithCommunicatorIncidents(opts ...func(*IncidentQuery)) *UserQuery {
+	query := (&IncidentClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withCommunicatorIncidents = query
+	return _q
+}
+
+// WithResponderIncidents tells the query-builder to eager-load the nodes that are connected to
+// the "responder_incidents" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithResponderIncidents(opts ...func(*IncidentQuery)) *UserQuery {
+	query := (&IncidentClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withResponderIncidents = query
+	return _q
+}
+
+// WithTriageOverrides tells the query-builder to eager-load the nodes that are connected to
+// the "triage_overrides" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithTriageOverrides(opts ...func(*TriageResultQuery)) *UserQuery {
+	query := (&TriageResultClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withTriageOverrides = query
+	return _q
+}
+
+// WithApprovedPostMortems tells the query-builder to eager-load the nodes that are connected to
+// the "approved_post_mortems" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithApprovedPostMortems(opts ...func(*PostMortemQuery)) *UserQuery {
+	query := (&PostMortemClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withApprovedPostMortems = query
+	return _q
+}
+
+// WithTriageRules tells the query-builder to eager-load the nodes that are connected to
+// the "triage_rules" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithTriageRules(opts ...func(*TriageRuleQuery)) *UserQuery {
+	query := (&TriageRuleClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withTriageRules = query
+	return _q
+}
+
+// WithKnowledgeNotes tells the query-builder to eager-load the nodes that are connected to
+// the "knowledge_notes" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithKnowledgeNotes(opts ...func(*KnowledgeNoteQuery)) *UserQuery {
+	query := (&KnowledgeNoteClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withKnowledgeNotes = query
+	return _q
+}
+
+// WithScheduleOverrides tells the query-builder to eager-load the nodes that are connected to
+// the "schedule_overrides" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithScheduleOverrides(opts ...func(*ScheduleOverrideQuery)) *UserQuery {
+	query := (&ScheduleOverrideClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withScheduleOverrides = query
+	return _q
+}
+
+// WithOutgoingHandoffs tells the query-builder to eager-load the nodes that are connected to
+// the "outgoing_handoffs" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithOutgoingHandoffs(opts ...func(*HandoffRecordQuery)) *UserQuery {
+	query := (&HandoffRecordClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withOutgoingHandoffs = query
+	return _q
+}
+
+// WithIncomingHandoffs tells the query-builder to eager-load the nodes that are connected to
+// the "incoming_handoffs" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithIncomingHandoffs(opts ...func(*HandoffRecordQuery)) *UserQuery {
+	query := (&HandoffRecordClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withIncomingHandoffs = query
 	return _q
 }
 
@@ -408,9 +945,24 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 	var (
 		nodes       = []*User{}
 		_spec       = _q.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [17]bool{
+			_q.withSessions != nil,
+			_q.withPasswordResetTokens != nil,
+			_q.withPersonalAccessTokens != nil,
+			_q.withOidcIdentities != nil,
+			_q.withTeamMembers != nil,
 			_q.withIcsRoleAssignments != nil,
 			_q.withDocumentEdits != nil,
+			_q.withCommanderIncidents != nil,
+			_q.withCommunicatorIncidents != nil,
+			_q.withResponderIncidents != nil,
+			_q.withTriageOverrides != nil,
+			_q.withApprovedPostMortems != nil,
+			_q.withTriageRules != nil,
+			_q.withKnowledgeNotes != nil,
+			_q.withScheduleOverrides != nil,
+			_q.withOutgoingHandoffs != nil,
+			_q.withIncomingHandoffs != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -431,6 +983,45 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := _q.withSessions; query != nil {
+		if err := _q.loadSessions(ctx, query, nodes,
+			func(n *User) { n.Edges.Sessions = []*Session{} },
+			func(n *User, e *Session) { n.Edges.Sessions = append(n.Edges.Sessions, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withPasswordResetTokens; query != nil {
+		if err := _q.loadPasswordResetTokens(ctx, query, nodes,
+			func(n *User) { n.Edges.PasswordResetTokens = []*PasswordResetToken{} },
+			func(n *User, e *PasswordResetToken) {
+				n.Edges.PasswordResetTokens = append(n.Edges.PasswordResetTokens, e)
+			}); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withPersonalAccessTokens; query != nil {
+		if err := _q.loadPersonalAccessTokens(ctx, query, nodes,
+			func(n *User) { n.Edges.PersonalAccessTokens = []*PersonalAccessToken{} },
+			func(n *User, e *PersonalAccessToken) {
+				n.Edges.PersonalAccessTokens = append(n.Edges.PersonalAccessTokens, e)
+			}); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withOidcIdentities; query != nil {
+		if err := _q.loadOidcIdentities(ctx, query, nodes,
+			func(n *User) { n.Edges.OidcIdentities = []*OIDCIdentity{} },
+			func(n *User, e *OIDCIdentity) { n.Edges.OidcIdentities = append(n.Edges.OidcIdentities, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withTeamMembers; query != nil {
+		if err := _q.loadTeamMembers(ctx, query, nodes,
+			func(n *User) { n.Edges.TeamMembers = []*TeamMember{} },
+			func(n *User, e *TeamMember) { n.Edges.TeamMembers = append(n.Edges.TeamMembers, e) }); err != nil {
+			return nil, err
+		}
+	}
 	if query := _q.withIcsRoleAssignments; query != nil {
 		if err := _q.loadIcsRoleAssignments(ctx, query, nodes,
 			func(n *User) { n.Edges.IcsRoleAssignments = []*ICSRoleAssignment{} },
@@ -447,9 +1038,229 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 			return nil, err
 		}
 	}
+	if query := _q.withCommanderIncidents; query != nil {
+		if err := _q.loadCommanderIncidents(ctx, query, nodes,
+			func(n *User) { n.Edges.CommanderIncidents = []*Incident{} },
+			func(n *User, e *Incident) { n.Edges.CommanderIncidents = append(n.Edges.CommanderIncidents, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withCommunicatorIncidents; query != nil {
+		if err := _q.loadCommunicatorIncidents(ctx, query, nodes,
+			func(n *User) { n.Edges.CommunicatorIncidents = []*Incident{} },
+			func(n *User, e *Incident) { n.Edges.CommunicatorIncidents = append(n.Edges.CommunicatorIncidents, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withResponderIncidents; query != nil {
+		if err := _q.loadResponderIncidents(ctx, query, nodes,
+			func(n *User) { n.Edges.ResponderIncidents = []*Incident{} },
+			func(n *User, e *Incident) { n.Edges.ResponderIncidents = append(n.Edges.ResponderIncidents, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withTriageOverrides; query != nil {
+		if err := _q.loadTriageOverrides(ctx, query, nodes,
+			func(n *User) { n.Edges.TriageOverrides = []*TriageResult{} },
+			func(n *User, e *TriageResult) { n.Edges.TriageOverrides = append(n.Edges.TriageOverrides, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withApprovedPostMortems; query != nil {
+		if err := _q.loadApprovedPostMortems(ctx, query, nodes,
+			func(n *User) { n.Edges.ApprovedPostMortems = []*PostMortem{} },
+			func(n *User, e *PostMortem) { n.Edges.ApprovedPostMortems = append(n.Edges.ApprovedPostMortems, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withTriageRules; query != nil {
+		if err := _q.loadTriageRules(ctx, query, nodes,
+			func(n *User) { n.Edges.TriageRules = []*TriageRule{} },
+			func(n *User, e *TriageRule) { n.Edges.TriageRules = append(n.Edges.TriageRules, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withKnowledgeNotes; query != nil {
+		if err := _q.loadKnowledgeNotes(ctx, query, nodes,
+			func(n *User) { n.Edges.KnowledgeNotes = []*KnowledgeNote{} },
+			func(n *User, e *KnowledgeNote) { n.Edges.KnowledgeNotes = append(n.Edges.KnowledgeNotes, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withScheduleOverrides; query != nil {
+		if err := _q.loadScheduleOverrides(ctx, query, nodes,
+			func(n *User) { n.Edges.ScheduleOverrides = []*ScheduleOverride{} },
+			func(n *User, e *ScheduleOverride) { n.Edges.ScheduleOverrides = append(n.Edges.ScheduleOverrides, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withOutgoingHandoffs; query != nil {
+		if err := _q.loadOutgoingHandoffs(ctx, query, nodes,
+			func(n *User) { n.Edges.OutgoingHandoffs = []*HandoffRecord{} },
+			func(n *User, e *HandoffRecord) { n.Edges.OutgoingHandoffs = append(n.Edges.OutgoingHandoffs, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withIncomingHandoffs; query != nil {
+		if err := _q.loadIncomingHandoffs(ctx, query, nodes,
+			func(n *User) { n.Edges.IncomingHandoffs = []*HandoffRecord{} },
+			func(n *User, e *HandoffRecord) { n.Edges.IncomingHandoffs = append(n.Edges.IncomingHandoffs, e) }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
 }
 
+func (_q *UserQuery) loadSessions(ctx context.Context, query *SessionQuery, nodes []*User, init func(*User), assign func(*User, *Session)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(session.FieldUserID)
+	}
+	query.Where(predicate.Session(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.SessionsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.UserID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadPasswordResetTokens(ctx context.Context, query *PasswordResetTokenQuery, nodes []*User, init func(*User), assign func(*User, *PasswordResetToken)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(passwordresettoken.FieldUserID)
+	}
+	query.Where(predicate.PasswordResetToken(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.PasswordResetTokensColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.UserID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadPersonalAccessTokens(ctx context.Context, query *PersonalAccessTokenQuery, nodes []*User, init func(*User), assign func(*User, *PersonalAccessToken)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(personalaccesstoken.FieldUserID)
+	}
+	query.Where(predicate.PersonalAccessToken(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.PersonalAccessTokensColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.UserID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadOidcIdentities(ctx context.Context, query *OIDCIdentityQuery, nodes []*User, init func(*User), assign func(*User, *OIDCIdentity)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(oidcidentity.FieldUserID)
+	}
+	query.Where(predicate.OIDCIdentity(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.OidcIdentitiesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.UserID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadTeamMembers(ctx context.Context, query *TeamMemberQuery, nodes []*User, init func(*User), assign func(*User, *TeamMember)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(teammember.FieldUserID)
+	}
+	query.Where(predicate.TeamMember(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.TeamMembersColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.UserID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
 func (_q *UserQuery) loadIcsRoleAssignments(ctx context.Context, query *ICSRoleAssignmentQuery, nodes []*User, init func(*User), assign func(*User, *ICSRoleAssignment)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*User)
@@ -460,7 +1271,9 @@ func (_q *UserQuery) loadIcsRoleAssignments(ctx context.Context, query *ICSRoleA
 			init(nodes[i])
 		}
 	}
-	query.withFKs = true
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(icsroleassignment.FieldUserID)
+	}
 	query.Where(predicate.ICSRoleAssignment(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(user.IcsRoleAssignmentsColumn), fks...))
 	}))
@@ -469,13 +1282,13 @@ func (_q *UserQuery) loadIcsRoleAssignments(ctx context.Context, query *ICSRoleA
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.user_ics_role_assignments
+		fk := n.UserID
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "user_ics_role_assignments" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "user_id" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "user_ics_role_assignments" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "user_id" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
@@ -491,7 +1304,9 @@ func (_q *UserQuery) loadDocumentEdits(ctx context.Context, query *IncidentDocum
 			init(nodes[i])
 		}
 	}
-	query.withFKs = true
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(incidentdocument.FieldUpdatedByID)
+	}
 	query.Where(predicate.IncidentDocument(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(user.DocumentEditsColumn), fks...))
 	}))
@@ -500,13 +1315,334 @@ func (_q *UserQuery) loadDocumentEdits(ctx context.Context, query *IncidentDocum
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.user_document_edits
+		fk := n.UpdatedByID
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "user_document_edits" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "updated_by_id" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "user_document_edits" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "updated_by_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadCommanderIncidents(ctx context.Context, query *IncidentQuery, nodes []*User, init func(*User), assign func(*User, *Incident)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(incident.FieldCommanderID)
+	}
+	query.Where(predicate.Incident(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.CommanderIncidentsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.CommanderID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "commander_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "commander_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadCommunicatorIncidents(ctx context.Context, query *IncidentQuery, nodes []*User, init func(*User), assign func(*User, *Incident)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(incident.FieldCommunicatorID)
+	}
+	query.Where(predicate.Incident(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.CommunicatorIncidentsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.CommunicatorID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "communicator_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "communicator_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadResponderIncidents(ctx context.Context, query *IncidentQuery, nodes []*User, init func(*User), assign func(*User, *Incident)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(incident.FieldOnCallResponderID)
+	}
+	query.Where(predicate.Incident(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.ResponderIncidentsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.OnCallResponderID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "on_call_responder_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "on_call_responder_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadTriageOverrides(ctx context.Context, query *TriageResultQuery, nodes []*User, init func(*User), assign func(*User, *TriageResult)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(triageresult.FieldOverriddenBy)
+	}
+	query.Where(predicate.TriageResult(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.TriageOverridesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.OverriddenBy
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "overridden_by" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadApprovedPostMortems(ctx context.Context, query *PostMortemQuery, nodes []*User, init func(*User), assign func(*User, *PostMortem)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(postmortem.FieldApprovedByID)
+	}
+	query.Where(predicate.PostMortem(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.ApprovedPostMortemsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ApprovedByID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "approved_by_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "approved_by_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadTriageRules(ctx context.Context, query *TriageRuleQuery, nodes []*User, init func(*User), assign func(*User, *TriageRule)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(triagerule.FieldCreatedBy)
+	}
+	query.Where(predicate.TriageRule(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.TriageRulesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.CreatedBy
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "created_by" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadKnowledgeNotes(ctx context.Context, query *KnowledgeNoteQuery, nodes []*User, init func(*User), assign func(*User, *KnowledgeNote)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(knowledgenote.FieldAuthorID)
+	}
+	query.Where(predicate.KnowledgeNote(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.KnowledgeNotesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.AuthorID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "author_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "author_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadScheduleOverrides(ctx context.Context, query *ScheduleOverrideQuery, nodes []*User, init func(*User), assign func(*User, *ScheduleOverride)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(scheduleoverride.FieldUserID)
+	}
+	query.Where(predicate.ScheduleOverride(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.ScheduleOverridesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.UserID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadOutgoingHandoffs(ctx context.Context, query *HandoffRecordQuery, nodes []*User, init func(*User), assign func(*User, *HandoffRecord)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(handoffrecord.FieldOutgoingUserID)
+	}
+	query.Where(predicate.HandoffRecord(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.OutgoingHandoffsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.OutgoingUserID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "outgoing_user_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "outgoing_user_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadIncomingHandoffs(ctx context.Context, query *HandoffRecordQuery, nodes []*User, init func(*User), assign func(*User, *HandoffRecord)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(handoffrecord.FieldIncomingUserID)
+	}
+	query.Where(predicate.HandoffRecord(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.IncomingHandoffsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.IncomingUserID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "incoming_user_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "incoming_user_id" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

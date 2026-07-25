@@ -12,7 +12,6 @@ var (
 	// ActionItemsColumns holds the columns for the "action_items" table.
 	ActionItemsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "post_mortem_id", Type: field.TypeUUID},
 		{Name: "description", Type: field.TypeString, Size: 2147483647},
 		{Name: "type", Type: field.TypeString, Default: "investigate"},
 		{Name: "assignee_name", Type: field.TypeString, Nullable: true, Default: ""},
@@ -22,88 +21,122 @@ var (
 		{Name: "due_date", Type: field.TypeTime, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "post_mortem_id", Type: field.TypeUUID},
 	}
 	// ActionItemsTable holds the schema information for the "action_items" table.
 	ActionItemsTable = &schema.Table{
 		Name:       "action_items",
 		Columns:    ActionItemsColumns,
 		PrimaryKey: []*schema.Column{ActionItemsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "action_items_post_mortems_action_items",
+				Columns:    []*schema.Column{ActionItemsColumns[10]},
+				RefColumns: []*schema.Column{PostMortemsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "actionitem_post_mortem_id",
 				Unique:  false,
-				Columns: []*schema.Column{ActionItemsColumns[1]},
+				Columns: []*schema.Column{ActionItemsColumns[10]},
 			},
 			{
 				Name:    "actionitem_assignee_id_status",
 				Unique:  false,
-				Columns: []*schema.Column{ActionItemsColumns[5], ActionItemsColumns[6]},
+				Columns: []*schema.Column{ActionItemsColumns[4], ActionItemsColumns[5]},
 			},
 			{
 				Name:    "actionitem_status",
 				Unique:  false,
-				Columns: []*schema.Column{ActionItemsColumns[6]},
+				Columns: []*schema.Column{ActionItemsColumns[5]},
 			},
 			{
 				Name:    "actionitem_type",
 				Unique:  false,
-				Columns: []*schema.Column{ActionItemsColumns[3]},
+				Columns: []*schema.Column{ActionItemsColumns[2]},
 			},
 		},
 	}
 	// AgentAsksColumns holds the columns for the "agent_asks" table.
 	AgentAsksColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "from_agent_id", Type: field.TypeUUID},
 		{Name: "from_agent_name", Type: field.TypeString},
 		{Name: "from_agent_type", Type: field.TypeString, Default: "hermes"},
 		{Name: "investigation_id", Type: field.TypeString, Nullable: true, Default: ""},
-		{Name: "to_agent_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "to_agent_type", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "question", Type: field.TypeString},
 		{Name: "reply", Type: field.TypeString, Nullable: true, Default: ""},
-		{Name: "replied_by_agent_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "replied_by_agent_name", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "status", Type: field.TypeString, Default: "pending"},
 		{Name: "expires_at", Type: field.TypeTime},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "answered_at", Type: field.TypeTime, Nullable: true},
+		{Name: "from_agent_id", Type: field.TypeUUID},
+		{Name: "to_agent_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "replied_by_agent_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// AgentAsksTable holds the schema information for the "agent_asks" table.
 	AgentAsksTable = &schema.Table{
 		Name:       "agent_asks",
 		Columns:    AgentAsksColumns,
 		PrimaryKey: []*schema.Column{AgentAsksColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "agent_asks_agent_tokens_sent_asks",
+				Columns:    []*schema.Column{AgentAsksColumns[12]},
+				RefColumns: []*schema.Column{AgentTokensColumns[0]},
+				OnDelete:   schema.Restrict,
+			},
+			{
+				Symbol:     "agent_asks_agent_tokens_received_asks",
+				Columns:    []*schema.Column{AgentAsksColumns[13]},
+				RefColumns: []*schema.Column{AgentTokensColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "agent_asks_agent_tokens_replied_asks",
+				Columns:    []*schema.Column{AgentAsksColumns[14]},
+				RefColumns: []*schema.Column{AgentTokensColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "agentask_status_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{AgentAsksColumns[11], AgentAsksColumns[13]},
+				Columns: []*schema.Column{AgentAsksColumns[8], AgentAsksColumns[10]},
 			},
 			{
 				Name:    "agentask_to_agent_id_status",
 				Unique:  false,
-				Columns: []*schema.Column{AgentAsksColumns[5], AgentAsksColumns[11]},
+				Columns: []*schema.Column{AgentAsksColumns[13], AgentAsksColumns[8]},
 			},
 			{
 				Name:    "agentask_to_agent_type_status",
 				Unique:  false,
-				Columns: []*schema.Column{AgentAsksColumns[6], AgentAsksColumns[11]},
+				Columns: []*schema.Column{AgentAsksColumns[4], AgentAsksColumns[8]},
 			},
 			{
 				Name:    "agentask_from_agent_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{AgentAsksColumns[1], AgentAsksColumns[13]},
+				Columns: []*schema.Column{AgentAsksColumns[12], AgentAsksColumns[10]},
 			},
 			{
 				Name:    "agentask_investigation_id",
 				Unique:  false,
-				Columns: []*schema.Column{AgentAsksColumns[4]},
+				Columns: []*schema.Column{AgentAsksColumns[3]},
 			},
 			{
 				Name:    "agentask_expires_at",
 				Unique:  false,
-				Columns: []*schema.Column{AgentAsksColumns[12]},
+				Columns: []*schema.Column{AgentAsksColumns[9]},
+			},
+			{
+				Name:    "agentask_replied_by_agent_id",
+				Unique:  false,
+				Columns: []*schema.Column{AgentAsksColumns[14]},
 			},
 		},
 	}
@@ -118,7 +151,7 @@ var (
 		{Name: "edited", Type: field.TypeBool, Default: false},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "agent_token_dm_messages", Type: field.TypeUUID},
+		{Name: "agent_token_id", Type: field.TypeUUID},
 	}
 	// AgentDmMessagesTable holds the schema information for the "agent_dm_messages" table.
 	AgentDmMessagesTable = &schema.Table{
@@ -133,6 +166,18 @@ var (
 				OnDelete:   schema.NoAction,
 			},
 		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "agentdmmessage_chat_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{AgentDmMessagesColumns[1], AgentDmMessagesColumns[7]},
+			},
+			{
+				Name:    "agentdmmessage_agent_token_id",
+				Unique:  false,
+				Columns: []*schema.Column{AgentDmMessagesColumns[9]},
+			},
+		},
 	}
 	// AgentMemoriesColumns holds the columns for the "agent_memories" table.
 	AgentMemoriesColumns = []*schema.Column{
@@ -141,7 +186,6 @@ var (
 		{Name: "memory_type", Type: field.TypeString, Default: "fact"},
 		{Name: "hash", Type: field.TypeString, Unique: true},
 		{Name: "embedding", Type: field.TypeJSON, Nullable: true},
-		{Name: "agent_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "agent_name", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "agent_type", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "investigation_id", Type: field.TypeString, Nullable: true, Default: ""},
@@ -154,27 +198,31 @@ var (
 		{Name: "expires_at", Type: field.TypeTime, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "agent_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// AgentMemoriesTable holds the schema information for the "agent_memories" table.
 	AgentMemoriesTable = &schema.Table{
 		Name:       "agent_memories",
 		Columns:    AgentMemoriesColumns,
 		PrimaryKey: []*schema.Column{AgentMemoriesColumns[0]},
-		Indexes: []*schema.Index{
+		ForeignKeys: []*schema.ForeignKey{
 			{
-				Name:    "agentmemory_hash",
-				Unique:  false,
-				Columns: []*schema.Column{AgentMemoriesColumns[3]},
+				Symbol:     "agent_memories_agent_tokens_memories",
+				Columns:    []*schema.Column{AgentMemoriesColumns[17]},
+				RefColumns: []*schema.Column{AgentTokensColumns[0]},
+				OnDelete:   schema.SetNull,
 			},
+		},
+		Indexes: []*schema.Index{
 			{
 				Name:    "agentmemory_agent_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{AgentMemoriesColumns[5], AgentMemoriesColumns[16]},
+				Columns: []*schema.Column{AgentMemoriesColumns[17], AgentMemoriesColumns[15]},
 			},
 			{
 				Name:    "agentmemory_investigation_id",
 				Unique:  false,
-				Columns: []*schema.Column{AgentMemoriesColumns[8]},
+				Columns: []*schema.Column{AgentMemoriesColumns[7]},
 			},
 			{
 				Name:    "agentmemory_memory_type",
@@ -184,12 +232,12 @@ var (
 			{
 				Name:    "agentmemory_expires_at",
 				Unique:  false,
-				Columns: []*schema.Column{AgentMemoriesColumns[15]},
+				Columns: []*schema.Column{AgentMemoriesColumns[14]},
 			},
 			{
 				Name:    "agentmemory_correlation_key",
 				Unique:  false,
-				Columns: []*schema.Column{AgentMemoriesColumns[9]},
+				Columns: []*schema.Column{AgentMemoriesColumns[8]},
 			},
 		},
 	}
@@ -217,9 +265,25 @@ var (
 		PrimaryKey: []*schema.Column{AgentTokensColumns[0]},
 		Indexes: []*schema.Index{
 			{
-				Name:    "agenttoken_lookup_prefix_revoked",
+				Name:    "agenttoken_lookup_prefix",
 				Unique:  false,
-				Columns: []*schema.Column{AgentTokensColumns[4], AgentTokensColumns[8]},
+				Columns: []*schema.Column{AgentTokensColumns[4]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "revoked = false AND enabled = true",
+				},
+			},
+			{
+				Name:    "agenttoken_expires_at",
+				Unique:  false,
+				Columns: []*schema.Column{AgentTokensColumns[7]},
+			},
+			{
+				Name:    "agenttoken_default_for_investigation",
+				Unique:  false,
+				Columns: []*schema.Column{AgentTokensColumns[12]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "default_for_investigation = true",
+				},
 			},
 		},
 	}
@@ -237,24 +301,32 @@ var (
 		{Name: "ends_at", Type: field.TypeTime, Nullable: true},
 		{Name: "generator_url", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "alert_number", Type: field.TypeInt64, Unique: true, Nullable: true},
-		{Name: "triage_result_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "enrichment", Type: field.TypeJSON, Nullable: true},
 		{Name: "triage_category", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "severity_classified", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "triage_result_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// AlertsTable holds the schema information for the "alerts" table.
 	AlertsTable = &schema.Table{
 		Name:       "alerts",
 		Columns:    AlertsColumns,
 		PrimaryKey: []*schema.Column{AlertsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "alerts_triage_results_alerts",
+				Columns:    []*schema.Column{AlertsColumns[18]},
+				RefColumns: []*schema.Column{TriageResultsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "alert_fingerprint_updated_at",
 				Unique:  false,
-				Columns: []*schema.Column{AlertsColumns[1], AlertsColumns[17]},
+				Columns: []*schema.Column{AlertsColumns[1], AlertsColumns[16]},
 			},
 			{
 				Name:    "alert_fingerprint",
@@ -267,12 +339,26 @@ var (
 			{
 				Name:    "alert_updated_at",
 				Unique:  false,
-				Columns: []*schema.Column{AlertsColumns[17]},
+				Columns: []*schema.Column{AlertsColumns[16]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "deleted_at IS NULL",
+				},
 			},
 			{
-				Name:    "alert_status",
+				Name:    "alert_status_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{AlertsColumns[2]},
+				Columns: []*schema.Column{AlertsColumns[2], AlertsColumns[15]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "deleted_at IS NULL",
+				},
+			},
+			{
+				Name:    "alert_triage_result_id",
+				Unique:  false,
+				Columns: []*schema.Column{AlertsColumns[18]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "deleted_at IS NULL",
+				},
 			},
 		},
 	}
@@ -285,7 +371,7 @@ var (
 		{Name: "actor_display_name", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "actor_user_id", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "source", Type: field.TypeString, Nullable: true, Default: ""},
-		{Name: "alert_events", Type: field.TypeUUID},
+		{Name: "alert_id", Type: field.TypeUUID},
 	}
 	// AlertEventsTable holds the schema information for the "alert_events" table.
 	AlertEventsTable = &schema.Table{
@@ -298,6 +384,13 @@ var (
 				Columns:    []*schema.Column{AlertEventsColumns[7]},
 				RefColumns: []*schema.Column{AlertsColumns[0]},
 				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "alertevent_alert_id_timestamp",
+				Unique:  false,
+				Columns: []*schema.Column{AlertEventsColumns[7], AlertEventsColumns[2]},
 			},
 		},
 	}
@@ -330,13 +423,13 @@ var (
 		{Name: "primary_alert_fingerprint", Type: field.TypeString, Default: ""},
 		{Name: "primary_alert_number", Type: field.TypeInt64, Nullable: true},
 		{Name: "escalation_level", Type: field.TypeString, Nullable: true, Default: ""},
-		{Name: "triage_result_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "triage_decision", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "triage_enrichment", Type: field.TypeJSON, Nullable: true},
 		{Name: "assignee_type", Type: field.TypeString, Default: "agent"},
 		{Name: "assignee_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "promoted_incident_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "promoted_incident_investigation_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "triage_result_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// AlertInvestigationsTable holds the schema information for the "alert_investigations" table.
 	AlertInvestigationsTable = &schema.Table{
@@ -346,27 +439,28 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "alert_investigations_incidents_promoted_alert_investigations",
-				Columns:    []*schema.Column{AlertInvestigationsColumns[32]},
+				Columns:    []*schema.Column{AlertInvestigationsColumns[31]},
 				RefColumns: []*schema.Column{IncidentsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "alert_investigations_incident_investigations_promoted_alert_investigations",
-				Columns:    []*schema.Column{AlertInvestigationsColumns[33]},
+				Columns:    []*schema.Column{AlertInvestigationsColumns[32]},
 				RefColumns: []*schema.Column{IncidentInvestigationsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "alert_investigations_triage_results_alert_investigations",
+				Columns:    []*schema.Column{AlertInvestigationsColumns[33]},
+				RefColumns: []*schema.Column{TriageResultsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 		},
 		Indexes: []*schema.Index{
 			{
-				Name:    "alertinvestigation_status",
+				Name:    "alertinvestigation_status_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{AlertInvestigationsColumns[3]},
-			},
-			{
-				Name:    "alertinvestigation_created_at",
-				Unique:  false,
-				Columns: []*schema.Column{AlertInvestigationsColumns[15]},
+				Columns: []*schema.Column{AlertInvestigationsColumns[3], AlertInvestigationsColumns[15]},
 			},
 			{
 				Name:    "alertinvestigation_correlation_key_status",
@@ -376,12 +470,12 @@ var (
 			{
 				Name:    "alertinvestigation_promoted_incident_id",
 				Unique:  false,
-				Columns: []*schema.Column{AlertInvestigationsColumns[32]},
+				Columns: []*schema.Column{AlertInvestigationsColumns[31]},
 			},
 			{
 				Name:    "alertinvestigation_promoted_incident_investigation_id",
 				Unique:  false,
-				Columns: []*schema.Column{AlertInvestigationsColumns[33]},
+				Columns: []*schema.Column{AlertInvestigationsColumns[32]},
 			},
 			{
 				Name:    "alertinvestigation_primary_alert_fingerprint",
@@ -392,6 +486,16 @@ var (
 				Name:    "alertinvestigation_primary_alert_number",
 				Unique:  false,
 				Columns: []*schema.Column{AlertInvestigationsColumns[25]},
+			},
+			{
+				Name:    "alertinvestigation_triage_result_id",
+				Unique:  false,
+				Columns: []*schema.Column{AlertInvestigationsColumns[33]},
+			},
+			{
+				Name:    "alertinvestigation_assignee_type_assignee_id_status",
+				Unique:  false,
+				Columns: []*schema.Column{AlertInvestigationsColumns[29], AlertInvestigationsColumns[30], AlertInvestigationsColumns[3]},
 			},
 		},
 	}
@@ -439,19 +543,9 @@ var (
 				Columns: []*schema.Column{AlertInvestigationAlertsColumns[1]},
 			},
 			{
-				Name:    "alertinvestigationalert_alert_number",
-				Unique:  false,
-				Columns: []*schema.Column{AlertInvestigationAlertsColumns[2]},
-			},
-			{
 				Name:    "alertinvestigationalert_alert_investigation_uuid",
 				Unique:  false,
 				Columns: []*schema.Column{AlertInvestigationAlertsColumns[14]},
-			},
-			{
-				Name:    "alertinvestigationalert_alert_id",
-				Unique:  false,
-				Columns: []*schema.Column{AlertInvestigationAlertsColumns[13]},
 			},
 			{
 				Name:    "alertinvestigationalert_alert_number_current",
@@ -567,6 +661,8 @@ var (
 		{Name: "success", Type: field.TypeBool, Default: true},
 		{Name: "details", Type: field.TypeJSON, Nullable: true},
 		{Name: "request_id", Type: field.TypeString, Nullable: true, Default: ""},
+		{Name: "entity_type", Type: field.TypeString, Nullable: true, Default: ""},
+		{Name: "entity_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// AuditLogsTable holds the schema information for the "audit_logs" table.
 	AuditLogsTable = &schema.Table{
@@ -575,14 +671,24 @@ var (
 		PrimaryKey: []*schema.Column{AuditLogsColumns[0]},
 		Indexes: []*schema.Index{
 			{
-				Name:    "auditlog_timestamp",
+				Name:    "auditlog_user_id_timestamp",
 				Unique:  false,
-				Columns: []*schema.Column{AuditLogsColumns[1]},
+				Columns: []*schema.Column{AuditLogsColumns[3], AuditLogsColumns[1]},
 			},
 			{
-				Name:    "auditlog_event",
+				Name:    "auditlog_event_timestamp",
 				Unique:  false,
-				Columns: []*schema.Column{AuditLogsColumns[2]},
+				Columns: []*schema.Column{AuditLogsColumns[2], AuditLogsColumns[1]},
+			},
+			{
+				Name:    "auditlog_entity_type_entity_id_timestamp",
+				Unique:  false,
+				Columns: []*schema.Column{AuditLogsColumns[10], AuditLogsColumns[11], AuditLogsColumns[1]},
+			},
+			{
+				Name:    "auditlog_request_id",
+				Unique:  false,
+				Columns: []*schema.Column{AuditLogsColumns[9]},
 			},
 		},
 	}
@@ -597,7 +703,6 @@ var (
 		{Name: "input_context", Type: field.TypeJSON},
 		{Name: "result", Type: field.TypeJSON, Nullable: true},
 		{Name: "result_schema", Type: field.TypeJSON, Nullable: true},
-		{Name: "linked_investigation_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "status", Type: field.TypeString, Default: "pending"},
 		{Name: "priority", Type: field.TypeInt, Default: 0},
 		{Name: "due_at", Type: field.TypeTime, Nullable: true},
@@ -611,6 +716,7 @@ var (
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "parent_task_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "incident_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "linked_investigation_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// CoordinationTasksTable holds the schema information for the "coordination_tasks" table.
 	CoordinationTasksTable = &schema.Table{
@@ -620,14 +726,20 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "coordination_tasks_coordination_tasks_child_tasks",
-				Columns:    []*schema.Column{CoordinationTasksColumns[21]},
+				Columns:    []*schema.Column{CoordinationTasksColumns[20]},
 				RefColumns: []*schema.Column{CoordinationTasksColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "coordination_tasks_incidents_coordination_tasks",
-				Columns:    []*schema.Column{CoordinationTasksColumns[22]},
+				Columns:    []*schema.Column{CoordinationTasksColumns[21]},
 				RefColumns: []*schema.Column{IncidentsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "coordination_tasks_incident_investigations_linked_coordination_tasks",
+				Columns:    []*schema.Column{CoordinationTasksColumns[22]},
+				RefColumns: []*schema.Column{IncidentInvestigationsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 		},
@@ -635,37 +747,42 @@ var (
 			{
 				Name:    "coordinationtask_incident_id",
 				Unique:  false,
-				Columns: []*schema.Column{CoordinationTasksColumns[22]},
+				Columns: []*schema.Column{CoordinationTasksColumns[21]},
 			},
 			{
-				Name:    "coordinationtask_status",
+				Name:    "coordinationtask_status_priority_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{CoordinationTasksColumns[10]},
+				Columns: []*schema.Column{CoordinationTasksColumns[9], CoordinationTasksColumns[10], CoordinationTasksColumns[18]},
 			},
 			{
 				Name:    "coordinationtask_assignee_agent_id_status",
 				Unique:  false,
-				Columns: []*schema.Column{CoordinationTasksColumns[3], CoordinationTasksColumns[10]},
+				Columns: []*schema.Column{CoordinationTasksColumns[3], CoordinationTasksColumns[9]},
 			},
 			{
 				Name:    "coordinationtask_parent_task_id",
 				Unique:  false,
-				Columns: []*schema.Column{CoordinationTasksColumns[21]},
+				Columns: []*schema.Column{CoordinationTasksColumns[20]},
 			},
 			{
 				Name:    "coordinationtask_incident_id_status",
 				Unique:  false,
-				Columns: []*schema.Column{CoordinationTasksColumns[22], CoordinationTasksColumns[10]},
+				Columns: []*schema.Column{CoordinationTasksColumns[21], CoordinationTasksColumns[9]},
 			},
 			{
 				Name:    "coordinationtask_assignee_role_status",
 				Unique:  false,
-				Columns: []*schema.Column{CoordinationTasksColumns[2], CoordinationTasksColumns[10]},
+				Columns: []*schema.Column{CoordinationTasksColumns[2], CoordinationTasksColumns[9]},
 			},
 			{
 				Name:    "coordinationtask_due_at",
 				Unique:  false,
-				Columns: []*schema.Column{CoordinationTasksColumns[12]},
+				Columns: []*schema.Column{CoordinationTasksColumns[11]},
+			},
+			{
+				Name:    "coordinationtask_linked_investigation_id",
+				Unique:  false,
+				Columns: []*schema.Column{CoordinationTasksColumns[22]},
 			},
 		},
 	}
@@ -716,7 +833,7 @@ var (
 		{Name: "channel", Type: field.TypeString},
 		{Name: "channel_name", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "post_id", Type: field.TypeString, Nullable: true, Default: ""},
-		{Name: "alert_delivery_targets", Type: field.TypeUUID},
+		{Name: "alert_id", Type: field.TypeUUID},
 	}
 	// DeliveryTargetsTable holds the schema information for the "delivery_targets" table.
 	DeliveryTargetsTable = &schema.Table{
@@ -729,6 +846,13 @@ var (
 				Columns:    []*schema.Column{DeliveryTargetsColumns[5]},
 				RefColumns: []*schema.Column{AlertsColumns[0]},
 				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "deliverytarget_alert_id",
+				Unique:  false,
+				Columns: []*schema.Column{DeliveryTargetsColumns[5]},
 			},
 		},
 	}
@@ -750,9 +874,7 @@ var (
 	}
 	// HandoffRecordsColumns holds the columns for the "handoff_records" table.
 	HandoffRecordsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUUID, Unique: true},
-		{Name: "outgoing_user_id", Type: field.TypeUUID, Nullable: true},
-		{Name: "incoming_user_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "id", Type: field.TypeUUID},
 		{Name: "handoff_at", Type: field.TypeTime},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "acknowledged"}, Default: "pending"},
 		{Name: "outgoing_notes", Type: field.TypeString, Nullable: true, Size: 2147483647},
@@ -762,6 +884,8 @@ var (
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "schedule_id", Type: field.TypeUUID},
+		{Name: "outgoing_user_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "incoming_user_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// HandoffRecordsTable holds the schema information for the "handoff_records" table.
 	HandoffRecordsTable = &schema.Table{
@@ -771,21 +895,43 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "handoff_records_on_call_schedules_schedule",
-				Columns:    []*schema.Column{HandoffRecordsColumns[11]},
+				Columns:    []*schema.Column{HandoffRecordsColumns[9]},
 				RefColumns: []*schema.Column{OnCallSchedulesColumns[0]},
 				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "handoff_records_users_outgoing_handoffs",
+				Columns:    []*schema.Column{HandoffRecordsColumns[10]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "handoff_records_users_incoming_handoffs",
+				Columns:    []*schema.Column{HandoffRecordsColumns[11]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.SetNull,
 			},
 		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "handoffrecord_schedule_id_handoff_at",
 				Unique:  false,
-				Columns: []*schema.Column{HandoffRecordsColumns[11], HandoffRecordsColumns[3]},
+				Columns: []*schema.Column{HandoffRecordsColumns[9], HandoffRecordsColumns[1]},
 			},
 			{
 				Name:    "handoffrecord_incoming_user_id_status",
 				Unique:  false,
-				Columns: []*schema.Column{HandoffRecordsColumns[2], HandoffRecordsColumns[4]},
+				Columns: []*schema.Column{HandoffRecordsColumns[11], HandoffRecordsColumns[2]},
+			},
+			{
+				Name:    "handoffrecord_outgoing_user_id",
+				Unique:  false,
+				Columns: []*schema.Column{HandoffRecordsColumns[10]},
+			},
+			{
+				Name:    "handoffrecord_status_handoff_at",
+				Unique:  false,
+				Columns: []*schema.Column{HandoffRecordsColumns[2], HandoffRecordsColumns[1]},
 			},
 		},
 	}
@@ -797,7 +943,6 @@ var (
 		{Name: "interval_seconds", Type: field.TypeInt},
 		{Name: "grace_seconds", Type: field.TypeInt, Default: 60},
 		{Name: "enabled", Type: field.TypeBool, Default: true},
-		{Name: "owner_team_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "status", Type: field.TypeString, Default: "healthy"},
 		{Name: "severity", Type: field.TypeString, Default: "warning"},
 		{Name: "labels", Type: field.TypeJSON, Nullable: true},
@@ -809,27 +954,41 @@ var (
 		{Name: "created_by", Type: field.TypeString, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "owner_team_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// HeartbeatsTable holds the schema information for the "heartbeats" table.
 	HeartbeatsTable = &schema.Table{
 		Name:       "heartbeats",
 		Columns:    HeartbeatsColumns,
 		PrimaryKey: []*schema.Column{HeartbeatsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "heartbeats_teams_heartbeats",
+				Columns:    []*schema.Column{HeartbeatsColumns[17]},
+				RefColumns: []*schema.Column{TeamsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "heartbeat_enabled_status_expires_at",
 				Unique:  false,
-				Columns: []*schema.Column{HeartbeatsColumns[5], HeartbeatsColumns[7], HeartbeatsColumns[13]},
+				Columns: []*schema.Column{HeartbeatsColumns[5], HeartbeatsColumns[6], HeartbeatsColumns[12]},
+			},
+			{
+				Name:    "heartbeat_enabled_last_ping_at",
+				Unique:  false,
+				Columns: []*schema.Column{HeartbeatsColumns[5], HeartbeatsColumns[11]},
 			},
 			{
 				Name:    "heartbeat_owner_team_id",
 				Unique:  false,
-				Columns: []*schema.Column{HeartbeatsColumns[6]},
+				Columns: []*schema.Column{HeartbeatsColumns[17]},
 			},
 			{
 				Name:    "heartbeat_lookup_prefix",
 				Unique:  false,
-				Columns: []*schema.Column{HeartbeatsColumns[11]},
+				Columns: []*schema.Column{HeartbeatsColumns[10]},
 			},
 		},
 	}
@@ -843,10 +1002,10 @@ var (
 		{Name: "ended_reason", Type: field.TypeString, Nullable: true},
 		{Name: "started_at", Type: field.TypeTime},
 		{Name: "ended_at", Type: field.TypeTime, Nullable: true},
-		{Name: "agent_token_ics_roles", Type: field.TypeUUID, Nullable: true},
-		{Name: "ics_role_assignment_parent", Type: field.TypeUUID, Unique: true, Nullable: true},
-		{Name: "incident_ics_roles", Type: field.TypeUUID},
-		{Name: "user_ics_role_assignments", Type: field.TypeUUID, Nullable: true},
+		{Name: "agent_token_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "parent_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "incident_id", Type: field.TypeUUID},
+		{Name: "user_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// IcsRoleAssignmentsTable holds the schema information for the "ics_role_assignments" table.
 	IcsRoleAssignmentsTable = &schema.Table{
@@ -861,7 +1020,7 @@ var (
 				OnDelete:   schema.SetNull,
 			},
 			{
-				Symbol:     "ics_role_assignments_ics_role_assignments_parent",
+				Symbol:     "ics_role_assignments_ics_role_assignments_children",
 				Columns:    []*schema.Column{IcsRoleAssignmentsColumns[9]},
 				RefColumns: []*schema.Column{IcsRoleAssignmentsColumns[0]},
 				OnDelete:   schema.SetNull,
@@ -890,6 +1049,34 @@ var (
 				Unique:  false,
 				Columns: []*schema.Column{IcsRoleAssignmentsColumns[2]},
 			},
+			{
+				Name:    "icsroleassignment_parent_id",
+				Unique:  false,
+				Columns: []*schema.Column{IcsRoleAssignmentsColumns[9]},
+			},
+			{
+				Name:    "icsroleassignment_incident_id",
+				Unique:  false,
+				Columns: []*schema.Column{IcsRoleAssignmentsColumns[10]},
+			},
+			{
+				Name:    "icsroleassignment_user_id",
+				Unique:  false,
+				Columns: []*schema.Column{IcsRoleAssignmentsColumns[11]},
+			},
+			{
+				Name:    "icsroleassignment_agent_token_id",
+				Unique:  false,
+				Columns: []*schema.Column{IcsRoleAssignmentsColumns[8]},
+			},
+			{
+				Name:    "icsroleassignment_incident_id_role_type",
+				Unique:  true,
+				Columns: []*schema.Column{IcsRoleAssignmentsColumns[10], IcsRoleAssignmentsColumns[1]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "status = 'active'",
+				},
+			},
 		},
 	}
 	// IncidentsColumns holds the columns for the "incidents" table.
@@ -904,13 +1091,8 @@ var (
 		{Name: "impact_level", Type: field.TypeString, Default: "medium"},
 		{Name: "priority", Type: field.TypeString, Default: "P4"},
 		{Name: "incident_type", Type: field.TypeString, Default: "real"},
-		{Name: "commander_id", Type: field.TypeUUID, Nullable: true},
-		{Name: "communicator_id", Type: field.TypeUUID, Nullable: true},
-		{Name: "on_call_responder_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "commander_assignee_type", Type: field.TypeString, Nullable: true, Default: "user"},
 		{Name: "communicator_assignee_type", Type: field.TypeString, Nullable: true, Default: "user"},
-		{Name: "service_id", Type: field.TypeUUID, Nullable: true},
-		{Name: "escalation_policy_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "conference_url", Type: field.TypeString, Default: ""},
 		{Name: "slack_channel_id", Type: field.TypeString, Nullable: true},
 		{Name: "slack_channel_name", Type: field.TypeString, Nullable: true, Default: ""},
@@ -935,7 +1117,11 @@ var (
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
-		{Name: "incident_post_mortem", Type: field.TypeUUID, Nullable: true},
+		{Name: "escalation_policy_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "service_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "commander_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "communicator_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "on_call_responder_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// IncidentsTable holds the schema information for the "incidents" table.
 	IncidentsTable = &schema.Table{
@@ -944,32 +1130,100 @@ var (
 		PrimaryKey: []*schema.Column{IncidentsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "incidents_post_mortems_post_mortem",
-				Columns:    []*schema.Column{IncidentsColumns[41]},
-				RefColumns: []*schema.Column{PostMortemsColumns[0]},
+				Symbol:     "incidents_escalation_policies_incidents",
+				Columns:    []*schema.Column{IncidentsColumns[36]},
+				RefColumns: []*schema.Column{EscalationPoliciesColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "incidents_services_incidents",
+				Columns:    []*schema.Column{IncidentsColumns[37]},
+				RefColumns: []*schema.Column{ServicesColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "incidents_users_commander_incidents",
+				Columns:    []*schema.Column{IncidentsColumns[38]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "incidents_users_communicator_incidents",
+				Columns:    []*schema.Column{IncidentsColumns[39]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "incidents_users_responder_incidents",
+				Columns:    []*schema.Column{IncidentsColumns[40]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 		},
 		Indexes: []*schema.Index{
 			{
-				Name:    "incident_status",
+				Name:    "incident_status_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{IncidentsColumns[5]},
+				Columns: []*schema.Column{IncidentsColumns[5], IncidentsColumns[33]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "deleted_at IS NULL",
+				},
 			},
 			{
 				Name:    "incident_severity",
 				Unique:  false,
 				Columns: []*schema.Column{IncidentsColumns[6]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "deleted_at IS NULL",
+				},
 			},
 			{
 				Name:    "incident_priority",
 				Unique:  false,
 				Columns: []*schema.Column{IncidentsColumns[8]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "deleted_at IS NULL",
+				},
 			},
 			{
-				Name:    "incident_created_at",
+				Name:    "incident_commander_id",
 				Unique:  false,
 				Columns: []*schema.Column{IncidentsColumns[38]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "deleted_at IS NULL",
+				},
+			},
+			{
+				Name:    "incident_communicator_id",
+				Unique:  false,
+				Columns: []*schema.Column{IncidentsColumns[39]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "deleted_at IS NULL",
+				},
+			},
+			{
+				Name:    "incident_on_call_responder_id",
+				Unique:  false,
+				Columns: []*schema.Column{IncidentsColumns[40]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "deleted_at IS NULL",
+				},
+			},
+			{
+				Name:    "incident_service_id",
+				Unique:  false,
+				Columns: []*schema.Column{IncidentsColumns[37]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "deleted_at IS NULL",
+				},
+			},
+			{
+				Name:    "incident_escalation_policy_id",
+				Unique:  false,
+				Columns: []*schema.Column{IncidentsColumns[36]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "deleted_at IS NULL",
+				},
 			},
 		},
 	}
@@ -992,7 +1246,7 @@ var (
 		{Name: "metadata", Type: field.TypeJSON},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "incident_coordination_messages", Type: field.TypeUUID},
+		{Name: "incident_id", Type: field.TypeUUID},
 		{Name: "parent_message_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// IncidentCoordinationMessagesTable holds the schema information for the "incident_coordination_messages" table.
@@ -1040,6 +1294,11 @@ var (
 				Unique:  false,
 				Columns: []*schema.Column{IncidentCoordinationMessagesColumns[13]},
 			},
+			{
+				Name:    "incidentcoordinationmessage_incident_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{IncidentCoordinationMessagesColumns[17], IncidentCoordinationMessagesColumns[15]},
+			},
 		},
 	}
 	// IncidentDocumentsColumns holds the columns for the "incident_documents" table.
@@ -1049,8 +1308,8 @@ var (
 		{Name: "content", Type: field.TypeString, Size: 2147483647, Default: ""},
 		{Name: "version", Type: field.TypeInt, Default: 1},
 		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "incident_documents", Type: field.TypeUUID},
-		{Name: "user_document_edits", Type: field.TypeUUID, Nullable: true},
+		{Name: "incident_id", Type: field.TypeUUID},
+		{Name: "updated_by_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// IncidentDocumentsTable holds the schema information for the "incident_documents" table.
 	IncidentDocumentsTable = &schema.Table{
@@ -1073,9 +1332,14 @@ var (
 		},
 		Indexes: []*schema.Index{
 			{
-				Name:    "incidentdocument_section",
+				Name:    "incidentdocument_incident_id_section",
+				Unique:  true,
+				Columns: []*schema.Column{IncidentDocumentsColumns[5], IncidentDocumentsColumns[1]},
+			},
+			{
+				Name:    "incidentdocument_updated_by_id",
 				Unique:  false,
-				Columns: []*schema.Column{IncidentDocumentsColumns[1]},
+				Columns: []*schema.Column{IncidentDocumentsColumns[6]},
 			},
 		},
 	}
@@ -1133,19 +1397,9 @@ var (
 		},
 		Indexes: []*schema.Index{
 			{
-				Name:    "incidentinvestigation_incident_id",
+				Name:    "incidentinvestigation_status_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{IncidentInvestigationsColumns[22]},
-			},
-			{
-				Name:    "incidentinvestigation_status",
-				Unique:  false,
-				Columns: []*schema.Column{IncidentInvestigationsColumns[2]},
-			},
-			{
-				Name:    "incidentinvestigation_created_at",
-				Unique:  false,
-				Columns: []*schema.Column{IncidentInvestigationsColumns[14]},
+				Columns: []*schema.Column{IncidentInvestigationsColumns[2], IncidentInvestigationsColumns[14]},
 			},
 			{
 				Name:    "incidentinvestigation_source_alert_investigation_id",
@@ -1161,6 +1415,11 @@ var (
 				Name:    "incidentinvestigation_parent_investigation_id",
 				Unique:  false,
 				Columns: []*schema.Column{IncidentInvestigationsColumns[23]},
+			},
+			{
+				Name:    "incidentinvestigation_assignee_type_assignee_id_status",
+				Unique:  false,
+				Columns: []*schema.Column{IncidentInvestigationsColumns[19], IncidentInvestigationsColumns[20], IncidentInvestigationsColumns[2]},
 			},
 		},
 	}
@@ -1217,7 +1476,7 @@ var (
 		{Name: "metadata", Type: field.TypeJSON},
 		{Name: "ics_event_type", Type: field.TypeString, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
-		{Name: "incident_timeline", Type: field.TypeUUID},
+		{Name: "incident_id", Type: field.TypeUUID},
 	}
 	// IncidentTimelineEntriesTable holds the schema information for the "incident_timeline_entries" table.
 	IncidentTimelineEntriesTable = &schema.Table{
@@ -1234,9 +1493,9 @@ var (
 		},
 		Indexes: []*schema.Index{
 			{
-				Name:    "incidenttimelineentry_created_at",
+				Name:    "incidenttimelineentry_incident_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{IncidentTimelineEntriesColumns[7]},
+				Columns: []*schema.Column{IncidentTimelineEntriesColumns[8], IncidentTimelineEntriesColumns[7]},
 			},
 		},
 	}
@@ -1349,7 +1608,6 @@ var (
 		{Name: "body_markdown", Type: field.TypeString},
 		{Name: "tags", Type: field.TypeJSON, Nullable: true},
 		{Name: "selectors", Type: field.TypeJSON, Nullable: true},
-		{Name: "author_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "author_type", Type: field.TypeString, Default: "user"},
 		{Name: "author_name", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "source_investigation_id", Type: field.TypeString, Nullable: true, Default: ""},
@@ -1357,22 +1615,36 @@ var (
 		{Name: "expires_at", Type: field.TypeTime, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "author_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// KnowledgeNotesTable holds the schema information for the "knowledge_notes" table.
 	KnowledgeNotesTable = &schema.Table{
 		Name:       "knowledge_notes",
 		Columns:    KnowledgeNotesColumns,
 		PrimaryKey: []*schema.Column{KnowledgeNotesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "knowledge_notes_users_knowledge_notes",
+				Columns:    []*schema.Column{KnowledgeNotesColumns[13]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "knowledgenote_kind_updated_at",
 				Unique:  false,
-				Columns: []*schema.Column{KnowledgeNotesColumns[1], KnowledgeNotesColumns[13]},
+				Columns: []*schema.Column{KnowledgeNotesColumns[1], KnowledgeNotesColumns[12]},
 			},
 			{
 				Name:    "knowledgenote_expires_at",
 				Unique:  false,
-				Columns: []*schema.Column{KnowledgeNotesColumns[11]},
+				Columns: []*schema.Column{KnowledgeNotesColumns[10]},
+			},
+			{
+				Name:    "knowledgenote_author_id",
+				Unique:  false,
+				Columns: []*schema.Column{KnowledgeNotesColumns[13]},
 			},
 		},
 	}
@@ -1470,29 +1742,43 @@ var (
 	// OidcIdentitiesColumns holds the columns for the "oidc_identities" table.
 	OidcIdentitiesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "user_id", Type: field.TypeUUID},
-		{Name: "provider_id", Type: field.TypeUUID},
 		{Name: "subject", Type: field.TypeString},
 		{Name: "issuer", Type: field.TypeString, Default: ""},
 		{Name: "email", Type: field.TypeString, Default: ""},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "provider_id", Type: field.TypeUUID},
+		{Name: "user_id", Type: field.TypeUUID},
 	}
 	// OidcIdentitiesTable holds the schema information for the "oidc_identities" table.
 	OidcIdentitiesTable = &schema.Table{
 		Name:       "oidc_identities",
 		Columns:    OidcIdentitiesColumns,
 		PrimaryKey: []*schema.Column{OidcIdentitiesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "oidc_identities_oidc_providers_oidc_identities",
+				Columns:    []*schema.Column{OidcIdentitiesColumns[6]},
+				RefColumns: []*schema.Column{OidcProvidersColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "oidc_identities_users_oidc_identities",
+				Columns:    []*schema.Column{OidcIdentitiesColumns[7]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "oidcidentity_provider_id_subject",
 				Unique:  true,
-				Columns: []*schema.Column{OidcIdentitiesColumns[2], OidcIdentitiesColumns[3]},
+				Columns: []*schema.Column{OidcIdentitiesColumns[6], OidcIdentitiesColumns[1]},
 			},
 			{
 				Name:    "oidcidentity_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{OidcIdentitiesColumns[1]},
+				Columns: []*schema.Column{OidcIdentitiesColumns[7]},
 			},
 		},
 	}
@@ -1519,31 +1805,52 @@ var (
 				Unique:  false,
 				Columns: []*schema.Column{OidcProvidersColumns[6]},
 			},
+			{
+				Name:    "oidcprovider_name",
+				Unique:  true,
+				Columns: []*schema.Column{OidcProvidersColumns[1]},
+			},
+			{
+				Name:    "oidcprovider_issuer",
+				Unique:  true,
+				Columns: []*schema.Column{OidcProvidersColumns[2]},
+			},
 		},
 	}
 	// OnCallSchedulesColumns holds the columns for the "on_call_schedules" table.
 	OnCallSchedulesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "team_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "team_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// OnCallSchedulesTable holds the schema information for the "on_call_schedules" table.
 	OnCallSchedulesTable = &schema.Table{
 		Name:       "on_call_schedules",
 		Columns:    OnCallSchedulesColumns,
 		PrimaryKey: []*schema.Column{OnCallSchedulesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "on_call_schedules_teams_on_call_schedule",
+				Columns:    []*schema.Column{OnCallSchedulesColumns[3]},
+				RefColumns: []*schema.Column{TeamsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "oncallschedule_team_id",
-				Unique:  false,
-				Columns: []*schema.Column{OnCallSchedulesColumns[1]},
+				Unique:  true,
+				Columns: []*schema.Column{OnCallSchedulesColumns[3]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "team_id IS NOT NULL",
+				},
 			},
 		},
 	}
 	// OutboxesColumns holds the columns for the "outboxes" table.
 	OutboxesColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUUID, Unique: true},
+		{Name: "id", Type: field.TypeUUID},
 		{Name: "event_type", Type: field.TypeString},
 		{Name: "aggregate_id", Type: field.TypeString, Default: ""},
 		{Name: "exchange", Type: field.TypeString},
@@ -1563,9 +1870,12 @@ var (
 		PrimaryKey: []*schema.Column{OutboxesColumns[0]},
 		Indexes: []*schema.Index{
 			{
-				Name:    "outbox_status_next_attempt_at",
+				Name:    "outbox_next_attempt_at_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{OutboxesColumns[6], OutboxesColumns[11]},
+				Columns: []*schema.Column{OutboxesColumns[11], OutboxesColumns[9]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "status IN ('pending', 'failed')",
+				},
 			},
 			{
 				Name:    "outbox_aggregate_id",
@@ -1582,29 +1892,41 @@ var (
 	// PasswordResetTokensColumns holds the columns for the "password_reset_tokens" table.
 	PasswordResetTokensColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "user_id", Type: field.TypeUUID},
 		{Name: "token_hash", Type: field.TypeString, Unique: true},
 		{Name: "expires_at", Type: field.TypeTime},
 		{Name: "used", Type: field.TypeBool, Default: false},
 		{Name: "created_at", Type: field.TypeTime},
+		{Name: "user_id", Type: field.TypeUUID},
 	}
 	// PasswordResetTokensTable holds the schema information for the "password_reset_tokens" table.
 	PasswordResetTokensTable = &schema.Table{
 		Name:       "password_reset_tokens",
 		Columns:    PasswordResetTokensColumns,
 		PrimaryKey: []*schema.Column{PasswordResetTokensColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "password_reset_tokens_users_password_reset_tokens",
+				Columns:    []*schema.Column{PasswordResetTokensColumns[5]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "passwordresettoken_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{PasswordResetTokensColumns[1]},
+				Columns: []*schema.Column{PasswordResetTokensColumns[5]},
+			},
+			{
+				Name:    "passwordresettoken_expires_at",
+				Unique:  false,
+				Columns: []*schema.Column{PasswordResetTokensColumns[2]},
 			},
 		},
 	}
 	// PersonalAccessTokensColumns holds the columns for the "personal_access_tokens" table.
 	PersonalAccessTokensColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "user_id", Type: field.TypeUUID},
 		{Name: "name", Type: field.TypeString, Size: 128},
 		{Name: "token_hash", Type: field.TypeString, Unique: true},
 		{Name: "lookup_prefix", Type: field.TypeString},
@@ -1613,28 +1935,45 @@ var (
 		{Name: "last_used_at", Type: field.TypeTime, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "revoked", Type: field.TypeBool, Default: false},
+		{Name: "user_id", Type: field.TypeUUID},
 	}
 	// PersonalAccessTokensTable holds the schema information for the "personal_access_tokens" table.
 	PersonalAccessTokensTable = &schema.Table{
 		Name:       "personal_access_tokens",
 		Columns:    PersonalAccessTokensColumns,
 		PrimaryKey: []*schema.Column{PersonalAccessTokensColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "personal_access_tokens_users_personal_access_tokens",
+				Columns:    []*schema.Column{PersonalAccessTokensColumns[9]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
 		Indexes: []*schema.Index{
 			{
-				Name:    "personalaccesstoken_lookup_prefix_revoked",
+				Name:    "personalaccesstoken_lookup_prefix",
 				Unique:  false,
-				Columns: []*schema.Column{PersonalAccessTokensColumns[4], PersonalAccessTokensColumns[9]},
+				Columns: []*schema.Column{PersonalAccessTokensColumns[3]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "revoked = false",
+				},
 			},
 			{
 				Name:    "personalaccesstoken_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{PersonalAccessTokensColumns[1]},
+				Columns: []*schema.Column{PersonalAccessTokensColumns[9]},
+			},
+			{
+				Name:    "personalaccesstoken_expires_at",
+				Unique:  false,
+				Columns: []*schema.Column{PersonalAccessTokensColumns[5]},
 			},
 		},
 	}
 	// PlaybooksColumns holds the columns for the "playbooks" table.
 	PlaybooksColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUUID, Unique: true},
+		{Name: "id", Type: field.TypeUUID},
 		{Name: "title", Type: field.TypeString, Unique: true},
 		{Name: "kind", Type: field.TypeEnum, Enums: []string{"procedure", "mitigation"}},
 		{Name: "summary", Type: field.TypeString, Nullable: true, Size: 2147483647},
@@ -1667,7 +2006,7 @@ var (
 	}
 	// PlaybookStepsColumns holds the columns for the "playbook_steps" table.
 	PlaybookStepsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUUID, Unique: true},
+		{Name: "id", Type: field.TypeUUID},
 		{Name: "step_number", Type: field.TypeInt},
 		{Name: "title", Type: field.TypeString},
 		{Name: "description", Type: field.TypeString, Nullable: true, Size: 2147483647},
@@ -1701,7 +2040,6 @@ var (
 	// PostMortemsColumns holds the columns for the "post_mortems" table.
 	PostMortemsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "incident_id", Type: field.TypeUUID, Unique: true},
 		{Name: "title", Type: field.TypeString, Default: ""},
 		{Name: "status", Type: field.TypeString, Default: "draft"},
 		{Name: "summary", Type: field.TypeString, Size: 2147483647, Default: ""},
@@ -1714,21 +2052,46 @@ var (
 		{Name: "what_went_wrong", Type: field.TypeString, Size: 2147483647, Default: ""},
 		{Name: "blameless_confirmed", Type: field.TypeBool, Default: false},
 		{Name: "blameless_notes", Type: field.TypeString, Size: 2147483647, Default: ""},
-		{Name: "approved_by_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "published_at", Type: field.TypeTime, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "incident_id", Type: field.TypeUUID, Unique: true},
+		{Name: "approved_by_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// PostMortemsTable holds the schema information for the "post_mortems" table.
 	PostMortemsTable = &schema.Table{
 		Name:       "post_mortems",
 		Columns:    PostMortemsColumns,
 		PrimaryKey: []*schema.Column{PostMortemsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "post_mortems_incidents_post_mortem",
+				Columns:    []*schema.Column{PostMortemsColumns[16]},
+				RefColumns: []*schema.Column{IncidentsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "post_mortems_users_approved_post_mortems",
+				Columns:    []*schema.Column{PostMortemsColumns[17]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
 		Indexes: []*schema.Index{
 			{
-				Name:    "postmortem_status",
+				Name:    "postmortem_incident_id",
 				Unique:  false,
-				Columns: []*schema.Column{PostMortemsColumns[3]},
+				Columns: []*schema.Column{PostMortemsColumns[16]},
+			},
+			{
+				Name:    "postmortem_status_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{PostMortemsColumns[2], PostMortemsColumns[14]},
+			},
+			{
+				Name:    "postmortem_approved_by_id",
+				Unique:  false,
+				Columns: []*schema.Column{PostMortemsColumns[17]},
 			},
 		},
 	}
@@ -1747,7 +2110,6 @@ var (
 	// ScheduleLayersColumns holds the columns for the "schedule_layers" table.
 	ScheduleLayersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "schedule_id", Type: field.TypeUUID},
 		{Name: "name", Type: field.TypeString, Default: ""},
 		{Name: "rotation_type", Type: field.TypeString, Default: "weekly"},
 		{Name: "rotation_interval", Type: field.TypeInt, Default: 1},
@@ -1761,50 +2123,78 @@ var (
 		{Name: "user_ids", Type: field.TypeJSON},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "schedule_id", Type: field.TypeUUID},
 	}
 	// ScheduleLayersTable holds the schema information for the "schedule_layers" table.
 	ScheduleLayersTable = &schema.Table{
 		Name:       "schedule_layers",
 		Columns:    ScheduleLayersColumns,
 		PrimaryKey: []*schema.Column{ScheduleLayersColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "schedule_layers_on_call_schedules_layers",
+				Columns:    []*schema.Column{ScheduleLayersColumns[14]},
+				RefColumns: []*schema.Column{OnCallSchedulesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "schedulelayer_schedule_id",
 				Unique:  false,
-				Columns: []*schema.Column{ScheduleLayersColumns[1]},
+				Columns: []*schema.Column{ScheduleLayersColumns[14]},
+			},
+			{
+				Name:    "schedulelayer_schedule_id_priority",
+				Unique:  true,
+				Columns: []*schema.Column{ScheduleLayersColumns[14], ScheduleLayersColumns[10]},
 			},
 		},
 	}
 	// ScheduleOverridesColumns holds the columns for the "schedule_overrides" table.
 	ScheduleOverridesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "schedule_id", Type: field.TypeUUID},
-		{Name: "user_id", Type: field.TypeUUID},
 		{Name: "start_at", Type: field.TypeTime},
 		{Name: "end_at", Type: field.TypeTime},
 		{Name: "created_by", Type: field.TypeUUID, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
+		{Name: "schedule_id", Type: field.TypeUUID},
+		{Name: "user_id", Type: field.TypeUUID},
 	}
 	// ScheduleOverridesTable holds the schema information for the "schedule_overrides" table.
 	ScheduleOverridesTable = &schema.Table{
 		Name:       "schedule_overrides",
 		Columns:    ScheduleOverridesColumns,
 		PrimaryKey: []*schema.Column{ScheduleOverridesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "schedule_overrides_on_call_schedules_overrides",
+				Columns:    []*schema.Column{ScheduleOverridesColumns[5]},
+				RefColumns: []*schema.Column{OnCallSchedulesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "schedule_overrides_users_schedule_overrides",
+				Columns:    []*schema.Column{ScheduleOverridesColumns[6]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "scheduleoverride_schedule_id",
 				Unique:  false,
-				Columns: []*schema.Column{ScheduleOverridesColumns[1]},
+				Columns: []*schema.Column{ScheduleOverridesColumns[5]},
 			},
 			{
 				Name:    "scheduleoverride_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{ScheduleOverridesColumns[2]},
+				Columns: []*schema.Column{ScheduleOverridesColumns[6]},
 			},
 			{
 				Name:    "scheduleoverride_start_at_end_at",
 				Unique:  false,
-				Columns: []*schema.Column{ScheduleOverridesColumns[3], ScheduleOverridesColumns[4]},
+				Columns: []*schema.Column{ScheduleOverridesColumns[1], ScheduleOverridesColumns[2]},
 			},
 		},
 	}
@@ -1814,58 +2204,95 @@ var (
 		{Name: "name", Type: field.TypeString, Unique: true},
 		{Name: "display_name", Type: field.TypeString, Default: ""},
 		{Name: "description", Type: field.TypeString, Default: ""},
-		{Name: "owner_team_id", Type: field.TypeUUID, Nullable: true},
-		{Name: "escalation_policy_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "label_matchers", Type: field.TypeJSON},
 		{Name: "sla_response_minutes", Type: field.TypeInt, Default: 0},
 		{Name: "sla_resolve_minutes", Type: field.TypeInt, Default: 0},
 		{Name: "status", Type: field.TypeString, Default: "operational"},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "escalation_policy_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "owner_team_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// ServicesTable holds the schema information for the "services" table.
 	ServicesTable = &schema.Table{
 		Name:       "services",
 		Columns:    ServicesColumns,
 		PrimaryKey: []*schema.Column{ServicesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "services_escalation_policies_services",
+				Columns:    []*schema.Column{ServicesColumns[10]},
+				RefColumns: []*schema.Column{EscalationPoliciesColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "services_teams_owned_services",
+				Columns:    []*schema.Column{ServicesColumns[11]},
+				RefColumns: []*schema.Column{TeamsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "service_status",
 				Unique:  false,
-				Columns: []*schema.Column{ServicesColumns[9]},
+				Columns: []*schema.Column{ServicesColumns[7]},
+			},
+			{
+				Name:    "service_owner_team_id",
+				Unique:  false,
+				Columns: []*schema.Column{ServicesColumns[11]},
+			},
+			{
+				Name:    "service_escalation_policy_id",
+				Unique:  false,
+				Columns: []*schema.Column{ServicesColumns[10]},
 			},
 		},
 	}
 	// ServiceDependenciesColumns holds the columns for the "service_dependencies" table.
 	ServiceDependenciesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "service_id", Type: field.TypeUUID},
-		{Name: "dependent_on_service_id", Type: field.TypeUUID},
 		{Name: "dependency_type", Type: field.TypeString, Default: "depends_on"},
 		{Name: "created_at", Type: field.TypeTime},
+		{Name: "service_id", Type: field.TypeUUID},
+		{Name: "dependent_on_service_id", Type: field.TypeUUID},
 	}
 	// ServiceDependenciesTable holds the schema information for the "service_dependencies" table.
 	ServiceDependenciesTable = &schema.Table{
 		Name:       "service_dependencies",
 		Columns:    ServiceDependenciesColumns,
 		PrimaryKey: []*schema.Column{ServiceDependenciesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "service_dependencies_services_dependencies",
+				Columns:    []*schema.Column{ServiceDependenciesColumns[3]},
+				RefColumns: []*schema.Column{ServicesColumns[0]},
+				OnDelete:   schema.Restrict,
+			},
+			{
+				Symbol:     "service_dependencies_services_depended_on_by",
+				Columns:    []*schema.Column{ServiceDependenciesColumns[4]},
+				RefColumns: []*schema.Column{ServicesColumns[0]},
+				OnDelete:   schema.Restrict,
+			},
+		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "servicedependency_service_id_dependent_on_service_id",
 				Unique:  true,
-				Columns: []*schema.Column{ServiceDependenciesColumns[1], ServiceDependenciesColumns[2]},
+				Columns: []*schema.Column{ServiceDependenciesColumns[3], ServiceDependenciesColumns[4]},
 			},
 			{
 				Name:    "servicedependency_dependent_on_service_id",
 				Unique:  false,
-				Columns: []*schema.Column{ServiceDependenciesColumns[2]},
+				Columns: []*schema.Column{ServiceDependenciesColumns[4]},
 			},
 		},
 	}
 	// SessionsColumns holds the columns for the "sessions" table.
 	SessionsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "user_id", Type: field.TypeUUID},
 		{Name: "id_hash", Type: field.TypeString, Unique: true},
 		{Name: "refresh_token_hash", Type: field.TypeString, Nullable: true},
 		{Name: "prev_refresh_token_hashes", Type: field.TypeJSON, Nullable: true},
@@ -1875,39 +2302,47 @@ var (
 		{Name: "last_used_at", Type: field.TypeTime},
 		{Name: "ip", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "user_agent", Type: field.TypeString, Nullable: true, Default: ""},
+		{Name: "user_id", Type: field.TypeUUID},
 	}
 	// SessionsTable holds the schema information for the "sessions" table.
 	SessionsTable = &schema.Table{
 		Name:       "sessions",
 		Columns:    SessionsColumns,
 		PrimaryKey: []*schema.Column{SessionsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "sessions_users_sessions",
+				Columns:    []*schema.Column{SessionsColumns[10]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "session_refresh_token_hash",
 				Unique:  false,
-				Columns: []*schema.Column{SessionsColumns[3]},
+				Columns: []*schema.Column{SessionsColumns[2]},
 			},
 			{
 				Name:    "session_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{SessionsColumns[1]},
+				Columns: []*schema.Column{SessionsColumns[10]},
 			},
 			{
 				Name:    "session_family_id",
 				Unique:  false,
-				Columns: []*schema.Column{SessionsColumns[5]},
+				Columns: []*schema.Column{SessionsColumns[4]},
 			},
 			{
 				Name:    "session_expires_at",
 				Unique:  false,
-				Columns: []*schema.Column{SessionsColumns[7]},
+				Columns: []*schema.Column{SessionsColumns[6]},
 			},
 		},
 	}
 	// SharedSecretsColumns holds the columns for the "shared_secrets" table.
 	SharedSecretsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "provider_id", Type: field.TypeUUID},
 		{Name: "name", Type: field.TypeString},
 		{Name: "secret_id", Type: field.TypeString},
 		{Name: "description", Type: field.TypeString, Default: ""},
@@ -1917,22 +2352,36 @@ var (
 		{Name: "allowed_agent_ids", Type: field.TypeJSON, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "provider_id", Type: field.TypeUUID},
 	}
 	// SharedSecretsTable holds the schema information for the "shared_secrets" table.
 	SharedSecretsTable = &schema.Table{
 		Name:       "shared_secrets",
 		Columns:    SharedSecretsColumns,
 		PrimaryKey: []*schema.Column{SharedSecretsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "shared_secrets_credential_providers_shared_secrets",
+				Columns:    []*schema.Column{SharedSecretsColumns[10]},
+				RefColumns: []*schema.Column{CredentialProvidersColumns[0]},
+				OnDelete:   schema.Restrict,
+			},
+		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "sharedsecret_secret_id",
 				Unique:  true,
-				Columns: []*schema.Column{SharedSecretsColumns[3]},
+				Columns: []*schema.Column{SharedSecretsColumns[2]},
 			},
 			{
 				Name:    "sharedsecret_provider_id",
 				Unique:  false,
-				Columns: []*schema.Column{SharedSecretsColumns[1]},
+				Columns: []*schema.Column{SharedSecretsColumns[10]},
+			},
+			{
+				Name:    "sharedsecret_provider_id_name",
+				Unique:  true,
+				Columns: []*schema.Column{SharedSecretsColumns[10], SharedSecretsColumns[1]},
 			},
 		},
 	}
@@ -1944,45 +2393,77 @@ var (
 		{Name: "description", Type: field.TypeString, Default: ""},
 		{Name: "visibility", Type: field.TypeString, Default: "internal"},
 		{Name: "enabled", Type: field.TypeBool, Default: true},
-		{Name: "owner_team_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "owner_team_id", Type: field.TypeUUID, Nullable: true},
 	}
 	// StatusPagesTable holds the schema information for the "status_pages" table.
 	StatusPagesTable = &schema.Table{
 		Name:       "status_pages",
 		Columns:    StatusPagesColumns,
 		PrimaryKey: []*schema.Column{StatusPagesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "status_pages_teams_owned_status_pages",
+				Columns:    []*schema.Column{StatusPagesColumns[8]},
+				RefColumns: []*schema.Column{TeamsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "statuspage_enabled",
 				Unique:  false,
 				Columns: []*schema.Column{StatusPagesColumns[5]},
 			},
+			{
+				Name:    "statuspage_owner_team_id",
+				Unique:  false,
+				Columns: []*schema.Column{StatusPagesColumns[8]},
+			},
 		},
 	}
 	// StatusPageComponentsColumns holds the columns for the "status_page_components" table.
 	StatusPageComponentsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "status_page_id", Type: field.TypeUUID},
 		{Name: "name", Type: field.TypeString},
 		{Name: "description", Type: field.TypeString, Default: ""},
-		{Name: "service_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "display_order", Type: field.TypeInt, Default: 0},
 		{Name: "status", Type: field.TypeString, Default: "operational"},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "service_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "status_page_id", Type: field.TypeUUID},
 	}
 	// StatusPageComponentsTable holds the schema information for the "status_page_components" table.
 	StatusPageComponentsTable = &schema.Table{
 		Name:       "status_page_components",
 		Columns:    StatusPageComponentsColumns,
 		PrimaryKey: []*schema.Column{StatusPageComponentsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "status_page_components_services_status_page_components",
+				Columns:    []*schema.Column{StatusPageComponentsColumns[7]},
+				RefColumns: []*schema.Column{ServicesColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "status_page_components_status_pages_components",
+				Columns:    []*schema.Column{StatusPageComponentsColumns[8]},
+				RefColumns: []*schema.Column{StatusPagesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "statuspagecomponent_status_page_id_display_order",
 				Unique:  false,
-				Columns: []*schema.Column{StatusPageComponentsColumns[1], StatusPageComponentsColumns[5]},
+				Columns: []*schema.Column{StatusPageComponentsColumns[8], StatusPageComponentsColumns[3]},
+			},
+			{
+				Name:    "statuspagecomponent_service_id",
+				Unique:  false,
+				Columns: []*schema.Column{StatusPageComponentsColumns[7]},
 			},
 		},
 	}
@@ -2015,26 +2496,40 @@ var (
 	// TeamMembersColumns holds the columns for the "team_members" table.
 	TeamMembersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "team_id", Type: field.TypeUUID},
-		{Name: "user_id", Type: field.TypeUUID},
 		{Name: "role", Type: field.TypeString, Default: "member"},
 		{Name: "created_at", Type: field.TypeTime},
+		{Name: "team_id", Type: field.TypeUUID},
+		{Name: "user_id", Type: field.TypeUUID},
 	}
 	// TeamMembersTable holds the schema information for the "team_members" table.
 	TeamMembersTable = &schema.Table{
 		Name:       "team_members",
 		Columns:    TeamMembersColumns,
 		PrimaryKey: []*schema.Column{TeamMembersColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "team_members_teams_team_members",
+				Columns:    []*schema.Column{TeamMembersColumns[3]},
+				RefColumns: []*schema.Column{TeamsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "team_members_users_team_members",
+				Columns:    []*schema.Column{TeamMembersColumns[4]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "teammember_team_id_user_id",
 				Unique:  true,
-				Columns: []*schema.Column{TeamMembersColumns[1], TeamMembersColumns[2]},
+				Columns: []*schema.Column{TeamMembersColumns[3], TeamMembersColumns[4]},
 			},
 			{
 				Name:    "teammember_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{TeamMembersColumns[2]},
+				Columns: []*schema.Column{TeamMembersColumns[4]},
 			},
 		},
 	}
@@ -2057,19 +2552,27 @@ var (
 		{Name: "context_used", Type: field.TypeJSON, Nullable: true},
 		{Name: "outcome", Type: field.TypeString, Default: "pending"},
 		{Name: "overridden_to", Type: field.TypeString, Nullable: true, Default: ""},
-		{Name: "overridden_by", Type: field.TypeUUID, Nullable: true},
 		{Name: "overridden_at", Type: field.TypeTime, Nullable: true},
 		{Name: "model_used", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "triage_duration_ms", Type: field.TypeInt64, Default: 0},
 		{Name: "trace_id", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "overridden_by", Type: field.TypeUUID, Nullable: true},
 	}
 	// TriageResultsTable holds the schema information for the "triage_results" table.
 	TriageResultsTable = &schema.Table{
 		Name:       "triage_results",
 		Columns:    TriageResultsColumns,
 		PrimaryKey: []*schema.Column{TriageResultsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "triage_results_users_triage_overrides",
+				Columns:    []*schema.Column{TriageResultsColumns[23]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "triageresult_correlation_key",
@@ -2089,7 +2592,12 @@ var (
 			{
 				Name:    "triageresult_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{TriageResultsColumns[22]},
+				Columns: []*schema.Column{TriageResultsColumns[21]},
+			},
+			{
+				Name:    "triageresult_overridden_by",
+				Unique:  false,
+				Columns: []*schema.Column{TriageResultsColumns[23]},
 			},
 		},
 	}
@@ -2106,25 +2614,33 @@ var (
 		{Name: "enrichment", Type: field.TypeJSON, Nullable: true},
 		{Name: "priority", Type: field.TypeInt, Default: 0},
 		{Name: "enabled", Type: field.TypeBool, Default: true},
-		{Name: "created_by", Type: field.TypeUUID, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "created_by", Type: field.TypeUUID, Nullable: true},
 	}
 	// TriageRulesTable holds the schema information for the "triage_rules" table.
 	TriageRulesTable = &schema.Table{
 		Name:       "triage_rules",
 		Columns:    TriageRulesColumns,
 		PrimaryKey: []*schema.Column{TriageRulesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "triage_rules_users_triage_rules",
+				Columns:    []*schema.Column{TriageRulesColumns[13]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
 		Indexes: []*schema.Index{
 			{
-				Name:    "triagerule_priority",
+				Name:    "triagerule_enabled_priority",
 				Unique:  false,
-				Columns: []*schema.Column{TriageRulesColumns[9]},
+				Columns: []*schema.Column{TriageRulesColumns[10], TriageRulesColumns[9]},
 			},
 			{
-				Name:    "triagerule_enabled",
+				Name:    "triagerule_created_by",
 				Unique:  false,
-				Columns: []*schema.Column{TriageRulesColumns[10]},
+				Columns: []*schema.Column{TriageRulesColumns[13]},
 			},
 		},
 	}
@@ -2161,6 +2677,14 @@ var (
 				Unique:  false,
 				Columns: []*schema.Column{UsersColumns[12]},
 			},
+			{
+				Name:    "user_slack_user_id",
+				Unique:  true,
+				Columns: []*schema.Column{UsersColumns[13]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "slack_user_id <> ''",
+				},
+			},
 		},
 	}
 	// WebhookTokensColumns holds the columns for the "webhook_tokens" table.
@@ -2181,9 +2705,17 @@ var (
 		PrimaryKey: []*schema.Column{WebhookTokensColumns[0]},
 		Indexes: []*schema.Index{
 			{
-				Name:    "webhooktoken_lookup_prefix_revoked",
+				Name:    "webhooktoken_lookup_prefix",
 				Unique:  false,
-				Columns: []*schema.Column{WebhookTokensColumns[3], WebhookTokensColumns[7]},
+				Columns: []*schema.Column{WebhookTokensColumns[3]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "revoked = false",
+				},
+			},
+			{
+				Name:    "webhooktoken_expires_at",
+				Unique:  false,
+				Columns: []*schema.Column{WebhookTokensColumns[6]},
 			},
 		},
 	}
@@ -2277,9 +2809,13 @@ var (
 )
 
 func init() {
+	ActionItemsTable.ForeignKeys[0].RefTable = PostMortemsTable
 	ActionItemsTable.Annotation = &entsql.Annotation{
 		Table: "action_items",
 	}
+	AgentAsksTable.ForeignKeys[0].RefTable = AgentTokensTable
+	AgentAsksTable.ForeignKeys[1].RefTable = AgentTokensTable
+	AgentAsksTable.ForeignKeys[2].RefTable = AgentTokensTable
 	AgentAsksTable.Annotation = &entsql.Annotation{
 		Table: "agent_asks",
 	}
@@ -2287,12 +2823,14 @@ func init() {
 	AgentDmMessagesTable.Annotation = &entsql.Annotation{
 		Table: "agent_dm_messages",
 	}
+	AgentMemoriesTable.ForeignKeys[0].RefTable = AgentTokensTable
 	AgentMemoriesTable.Annotation = &entsql.Annotation{
 		Table: "agent_memories",
 	}
 	AgentTokensTable.Annotation = &entsql.Annotation{
 		Table: "agent_tokens",
 	}
+	AlertsTable.ForeignKeys[0].RefTable = TriageResultsTable
 	AlertsTable.Annotation = &entsql.Annotation{
 		Table: "alerts",
 	}
@@ -2302,6 +2840,7 @@ func init() {
 	}
 	AlertInvestigationsTable.ForeignKeys[0].RefTable = IncidentsTable
 	AlertInvestigationsTable.ForeignKeys[1].RefTable = IncidentInvestigationsTable
+	AlertInvestigationsTable.ForeignKeys[2].RefTable = TriageResultsTable
 	AlertInvestigationsTable.Annotation = &entsql.Annotation{
 		Table: "alert_investigations",
 	}
@@ -2323,6 +2862,7 @@ func init() {
 	}
 	CoordinationTasksTable.ForeignKeys[0].RefTable = CoordinationTasksTable
 	CoordinationTasksTable.ForeignKeys[1].RefTable = IncidentsTable
+	CoordinationTasksTable.ForeignKeys[2].RefTable = IncidentInvestigationsTable
 	CoordinationTasksTable.Annotation = &entsql.Annotation{
 		Table: "coordination_tasks",
 	}
@@ -2340,6 +2880,12 @@ func init() {
 		Table: "escalation_policies",
 	}
 	HandoffRecordsTable.ForeignKeys[0].RefTable = OnCallSchedulesTable
+	HandoffRecordsTable.ForeignKeys[1].RefTable = UsersTable
+	HandoffRecordsTable.ForeignKeys[2].RefTable = UsersTable
+	HandoffRecordsTable.Annotation = &entsql.Annotation{
+		Table: "handoff_records",
+	}
+	HeartbeatsTable.ForeignKeys[0].RefTable = TeamsTable
 	HeartbeatsTable.Annotation = &entsql.Annotation{
 		Table: "heartbeats",
 	}
@@ -2350,7 +2896,11 @@ func init() {
 	IcsRoleAssignmentsTable.Annotation = &entsql.Annotation{
 		Table: "ics_role_assignments",
 	}
-	IncidentsTable.ForeignKeys[0].RefTable = PostMortemsTable
+	IncidentsTable.ForeignKeys[0].RefTable = EscalationPoliciesTable
+	IncidentsTable.ForeignKeys[1].RefTable = ServicesTable
+	IncidentsTable.ForeignKeys[2].RefTable = UsersTable
+	IncidentsTable.ForeignKeys[3].RefTable = UsersTable
+	IncidentsTable.ForeignKeys[4].RefTable = UsersTable
 	IncidentsTable.Annotation = &entsql.Annotation{
 		Table: "incidents",
 	}
@@ -2388,6 +2938,7 @@ func init() {
 	InvestigationThreadMessagesTable.Annotation = &entsql.Annotation{
 		Table: "investigation_thread_messages",
 	}
+	KnowledgeNotesTable.ForeignKeys[0].RefTable = UsersTable
 	KnowledgeNotesTable.Annotation = &entsql.Annotation{
 		Table: "knowledge_notes",
 	}
@@ -2400,51 +2951,79 @@ func init() {
 	NotificationDeliveryLogsTable.Annotation = &entsql.Annotation{
 		Table: "notification_delivery_logs",
 	}
+	OidcIdentitiesTable.ForeignKeys[0].RefTable = OidcProvidersTable
+	OidcIdentitiesTable.ForeignKeys[1].RefTable = UsersTable
 	OidcIdentitiesTable.Annotation = &entsql.Annotation{
 		Table: "oidc_identities",
 	}
 	OidcProvidersTable.Annotation = &entsql.Annotation{
 		Table: "oidc_providers",
 	}
+	OnCallSchedulesTable.ForeignKeys[0].RefTable = TeamsTable
 	OnCallSchedulesTable.Annotation = &entsql.Annotation{
 		Table: "on_call_schedules",
 	}
+	OutboxesTable.Annotation = &entsql.Annotation{
+		Table: "outboxes",
+	}
+	PasswordResetTokensTable.ForeignKeys[0].RefTable = UsersTable
 	PasswordResetTokensTable.Annotation = &entsql.Annotation{
 		Table: "password_reset_tokens",
 	}
+	PersonalAccessTokensTable.ForeignKeys[0].RefTable = UsersTable
 	PersonalAccessTokensTable.Annotation = &entsql.Annotation{
 		Table: "personal_access_tokens",
 	}
 	PlaybooksTable.ForeignKeys[0].RefTable = ServicesTable
 	PlaybooksTable.ForeignKeys[1].RefTable = UsersTable
+	PlaybooksTable.Annotation = &entsql.Annotation{
+		Table: "playbooks",
+	}
 	PlaybookStepsTable.ForeignKeys[0].RefTable = PlaybooksTable
+	PlaybookStepsTable.Annotation = &entsql.Annotation{
+		Table: "playbook_steps",
+	}
+	PostMortemsTable.ForeignKeys[0].RefTable = IncidentsTable
+	PostMortemsTable.ForeignKeys[1].RefTable = UsersTable
 	PostMortemsTable.Annotation = &entsql.Annotation{
 		Table: "post_mortems",
 	}
 	RouteRulesTable.Annotation = &entsql.Annotation{
 		Table: "route_rules",
 	}
+	ScheduleLayersTable.ForeignKeys[0].RefTable = OnCallSchedulesTable
 	ScheduleLayersTable.Annotation = &entsql.Annotation{
 		Table: "schedule_layers",
 	}
+	ScheduleOverridesTable.ForeignKeys[0].RefTable = OnCallSchedulesTable
+	ScheduleOverridesTable.ForeignKeys[1].RefTable = UsersTable
 	ScheduleOverridesTable.Annotation = &entsql.Annotation{
 		Table: "schedule_overrides",
 	}
+	ServicesTable.ForeignKeys[0].RefTable = EscalationPoliciesTable
+	ServicesTable.ForeignKeys[1].RefTable = TeamsTable
 	ServicesTable.Annotation = &entsql.Annotation{
 		Table: "services",
 	}
+	ServiceDependenciesTable.ForeignKeys[0].RefTable = ServicesTable
+	ServiceDependenciesTable.ForeignKeys[1].RefTable = ServicesTable
 	ServiceDependenciesTable.Annotation = &entsql.Annotation{
 		Table: "service_dependencies",
 	}
+	SessionsTable.ForeignKeys[0].RefTable = UsersTable
 	SessionsTable.Annotation = &entsql.Annotation{
 		Table: "sessions",
 	}
+	SharedSecretsTable.ForeignKeys[0].RefTable = CredentialProvidersTable
 	SharedSecretsTable.Annotation = &entsql.Annotation{
 		Table: "shared_secrets",
 	}
+	StatusPagesTable.ForeignKeys[0].RefTable = TeamsTable
 	StatusPagesTable.Annotation = &entsql.Annotation{
 		Table: "status_pages",
 	}
+	StatusPageComponentsTable.ForeignKeys[0].RefTable = ServicesTable
+	StatusPageComponentsTable.ForeignKeys[1].RefTable = StatusPagesTable
 	StatusPageComponentsTable.Annotation = &entsql.Annotation{
 		Table: "status_page_components",
 	}
@@ -2454,12 +3033,16 @@ func init() {
 	TeamsTable.Annotation = &entsql.Annotation{
 		Table: "teams",
 	}
+	TeamMembersTable.ForeignKeys[0].RefTable = TeamsTable
+	TeamMembersTable.ForeignKeys[1].RefTable = UsersTable
 	TeamMembersTable.Annotation = &entsql.Annotation{
 		Table: "team_members",
 	}
+	TriageResultsTable.ForeignKeys[0].RefTable = UsersTable
 	TriageResultsTable.Annotation = &entsql.Annotation{
 		Table: "triage_results",
 	}
+	TriageRulesTable.ForeignKeys[0].RefTable = UsersTable
 	TriageRulesTable.Annotation = &entsql.Annotation{
 		Table: "triage_rules",
 	}

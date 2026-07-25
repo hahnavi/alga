@@ -5,6 +5,7 @@ package ent
 import (
 	"alga/ent/coordinationtask"
 	"alga/ent/incident"
+	"alga/ent/incidentinvestigation"
 	"alga/ent/predicate"
 	"context"
 	"database/sql/driver"
@@ -21,13 +22,14 @@ import (
 // CoordinationTaskQuery is the builder for querying CoordinationTask entities.
 type CoordinationTaskQuery struct {
 	config
-	ctx            *QueryContext
-	order          []coordinationtask.OrderOption
-	inters         []Interceptor
-	predicates     []predicate.CoordinationTask
-	withIncident   *IncidentQuery
-	withChildTasks *CoordinationTaskQuery
-	withParentTask *CoordinationTaskQuery
+	ctx                     *QueryContext
+	order                   []coordinationtask.OrderOption
+	inters                  []Interceptor
+	predicates              []predicate.CoordinationTask
+	withIncident            *IncidentQuery
+	withChildTasks          *CoordinationTaskQuery
+	withParentTask          *CoordinationTaskQuery
+	withLinkedInvestigation *IncidentInvestigationQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -123,6 +125,28 @@ func (_q *CoordinationTaskQuery) QueryParentTask() *CoordinationTaskQuery {
 			sqlgraph.From(coordinationtask.Table, coordinationtask.FieldID, selector),
 			sqlgraph.To(coordinationtask.Table, coordinationtask.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, coordinationtask.ParentTaskTable, coordinationtask.ParentTaskColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryLinkedInvestigation chains the current query on the "linked_investigation" edge.
+func (_q *CoordinationTaskQuery) QueryLinkedInvestigation() *IncidentInvestigationQuery {
+	query := (&IncidentInvestigationClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(coordinationtask.Table, coordinationtask.FieldID, selector),
+			sqlgraph.To(incidentinvestigation.Table, incidentinvestigation.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, coordinationtask.LinkedInvestigationTable, coordinationtask.LinkedInvestigationColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -317,14 +341,15 @@ func (_q *CoordinationTaskQuery) Clone() *CoordinationTaskQuery {
 		return nil
 	}
 	return &CoordinationTaskQuery{
-		config:         _q.config,
-		ctx:            _q.ctx.Clone(),
-		order:          append([]coordinationtask.OrderOption{}, _q.order...),
-		inters:         append([]Interceptor{}, _q.inters...),
-		predicates:     append([]predicate.CoordinationTask{}, _q.predicates...),
-		withIncident:   _q.withIncident.Clone(),
-		withChildTasks: _q.withChildTasks.Clone(),
-		withParentTask: _q.withParentTask.Clone(),
+		config:                  _q.config,
+		ctx:                     _q.ctx.Clone(),
+		order:                   append([]coordinationtask.OrderOption{}, _q.order...),
+		inters:                  append([]Interceptor{}, _q.inters...),
+		predicates:              append([]predicate.CoordinationTask{}, _q.predicates...),
+		withIncident:            _q.withIncident.Clone(),
+		withChildTasks:          _q.withChildTasks.Clone(),
+		withParentTask:          _q.withParentTask.Clone(),
+		withLinkedInvestigation: _q.withLinkedInvestigation.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -361,6 +386,17 @@ func (_q *CoordinationTaskQuery) WithParentTask(opts ...func(*CoordinationTaskQu
 		opt(query)
 	}
 	_q.withParentTask = query
+	return _q
+}
+
+// WithLinkedInvestigation tells the query-builder to eager-load the nodes that are connected to
+// the "linked_investigation" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *CoordinationTaskQuery) WithLinkedInvestigation(opts ...func(*IncidentInvestigationQuery)) *CoordinationTaskQuery {
+	query := (&IncidentInvestigationClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withLinkedInvestigation = query
 	return _q
 }
 
@@ -442,10 +478,11 @@ func (_q *CoordinationTaskQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 	var (
 		nodes       = []*CoordinationTask{}
 		_spec       = _q.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [4]bool{
 			_q.withIncident != nil,
 			_q.withChildTasks != nil,
 			_q.withParentTask != nil,
+			_q.withLinkedInvestigation != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -482,6 +519,12 @@ func (_q *CoordinationTaskQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 	if query := _q.withParentTask; query != nil {
 		if err := _q.loadParentTask(ctx, query, nodes, nil,
 			func(n *CoordinationTask, e *CoordinationTask) { n.Edges.ParentTask = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withLinkedInvestigation; query != nil {
+		if err := _q.loadLinkedInvestigation(ctx, query, nodes, nil,
+			func(n *CoordinationTask, e *IncidentInvestigation) { n.Edges.LinkedInvestigation = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -585,6 +628,38 @@ func (_q *CoordinationTaskQuery) loadParentTask(ctx context.Context, query *Coor
 	}
 	return nil
 }
+func (_q *CoordinationTaskQuery) loadLinkedInvestigation(ctx context.Context, query *IncidentInvestigationQuery, nodes []*CoordinationTask, init func(*CoordinationTask), assign func(*CoordinationTask, *IncidentInvestigation)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*CoordinationTask)
+	for i := range nodes {
+		if nodes[i].LinkedInvestigationID == nil {
+			continue
+		}
+		fk := *nodes[i].LinkedInvestigationID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(incidentinvestigation.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "linked_investigation_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
 
 func (_q *CoordinationTaskQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
@@ -616,6 +691,9 @@ func (_q *CoordinationTaskQuery) querySpec() *sqlgraph.QuerySpec {
 		}
 		if _q.withParentTask != nil {
 			_spec.Node.AddColumnOnce(coordinationtask.FieldParentTaskID)
+		}
+		if _q.withLinkedInvestigation != nil {
+			_spec.Node.AddColumnOnce(coordinationtask.FieldLinkedInvestigationID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

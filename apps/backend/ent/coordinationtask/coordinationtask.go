@@ -65,6 +65,8 @@ const (
 	EdgeChildTasks = "child_tasks"
 	// EdgeParentTask holds the string denoting the parent_task edge name in mutations.
 	EdgeParentTask = "parent_task"
+	// EdgeLinkedInvestigation holds the string denoting the linked_investigation edge name in mutations.
+	EdgeLinkedInvestigation = "linked_investigation"
 	// Table holds the table name of the coordinationtask in the database.
 	Table = "coordination_tasks"
 	// IncidentTable is the table that holds the incident relation/edge.
@@ -82,6 +84,13 @@ const (
 	ParentTaskTable = "coordination_tasks"
 	// ParentTaskColumn is the table column denoting the parent_task relation/edge.
 	ParentTaskColumn = "parent_task_id"
+	// LinkedInvestigationTable is the table that holds the linked_investigation relation/edge.
+	LinkedInvestigationTable = "coordination_tasks"
+	// LinkedInvestigationInverseTable is the table name for the IncidentInvestigation entity.
+	// It exists in this package in order to avoid circular dependency with the "incidentinvestigation" package.
+	LinkedInvestigationInverseTable = "incident_investigations"
+	// LinkedInvestigationColumn is the table column denoting the linked_investigation relation/edge.
+	LinkedInvestigationColumn = "linked_investigation_id"
 )
 
 // Columns holds all SQL columns for coordinationtask fields.
@@ -138,6 +147,8 @@ var (
 	DefaultStatus string
 	// DefaultPriority holds the default value on creation for the "priority" field.
 	DefaultPriority int
+	// PriorityValidator is a validator for the "priority" field. It is called by the builders before save.
+	PriorityValidator func(int) error
 	// DefaultCreatedByAgentID holds the default value on creation for the "created_by_agent_id" field.
 	DefaultCreatedByAgentID string
 	// DefaultCreatedByName holds the default value on creation for the "created_by_name" field.
@@ -146,6 +157,8 @@ var (
 	DefaultFailureReason string
 	// DefaultDispatchAttempts holds the default value on creation for the "dispatch_attempts" field.
 	DefaultDispatchAttempts int
+	// DispatchAttemptsValidator is a validator for the "dispatch_attempts" field. It is called by the builders before save.
+	DispatchAttemptsValidator func(int) error
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
@@ -286,6 +299,13 @@ func ByParentTaskField(field string, opts ...sql.OrderTermOption) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newParentTaskStep(), sql.OrderByField(field, opts...))
 	}
 }
+
+// ByLinkedInvestigationField orders the results by linked_investigation field.
+func ByLinkedInvestigationField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newLinkedInvestigationStep(), sql.OrderByField(field, opts...))
+	}
+}
 func newIncidentStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -305,5 +325,12 @@ func newParentTaskStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(Table, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, ParentTaskTable, ParentTaskColumn),
+	)
+}
+func newLinkedInvestigationStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(LinkedInvestigationInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, LinkedInvestigationTable, LinkedInvestigationColumn),
 	)
 }

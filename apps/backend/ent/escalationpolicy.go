@@ -31,8 +31,40 @@ type EscalationPolicy struct {
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt    time.Time `json:"updated_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the EscalationPolicyQuery when eager-loading is set.
+	Edges        EscalationPolicyEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// EscalationPolicyEdges holds the relations/edges for other nodes in the graph.
+type EscalationPolicyEdges struct {
+	// Services holds the value of the services edge.
+	Services []*Service `json:"services,omitempty"`
+	// Incidents holds the value of the incidents edge.
+	Incidents []*Incident `json:"incidents,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [2]bool
+}
+
+// ServicesOrErr returns the Services value or an error if the edge
+// was not loaded in eager-loading.
+func (e EscalationPolicyEdges) ServicesOrErr() ([]*Service, error) {
+	if e.loadedTypes[0] {
+		return e.Services, nil
+	}
+	return nil, &NotLoadedError{edge: "services"}
+}
+
+// IncidentsOrErr returns the Incidents value or an error if the edge
+// was not loaded in eager-loading.
+func (e EscalationPolicyEdges) IncidentsOrErr() ([]*Incident, error) {
+	if e.loadedTypes[1] {
+		return e.Incidents, nil
+	}
+	return nil, &NotLoadedError{edge: "incidents"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -120,6 +152,16 @@ func (_m *EscalationPolicy) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *EscalationPolicy) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
+}
+
+// QueryServices queries the "services" edge of the EscalationPolicy entity.
+func (_m *EscalationPolicy) QueryServices() *ServiceQuery {
+	return NewEscalationPolicyClient(_m.config).QueryServices(_m)
+}
+
+// QueryIncidents queries the "incidents" edge of the EscalationPolicy entity.
+func (_m *EscalationPolicy) QueryIncidents() *IncidentQuery {
+	return NewEscalationPolicyClient(_m.config).QueryIncidents(_m)
 }
 
 // Update returns a builder for updating this EscalationPolicy.

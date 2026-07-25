@@ -21,7 +21,7 @@ type WebhookToken struct {
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty"`
 	// TokenHash holds the value of the "token_hash" field.
-	TokenHash string `json:"token_hash,omitempty"`
+	TokenHash string `json:"-"`
 	// LookupPrefix holds the value of the "lookup_prefix" field.
 	LookupPrefix string `json:"lookup_prefix,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -152,8 +152,7 @@ func (_m *WebhookToken) String() string {
 	builder.WriteString("name=")
 	builder.WriteString(_m.Name)
 	builder.WriteString(", ")
-	builder.WriteString("token_hash=")
-	builder.WriteString(_m.TokenHash)
+	builder.WriteString("token_hash=<sensitive>")
 	builder.WriteString(", ")
 	builder.WriteString("lookup_prefix=")
 	builder.WriteString(_m.LookupPrefix)

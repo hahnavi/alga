@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -60,8 +61,35 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// EdgeAlerts holds the string denoting the alerts edge name in mutations.
+	EdgeAlerts = "alerts"
+	// EdgeAlertInvestigations holds the string denoting the alert_investigations edge name in mutations.
+	EdgeAlertInvestigations = "alert_investigations"
+	// EdgeOverriddenByUser holds the string denoting the overridden_by_user edge name in mutations.
+	EdgeOverriddenByUser = "overridden_by_user"
 	// Table holds the table name of the triageresult in the database.
 	Table = "triage_results"
+	// AlertsTable is the table that holds the alerts relation/edge.
+	AlertsTable = "alerts"
+	// AlertsInverseTable is the table name for the Alert entity.
+	// It exists in this package in order to avoid circular dependency with the "alert" package.
+	AlertsInverseTable = "alerts"
+	// AlertsColumn is the table column denoting the alerts relation/edge.
+	AlertsColumn = "triage_result_id"
+	// AlertInvestigationsTable is the table that holds the alert_investigations relation/edge.
+	AlertInvestigationsTable = "alert_investigations"
+	// AlertInvestigationsInverseTable is the table name for the AlertInvestigation entity.
+	// It exists in this package in order to avoid circular dependency with the "alertinvestigation" package.
+	AlertInvestigationsInverseTable = "alert_investigations"
+	// AlertInvestigationsColumn is the table column denoting the alert_investigations relation/edge.
+	AlertInvestigationsColumn = "triage_result_id"
+	// OverriddenByUserTable is the table that holds the overridden_by_user relation/edge.
+	OverriddenByUserTable = "triage_results"
+	// OverriddenByUserInverseTable is the table name for the User entity.
+	// It exists in this package in order to avoid circular dependency with the "user" package.
+	OverriddenByUserInverseTable = "users"
+	// OverriddenByUserColumn is the table column denoting the overridden_by_user relation/edge.
+	OverriddenByUserColumn = "overridden_by"
 )
 
 // Columns holds all SQL columns for triageresult fields.
@@ -129,6 +157,8 @@ var (
 	DefaultModelUsed string
 	// DefaultTriageDurationMs holds the default value on creation for the "triage_duration_ms" field.
 	DefaultTriageDurationMs int64
+	// TriageDurationMsValidator is a validator for the "triage_duration_ms" field. It is called by the builders before save.
+	TriageDurationMsValidator func(int64) error
 	// DefaultTraceID holds the default value on creation for the "trace_id" field.
 	DefaultTraceID string
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
@@ -237,4 +267,60 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByAlertsCount orders the results by alerts count.
+func ByAlertsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAlertsStep(), opts...)
+	}
+}
+
+// ByAlerts orders the results by alerts terms.
+func ByAlerts(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAlertsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByAlertInvestigationsCount orders the results by alert_investigations count.
+func ByAlertInvestigationsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAlertInvestigationsStep(), opts...)
+	}
+}
+
+// ByAlertInvestigations orders the results by alert_investigations terms.
+func ByAlertInvestigations(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAlertInvestigationsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByOverriddenByUserField orders the results by overridden_by_user field.
+func ByOverriddenByUserField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newOverriddenByUserStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newAlertsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AlertsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, AlertsTable, AlertsColumn),
+	)
+}
+func newAlertInvestigationsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AlertInvestigationsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, AlertInvestigationsTable, AlertInvestigationsColumn),
+	)
+}
+func newOverriddenByUserStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(OverriddenByUserInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, OverriddenByUserTable, OverriddenByUserColumn),
+	)
 }

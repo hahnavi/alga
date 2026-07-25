@@ -4,7 +4,9 @@ package ent
 
 import (
 	"alga/ent/oidcidentity"
+	"alga/ent/oidcprovider"
 	"alga/ent/predicate"
+	"alga/ent/user"
 	"context"
 	"errors"
 	"fmt"
@@ -119,9 +121,31 @@ func (_u *OIDCIdentityUpdate) SetUpdatedAt(v time.Time) *OIDCIdentityUpdate {
 	return _u
 }
 
+// SetUser sets the "user" edge to the User entity.
+func (_u *OIDCIdentityUpdate) SetUser(v *User) *OIDCIdentityUpdate {
+	return _u.SetUserID(v.ID)
+}
+
+// SetProvider sets the "provider" edge to the OIDCProvider entity.
+func (_u *OIDCIdentityUpdate) SetProvider(v *OIDCProvider) *OIDCIdentityUpdate {
+	return _u.SetProviderID(v.ID)
+}
+
 // Mutation returns the OIDCIdentityMutation object of the builder.
 func (_u *OIDCIdentityUpdate) Mutation() *OIDCIdentityMutation {
 	return _u.mutation
+}
+
+// ClearUser clears the "user" edge to the User entity.
+func (_u *OIDCIdentityUpdate) ClearUser() *OIDCIdentityUpdate {
+	_u.mutation.ClearUser()
+	return _u
+}
+
+// ClearProvider clears the "provider" edge to the OIDCProvider entity.
+func (_u *OIDCIdentityUpdate) ClearProvider() *OIDCIdentityUpdate {
+	_u.mutation.ClearProvider()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -167,6 +191,12 @@ func (_u *OIDCIdentityUpdate) check() error {
 			return &ValidationError{Name: "subject", err: fmt.Errorf(`ent: validator failed for field "OIDCIdentity.subject": %w`, err)}
 		}
 	}
+	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "OIDCIdentity.user"`)
+	}
+	if _u.mutation.ProviderCleared() && len(_u.mutation.ProviderIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "OIDCIdentity.provider"`)
+	}
 	return nil
 }
 
@@ -182,12 +212,6 @@ func (_u *OIDCIdentityUpdate) sqlSave(ctx context.Context) (_node int, err error
 			}
 		}
 	}
-	if value, ok := _u.mutation.UserID(); ok {
-		_spec.SetField(oidcidentity.FieldUserID, field.TypeUUID, value)
-	}
-	if value, ok := _u.mutation.ProviderID(); ok {
-		_spec.SetField(oidcidentity.FieldProviderID, field.TypeUUID, value)
-	}
 	if value, ok := _u.mutation.Subject(); ok {
 		_spec.SetField(oidcidentity.FieldSubject, field.TypeString, value)
 	}
@@ -202,6 +226,64 @@ func (_u *OIDCIdentityUpdate) sqlSave(ctx context.Context) (_node int, err error
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(oidcidentity.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.UserCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   oidcidentity.UserTable,
+			Columns: []string{oidcidentity.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.UserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   oidcidentity.UserTable,
+			Columns: []string{oidcidentity.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ProviderCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   oidcidentity.ProviderTable,
+			Columns: []string{oidcidentity.ProviderColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oidcprovider.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ProviderIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   oidcidentity.ProviderTable,
+			Columns: []string{oidcidentity.ProviderColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oidcprovider.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -313,9 +395,31 @@ func (_u *OIDCIdentityUpdateOne) SetUpdatedAt(v time.Time) *OIDCIdentityUpdateOn
 	return _u
 }
 
+// SetUser sets the "user" edge to the User entity.
+func (_u *OIDCIdentityUpdateOne) SetUser(v *User) *OIDCIdentityUpdateOne {
+	return _u.SetUserID(v.ID)
+}
+
+// SetProvider sets the "provider" edge to the OIDCProvider entity.
+func (_u *OIDCIdentityUpdateOne) SetProvider(v *OIDCProvider) *OIDCIdentityUpdateOne {
+	return _u.SetProviderID(v.ID)
+}
+
 // Mutation returns the OIDCIdentityMutation object of the builder.
 func (_u *OIDCIdentityUpdateOne) Mutation() *OIDCIdentityMutation {
 	return _u.mutation
+}
+
+// ClearUser clears the "user" edge to the User entity.
+func (_u *OIDCIdentityUpdateOne) ClearUser() *OIDCIdentityUpdateOne {
+	_u.mutation.ClearUser()
+	return _u
+}
+
+// ClearProvider clears the "provider" edge to the OIDCProvider entity.
+func (_u *OIDCIdentityUpdateOne) ClearProvider() *OIDCIdentityUpdateOne {
+	_u.mutation.ClearProvider()
+	return _u
 }
 
 // Where appends a list predicates to the OIDCIdentityUpdate builder.
@@ -374,6 +478,12 @@ func (_u *OIDCIdentityUpdateOne) check() error {
 			return &ValidationError{Name: "subject", err: fmt.Errorf(`ent: validator failed for field "OIDCIdentity.subject": %w`, err)}
 		}
 	}
+	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "OIDCIdentity.user"`)
+	}
+	if _u.mutation.ProviderCleared() && len(_u.mutation.ProviderIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "OIDCIdentity.provider"`)
+	}
 	return nil
 }
 
@@ -406,12 +516,6 @@ func (_u *OIDCIdentityUpdateOne) sqlSave(ctx context.Context) (_node *OIDCIdenti
 			}
 		}
 	}
-	if value, ok := _u.mutation.UserID(); ok {
-		_spec.SetField(oidcidentity.FieldUserID, field.TypeUUID, value)
-	}
-	if value, ok := _u.mutation.ProviderID(); ok {
-		_spec.SetField(oidcidentity.FieldProviderID, field.TypeUUID, value)
-	}
 	if value, ok := _u.mutation.Subject(); ok {
 		_spec.SetField(oidcidentity.FieldSubject, field.TypeString, value)
 	}
@@ -426,6 +530,64 @@ func (_u *OIDCIdentityUpdateOne) sqlSave(ctx context.Context) (_node *OIDCIdenti
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(oidcidentity.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.UserCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   oidcidentity.UserTable,
+			Columns: []string{oidcidentity.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.UserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   oidcidentity.UserTable,
+			Columns: []string{oidcidentity.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ProviderCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   oidcidentity.ProviderTable,
+			Columns: []string{oidcidentity.ProviderColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oidcprovider.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ProviderIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   oidcidentity.ProviderTable,
+			Columns: []string{oidcidentity.ProviderColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oidcprovider.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &OIDCIdentity{config: _u.config}
 	_spec.Assign = _node.assignValues

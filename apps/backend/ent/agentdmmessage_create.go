@@ -118,6 +118,12 @@ func (_c *AgentDMMessageCreate) SetNillableUpdatedAt(v *time.Time) *AgentDMMessa
 	return _c
 }
 
+// SetAgentTokenID sets the "agent_token_id" field.
+func (_c *AgentDMMessageCreate) SetAgentTokenID(v uuid.UUID) *AgentDMMessageCreate {
+	_c.mutation.SetAgentTokenID(v)
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *AgentDMMessageCreate) SetID(v uuid.UUID) *AgentDMMessageCreate {
 	_c.mutation.SetID(v)
@@ -129,12 +135,6 @@ func (_c *AgentDMMessageCreate) SetNillableID(v *uuid.UUID) *AgentDMMessageCreat
 	if v != nil {
 		_c.SetID(*v)
 	}
-	return _c
-}
-
-// SetAgentTokenID sets the "agent_token" edge to the AgentToken entity by ID.
-func (_c *AgentDMMessageCreate) SetAgentTokenID(id uuid.UUID) *AgentDMMessageCreate {
-	_c.mutation.SetAgentTokenID(id)
 	return _c
 }
 
@@ -230,6 +230,9 @@ func (_c *AgentDMMessageCreate) check() error {
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "AgentDMMessage.updated_at"`)}
 	}
+	if _, ok := _c.mutation.AgentTokenID(); !ok {
+		return &ValidationError{Name: "agent_token_id", err: errors.New(`ent: missing required field "AgentDMMessage.agent_token_id"`)}
+	}
 	if len(_c.mutation.AgentTokenIDs()) == 0 {
 		return &ValidationError{Name: "agent_token", err: errors.New(`ent: missing required edge "AgentDMMessage.agent_token"`)}
 	}
@@ -314,7 +317,7 @@ func (_c *AgentDMMessageCreate) createSpec() (*AgentDMMessage, *sqlgraph.CreateS
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.agent_token_dm_messages = &nodes[0]
+		_node.AgentTokenID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

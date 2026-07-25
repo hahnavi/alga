@@ -4,6 +4,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 )
@@ -50,7 +51,7 @@ func (EscalationPolicy) Fields() []ent.Field {
 		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
 		field.String("name").Unique().NotEmpty(),
 		field.String("description").Default(""),
-		field.Int("repeat_count").Default(3),
+		field.Int("repeat_count").Default(3).NonNegative(),
 		// Collapsed levels structure stored as JSONB.
 		field.JSON("levels", []EscalationLevelRecord{}).Default([]EscalationLevelRecord{}),
 		field.Time("created_at").Default(timeNow),
@@ -59,5 +60,8 @@ func (EscalationPolicy) Fields() []ent.Field {
 }
 
 func (EscalationPolicy) Edges() []ent.Edge {
-	return nil
+	return []ent.Edge{
+		edge.To("services", Service.Type).Annotations(entsql.Annotation{OnDelete: entsql.SetNull}),
+		edge.To("incidents", Incident.Type).Annotations(entsql.Annotation{OnDelete: entsql.SetNull}),
+	}
 }

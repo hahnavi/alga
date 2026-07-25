@@ -713,6 +713,12 @@ func (r *promoteAuditRecorder) Log(event store.AuditEvent, _ *uuid.UUID, _ strin
 	r.events = append(r.events, store.AuditRecord{Event: event, Details: details})
 }
 
+func (r *promoteAuditRecorder) LogEntity(event store.AuditEvent, _ *uuid.UUID, _ string, _ string, _ string, _ bool, details map[string]any, entityType string, entityID *uuid.UUID) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.events = append(r.events, store.AuditRecord{Event: event, Details: details, EntityType: entityType, EntityID: entityID})
+}
+
 func (r *promoteAuditRecorder) Query(map[string]any) ([]store.AuditRecord, error) { return nil, nil }
 func (r *promoteAuditRecorder) GetRecentEvents(int) ([]store.AuditRecord, error)  { return nil, nil }
 

@@ -4,6 +4,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -36,7 +37,9 @@ func (ActionItem) Fields() []ent.Field {
 }
 
 func (ActionItem) Edges() []ent.Edge {
-	return nil
+	return []ent.Edge{
+		edge.From("post_mortem", PostMortem.Type).Ref("action_items").Field("post_mortem_id").Unique().Required(),
+	}
 }
 
 func (ActionItem) Indexes() []ent.Index {

@@ -80,6 +80,8 @@ var (
 	DefaultEventID string
 	// DefaultRetryCount holds the default value on creation for the "retry_count" field.
 	DefaultRetryCount int
+	// RetryCountValidator is a validator for the "retry_count" field. It is called by the builders before save.
+	RetryCountValidator func(int) error
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultID holds the default value on creation for the "id" field.

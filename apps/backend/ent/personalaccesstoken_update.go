@@ -5,6 +5,7 @@ package ent
 import (
 	"alga/ent/personalaccesstoken"
 	"alga/ent/predicate"
+	"alga/ent/user"
 	"context"
 	"errors"
 	"fmt"
@@ -166,9 +167,20 @@ func (_u *PersonalAccessTokenUpdate) SetNillableRevoked(v *bool) *PersonalAccess
 	return _u
 }
 
+// SetUser sets the "user" edge to the User entity.
+func (_u *PersonalAccessTokenUpdate) SetUser(v *User) *PersonalAccessTokenUpdate {
+	return _u.SetUserID(v.ID)
+}
+
 // Mutation returns the PersonalAccessTokenMutation object of the builder.
 func (_u *PersonalAccessTokenUpdate) Mutation() *PersonalAccessTokenMutation {
 	return _u.mutation
+}
+
+// ClearUser clears the "user" edge to the User entity.
+func (_u *PersonalAccessTokenUpdate) ClearUser() *PersonalAccessTokenUpdate {
+	_u.mutation.ClearUser()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -215,6 +227,9 @@ func (_u *PersonalAccessTokenUpdate) check() error {
 			return &ValidationError{Name: "lookup_prefix", err: fmt.Errorf(`ent: validator failed for field "PersonalAccessToken.lookup_prefix": %w`, err)}
 		}
 	}
+	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "PersonalAccessToken.user"`)
+	}
 	return nil
 }
 
@@ -229,9 +244,6 @@ func (_u *PersonalAccessTokenUpdate) sqlSave(ctx context.Context) (_node int, er
 				ps[i](selector)
 			}
 		}
-	}
-	if value, ok := _u.mutation.UserID(); ok {
-		_spec.SetField(personalaccesstoken.FieldUserID, field.TypeUUID, value)
 	}
 	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(personalaccesstoken.FieldName, field.TypeString, value)
@@ -267,6 +279,35 @@ func (_u *PersonalAccessTokenUpdate) sqlSave(ctx context.Context) (_node int, er
 	}
 	if value, ok := _u.mutation.Revoked(); ok {
 		_spec.SetField(personalaccesstoken.FieldRevoked, field.TypeBool, value)
+	}
+	if _u.mutation.UserCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   personalaccesstoken.UserTable,
+			Columns: []string{personalaccesstoken.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.UserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   personalaccesstoken.UserTable,
+			Columns: []string{personalaccesstoken.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -424,9 +465,20 @@ func (_u *PersonalAccessTokenUpdateOne) SetNillableRevoked(v *bool) *PersonalAcc
 	return _u
 }
 
+// SetUser sets the "user" edge to the User entity.
+func (_u *PersonalAccessTokenUpdateOne) SetUser(v *User) *PersonalAccessTokenUpdateOne {
+	return _u.SetUserID(v.ID)
+}
+
 // Mutation returns the PersonalAccessTokenMutation object of the builder.
 func (_u *PersonalAccessTokenUpdateOne) Mutation() *PersonalAccessTokenMutation {
 	return _u.mutation
+}
+
+// ClearUser clears the "user" edge to the User entity.
+func (_u *PersonalAccessTokenUpdateOne) ClearUser() *PersonalAccessTokenUpdateOne {
+	_u.mutation.ClearUser()
+	return _u
 }
 
 // Where appends a list predicates to the PersonalAccessTokenUpdate builder.
@@ -486,6 +538,9 @@ func (_u *PersonalAccessTokenUpdateOne) check() error {
 			return &ValidationError{Name: "lookup_prefix", err: fmt.Errorf(`ent: validator failed for field "PersonalAccessToken.lookup_prefix": %w`, err)}
 		}
 	}
+	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "PersonalAccessToken.user"`)
+	}
 	return nil
 }
 
@@ -517,9 +572,6 @@ func (_u *PersonalAccessTokenUpdateOne) sqlSave(ctx context.Context) (_node *Per
 				ps[i](selector)
 			}
 		}
-	}
-	if value, ok := _u.mutation.UserID(); ok {
-		_spec.SetField(personalaccesstoken.FieldUserID, field.TypeUUID, value)
 	}
 	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(personalaccesstoken.FieldName, field.TypeString, value)
@@ -555,6 +607,35 @@ func (_u *PersonalAccessTokenUpdateOne) sqlSave(ctx context.Context) (_node *Per
 	}
 	if value, ok := _u.mutation.Revoked(); ok {
 		_spec.SetField(personalaccesstoken.FieldRevoked, field.TypeBool, value)
+	}
+	if _u.mutation.UserCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   personalaccesstoken.UserTable,
+			Columns: []string{personalaccesstoken.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.UserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   personalaccesstoken.UserTable,
+			Columns: []string{personalaccesstoken.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &PersonalAccessToken{config: _u.config}
 	_spec.Assign = _node.assignValues

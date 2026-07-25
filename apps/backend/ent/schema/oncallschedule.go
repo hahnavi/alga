@@ -4,6 +4,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -33,11 +34,17 @@ func (OnCallSchedule) Fields() []ent.Field {
 }
 
 func (OnCallSchedule) Edges() []ent.Edge {
-	return nil
+	return []ent.Edge{
+		edge.From("team", Team.Type).Ref("on_call_schedule").Field("team_id").Unique(),
+		edge.To("layers", ScheduleLayer.Type).Annotations(entsql.Annotation{OnDelete: entsql.Cascade}),
+		edge.To("overrides", ScheduleOverride.Type).Annotations(entsql.Annotation{OnDelete: entsql.Cascade}),
+	}
 }
 
 func (OnCallSchedule) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("team_id"),
+		index.Fields("team_id").
+			Unique().
+			Annotations(entsql.IndexWhere("team_id IS NOT NULL")),
 	}
 }

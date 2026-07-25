@@ -5,6 +5,7 @@ package ent
 import (
 	"alga/ent/passwordresettoken"
 	"alga/ent/predicate"
+	"alga/ent/user"
 	"context"
 	"errors"
 	"fmt"
@@ -99,9 +100,20 @@ func (_u *PasswordResetTokenUpdate) SetNillableCreatedAt(v *time.Time) *Password
 	return _u
 }
 
+// SetUser sets the "user" edge to the User entity.
+func (_u *PasswordResetTokenUpdate) SetUser(v *User) *PasswordResetTokenUpdate {
+	return _u.SetUserID(v.ID)
+}
+
 // Mutation returns the PasswordResetTokenMutation object of the builder.
 func (_u *PasswordResetTokenUpdate) Mutation() *PasswordResetTokenMutation {
 	return _u.mutation
+}
+
+// ClearUser clears the "user" edge to the User entity.
+func (_u *PasswordResetTokenUpdate) ClearUser() *PasswordResetTokenUpdate {
+	_u.mutation.ClearUser()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -138,6 +150,9 @@ func (_u *PasswordResetTokenUpdate) check() error {
 			return &ValidationError{Name: "token_hash", err: fmt.Errorf(`ent: validator failed for field "PasswordResetToken.token_hash": %w`, err)}
 		}
 	}
+	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "PasswordResetToken.user"`)
+	}
 	return nil
 }
 
@@ -153,9 +168,6 @@ func (_u *PasswordResetTokenUpdate) sqlSave(ctx context.Context) (_node int, err
 			}
 		}
 	}
-	if value, ok := _u.mutation.UserID(); ok {
-		_spec.SetField(passwordresettoken.FieldUserID, field.TypeUUID, value)
-	}
 	if value, ok := _u.mutation.TokenHash(); ok {
 		_spec.SetField(passwordresettoken.FieldTokenHash, field.TypeString, value)
 	}
@@ -167,6 +179,35 @@ func (_u *PasswordResetTokenUpdate) sqlSave(ctx context.Context) (_node int, err
 	}
 	if value, ok := _u.mutation.CreatedAt(); ok {
 		_spec.SetField(passwordresettoken.FieldCreatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.UserCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   passwordresettoken.UserTable,
+			Columns: []string{passwordresettoken.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.UserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   passwordresettoken.UserTable,
+			Columns: []string{passwordresettoken.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -258,9 +299,20 @@ func (_u *PasswordResetTokenUpdateOne) SetNillableCreatedAt(v *time.Time) *Passw
 	return _u
 }
 
+// SetUser sets the "user" edge to the User entity.
+func (_u *PasswordResetTokenUpdateOne) SetUser(v *User) *PasswordResetTokenUpdateOne {
+	return _u.SetUserID(v.ID)
+}
+
 // Mutation returns the PasswordResetTokenMutation object of the builder.
 func (_u *PasswordResetTokenUpdateOne) Mutation() *PasswordResetTokenMutation {
 	return _u.mutation
+}
+
+// ClearUser clears the "user" edge to the User entity.
+func (_u *PasswordResetTokenUpdateOne) ClearUser() *PasswordResetTokenUpdateOne {
+	_u.mutation.ClearUser()
+	return _u
 }
 
 // Where appends a list predicates to the PasswordResetTokenUpdate builder.
@@ -310,6 +362,9 @@ func (_u *PasswordResetTokenUpdateOne) check() error {
 			return &ValidationError{Name: "token_hash", err: fmt.Errorf(`ent: validator failed for field "PasswordResetToken.token_hash": %w`, err)}
 		}
 	}
+	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "PasswordResetToken.user"`)
+	}
 	return nil
 }
 
@@ -342,9 +397,6 @@ func (_u *PasswordResetTokenUpdateOne) sqlSave(ctx context.Context) (_node *Pass
 			}
 		}
 	}
-	if value, ok := _u.mutation.UserID(); ok {
-		_spec.SetField(passwordresettoken.FieldUserID, field.TypeUUID, value)
-	}
 	if value, ok := _u.mutation.TokenHash(); ok {
 		_spec.SetField(passwordresettoken.FieldTokenHash, field.TypeString, value)
 	}
@@ -356,6 +408,35 @@ func (_u *PasswordResetTokenUpdateOne) sqlSave(ctx context.Context) (_node *Pass
 	}
 	if value, ok := _u.mutation.CreatedAt(); ok {
 		_spec.SetField(passwordresettoken.FieldCreatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.UserCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   passwordresettoken.UserTable,
+			Columns: []string{passwordresettoken.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.UserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   passwordresettoken.UserTable,
+			Columns: []string{passwordresettoken.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &PasswordResetToken{config: _u.config}
 	_spec.Assign = _node.assignValues

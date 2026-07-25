@@ -6,6 +6,7 @@ import (
 	"entgo.io/ent/schema"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
 )
 
@@ -26,6 +27,7 @@ func (DeliveryTarget) Fields() []ent.Field {
 		field.String("channel").NotEmpty(),
 		field.String("channel_name").Optional().Default(""),
 		field.String("post_id").Optional().Default(""),
+		field.UUID("alert_id", uuid.UUID{}),
 	}
 }
 
@@ -34,10 +36,13 @@ func (DeliveryTarget) Edges() []ent.Edge {
 		edge.From("alert", Alert.Type).
 			Ref("delivery_targets").
 			Unique().
-			Required(),
+			Required().
+			Field("alert_id"),
 	}
 }
 
 func (DeliveryTarget) Indexes() []ent.Index {
-	return []ent.Index{}
+	return []ent.Index{
+		index.Fields("alert_id"),
+	}
 }

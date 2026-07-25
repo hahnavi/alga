@@ -5,6 +5,7 @@ package ent
 import (
 	"alga/ent/credentialprovider"
 	"alga/ent/predicate"
+	"alga/ent/sharedsecret"
 	"context"
 	"errors"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 )
 
 // CredentialProviderUpdate is the builder for updating CredentialProvider entities.
@@ -118,9 +120,45 @@ func (_u *CredentialProviderUpdate) SetUpdatedAt(v time.Time) *CredentialProvide
 	return _u
 }
 
+// AddSharedSecretIDs adds the "shared_secrets" edge to the SharedSecret entity by IDs.
+func (_u *CredentialProviderUpdate) AddSharedSecretIDs(ids ...uuid.UUID) *CredentialProviderUpdate {
+	_u.mutation.AddSharedSecretIDs(ids...)
+	return _u
+}
+
+// AddSharedSecrets adds the "shared_secrets" edges to the SharedSecret entity.
+func (_u *CredentialProviderUpdate) AddSharedSecrets(v ...*SharedSecret) *CredentialProviderUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddSharedSecretIDs(ids...)
+}
+
 // Mutation returns the CredentialProviderMutation object of the builder.
 func (_u *CredentialProviderUpdate) Mutation() *CredentialProviderMutation {
 	return _u.mutation
+}
+
+// ClearSharedSecrets clears all "shared_secrets" edges to the SharedSecret entity.
+func (_u *CredentialProviderUpdate) ClearSharedSecrets() *CredentialProviderUpdate {
+	_u.mutation.ClearSharedSecrets()
+	return _u
+}
+
+// RemoveSharedSecretIDs removes the "shared_secrets" edge to SharedSecret entities by IDs.
+func (_u *CredentialProviderUpdate) RemoveSharedSecretIDs(ids ...uuid.UUID) *CredentialProviderUpdate {
+	_u.mutation.RemoveSharedSecretIDs(ids...)
+	return _u
+}
+
+// RemoveSharedSecrets removes "shared_secrets" edges to SharedSecret entities.
+func (_u *CredentialProviderUpdate) RemoveSharedSecrets(v ...*SharedSecret) *CredentialProviderUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveSharedSecretIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -201,6 +239,51 @@ func (_u *CredentialProviderUpdate) sqlSave(ctx context.Context) (_node int, err
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(credentialprovider.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.SharedSecretsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   credentialprovider.SharedSecretsTable,
+			Columns: []string{credentialprovider.SharedSecretsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(sharedsecret.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedSharedSecretsIDs(); len(nodes) > 0 && !_u.mutation.SharedSecretsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   credentialprovider.SharedSecretsTable,
+			Columns: []string{credentialprovider.SharedSecretsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(sharedsecret.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.SharedSecretsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   credentialprovider.SharedSecretsTable,
+			Columns: []string{credentialprovider.SharedSecretsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(sharedsecret.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -312,9 +395,45 @@ func (_u *CredentialProviderUpdateOne) SetUpdatedAt(v time.Time) *CredentialProv
 	return _u
 }
 
+// AddSharedSecretIDs adds the "shared_secrets" edge to the SharedSecret entity by IDs.
+func (_u *CredentialProviderUpdateOne) AddSharedSecretIDs(ids ...uuid.UUID) *CredentialProviderUpdateOne {
+	_u.mutation.AddSharedSecretIDs(ids...)
+	return _u
+}
+
+// AddSharedSecrets adds the "shared_secrets" edges to the SharedSecret entity.
+func (_u *CredentialProviderUpdateOne) AddSharedSecrets(v ...*SharedSecret) *CredentialProviderUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddSharedSecretIDs(ids...)
+}
+
 // Mutation returns the CredentialProviderMutation object of the builder.
 func (_u *CredentialProviderUpdateOne) Mutation() *CredentialProviderMutation {
 	return _u.mutation
+}
+
+// ClearSharedSecrets clears all "shared_secrets" edges to the SharedSecret entity.
+func (_u *CredentialProviderUpdateOne) ClearSharedSecrets() *CredentialProviderUpdateOne {
+	_u.mutation.ClearSharedSecrets()
+	return _u
+}
+
+// RemoveSharedSecretIDs removes the "shared_secrets" edge to SharedSecret entities by IDs.
+func (_u *CredentialProviderUpdateOne) RemoveSharedSecretIDs(ids ...uuid.UUID) *CredentialProviderUpdateOne {
+	_u.mutation.RemoveSharedSecretIDs(ids...)
+	return _u
+}
+
+// RemoveSharedSecrets removes "shared_secrets" edges to SharedSecret entities.
+func (_u *CredentialProviderUpdateOne) RemoveSharedSecrets(v ...*SharedSecret) *CredentialProviderUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveSharedSecretIDs(ids...)
 }
 
 // Where appends a list predicates to the CredentialProviderUpdate builder.
@@ -425,6 +544,51 @@ func (_u *CredentialProviderUpdateOne) sqlSave(ctx context.Context) (_node *Cred
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(credentialprovider.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.SharedSecretsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   credentialprovider.SharedSecretsTable,
+			Columns: []string{credentialprovider.SharedSecretsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(sharedsecret.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedSharedSecretsIDs(); len(nodes) > 0 && !_u.mutation.SharedSecretsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   credentialprovider.SharedSecretsTable,
+			Columns: []string{credentialprovider.SharedSecretsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(sharedsecret.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.SharedSecretsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   credentialprovider.SharedSecretsTable,
+			Columns: []string{credentialprovider.SharedSecretsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(sharedsecret.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &CredentialProvider{config: _u.config}
 	_spec.Assign = _node.assignValues

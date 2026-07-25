@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"alga/ent/oncallschedule"
 	"alga/ent/schedulelayer"
 	"context"
 	"errors"
@@ -207,6 +208,11 @@ func (_c *ScheduleLayerCreate) SetNillableID(v *uuid.UUID) *ScheduleLayerCreate 
 	return _c
 }
 
+// SetSchedule sets the "schedule" edge to the OnCallSchedule entity.
+func (_c *ScheduleLayerCreate) SetSchedule(v *OnCallSchedule) *ScheduleLayerCreate {
+	return _c.SetScheduleID(v.ID)
+}
+
 // Mutation returns the ScheduleLayerMutation object of the builder.
 func (_c *ScheduleLayerCreate) Mutation() *ScheduleLayerMutation {
 	return _c.mutation
@@ -310,6 +316,11 @@ func (_c *ScheduleLayerCreate) check() error {
 	if _, ok := _c.mutation.RotationInterval(); !ok {
 		return &ValidationError{Name: "rotation_interval", err: errors.New(`ent: missing required field "ScheduleLayer.rotation_interval"`)}
 	}
+	if v, ok := _c.mutation.RotationInterval(); ok {
+		if err := schedulelayer.RotationIntervalValidator(v); err != nil {
+			return &ValidationError{Name: "rotation_interval", err: fmt.Errorf(`ent: validator failed for field "ScheduleLayer.rotation_interval": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.StartDate(); !ok {
 		return &ValidationError{Name: "start_date", err: errors.New(`ent: missing required field "ScheduleLayer.start_date"`)}
 	}
@@ -328,6 +339,11 @@ func (_c *ScheduleLayerCreate) check() error {
 	if _, ok := _c.mutation.Priority(); !ok {
 		return &ValidationError{Name: "priority", err: errors.New(`ent: missing required field "ScheduleLayer.priority"`)}
 	}
+	if v, ok := _c.mutation.Priority(); ok {
+		if err := schedulelayer.PriorityValidator(v); err != nil {
+			return &ValidationError{Name: "priority", err: fmt.Errorf(`ent: validator failed for field "ScheduleLayer.priority": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.UserIds(); !ok {
 		return &ValidationError{Name: "user_ids", err: errors.New(`ent: missing required field "ScheduleLayer.user_ids"`)}
 	}
@@ -336,6 +352,9 @@ func (_c *ScheduleLayerCreate) check() error {
 	}
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "ScheduleLayer.updated_at"`)}
+	}
+	if len(_c.mutation.ScheduleIDs()) == 0 {
+		return &ValidationError{Name: "schedule", err: errors.New(`ent: missing required edge "ScheduleLayer.schedule"`)}
 	}
 	return nil
 }
@@ -371,10 +390,6 @@ func (_c *ScheduleLayerCreate) createSpec() (*ScheduleLayer, *sqlgraph.CreateSpe
 	if id, ok := _c.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
-	}
-	if value, ok := _c.mutation.ScheduleID(); ok {
-		_spec.SetField(schedulelayer.FieldScheduleID, field.TypeUUID, value)
-		_node.ScheduleID = value
 	}
 	if value, ok := _c.mutation.Name(); ok {
 		_spec.SetField(schedulelayer.FieldName, field.TypeString, value)
@@ -427,6 +442,23 @@ func (_c *ScheduleLayerCreate) createSpec() (*ScheduleLayer, *sqlgraph.CreateSpe
 	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(schedulelayer.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if nodes := _c.mutation.ScheduleIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   schedulelayer.ScheduleTable,
+			Columns: []string{schedulelayer.ScheduleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oncallschedule.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.ScheduleID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

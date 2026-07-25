@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -383,6 +384,29 @@ func UpdatedAtLT(v time.Time) predicate.CredentialProvider {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.CredentialProvider {
 	return predicate.CredentialProvider(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// HasSharedSecrets applies the HasEdge predicate on the "shared_secrets" edge.
+func HasSharedSecrets() predicate.CredentialProvider {
+	return predicate.CredentialProvider(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, SharedSecretsTable, SharedSecretsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasSharedSecretsWith applies the HasEdge predicate on the "shared_secrets" edge with a given conditions (other predicates).
+func HasSharedSecretsWith(preds ...predicate.SharedSecret) predicate.CredentialProvider {
+	return predicate.CredentialProvider(func(s *sql.Selector) {
+		step := newSharedSecretsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

@@ -2,6 +2,8 @@ package schema
 
 import (
 	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
+	"entgo.io/ent/schema"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -21,9 +23,15 @@ type Outbox struct {
 	ent.Schema
 }
 
+func (Outbox) Annotations() []schema.Annotation {
+	return []schema.Annotation{
+		entsql.Annotation{Table: "outboxes"},
+	}
+}
+
 func (Outbox) Fields() []ent.Field {
 	return []ent.Field{
-		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).Unique(),
+		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
 		// event_type is the W5 aggregate.action wire name (e.g. "alert.received").
 		field.String("event_type").NotEmpty(),
 		// aggregate_id is the domain aggregate the event is about (empty when
@@ -45,7 +53,7 @@ func (Outbox) Fields() []ent.Field {
 		field.String("event_id").Default(""),
 		// retry_count counts failed publish attempts. Terminal-failed rows have
 		// retry_count >= MaxOutboxRetries.
-		field.Int("retry_count").Default(0),
+		field.Int("retry_count").Default(0).NonNegative(),
 		field.Time("created_at").Default(timeNow),
 		// published_at is set when the row is successfully published.
 		field.Time("published_at").Optional().Nillable(),
@@ -58,7 +66,8 @@ func (Outbox) Fields() []ent.Field {
 
 func (Outbox) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("status", "next_attempt_at"),
+		index.Fields("next_attempt_at", "created_at").
+			Annotations(entsql.IndexWhere("status IN ('pending', 'failed')")),
 		index.Fields("aggregate_id"),
 		index.Fields("event_id"),
 	}

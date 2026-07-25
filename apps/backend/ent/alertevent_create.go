@@ -98,6 +98,12 @@ func (_c *AlertEventCreate) SetNillableSource(v *string) *AlertEventCreate {
 	return _c
 }
 
+// SetAlertID sets the "alert_id" field.
+func (_c *AlertEventCreate) SetAlertID(v uuid.UUID) *AlertEventCreate {
+	_c.mutation.SetAlertID(v)
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *AlertEventCreate) SetID(v uuid.UUID) *AlertEventCreate {
 	_c.mutation.SetID(v)
@@ -109,12 +115,6 @@ func (_c *AlertEventCreate) SetNillableID(v *uuid.UUID) *AlertEventCreate {
 	if v != nil {
 		_c.SetID(*v)
 	}
-	return _c
-}
-
-// SetAlertID sets the "alert" edge to the Alert entity by ID.
-func (_c *AlertEventCreate) SetAlertID(id uuid.UUID) *AlertEventCreate {
-	_c.mutation.SetAlertID(id)
 	return _c
 }
 
@@ -197,6 +197,9 @@ func (_c *AlertEventCreate) check() error {
 	if _, ok := _c.mutation.Timestamp(); !ok {
 		return &ValidationError{Name: "timestamp", err: errors.New(`ent: missing required field "AlertEvent.timestamp"`)}
 	}
+	if _, ok := _c.mutation.AlertID(); !ok {
+		return &ValidationError{Name: "alert_id", err: errors.New(`ent: missing required field "AlertEvent.alert_id"`)}
+	}
 	if len(_c.mutation.AlertIDs()) == 0 {
 		return &ValidationError{Name: "alert", err: errors.New(`ent: missing required edge "AlertEvent.alert"`)}
 	}
@@ -273,7 +276,7 @@ func (_c *AlertEventCreate) createSpec() (*AlertEvent, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.alert_events = &nodes[0]
+		_node.AlertID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

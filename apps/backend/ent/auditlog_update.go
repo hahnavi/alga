@@ -183,6 +183,46 @@ func (_u *AuditLogUpdate) ClearRequestID() *AuditLogUpdate {
 	return _u
 }
 
+// SetEntityType sets the "entity_type" field.
+func (_u *AuditLogUpdate) SetEntityType(v string) *AuditLogUpdate {
+	_u.mutation.SetEntityType(v)
+	return _u
+}
+
+// SetNillableEntityType sets the "entity_type" field if the given value is not nil.
+func (_u *AuditLogUpdate) SetNillableEntityType(v *string) *AuditLogUpdate {
+	if v != nil {
+		_u.SetEntityType(*v)
+	}
+	return _u
+}
+
+// ClearEntityType clears the value of the "entity_type" field.
+func (_u *AuditLogUpdate) ClearEntityType() *AuditLogUpdate {
+	_u.mutation.ClearEntityType()
+	return _u
+}
+
+// SetEntityID sets the "entity_id" field.
+func (_u *AuditLogUpdate) SetEntityID(v uuid.UUID) *AuditLogUpdate {
+	_u.mutation.SetEntityID(v)
+	return _u
+}
+
+// SetNillableEntityID sets the "entity_id" field if the given value is not nil.
+func (_u *AuditLogUpdate) SetNillableEntityID(v *uuid.UUID) *AuditLogUpdate {
+	if v != nil {
+		_u.SetEntityID(*v)
+	}
+	return _u
+}
+
+// ClearEntityID clears the value of the "entity_id" field.
+func (_u *AuditLogUpdate) ClearEntityID() *AuditLogUpdate {
+	_u.mutation.ClearEntityID()
+	return _u
+}
+
 // Mutation returns the AuditLogMutation object of the builder.
 func (_u *AuditLogUpdate) Mutation() *AuditLogMutation {
 	return _u.mutation
@@ -281,6 +321,18 @@ func (_u *AuditLogUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.RequestIDCleared() {
 		_spec.ClearField(auditlog.FieldRequestID, field.TypeString)
+	}
+	if value, ok := _u.mutation.EntityType(); ok {
+		_spec.SetField(auditlog.FieldEntityType, field.TypeString, value)
+	}
+	if _u.mutation.EntityTypeCleared() {
+		_spec.ClearField(auditlog.FieldEntityType, field.TypeString)
+	}
+	if value, ok := _u.mutation.EntityID(); ok {
+		_spec.SetField(auditlog.FieldEntityID, field.TypeUUID, value)
+	}
+	if _u.mutation.EntityIDCleared() {
+		_spec.ClearField(auditlog.FieldEntityID, field.TypeUUID)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -456,6 +508,46 @@ func (_u *AuditLogUpdateOne) ClearRequestID() *AuditLogUpdateOne {
 	return _u
 }
 
+// SetEntityType sets the "entity_type" field.
+func (_u *AuditLogUpdateOne) SetEntityType(v string) *AuditLogUpdateOne {
+	_u.mutation.SetEntityType(v)
+	return _u
+}
+
+// SetNillableEntityType sets the "entity_type" field if the given value is not nil.
+func (_u *AuditLogUpdateOne) SetNillableEntityType(v *string) *AuditLogUpdateOne {
+	if v != nil {
+		_u.SetEntityType(*v)
+	}
+	return _u
+}
+
+// ClearEntityType clears the value of the "entity_type" field.
+func (_u *AuditLogUpdateOne) ClearEntityType() *AuditLogUpdateOne {
+	_u.mutation.ClearEntityType()
+	return _u
+}
+
+// SetEntityID sets the "entity_id" field.
+func (_u *AuditLogUpdateOne) SetEntityID(v uuid.UUID) *AuditLogUpdateOne {
+	_u.mutation.SetEntityID(v)
+	return _u
+}
+
+// SetNillableEntityID sets the "entity_id" field if the given value is not nil.
+func (_u *AuditLogUpdateOne) SetNillableEntityID(v *uuid.UUID) *AuditLogUpdateOne {
+	if v != nil {
+		_u.SetEntityID(*v)
+	}
+	return _u
+}
+
+// ClearEntityID clears the value of the "entity_id" field.
+func (_u *AuditLogUpdateOne) ClearEntityID() *AuditLogUpdateOne {
+	_u.mutation.ClearEntityID()
+	return _u
+}
+
 // Mutation returns the AuditLogMutation object of the builder.
 func (_u *AuditLogUpdateOne) Mutation() *AuditLogMutation {
 	return _u.mutation
@@ -584,6 +676,18 @@ func (_u *AuditLogUpdateOne) sqlSave(ctx context.Context) (_node *AuditLog, err 
 	}
 	if _u.mutation.RequestIDCleared() {
 		_spec.ClearField(auditlog.FieldRequestID, field.TypeString)
+	}
+	if value, ok := _u.mutation.EntityType(); ok {
+		_spec.SetField(auditlog.FieldEntityType, field.TypeString, value)
+	}
+	if _u.mutation.EntityTypeCleared() {
+		_spec.ClearField(auditlog.FieldEntityType, field.TypeString)
+	}
+	if value, ok := _u.mutation.EntityID(); ok {
+		_spec.SetField(auditlog.FieldEntityID, field.TypeUUID, value)
+	}
+	if _u.mutation.EntityIDCleared() {
+		_spec.ClearField(auditlog.FieldEntityID, field.TypeUUID)
 	}
 	_node = &AuditLog{config: _u.config}
 	_spec.Assign = _node.assignValues

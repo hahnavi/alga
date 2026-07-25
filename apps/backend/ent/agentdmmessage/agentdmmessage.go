@@ -31,6 +31,8 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// FieldAgentTokenID holds the string denoting the agent_token_id field in the database.
+	FieldAgentTokenID = "agent_token_id"
 	// EdgeAgentToken holds the string denoting the agent_token edge name in mutations.
 	EdgeAgentToken = "agent_token"
 	// Table holds the table name of the agentdmmessage in the database.
@@ -41,7 +43,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "agenttoken" package.
 	AgentTokenInverseTable = "agent_tokens"
 	// AgentTokenColumn is the table column denoting the agent_token relation/edge.
-	AgentTokenColumn = "agent_token_dm_messages"
+	AgentTokenColumn = "agent_token_id"
 )
 
 // Columns holds all SQL columns for agentdmmessage fields.
@@ -55,23 +57,13 @@ var Columns = []string{
 	FieldEdited,
 	FieldCreatedAt,
 	FieldUpdatedAt,
-}
-
-// ForeignKeys holds the SQL foreign-keys that are owned by the "agent_dm_messages"
-// table and are not defined as standalone fields in the schema.
-var ForeignKeys = []string{
-	"agent_token_dm_messages",
+	FieldAgentTokenID,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
-			return true
-		}
-	}
-	for i := range ForeignKeys {
-		if column == ForeignKeys[i] {
 			return true
 		}
 	}
@@ -143,6 +135,11 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByAgentTokenID orders the results by the agent_token_id field.
+func ByAgentTokenID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAgentTokenID, opts...).ToFunc()
 }
 
 // ByAgentTokenField orders the results by agent_token field.

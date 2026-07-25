@@ -4,6 +4,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -41,14 +42,20 @@ func (TriageResult) Fields() []ent.Field {
 		field.UUID("overridden_by", uuid.UUID{}).Optional(),
 		field.Time("overridden_at").Optional().Nillable(),
 		field.String("model_used").Optional().Default(""),
-		field.Int64("triage_duration_ms").Default(0),
+		field.Int64("triage_duration_ms").Default(0).NonNegative(),
 		field.String("trace_id").Optional().Default(""),
 		field.Time("created_at").Default(timeNow),
 		field.Time("updated_at").Default(timeNow).UpdateDefault(timeNow),
 	}
 }
 
-func (TriageResult) Edges() []ent.Edge { return nil }
+func (TriageResult) Edges() []ent.Edge {
+	return []ent.Edge{
+		edge.To("alerts", Alert.Type).Annotations(entsql.Annotation{OnDelete: entsql.SetNull}),
+		edge.To("alert_investigations", AlertInvestigation.Type).Annotations(entsql.Annotation{OnDelete: entsql.SetNull}),
+		edge.From("overridden_by_user", User.Type).Ref("triage_overrides").Field("overridden_by").Unique(),
+	}
+}
 
 func (TriageResult) Indexes() []ent.Index {
 	return []ent.Index{
@@ -56,5 +63,6 @@ func (TriageResult) Indexes() []ent.Index {
 		index.Fields("decision"),
 		index.Fields("outcome"),
 		index.Fields("created_at"),
+		index.Fields("overridden_by"),
 	}
 }

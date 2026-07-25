@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -88,26 +89,6 @@ func TeamIDIn(vs ...uuid.UUID) predicate.OnCallSchedule {
 // TeamIDNotIn applies the NotIn predicate on the "team_id" field.
 func TeamIDNotIn(vs ...uuid.UUID) predicate.OnCallSchedule {
 	return predicate.OnCallSchedule(sql.FieldNotIn(FieldTeamID, vs...))
-}
-
-// TeamIDGT applies the GT predicate on the "team_id" field.
-func TeamIDGT(v uuid.UUID) predicate.OnCallSchedule {
-	return predicate.OnCallSchedule(sql.FieldGT(FieldTeamID, v))
-}
-
-// TeamIDGTE applies the GTE predicate on the "team_id" field.
-func TeamIDGTE(v uuid.UUID) predicate.OnCallSchedule {
-	return predicate.OnCallSchedule(sql.FieldGTE(FieldTeamID, v))
-}
-
-// TeamIDLT applies the LT predicate on the "team_id" field.
-func TeamIDLT(v uuid.UUID) predicate.OnCallSchedule {
-	return predicate.OnCallSchedule(sql.FieldLT(FieldTeamID, v))
-}
-
-// TeamIDLTE applies the LTE predicate on the "team_id" field.
-func TeamIDLTE(v uuid.UUID) predicate.OnCallSchedule {
-	return predicate.OnCallSchedule(sql.FieldLTE(FieldTeamID, v))
 }
 
 // TeamIDIsNil applies the IsNil predicate on the "team_id" field.
@@ -198,6 +179,75 @@ func UpdatedAtLT(v time.Time) predicate.OnCallSchedule {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.OnCallSchedule {
 	return predicate.OnCallSchedule(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// HasTeam applies the HasEdge predicate on the "team" edge.
+func HasTeam() predicate.OnCallSchedule {
+	return predicate.OnCallSchedule(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, TeamTable, TeamColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasTeamWith applies the HasEdge predicate on the "team" edge with a given conditions (other predicates).
+func HasTeamWith(preds ...predicate.Team) predicate.OnCallSchedule {
+	return predicate.OnCallSchedule(func(s *sql.Selector) {
+		step := newTeamStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasLayers applies the HasEdge predicate on the "layers" edge.
+func HasLayers() predicate.OnCallSchedule {
+	return predicate.OnCallSchedule(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, LayersTable, LayersColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasLayersWith applies the HasEdge predicate on the "layers" edge with a given conditions (other predicates).
+func HasLayersWith(preds ...predicate.ScheduleLayer) predicate.OnCallSchedule {
+	return predicate.OnCallSchedule(func(s *sql.Selector) {
+		step := newLayersStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasOverrides applies the HasEdge predicate on the "overrides" edge.
+func HasOverrides() predicate.OnCallSchedule {
+	return predicate.OnCallSchedule(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, OverridesTable, OverridesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasOverridesWith applies the HasEdge predicate on the "overrides" edge with a given conditions (other predicates).
+func HasOverridesWith(preds ...predicate.ScheduleOverride) predicate.OnCallSchedule {
+	return predicate.OnCallSchedule(func(s *sql.Selector) {
+		step := newOverridesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

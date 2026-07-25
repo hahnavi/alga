@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/actionitem"
+	"alga/ent/postmortem"
 	"alga/ent/predicate"
 	"context"
 	"errors"
@@ -179,9 +180,20 @@ func (_u *ActionItemUpdate) SetUpdatedAt(v time.Time) *ActionItemUpdate {
 	return _u
 }
 
+// SetPostMortem sets the "post_mortem" edge to the PostMortem entity.
+func (_u *ActionItemUpdate) SetPostMortem(v *PostMortem) *ActionItemUpdate {
+	return _u.SetPostMortemID(v.ID)
+}
+
 // Mutation returns the ActionItemMutation object of the builder.
 func (_u *ActionItemUpdate) Mutation() *ActionItemMutation {
 	return _u.mutation
+}
+
+// ClearPostMortem clears the "post_mortem" edge to the PostMortem entity.
+func (_u *ActionItemUpdate) ClearPostMortem() *ActionItemUpdate {
+	_u.mutation.ClearPostMortem()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -227,6 +239,9 @@ func (_u *ActionItemUpdate) check() error {
 			return &ValidationError{Name: "description", err: fmt.Errorf(`ent: validator failed for field "ActionItem.description": %w`, err)}
 		}
 	}
+	if _u.mutation.PostMortemCleared() && len(_u.mutation.PostMortemIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "ActionItem.post_mortem"`)
+	}
 	return nil
 }
 
@@ -241,9 +256,6 @@ func (_u *ActionItemUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 				ps[i](selector)
 			}
 		}
-	}
-	if value, ok := _u.mutation.PostMortemID(); ok {
-		_spec.SetField(actionitem.FieldPostMortemID, field.TypeUUID, value)
 	}
 	if value, ok := _u.mutation.Description(); ok {
 		_spec.SetField(actionitem.FieldDescription, field.TypeString, value)
@@ -280,6 +292,35 @@ func (_u *ActionItemUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(actionitem.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.PostMortemCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   actionitem.PostMortemTable,
+			Columns: []string{actionitem.PostMortemColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(postmortem.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.PostMortemIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   actionitem.PostMortemTable,
+			Columns: []string{actionitem.PostMortemColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(postmortem.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -451,9 +492,20 @@ func (_u *ActionItemUpdateOne) SetUpdatedAt(v time.Time) *ActionItemUpdateOne {
 	return _u
 }
 
+// SetPostMortem sets the "post_mortem" edge to the PostMortem entity.
+func (_u *ActionItemUpdateOne) SetPostMortem(v *PostMortem) *ActionItemUpdateOne {
+	return _u.SetPostMortemID(v.ID)
+}
+
 // Mutation returns the ActionItemMutation object of the builder.
 func (_u *ActionItemUpdateOne) Mutation() *ActionItemMutation {
 	return _u.mutation
+}
+
+// ClearPostMortem clears the "post_mortem" edge to the PostMortem entity.
+func (_u *ActionItemUpdateOne) ClearPostMortem() *ActionItemUpdateOne {
+	_u.mutation.ClearPostMortem()
+	return _u
 }
 
 // Where appends a list predicates to the ActionItemUpdate builder.
@@ -512,6 +564,9 @@ func (_u *ActionItemUpdateOne) check() error {
 			return &ValidationError{Name: "description", err: fmt.Errorf(`ent: validator failed for field "ActionItem.description": %w`, err)}
 		}
 	}
+	if _u.mutation.PostMortemCleared() && len(_u.mutation.PostMortemIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "ActionItem.post_mortem"`)
+	}
 	return nil
 }
 
@@ -543,9 +598,6 @@ func (_u *ActionItemUpdateOne) sqlSave(ctx context.Context) (_node *ActionItem, 
 				ps[i](selector)
 			}
 		}
-	}
-	if value, ok := _u.mutation.PostMortemID(); ok {
-		_spec.SetField(actionitem.FieldPostMortemID, field.TypeUUID, value)
 	}
 	if value, ok := _u.mutation.Description(); ok {
 		_spec.SetField(actionitem.FieldDescription, field.TypeString, value)
@@ -582,6 +634,35 @@ func (_u *ActionItemUpdateOne) sqlSave(ctx context.Context) (_node *ActionItem, 
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(actionitem.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.PostMortemCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   actionitem.PostMortemTable,
+			Columns: []string{actionitem.PostMortemColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(postmortem.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.PostMortemIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   actionitem.PostMortemTable,
+			Columns: []string{actionitem.PostMortemColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(postmortem.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &ActionItem{config: _u.config}
 	_spec.Assign = _node.assignValues

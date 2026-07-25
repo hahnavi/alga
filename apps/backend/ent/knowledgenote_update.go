@@ -6,6 +6,7 @@ import (
 	"alga/ent/knowledgenote"
 	"alga/ent/predicate"
 	"alga/ent/schema"
+	"alga/ent/user"
 	"context"
 	"errors"
 	"fmt"
@@ -250,9 +251,20 @@ func (_u *KnowledgeNoteUpdate) SetUpdatedAt(v time.Time) *KnowledgeNoteUpdate {
 	return _u
 }
 
+// SetAuthor sets the "author" edge to the User entity.
+func (_u *KnowledgeNoteUpdate) SetAuthor(v *User) *KnowledgeNoteUpdate {
+	return _u.SetAuthorID(v.ID)
+}
+
 // Mutation returns the KnowledgeNoteMutation object of the builder.
 func (_u *KnowledgeNoteUpdate) Mutation() *KnowledgeNoteMutation {
 	return _u.mutation
+}
+
+// ClearAuthor clears the "author" edge to the User entity.
+func (_u *KnowledgeNoteUpdate) ClearAuthor() *KnowledgeNoteUpdate {
+	_u.mutation.ClearAuthor()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -354,12 +366,6 @@ func (_u *KnowledgeNoteUpdate) sqlSave(ctx context.Context) (_node int, err erro
 	if _u.mutation.SelectorsCleared() {
 		_spec.ClearField(knowledgenote.FieldSelectors, field.TypeJSON)
 	}
-	if value, ok := _u.mutation.AuthorID(); ok {
-		_spec.SetField(knowledgenote.FieldAuthorID, field.TypeUUID, value)
-	}
-	if _u.mutation.AuthorIDCleared() {
-		_spec.ClearField(knowledgenote.FieldAuthorID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.AuthorType(); ok {
 		_spec.SetField(knowledgenote.FieldAuthorType, field.TypeString, value)
 	}
@@ -395,6 +401,35 @@ func (_u *KnowledgeNoteUpdate) sqlSave(ctx context.Context) (_node int, err erro
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(knowledgenote.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.AuthorCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   knowledgenote.AuthorTable,
+			Columns: []string{knowledgenote.AuthorColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AuthorIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   knowledgenote.AuthorTable,
+			Columns: []string{knowledgenote.AuthorColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -635,9 +670,20 @@ func (_u *KnowledgeNoteUpdateOne) SetUpdatedAt(v time.Time) *KnowledgeNoteUpdate
 	return _u
 }
 
+// SetAuthor sets the "author" edge to the User entity.
+func (_u *KnowledgeNoteUpdateOne) SetAuthor(v *User) *KnowledgeNoteUpdateOne {
+	return _u.SetAuthorID(v.ID)
+}
+
 // Mutation returns the KnowledgeNoteMutation object of the builder.
 func (_u *KnowledgeNoteUpdateOne) Mutation() *KnowledgeNoteMutation {
 	return _u.mutation
+}
+
+// ClearAuthor clears the "author" edge to the User entity.
+func (_u *KnowledgeNoteUpdateOne) ClearAuthor() *KnowledgeNoteUpdateOne {
+	_u.mutation.ClearAuthor()
+	return _u
 }
 
 // Where appends a list predicates to the KnowledgeNoteUpdate builder.
@@ -769,12 +815,6 @@ func (_u *KnowledgeNoteUpdateOne) sqlSave(ctx context.Context) (_node *Knowledge
 	if _u.mutation.SelectorsCleared() {
 		_spec.ClearField(knowledgenote.FieldSelectors, field.TypeJSON)
 	}
-	if value, ok := _u.mutation.AuthorID(); ok {
-		_spec.SetField(knowledgenote.FieldAuthorID, field.TypeUUID, value)
-	}
-	if _u.mutation.AuthorIDCleared() {
-		_spec.ClearField(knowledgenote.FieldAuthorID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.AuthorType(); ok {
 		_spec.SetField(knowledgenote.FieldAuthorType, field.TypeString, value)
 	}
@@ -810,6 +850,35 @@ func (_u *KnowledgeNoteUpdateOne) sqlSave(ctx context.Context) (_node *Knowledge
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(knowledgenote.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.AuthorCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   knowledgenote.AuthorTable,
+			Columns: []string{knowledgenote.AuthorColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AuthorIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   knowledgenote.AuthorTable,
+			Columns: []string{knowledgenote.AuthorColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &KnowledgeNote{config: _u.config}
 	_spec.Assign = _node.assignValues

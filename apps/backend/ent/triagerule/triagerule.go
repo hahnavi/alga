@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -40,8 +41,17 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// EdgeCreatedByUser holds the string denoting the created_by_user edge name in mutations.
+	EdgeCreatedByUser = "created_by_user"
 	// Table holds the table name of the triagerule in the database.
 	Table = "triage_rules"
+	// CreatedByUserTable is the table that holds the created_by_user relation/edge.
+	CreatedByUserTable = "triage_rules"
+	// CreatedByUserInverseTable is the table name for the User entity.
+	// It exists in this package in order to avoid circular dependency with the "user" package.
+	CreatedByUserInverseTable = "users"
+	// CreatedByUserColumn is the table column denoting the created_by_user relation/edge.
+	CreatedByUserColumn = "created_by"
 )
 
 // Columns holds all SQL columns for triagerule fields.
@@ -87,6 +97,8 @@ var (
 	DefaultCategory string
 	// DefaultPriority holds the default value on creation for the "priority" field.
 	DefaultPriority int
+	// PriorityValidator is a validator for the "priority" field. It is called by the builders before save.
+	PriorityValidator func(int) error
 	// DefaultEnabled holds the default value on creation for the "enabled" field.
 	DefaultEnabled bool
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
@@ -160,4 +172,18 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByCreatedByUserField orders the results by created_by_user field.
+func ByCreatedByUserField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCreatedByUserStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newCreatedByUserStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CreatedByUserInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, CreatedByUserTable, CreatedByUserColumn),
+	)
 }

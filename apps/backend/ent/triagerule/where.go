@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -620,26 +621,6 @@ func CreatedByNotIn(vs ...uuid.UUID) predicate.TriageRule {
 	return predicate.TriageRule(sql.FieldNotIn(FieldCreatedBy, vs...))
 }
 
-// CreatedByGT applies the GT predicate on the "created_by" field.
-func CreatedByGT(v uuid.UUID) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldGT(FieldCreatedBy, v))
-}
-
-// CreatedByGTE applies the GTE predicate on the "created_by" field.
-func CreatedByGTE(v uuid.UUID) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldGTE(FieldCreatedBy, v))
-}
-
-// CreatedByLT applies the LT predicate on the "created_by" field.
-func CreatedByLT(v uuid.UUID) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldLT(FieldCreatedBy, v))
-}
-
-// CreatedByLTE applies the LTE predicate on the "created_by" field.
-func CreatedByLTE(v uuid.UUID) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldLTE(FieldCreatedBy, v))
-}
-
 // CreatedByIsNil applies the IsNil predicate on the "created_by" field.
 func CreatedByIsNil() predicate.TriageRule {
 	return predicate.TriageRule(sql.FieldIsNull(FieldCreatedBy))
@@ -728,6 +709,29 @@ func UpdatedAtLT(v time.Time) predicate.TriageRule {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.TriageRule {
 	return predicate.TriageRule(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// HasCreatedByUser applies the HasEdge predicate on the "created_by_user" edge.
+func HasCreatedByUser() predicate.TriageRule {
+	return predicate.TriageRule(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, CreatedByUserTable, CreatedByUserColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCreatedByUserWith applies the HasEdge predicate on the "created_by_user" edge with a given conditions (other predicates).
+func HasCreatedByUserWith(preds ...predicate.User) predicate.TriageRule {
+	return predicate.TriageRule(func(s *sql.Selector) {
+		step := newCreatedByUserStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -123,26 +124,6 @@ func PostMortemIDIn(vs ...uuid.UUID) predicate.ActionItem {
 // PostMortemIDNotIn applies the NotIn predicate on the "post_mortem_id" field.
 func PostMortemIDNotIn(vs ...uuid.UUID) predicate.ActionItem {
 	return predicate.ActionItem(sql.FieldNotIn(FieldPostMortemID, vs...))
-}
-
-// PostMortemIDGT applies the GT predicate on the "post_mortem_id" field.
-func PostMortemIDGT(v uuid.UUID) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldGT(FieldPostMortemID, v))
-}
-
-// PostMortemIDGTE applies the GTE predicate on the "post_mortem_id" field.
-func PostMortemIDGTE(v uuid.UUID) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldGTE(FieldPostMortemID, v))
-}
-
-// PostMortemIDLT applies the LT predicate on the "post_mortem_id" field.
-func PostMortemIDLT(v uuid.UUID) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldLT(FieldPostMortemID, v))
-}
-
-// PostMortemIDLTE applies the LTE predicate on the "post_mortem_id" field.
-func PostMortemIDLTE(v uuid.UUID) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldLTE(FieldPostMortemID, v))
 }
 
 // DescriptionEQ applies the EQ predicate on the "description" field.
@@ -658,6 +639,29 @@ func UpdatedAtLT(v time.Time) predicate.ActionItem {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.ActionItem {
 	return predicate.ActionItem(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// HasPostMortem applies the HasEdge predicate on the "post_mortem" edge.
+func HasPostMortem() predicate.ActionItem {
+	return predicate.ActionItem(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, PostMortemTable, PostMortemColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasPostMortemWith applies the HasEdge predicate on the "post_mortem" edge with a given conditions (other predicates).
+func HasPostMortemWith(preds ...predicate.PostMortem) predicate.ActionItem {
+	return predicate.ActionItem(func(s *sql.Selector) {
+		step := newPostMortemStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -148,26 +149,6 @@ func IncidentIDIn(vs ...uuid.UUID) predicate.PostMortem {
 // IncidentIDNotIn applies the NotIn predicate on the "incident_id" field.
 func IncidentIDNotIn(vs ...uuid.UUID) predicate.PostMortem {
 	return predicate.PostMortem(sql.FieldNotIn(FieldIncidentID, vs...))
-}
-
-// IncidentIDGT applies the GT predicate on the "incident_id" field.
-func IncidentIDGT(v uuid.UUID) predicate.PostMortem {
-	return predicate.PostMortem(sql.FieldGT(FieldIncidentID, v))
-}
-
-// IncidentIDGTE applies the GTE predicate on the "incident_id" field.
-func IncidentIDGTE(v uuid.UUID) predicate.PostMortem {
-	return predicate.PostMortem(sql.FieldGTE(FieldIncidentID, v))
-}
-
-// IncidentIDLT applies the LT predicate on the "incident_id" field.
-func IncidentIDLT(v uuid.UUID) predicate.PostMortem {
-	return predicate.PostMortem(sql.FieldLT(FieldIncidentID, v))
-}
-
-// IncidentIDLTE applies the LTE predicate on the "incident_id" field.
-func IncidentIDLTE(v uuid.UUID) predicate.PostMortem {
-	return predicate.PostMortem(sql.FieldLTE(FieldIncidentID, v))
 }
 
 // TitleEQ applies the EQ predicate on the "title" field.
@@ -805,26 +786,6 @@ func ApprovedByIDNotIn(vs ...uuid.UUID) predicate.PostMortem {
 	return predicate.PostMortem(sql.FieldNotIn(FieldApprovedByID, vs...))
 }
 
-// ApprovedByIDGT applies the GT predicate on the "approved_by_id" field.
-func ApprovedByIDGT(v uuid.UUID) predicate.PostMortem {
-	return predicate.PostMortem(sql.FieldGT(FieldApprovedByID, v))
-}
-
-// ApprovedByIDGTE applies the GTE predicate on the "approved_by_id" field.
-func ApprovedByIDGTE(v uuid.UUID) predicate.PostMortem {
-	return predicate.PostMortem(sql.FieldGTE(FieldApprovedByID, v))
-}
-
-// ApprovedByIDLT applies the LT predicate on the "approved_by_id" field.
-func ApprovedByIDLT(v uuid.UUID) predicate.PostMortem {
-	return predicate.PostMortem(sql.FieldLT(FieldApprovedByID, v))
-}
-
-// ApprovedByIDLTE applies the LTE predicate on the "approved_by_id" field.
-func ApprovedByIDLTE(v uuid.UUID) predicate.PostMortem {
-	return predicate.PostMortem(sql.FieldLTE(FieldApprovedByID, v))
-}
-
 // ApprovedByIDIsNil applies the IsNil predicate on the "approved_by_id" field.
 func ApprovedByIDIsNil() predicate.PostMortem {
 	return predicate.PostMortem(sql.FieldIsNull(FieldApprovedByID))
@@ -963,6 +924,75 @@ func UpdatedAtLT(v time.Time) predicate.PostMortem {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.PostMortem {
 	return predicate.PostMortem(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// HasIncident applies the HasEdge predicate on the "incident" edge.
+func HasIncident() predicate.PostMortem {
+	return predicate.PostMortem(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, IncidentTable, IncidentColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasIncidentWith applies the HasEdge predicate on the "incident" edge with a given conditions (other predicates).
+func HasIncidentWith(preds ...predicate.Incident) predicate.PostMortem {
+	return predicate.PostMortem(func(s *sql.Selector) {
+		step := newIncidentStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasApprovedBy applies the HasEdge predicate on the "approved_by" edge.
+func HasApprovedBy() predicate.PostMortem {
+	return predicate.PostMortem(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, ApprovedByTable, ApprovedByColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasApprovedByWith applies the HasEdge predicate on the "approved_by" edge with a given conditions (other predicates).
+func HasApprovedByWith(preds ...predicate.User) predicate.PostMortem {
+	return predicate.PostMortem(func(s *sql.Selector) {
+		step := newApprovedByStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasActionItems applies the HasEdge predicate on the "action_items" edge.
+func HasActionItems() predicate.PostMortem {
+	return predicate.PostMortem(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ActionItemsTable, ActionItemsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasActionItemsWith applies the HasEdge predicate on the "action_items" edge with a given conditions (other predicates).
+func HasActionItemsWith(preds ...predicate.ActionItem) predicate.PostMortem {
+	return predicate.PostMortem(func(s *sql.Selector) {
+		step := newActionItemsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

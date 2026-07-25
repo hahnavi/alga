@@ -146,9 +146,17 @@ func (_u *AgentDMMessageUpdate) SetUpdatedAt(v time.Time) *AgentDMMessageUpdate 
 	return _u
 }
 
-// SetAgentTokenID sets the "agent_token" edge to the AgentToken entity by ID.
-func (_u *AgentDMMessageUpdate) SetAgentTokenID(id uuid.UUID) *AgentDMMessageUpdate {
-	_u.mutation.SetAgentTokenID(id)
+// SetAgentTokenID sets the "agent_token_id" field.
+func (_u *AgentDMMessageUpdate) SetAgentTokenID(v uuid.UUID) *AgentDMMessageUpdate {
+	_u.mutation.SetAgentTokenID(v)
+	return _u
+}
+
+// SetNillableAgentTokenID sets the "agent_token_id" field if the given value is not nil.
+func (_u *AgentDMMessageUpdate) SetNillableAgentTokenID(v *uuid.UUID) *AgentDMMessageUpdate {
+	if v != nil {
+		_u.SetAgentTokenID(*v)
+	}
 	return _u
 }
 
@@ -429,9 +437,17 @@ func (_u *AgentDMMessageUpdateOne) SetUpdatedAt(v time.Time) *AgentDMMessageUpda
 	return _u
 }
 
-// SetAgentTokenID sets the "agent_token" edge to the AgentToken entity by ID.
-func (_u *AgentDMMessageUpdateOne) SetAgentTokenID(id uuid.UUID) *AgentDMMessageUpdateOne {
-	_u.mutation.SetAgentTokenID(id)
+// SetAgentTokenID sets the "agent_token_id" field.
+func (_u *AgentDMMessageUpdateOne) SetAgentTokenID(v uuid.UUID) *AgentDMMessageUpdateOne {
+	_u.mutation.SetAgentTokenID(v)
+	return _u
+}
+
+// SetNillableAgentTokenID sets the "agent_token_id" field if the given value is not nil.
+func (_u *AgentDMMessageUpdateOne) SetNillableAgentTokenID(v *uuid.UUID) *AgentDMMessageUpdateOne {
+	if v != nil {
+		_u.SetAgentTokenID(*v)
+	}
 	return _u
 }
 

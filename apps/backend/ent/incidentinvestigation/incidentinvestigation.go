@@ -73,6 +73,8 @@ const (
 	EdgeSourceAlertInvestigation = "source_alert_investigation"
 	// EdgeParentInvestigation holds the string denoting the parent_investigation edge name in mutations.
 	EdgeParentInvestigation = "parent_investigation"
+	// EdgeLinkedCoordinationTasks holds the string denoting the linked_coordination_tasks edge name in mutations.
+	EdgeLinkedCoordinationTasks = "linked_coordination_tasks"
 	// Table holds the table name of the incidentinvestigation in the database.
 	Table = "incident_investigations"
 	// UpdatesTable is the table that holds the updates relation/edge.
@@ -111,6 +113,13 @@ const (
 	ParentInvestigationTable = "incident_investigations"
 	// ParentInvestigationColumn is the table column denoting the parent_investigation relation/edge.
 	ParentInvestigationColumn = "parent_investigation_id"
+	// LinkedCoordinationTasksTable is the table that holds the linked_coordination_tasks relation/edge.
+	LinkedCoordinationTasksTable = "coordination_tasks"
+	// LinkedCoordinationTasksInverseTable is the table name for the CoordinationTask entity.
+	// It exists in this package in order to avoid circular dependency with the "coordinationtask" package.
+	LinkedCoordinationTasksInverseTable = "coordination_tasks"
+	// LinkedCoordinationTasksColumn is the table column denoting the linked_coordination_tasks relation/edge.
+	LinkedCoordinationTasksColumn = "linked_investigation_id"
 )
 
 // Columns holds all SQL columns for incidentinvestigation fields.
@@ -356,6 +365,20 @@ func ByParentInvestigationField(field string, opts ...sql.OrderTermOption) Order
 		sqlgraph.OrderByNeighborTerms(s, newParentInvestigationStep(), sql.OrderByField(field, opts...))
 	}
 }
+
+// ByLinkedCoordinationTasksCount orders the results by linked_coordination_tasks count.
+func ByLinkedCoordinationTasksCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newLinkedCoordinationTasksStep(), opts...)
+	}
+}
+
+// ByLinkedCoordinationTasks orders the results by linked_coordination_tasks terms.
+func ByLinkedCoordinationTasks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newLinkedCoordinationTasksStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newUpdatesStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -396,5 +419,12 @@ func newParentInvestigationStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(Table, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, ParentInvestigationTable, ParentInvestigationColumn),
+	)
+}
+func newLinkedCoordinationTasksStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(LinkedCoordinationTasksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, LinkedCoordinationTasksTable, LinkedCoordinationTasksColumn),
 	)
 }

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -105,26 +106,6 @@ func ScheduleIDNotIn(vs ...uuid.UUID) predicate.ScheduleOverride {
 	return predicate.ScheduleOverride(sql.FieldNotIn(FieldScheduleID, vs...))
 }
 
-// ScheduleIDGT applies the GT predicate on the "schedule_id" field.
-func ScheduleIDGT(v uuid.UUID) predicate.ScheduleOverride {
-	return predicate.ScheduleOverride(sql.FieldGT(FieldScheduleID, v))
-}
-
-// ScheduleIDGTE applies the GTE predicate on the "schedule_id" field.
-func ScheduleIDGTE(v uuid.UUID) predicate.ScheduleOverride {
-	return predicate.ScheduleOverride(sql.FieldGTE(FieldScheduleID, v))
-}
-
-// ScheduleIDLT applies the LT predicate on the "schedule_id" field.
-func ScheduleIDLT(v uuid.UUID) predicate.ScheduleOverride {
-	return predicate.ScheduleOverride(sql.FieldLT(FieldScheduleID, v))
-}
-
-// ScheduleIDLTE applies the LTE predicate on the "schedule_id" field.
-func ScheduleIDLTE(v uuid.UUID) predicate.ScheduleOverride {
-	return predicate.ScheduleOverride(sql.FieldLTE(FieldScheduleID, v))
-}
-
 // UserIDEQ applies the EQ predicate on the "user_id" field.
 func UserIDEQ(v uuid.UUID) predicate.ScheduleOverride {
 	return predicate.ScheduleOverride(sql.FieldEQ(FieldUserID, v))
@@ -143,26 +124,6 @@ func UserIDIn(vs ...uuid.UUID) predicate.ScheduleOverride {
 // UserIDNotIn applies the NotIn predicate on the "user_id" field.
 func UserIDNotIn(vs ...uuid.UUID) predicate.ScheduleOverride {
 	return predicate.ScheduleOverride(sql.FieldNotIn(FieldUserID, vs...))
-}
-
-// UserIDGT applies the GT predicate on the "user_id" field.
-func UserIDGT(v uuid.UUID) predicate.ScheduleOverride {
-	return predicate.ScheduleOverride(sql.FieldGT(FieldUserID, v))
-}
-
-// UserIDGTE applies the GTE predicate on the "user_id" field.
-func UserIDGTE(v uuid.UUID) predicate.ScheduleOverride {
-	return predicate.ScheduleOverride(sql.FieldGTE(FieldUserID, v))
-}
-
-// UserIDLT applies the LT predicate on the "user_id" field.
-func UserIDLT(v uuid.UUID) predicate.ScheduleOverride {
-	return predicate.ScheduleOverride(sql.FieldLT(FieldUserID, v))
-}
-
-// UserIDLTE applies the LTE predicate on the "user_id" field.
-func UserIDLTE(v uuid.UUID) predicate.ScheduleOverride {
-	return predicate.ScheduleOverride(sql.FieldLTE(FieldUserID, v))
 }
 
 // StartAtEQ applies the EQ predicate on the "start_at" field.
@@ -333,6 +294,52 @@ func CreatedAtLT(v time.Time) predicate.ScheduleOverride {
 // CreatedAtLTE applies the LTE predicate on the "created_at" field.
 func CreatedAtLTE(v time.Time) predicate.ScheduleOverride {
 	return predicate.ScheduleOverride(sql.FieldLTE(FieldCreatedAt, v))
+}
+
+// HasSchedule applies the HasEdge predicate on the "schedule" edge.
+func HasSchedule() predicate.ScheduleOverride {
+	return predicate.ScheduleOverride(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, ScheduleTable, ScheduleColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasScheduleWith applies the HasEdge predicate on the "schedule" edge with a given conditions (other predicates).
+func HasScheduleWith(preds ...predicate.OnCallSchedule) predicate.ScheduleOverride {
+	return predicate.ScheduleOverride(func(s *sql.Selector) {
+		step := newScheduleStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasUser applies the HasEdge predicate on the "user" edge.
+func HasUser() predicate.ScheduleOverride {
+	return predicate.ScheduleOverride(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, UserTable, UserColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasUserWith applies the HasEdge predicate on the "user" edge with a given conditions (other predicates).
+func HasUserWith(preds ...predicate.User) predicate.ScheduleOverride {
+	return predicate.ScheduleOverride(func(s *sql.Selector) {
+		step := newUserStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

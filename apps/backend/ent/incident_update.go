@@ -6,6 +6,7 @@ import (
 	"alga/ent/alert"
 	"alga/ent/alertinvestigation"
 	"alga/ent/coordinationtask"
+	"alga/ent/escalationpolicy"
 	"alga/ent/icsroleassignment"
 	"alga/ent/incident"
 	"alga/ent/incidentcoordinationmessage"
@@ -14,6 +15,8 @@ import (
 	"alga/ent/incidenttimelineentry"
 	"alga/ent/postmortem"
 	"alga/ent/predicate"
+	"alga/ent/service"
+	"alga/ent/user"
 	"context"
 	"errors"
 	"fmt"
@@ -869,6 +872,31 @@ func (_u *IncidentUpdate) AddCoordinationTasks(v ...*CoordinationTask) *Incident
 	return _u.AddCoordinationTaskIDs(ids...)
 }
 
+// SetCommander sets the "commander" edge to the User entity.
+func (_u *IncidentUpdate) SetCommander(v *User) *IncidentUpdate {
+	return _u.SetCommanderID(v.ID)
+}
+
+// SetCommunicator sets the "communicator" edge to the User entity.
+func (_u *IncidentUpdate) SetCommunicator(v *User) *IncidentUpdate {
+	return _u.SetCommunicatorID(v.ID)
+}
+
+// SetOnCallResponder sets the "on_call_responder" edge to the User entity.
+func (_u *IncidentUpdate) SetOnCallResponder(v *User) *IncidentUpdate {
+	return _u.SetOnCallResponderID(v.ID)
+}
+
+// SetService sets the "service" edge to the Service entity.
+func (_u *IncidentUpdate) SetService(v *Service) *IncidentUpdate {
+	return _u.SetServiceID(v.ID)
+}
+
+// SetEscalationPolicy sets the "escalation_policy" edge to the EscalationPolicy entity.
+func (_u *IncidentUpdate) SetEscalationPolicy(v *EscalationPolicy) *IncidentUpdate {
+	return _u.SetEscalationPolicyID(v.ID)
+}
+
 // Mutation returns the IncidentMutation object of the builder.
 func (_u *IncidentUpdate) Mutation() *IncidentMutation {
 	return _u.mutation
@@ -1048,6 +1076,36 @@ func (_u *IncidentUpdate) RemoveCoordinationTasks(v ...*CoordinationTask) *Incid
 	return _u.RemoveCoordinationTaskIDs(ids...)
 }
 
+// ClearCommander clears the "commander" edge to the User entity.
+func (_u *IncidentUpdate) ClearCommander() *IncidentUpdate {
+	_u.mutation.ClearCommander()
+	return _u
+}
+
+// ClearCommunicator clears the "communicator" edge to the User entity.
+func (_u *IncidentUpdate) ClearCommunicator() *IncidentUpdate {
+	_u.mutation.ClearCommunicator()
+	return _u
+}
+
+// ClearOnCallResponder clears the "on_call_responder" edge to the User entity.
+func (_u *IncidentUpdate) ClearOnCallResponder() *IncidentUpdate {
+	_u.mutation.ClearOnCallResponder()
+	return _u
+}
+
+// ClearService clears the "service" edge to the Service entity.
+func (_u *IncidentUpdate) ClearService() *IncidentUpdate {
+	_u.mutation.ClearService()
+	return _u
+}
+
+// ClearEscalationPolicy clears the "escalation_policy" edge to the EscalationPolicy entity.
+func (_u *IncidentUpdate) ClearEscalationPolicy() *IncidentUpdate {
+	_u.mutation.ClearEscalationPolicy()
+	return _u
+}
+
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (_u *IncidentUpdate) Save(ctx context.Context) (int, error) {
 	_u.defaults()
@@ -1139,24 +1197,6 @@ func (_u *IncidentUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.IncidentType(); ok {
 		_spec.SetField(incident.FieldIncidentType, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.CommanderID(); ok {
-		_spec.SetField(incident.FieldCommanderID, field.TypeUUID, value)
-	}
-	if _u.mutation.CommanderIDCleared() {
-		_spec.ClearField(incident.FieldCommanderID, field.TypeUUID)
-	}
-	if value, ok := _u.mutation.CommunicatorID(); ok {
-		_spec.SetField(incident.FieldCommunicatorID, field.TypeUUID, value)
-	}
-	if _u.mutation.CommunicatorIDCleared() {
-		_spec.ClearField(incident.FieldCommunicatorID, field.TypeUUID)
-	}
-	if value, ok := _u.mutation.OnCallResponderID(); ok {
-		_spec.SetField(incident.FieldOnCallResponderID, field.TypeUUID, value)
-	}
-	if _u.mutation.OnCallResponderIDCleared() {
-		_spec.ClearField(incident.FieldOnCallResponderID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.CommanderAssigneeType(); ok {
 		_spec.SetField(incident.FieldCommanderAssigneeType, field.TypeString, value)
 	}
@@ -1168,18 +1208,6 @@ func (_u *IncidentUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.CommunicatorAssigneeTypeCleared() {
 		_spec.ClearField(incident.FieldCommunicatorAssigneeType, field.TypeString)
-	}
-	if value, ok := _u.mutation.ServiceID(); ok {
-		_spec.SetField(incident.FieldServiceID, field.TypeUUID, value)
-	}
-	if _u.mutation.ServiceIDCleared() {
-		_spec.ClearField(incident.FieldServiceID, field.TypeUUID)
-	}
-	if value, ok := _u.mutation.EscalationPolicyID(); ok {
-		_spec.SetField(incident.FieldEscalationPolicyID, field.TypeUUID, value)
-	}
-	if _u.mutation.EscalationPolicyIDCleared() {
-		_spec.ClearField(incident.FieldEscalationPolicyID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.ConferenceURL(); ok {
 		_spec.SetField(incident.FieldConferenceURL, field.TypeString, value)
@@ -1491,7 +1519,7 @@ func (_u *IncidentUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.PostMortemCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.O2O,
 			Inverse: false,
 			Table:   incident.PostMortemTable,
 			Columns: []string{incident.PostMortemColumn},
@@ -1504,7 +1532,7 @@ func (_u *IncidentUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if nodes := _u.mutation.PostMortemIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.O2O,
 			Inverse: false,
 			Table:   incident.PostMortemTable,
 			Columns: []string{incident.PostMortemColumn},
@@ -1691,6 +1719,151 @@ func (_u *IncidentUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(coordinationtask.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.CommanderCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   incident.CommanderTable,
+			Columns: []string{incident.CommanderColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CommanderIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   incident.CommanderTable,
+			Columns: []string{incident.CommanderColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.CommunicatorCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   incident.CommunicatorTable,
+			Columns: []string{incident.CommunicatorColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CommunicatorIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   incident.CommunicatorTable,
+			Columns: []string{incident.CommunicatorColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.OnCallResponderCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   incident.OnCallResponderTable,
+			Columns: []string{incident.OnCallResponderColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OnCallResponderIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   incident.OnCallResponderTable,
+			Columns: []string{incident.OnCallResponderColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ServiceCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   incident.ServiceTable,
+			Columns: []string{incident.ServiceColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ServiceIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   incident.ServiceTable,
+			Columns: []string{incident.ServiceColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.EscalationPolicyCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   incident.EscalationPolicyTable,
+			Columns: []string{incident.EscalationPolicyColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(escalationpolicy.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.EscalationPolicyIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   incident.EscalationPolicyTable,
+			Columns: []string{incident.EscalationPolicyColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(escalationpolicy.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -2548,6 +2721,31 @@ func (_u *IncidentUpdateOne) AddCoordinationTasks(v ...*CoordinationTask) *Incid
 	return _u.AddCoordinationTaskIDs(ids...)
 }
 
+// SetCommander sets the "commander" edge to the User entity.
+func (_u *IncidentUpdateOne) SetCommander(v *User) *IncidentUpdateOne {
+	return _u.SetCommanderID(v.ID)
+}
+
+// SetCommunicator sets the "communicator" edge to the User entity.
+func (_u *IncidentUpdateOne) SetCommunicator(v *User) *IncidentUpdateOne {
+	return _u.SetCommunicatorID(v.ID)
+}
+
+// SetOnCallResponder sets the "on_call_responder" edge to the User entity.
+func (_u *IncidentUpdateOne) SetOnCallResponder(v *User) *IncidentUpdateOne {
+	return _u.SetOnCallResponderID(v.ID)
+}
+
+// SetService sets the "service" edge to the Service entity.
+func (_u *IncidentUpdateOne) SetService(v *Service) *IncidentUpdateOne {
+	return _u.SetServiceID(v.ID)
+}
+
+// SetEscalationPolicy sets the "escalation_policy" edge to the EscalationPolicy entity.
+func (_u *IncidentUpdateOne) SetEscalationPolicy(v *EscalationPolicy) *IncidentUpdateOne {
+	return _u.SetEscalationPolicyID(v.ID)
+}
+
 // Mutation returns the IncidentMutation object of the builder.
 func (_u *IncidentUpdateOne) Mutation() *IncidentMutation {
 	return _u.mutation
@@ -2727,6 +2925,36 @@ func (_u *IncidentUpdateOne) RemoveCoordinationTasks(v ...*CoordinationTask) *In
 	return _u.RemoveCoordinationTaskIDs(ids...)
 }
 
+// ClearCommander clears the "commander" edge to the User entity.
+func (_u *IncidentUpdateOne) ClearCommander() *IncidentUpdateOne {
+	_u.mutation.ClearCommander()
+	return _u
+}
+
+// ClearCommunicator clears the "communicator" edge to the User entity.
+func (_u *IncidentUpdateOne) ClearCommunicator() *IncidentUpdateOne {
+	_u.mutation.ClearCommunicator()
+	return _u
+}
+
+// ClearOnCallResponder clears the "on_call_responder" edge to the User entity.
+func (_u *IncidentUpdateOne) ClearOnCallResponder() *IncidentUpdateOne {
+	_u.mutation.ClearOnCallResponder()
+	return _u
+}
+
+// ClearService clears the "service" edge to the Service entity.
+func (_u *IncidentUpdateOne) ClearService() *IncidentUpdateOne {
+	_u.mutation.ClearService()
+	return _u
+}
+
+// ClearEscalationPolicy clears the "escalation_policy" edge to the EscalationPolicy entity.
+func (_u *IncidentUpdateOne) ClearEscalationPolicy() *IncidentUpdateOne {
+	_u.mutation.ClearEscalationPolicy()
+	return _u
+}
+
 // Where appends a list predicates to the IncidentUpdate builder.
 func (_u *IncidentUpdateOne) Where(ps ...predicate.Incident) *IncidentUpdateOne {
 	_u.mutation.Where(ps...)
@@ -2848,24 +3076,6 @@ func (_u *IncidentUpdateOne) sqlSave(ctx context.Context) (_node *Incident, err 
 	if value, ok := _u.mutation.IncidentType(); ok {
 		_spec.SetField(incident.FieldIncidentType, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.CommanderID(); ok {
-		_spec.SetField(incident.FieldCommanderID, field.TypeUUID, value)
-	}
-	if _u.mutation.CommanderIDCleared() {
-		_spec.ClearField(incident.FieldCommanderID, field.TypeUUID)
-	}
-	if value, ok := _u.mutation.CommunicatorID(); ok {
-		_spec.SetField(incident.FieldCommunicatorID, field.TypeUUID, value)
-	}
-	if _u.mutation.CommunicatorIDCleared() {
-		_spec.ClearField(incident.FieldCommunicatorID, field.TypeUUID)
-	}
-	if value, ok := _u.mutation.OnCallResponderID(); ok {
-		_spec.SetField(incident.FieldOnCallResponderID, field.TypeUUID, value)
-	}
-	if _u.mutation.OnCallResponderIDCleared() {
-		_spec.ClearField(incident.FieldOnCallResponderID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.CommanderAssigneeType(); ok {
 		_spec.SetField(incident.FieldCommanderAssigneeType, field.TypeString, value)
 	}
@@ -2877,18 +3087,6 @@ func (_u *IncidentUpdateOne) sqlSave(ctx context.Context) (_node *Incident, err 
 	}
 	if _u.mutation.CommunicatorAssigneeTypeCleared() {
 		_spec.ClearField(incident.FieldCommunicatorAssigneeType, field.TypeString)
-	}
-	if value, ok := _u.mutation.ServiceID(); ok {
-		_spec.SetField(incident.FieldServiceID, field.TypeUUID, value)
-	}
-	if _u.mutation.ServiceIDCleared() {
-		_spec.ClearField(incident.FieldServiceID, field.TypeUUID)
-	}
-	if value, ok := _u.mutation.EscalationPolicyID(); ok {
-		_spec.SetField(incident.FieldEscalationPolicyID, field.TypeUUID, value)
-	}
-	if _u.mutation.EscalationPolicyIDCleared() {
-		_spec.ClearField(incident.FieldEscalationPolicyID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.ConferenceURL(); ok {
 		_spec.SetField(incident.FieldConferenceURL, field.TypeString, value)
@@ -3200,7 +3398,7 @@ func (_u *IncidentUpdateOne) sqlSave(ctx context.Context) (_node *Incident, err 
 	}
 	if _u.mutation.PostMortemCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.O2O,
 			Inverse: false,
 			Table:   incident.PostMortemTable,
 			Columns: []string{incident.PostMortemColumn},
@@ -3213,7 +3411,7 @@ func (_u *IncidentUpdateOne) sqlSave(ctx context.Context) (_node *Incident, err 
 	}
 	if nodes := _u.mutation.PostMortemIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.O2O,
 			Inverse: false,
 			Table:   incident.PostMortemTable,
 			Columns: []string{incident.PostMortemColumn},
@@ -3400,6 +3598,151 @@ func (_u *IncidentUpdateOne) sqlSave(ctx context.Context) (_node *Incident, err 
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(coordinationtask.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.CommanderCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   incident.CommanderTable,
+			Columns: []string{incident.CommanderColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CommanderIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   incident.CommanderTable,
+			Columns: []string{incident.CommanderColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.CommunicatorCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   incident.CommunicatorTable,
+			Columns: []string{incident.CommunicatorColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CommunicatorIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   incident.CommunicatorTable,
+			Columns: []string{incident.CommunicatorColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.OnCallResponderCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   incident.OnCallResponderTable,
+			Columns: []string{incident.OnCallResponderColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OnCallResponderIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   incident.OnCallResponderTable,
+			Columns: []string{incident.OnCallResponderColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ServiceCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   incident.ServiceTable,
+			Columns: []string{incident.ServiceColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ServiceIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   incident.ServiceTable,
+			Columns: []string{incident.ServiceColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.EscalationPolicyCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   incident.EscalationPolicyTable,
+			Columns: []string{incident.EscalationPolicyColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(escalationpolicy.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.EscalationPolicyIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   incident.EscalationPolicyTable,
+			Columns: []string{incident.EscalationPolicyColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(escalationpolicy.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

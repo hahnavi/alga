@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/credentialprovider"
+	"alga/ent/sharedsecret"
 	"context"
 	"errors"
 	"fmt"
@@ -123,6 +124,21 @@ func (_c *CredentialProviderCreate) SetNillableID(v *uuid.UUID) *CredentialProvi
 		_c.SetID(*v)
 	}
 	return _c
+}
+
+// AddSharedSecretIDs adds the "shared_secrets" edge to the SharedSecret entity by IDs.
+func (_c *CredentialProviderCreate) AddSharedSecretIDs(ids ...uuid.UUID) *CredentialProviderCreate {
+	_c.mutation.AddSharedSecretIDs(ids...)
+	return _c
+}
+
+// AddSharedSecrets adds the "shared_secrets" edges to the SharedSecret entity.
+func (_c *CredentialProviderCreate) AddSharedSecrets(v ...*SharedSecret) *CredentialProviderCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddSharedSecretIDs(ids...)
 }
 
 // Mutation returns the CredentialProviderMutation object of the builder.
@@ -280,6 +296,22 @@ func (_c *CredentialProviderCreate) createSpec() (*CredentialProvider, *sqlgraph
 	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(credentialprovider.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if nodes := _c.mutation.SharedSecretsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   credentialprovider.SharedSecretsTable,
+			Columns: []string{credentialprovider.SharedSecretsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(sharedsecret.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

@@ -4,6 +4,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -32,7 +33,7 @@ func (CredentialProvider) Fields() []ent.Field {
 		// config_encrypted holds the provider-specific connection config as an
 		// encrypted JSON blob (e.g. vault address + token, aws region). The
 		// "internal" provider leaves this empty.
-		field.String("config_encrypted").Default(""),
+		field.String("config_encrypted").Default("").Sensitive(),
 		field.Bool("enabled").Default(true),
 		// system marks built-in providers that are seeded and cannot be removed
 		// (e.g. the default "Alga Internal" provider). It is set only by the
@@ -44,7 +45,9 @@ func (CredentialProvider) Fields() []ent.Field {
 }
 
 func (CredentialProvider) Edges() []ent.Edge {
-	return nil
+	return []ent.Edge{
+		edge.To("shared_secrets", SharedSecret.Type).Annotations(entsql.Annotation{OnDelete: entsql.Restrict}),
+	}
 }
 
 func (CredentialProvider) Indexes() []ent.Index {

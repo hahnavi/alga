@@ -5,7 +5,11 @@ package ent
 import (
 	"alga/ent/oncallschedule"
 	"alga/ent/predicate"
+	"alga/ent/schedulelayer"
+	"alga/ent/scheduleoverride"
+	"alga/ent/team"
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -19,10 +23,13 @@ import (
 // OnCallScheduleQuery is the builder for querying OnCallSchedule entities.
 type OnCallScheduleQuery struct {
 	config
-	ctx        *QueryContext
-	order      []oncallschedule.OrderOption
-	inters     []Interceptor
-	predicates []predicate.OnCallSchedule
+	ctx           *QueryContext
+	order         []oncallschedule.OrderOption
+	inters        []Interceptor
+	predicates    []predicate.OnCallSchedule
+	withTeam      *TeamQuery
+	withLayers    *ScheduleLayerQuery
+	withOverrides *ScheduleOverrideQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -57,6 +64,72 @@ func (_q *OnCallScheduleQuery) Unique(unique bool) *OnCallScheduleQuery {
 func (_q *OnCallScheduleQuery) Order(o ...oncallschedule.OrderOption) *OnCallScheduleQuery {
 	_q.order = append(_q.order, o...)
 	return _q
+}
+
+// QueryTeam chains the current query on the "team" edge.
+func (_q *OnCallScheduleQuery) QueryTeam() *TeamQuery {
+	query := (&TeamClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(oncallschedule.Table, oncallschedule.FieldID, selector),
+			sqlgraph.To(team.Table, team.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, oncallschedule.TeamTable, oncallschedule.TeamColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryLayers chains the current query on the "layers" edge.
+func (_q *OnCallScheduleQuery) QueryLayers() *ScheduleLayerQuery {
+	query := (&ScheduleLayerClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(oncallschedule.Table, oncallschedule.FieldID, selector),
+			sqlgraph.To(schedulelayer.Table, schedulelayer.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, oncallschedule.LayersTable, oncallschedule.LayersColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryOverrides chains the current query on the "overrides" edge.
+func (_q *OnCallScheduleQuery) QueryOverrides() *ScheduleOverrideQuery {
+	query := (&ScheduleOverrideClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(oncallschedule.Table, oncallschedule.FieldID, selector),
+			sqlgraph.To(scheduleoverride.Table, scheduleoverride.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, oncallschedule.OverridesTable, oncallschedule.OverridesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first OnCallSchedule entity from the query.
@@ -246,15 +319,51 @@ func (_q *OnCallScheduleQuery) Clone() *OnCallScheduleQuery {
 		return nil
 	}
 	return &OnCallScheduleQuery{
-		config:     _q.config,
-		ctx:        _q.ctx.Clone(),
-		order:      append([]oncallschedule.OrderOption{}, _q.order...),
-		inters:     append([]Interceptor{}, _q.inters...),
-		predicates: append([]predicate.OnCallSchedule{}, _q.predicates...),
+		config:        _q.config,
+		ctx:           _q.ctx.Clone(),
+		order:         append([]oncallschedule.OrderOption{}, _q.order...),
+		inters:        append([]Interceptor{}, _q.inters...),
+		predicates:    append([]predicate.OnCallSchedule{}, _q.predicates...),
+		withTeam:      _q.withTeam.Clone(),
+		withLayers:    _q.withLayers.Clone(),
+		withOverrides: _q.withOverrides.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
+}
+
+// WithTeam tells the query-builder to eager-load the nodes that are connected to
+// the "team" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *OnCallScheduleQuery) WithTeam(opts ...func(*TeamQuery)) *OnCallScheduleQuery {
+	query := (&TeamClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withTeam = query
+	return _q
+}
+
+// WithLayers tells the query-builder to eager-load the nodes that are connected to
+// the "layers" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *OnCallScheduleQuery) WithLayers(opts ...func(*ScheduleLayerQuery)) *OnCallScheduleQuery {
+	query := (&ScheduleLayerClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withLayers = query
+	return _q
+}
+
+// WithOverrides tells the query-builder to eager-load the nodes that are connected to
+// the "overrides" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *OnCallScheduleQuery) WithOverrides(opts ...func(*ScheduleOverrideQuery)) *OnCallScheduleQuery {
+	query := (&ScheduleOverrideClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withOverrides = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -333,8 +442,13 @@ func (_q *OnCallScheduleQuery) prepareQuery(ctx context.Context) error {
 
 func (_q *OnCallScheduleQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*OnCallSchedule, error) {
 	var (
-		nodes = []*OnCallSchedule{}
-		_spec = _q.querySpec()
+		nodes       = []*OnCallSchedule{}
+		_spec       = _q.querySpec()
+		loadedTypes = [3]bool{
+			_q.withTeam != nil,
+			_q.withLayers != nil,
+			_q.withOverrides != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*OnCallSchedule).scanValues(nil, columns)
@@ -342,6 +456,7 @@ func (_q *OnCallScheduleQuery) sqlAll(ctx context.Context, hooks ...queryHook) (
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &OnCallSchedule{config: _q.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -353,7 +468,120 @@ func (_q *OnCallScheduleQuery) sqlAll(ctx context.Context, hooks ...queryHook) (
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := _q.withTeam; query != nil {
+		if err := _q.loadTeam(ctx, query, nodes, nil,
+			func(n *OnCallSchedule, e *Team) { n.Edges.Team = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withLayers; query != nil {
+		if err := _q.loadLayers(ctx, query, nodes,
+			func(n *OnCallSchedule) { n.Edges.Layers = []*ScheduleLayer{} },
+			func(n *OnCallSchedule, e *ScheduleLayer) { n.Edges.Layers = append(n.Edges.Layers, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withOverrides; query != nil {
+		if err := _q.loadOverrides(ctx, query, nodes,
+			func(n *OnCallSchedule) { n.Edges.Overrides = []*ScheduleOverride{} },
+			func(n *OnCallSchedule, e *ScheduleOverride) { n.Edges.Overrides = append(n.Edges.Overrides, e) }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (_q *OnCallScheduleQuery) loadTeam(ctx context.Context, query *TeamQuery, nodes []*OnCallSchedule, init func(*OnCallSchedule), assign func(*OnCallSchedule, *Team)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*OnCallSchedule)
+	for i := range nodes {
+		if nodes[i].TeamID == nil {
+			continue
+		}
+		fk := *nodes[i].TeamID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(team.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "team_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *OnCallScheduleQuery) loadLayers(ctx context.Context, query *ScheduleLayerQuery, nodes []*OnCallSchedule, init func(*OnCallSchedule), assign func(*OnCallSchedule, *ScheduleLayer)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*OnCallSchedule)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(schedulelayer.FieldScheduleID)
+	}
+	query.Where(predicate.ScheduleLayer(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(oncallschedule.LayersColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ScheduleID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "schedule_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *OnCallScheduleQuery) loadOverrides(ctx context.Context, query *ScheduleOverrideQuery, nodes []*OnCallSchedule, init func(*OnCallSchedule), assign func(*OnCallSchedule, *ScheduleOverride)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*OnCallSchedule)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(scheduleoverride.FieldScheduleID)
+	}
+	query.Where(predicate.ScheduleOverride(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(oncallschedule.OverridesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ScheduleID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "schedule_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
 }
 
 func (_q *OnCallScheduleQuery) sqlCount(ctx context.Context) (int, error) {
@@ -380,6 +608,9 @@ func (_q *OnCallScheduleQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != oncallschedule.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if _q.withTeam != nil {
+			_spec.Node.AddColumnOnce(oncallschedule.FieldTeamID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

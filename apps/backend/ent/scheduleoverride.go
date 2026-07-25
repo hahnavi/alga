@@ -3,7 +3,9 @@
 package ent
 
 import (
+	"alga/ent/oncallschedule"
 	"alga/ent/scheduleoverride"
+	"alga/ent/user"
 	"fmt"
 	"strings"
 	"time"
@@ -29,8 +31,44 @@ type ScheduleOverride struct {
 	// CreatedBy holds the value of the "created_by" field.
 	CreatedBy *uuid.UUID `json:"created_by,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
-	CreatedAt    time.Time `json:"created_at,omitempty"`
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the ScheduleOverrideQuery when eager-loading is set.
+	Edges        ScheduleOverrideEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// ScheduleOverrideEdges holds the relations/edges for other nodes in the graph.
+type ScheduleOverrideEdges struct {
+	// Schedule holds the value of the schedule edge.
+	Schedule *OnCallSchedule `json:"schedule,omitempty"`
+	// User holds the value of the user edge.
+	User *User `json:"user,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [2]bool
+}
+
+// ScheduleOrErr returns the Schedule value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ScheduleOverrideEdges) ScheduleOrErr() (*OnCallSchedule, error) {
+	if e.Schedule != nil {
+		return e.Schedule, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: oncallschedule.Label}
+	}
+	return nil, &NotLoadedError{edge: "schedule"}
+}
+
+// UserOrErr returns the User value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ScheduleOverrideEdges) UserOrErr() (*User, error) {
+	if e.User != nil {
+		return e.User, nil
+	} else if e.loadedTypes[1] {
+		return nil, &NotFoundError{label: user.Label}
+	}
+	return nil, &NotLoadedError{edge: "user"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -113,6 +151,16 @@ func (_m *ScheduleOverride) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *ScheduleOverride) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
+}
+
+// QuerySchedule queries the "schedule" edge of the ScheduleOverride entity.
+func (_m *ScheduleOverride) QuerySchedule() *OnCallScheduleQuery {
+	return NewScheduleOverrideClient(_m.config).QuerySchedule(_m)
+}
+
+// QueryUser queries the "user" edge of the ScheduleOverride entity.
+func (_m *ScheduleOverride) QueryUser() *UserQuery {
+	return NewScheduleOverrideClient(_m.config).QueryUser(_m)
 }
 
 // Update returns a builder for updating this ScheduleOverride.

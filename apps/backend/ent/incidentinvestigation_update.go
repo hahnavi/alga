@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/alertinvestigation"
+	"alga/ent/coordinationtask"
 	"alga/ent/incident"
 	"alga/ent/incidentinvestigation"
 	"alga/ent/incidentinvestigationupdateentry"
@@ -511,6 +512,21 @@ func (_u *IncidentInvestigationUpdate) SetParentInvestigation(v *IncidentInvesti
 	return _u.SetParentInvestigationID(v.ID)
 }
 
+// AddLinkedCoordinationTaskIDs adds the "linked_coordination_tasks" edge to the CoordinationTask entity by IDs.
+func (_u *IncidentInvestigationUpdate) AddLinkedCoordinationTaskIDs(ids ...uuid.UUID) *IncidentInvestigationUpdate {
+	_u.mutation.AddLinkedCoordinationTaskIDs(ids...)
+	return _u
+}
+
+// AddLinkedCoordinationTasks adds the "linked_coordination_tasks" edges to the CoordinationTask entity.
+func (_u *IncidentInvestigationUpdate) AddLinkedCoordinationTasks(v ...*CoordinationTask) *IncidentInvestigationUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddLinkedCoordinationTaskIDs(ids...)
+}
+
 // Mutation returns the IncidentInvestigationMutation object of the builder.
 func (_u *IncidentInvestigationUpdate) Mutation() *IncidentInvestigationMutation {
 	return _u.mutation
@@ -595,6 +611,27 @@ func (_u *IncidentInvestigationUpdate) ClearSourceAlertInvestigation() *Incident
 func (_u *IncidentInvestigationUpdate) ClearParentInvestigation() *IncidentInvestigationUpdate {
 	_u.mutation.ClearParentInvestigation()
 	return _u
+}
+
+// ClearLinkedCoordinationTasks clears all "linked_coordination_tasks" edges to the CoordinationTask entity.
+func (_u *IncidentInvestigationUpdate) ClearLinkedCoordinationTasks() *IncidentInvestigationUpdate {
+	_u.mutation.ClearLinkedCoordinationTasks()
+	return _u
+}
+
+// RemoveLinkedCoordinationTaskIDs removes the "linked_coordination_tasks" edge to CoordinationTask entities by IDs.
+func (_u *IncidentInvestigationUpdate) RemoveLinkedCoordinationTaskIDs(ids ...uuid.UUID) *IncidentInvestigationUpdate {
+	_u.mutation.RemoveLinkedCoordinationTaskIDs(ids...)
+	return _u
+}
+
+// RemoveLinkedCoordinationTasks removes "linked_coordination_tasks" edges to CoordinationTask entities.
+func (_u *IncidentInvestigationUpdate) RemoveLinkedCoordinationTasks(v ...*CoordinationTask) *IncidentInvestigationUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveLinkedCoordinationTaskIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -988,6 +1025,51 @@ func (_u *IncidentInvestigationUpdate) sqlSave(ctx context.Context) (_node int, 
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(incidentinvestigation.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.LinkedCoordinationTasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   incidentinvestigation.LinkedCoordinationTasksTable,
+			Columns: []string{incidentinvestigation.LinkedCoordinationTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(coordinationtask.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedLinkedCoordinationTasksIDs(); len(nodes) > 0 && !_u.mutation.LinkedCoordinationTasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   incidentinvestigation.LinkedCoordinationTasksTable,
+			Columns: []string{incidentinvestigation.LinkedCoordinationTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(coordinationtask.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.LinkedCoordinationTasksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   incidentinvestigation.LinkedCoordinationTasksTable,
+			Columns: []string{incidentinvestigation.LinkedCoordinationTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(coordinationtask.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1492,6 +1574,21 @@ func (_u *IncidentInvestigationUpdateOne) SetParentInvestigation(v *IncidentInve
 	return _u.SetParentInvestigationID(v.ID)
 }
 
+// AddLinkedCoordinationTaskIDs adds the "linked_coordination_tasks" edge to the CoordinationTask entity by IDs.
+func (_u *IncidentInvestigationUpdateOne) AddLinkedCoordinationTaskIDs(ids ...uuid.UUID) *IncidentInvestigationUpdateOne {
+	_u.mutation.AddLinkedCoordinationTaskIDs(ids...)
+	return _u
+}
+
+// AddLinkedCoordinationTasks adds the "linked_coordination_tasks" edges to the CoordinationTask entity.
+func (_u *IncidentInvestigationUpdateOne) AddLinkedCoordinationTasks(v ...*CoordinationTask) *IncidentInvestigationUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddLinkedCoordinationTaskIDs(ids...)
+}
+
 // Mutation returns the IncidentInvestigationMutation object of the builder.
 func (_u *IncidentInvestigationUpdateOne) Mutation() *IncidentInvestigationMutation {
 	return _u.mutation
@@ -1576,6 +1673,27 @@ func (_u *IncidentInvestigationUpdateOne) ClearSourceAlertInvestigation() *Incid
 func (_u *IncidentInvestigationUpdateOne) ClearParentInvestigation() *IncidentInvestigationUpdateOne {
 	_u.mutation.ClearParentInvestigation()
 	return _u
+}
+
+// ClearLinkedCoordinationTasks clears all "linked_coordination_tasks" edges to the CoordinationTask entity.
+func (_u *IncidentInvestigationUpdateOne) ClearLinkedCoordinationTasks() *IncidentInvestigationUpdateOne {
+	_u.mutation.ClearLinkedCoordinationTasks()
+	return _u
+}
+
+// RemoveLinkedCoordinationTaskIDs removes the "linked_coordination_tasks" edge to CoordinationTask entities by IDs.
+func (_u *IncidentInvestigationUpdateOne) RemoveLinkedCoordinationTaskIDs(ids ...uuid.UUID) *IncidentInvestigationUpdateOne {
+	_u.mutation.RemoveLinkedCoordinationTaskIDs(ids...)
+	return _u
+}
+
+// RemoveLinkedCoordinationTasks removes "linked_coordination_tasks" edges to CoordinationTask entities.
+func (_u *IncidentInvestigationUpdateOne) RemoveLinkedCoordinationTasks(v ...*CoordinationTask) *IncidentInvestigationUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveLinkedCoordinationTaskIDs(ids...)
 }
 
 // Where appends a list predicates to the IncidentInvestigationUpdate builder.
@@ -1999,6 +2117,51 @@ func (_u *IncidentInvestigationUpdateOne) sqlSave(ctx context.Context) (_node *I
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(incidentinvestigation.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.LinkedCoordinationTasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   incidentinvestigation.LinkedCoordinationTasksTable,
+			Columns: []string{incidentinvestigation.LinkedCoordinationTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(coordinationtask.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedLinkedCoordinationTasksIDs(); len(nodes) > 0 && !_u.mutation.LinkedCoordinationTasksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   incidentinvestigation.LinkedCoordinationTasksTable,
+			Columns: []string{incidentinvestigation.LinkedCoordinationTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(coordinationtask.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.LinkedCoordinationTasksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   incidentinvestigation.LinkedCoordinationTasksTable,
+			Columns: []string{incidentinvestigation.LinkedCoordinationTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(coordinationtask.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

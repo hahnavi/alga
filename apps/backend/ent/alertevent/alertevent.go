@@ -27,6 +27,8 @@ const (
 	FieldActorUserID = "actor_user_id"
 	// FieldSource holds the string denoting the source field in the database.
 	FieldSource = "source"
+	// FieldAlertID holds the string denoting the alert_id field in the database.
+	FieldAlertID = "alert_id"
 	// EdgeAlert holds the string denoting the alert edge name in mutations.
 	EdgeAlert = "alert"
 	// Table holds the table name of the alertevent in the database.
@@ -37,7 +39,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "alert" package.
 	AlertInverseTable = "alerts"
 	// AlertColumn is the table column denoting the alert relation/edge.
-	AlertColumn = "alert_events"
+	AlertColumn = "alert_id"
 )
 
 // Columns holds all SQL columns for alertevent fields.
@@ -49,23 +51,13 @@ var Columns = []string{
 	FieldActorDisplayName,
 	FieldActorUserID,
 	FieldSource,
-}
-
-// ForeignKeys holds the SQL foreign-keys that are owned by the "alert_events"
-// table and are not defined as standalone fields in the schema.
-var ForeignKeys = []string{
-	"alert_events",
+	FieldAlertID,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
-			return true
-		}
-	}
-	for i := range ForeignKeys {
-		if column == ForeignKeys[i] {
 			return true
 		}
 	}
@@ -125,6 +117,11 @@ func ByActorUserID(opts ...sql.OrderTermOption) OrderOption {
 // BySource orders the results by the source field.
 func BySource(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSource, opts...).ToFunc()
+}
+
+// ByAlertID orders the results by the alert_id field.
+func ByAlertID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAlertID, opts...).ToFunc()
 }
 
 // ByAlertField orders the results by alert field.

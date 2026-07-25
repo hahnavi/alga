@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/agentask"
+	"alga/ent/agenttoken"
 	"fmt"
 	"strings"
 	"time"
@@ -45,8 +46,57 @@ type AgentAsk struct {
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// AnsweredAt holds the value of the "answered_at" field.
-	AnsweredAt   *time.Time `json:"answered_at,omitempty"`
+	AnsweredAt *time.Time `json:"answered_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the AgentAskQuery when eager-loading is set.
+	Edges        AgentAskEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// AgentAskEdges holds the relations/edges for other nodes in the graph.
+type AgentAskEdges struct {
+	// FromAgent holds the value of the from_agent edge.
+	FromAgent *AgentToken `json:"from_agent,omitempty"`
+	// ToAgent holds the value of the to_agent edge.
+	ToAgent *AgentToken `json:"to_agent,omitempty"`
+	// RepliedByAgent holds the value of the replied_by_agent edge.
+	RepliedByAgent *AgentToken `json:"replied_by_agent,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [3]bool
+}
+
+// FromAgentOrErr returns the FromAgent value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e AgentAskEdges) FromAgentOrErr() (*AgentToken, error) {
+	if e.FromAgent != nil {
+		return e.FromAgent, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: agenttoken.Label}
+	}
+	return nil, &NotLoadedError{edge: "from_agent"}
+}
+
+// ToAgentOrErr returns the ToAgent value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e AgentAskEdges) ToAgentOrErr() (*AgentToken, error) {
+	if e.ToAgent != nil {
+		return e.ToAgent, nil
+	} else if e.loadedTypes[1] {
+		return nil, &NotFoundError{label: agenttoken.Label}
+	}
+	return nil, &NotLoadedError{edge: "to_agent"}
+}
+
+// RepliedByAgentOrErr returns the RepliedByAgent value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e AgentAskEdges) RepliedByAgentOrErr() (*AgentToken, error) {
+	if e.RepliedByAgent != nil {
+		return e.RepliedByAgent, nil
+	} else if e.loadedTypes[2] {
+		return nil, &NotFoundError{label: agenttoken.Label}
+	}
+	return nil, &NotLoadedError{edge: "replied_by_agent"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -181,6 +231,21 @@ func (_m *AgentAsk) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *AgentAsk) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
+}
+
+// QueryFromAgent queries the "from_agent" edge of the AgentAsk entity.
+func (_m *AgentAsk) QueryFromAgent() *AgentTokenQuery {
+	return NewAgentAskClient(_m.config).QueryFromAgent(_m)
+}
+
+// QueryToAgent queries the "to_agent" edge of the AgentAsk entity.
+func (_m *AgentAsk) QueryToAgent() *AgentTokenQuery {
+	return NewAgentAskClient(_m.config).QueryToAgent(_m)
+}
+
+// QueryRepliedByAgent queries the "replied_by_agent" edge of the AgentAsk entity.
+func (_m *AgentAsk) QueryRepliedByAgent() *AgentTokenQuery {
+	return NewAgentAskClient(_m.config).QueryRepliedByAgent(_m)
 }
 
 // Update returns a builder for updating this AgentAsk.

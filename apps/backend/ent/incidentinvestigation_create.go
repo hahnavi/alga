@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/alertinvestigation"
+	"alga/ent/coordinationtask"
 	"alga/ent/incident"
 	"alga/ent/incidentinvestigation"
 	"alga/ent/incidentinvestigationupdateentry"
@@ -389,6 +390,21 @@ func (_c *IncidentInvestigationCreate) SetParentInvestigation(v *IncidentInvesti
 	return _c.SetParentInvestigationID(v.ID)
 }
 
+// AddLinkedCoordinationTaskIDs adds the "linked_coordination_tasks" edge to the CoordinationTask entity by IDs.
+func (_c *IncidentInvestigationCreate) AddLinkedCoordinationTaskIDs(ids ...uuid.UUID) *IncidentInvestigationCreate {
+	_c.mutation.AddLinkedCoordinationTaskIDs(ids...)
+	return _c
+}
+
+// AddLinkedCoordinationTasks adds the "linked_coordination_tasks" edges to the CoordinationTask entity.
+func (_c *IncidentInvestigationCreate) AddLinkedCoordinationTasks(v ...*CoordinationTask) *IncidentInvestigationCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddLinkedCoordinationTaskIDs(ids...)
+}
+
 // Mutation returns the IncidentInvestigationMutation object of the builder.
 func (_c *IncidentInvestigationCreate) Mutation() *IncidentInvestigationMutation {
 	return _c.mutation
@@ -716,6 +732,22 @@ func (_c *IncidentInvestigationCreate) createSpec() (*IncidentInvestigation, *sq
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.ParentInvestigationID = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.LinkedCoordinationTasksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   incidentinvestigation.LinkedCoordinationTasksTable,
+			Columns: []string{incidentinvestigation.LinkedCoordinationTasksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(coordinationtask.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

@@ -131,7 +131,7 @@ func TestOIDCProviderDeleteRemovesIdentities(t *testing.T) {
 	ps := newPGOIDCProviderStore(client)
 	is := newPGOIDCIdentityStore(client)
 
-	userID := uuid.New()
+	userID := mustCreateUser(t, client)
 	created, _ := ps.CreateProvider(context.Background(), &OIDCProviderRecord{
 		Name: "P", Issuer: "https://p.example.com", ClientID: "c", Enabled: true,
 	}, "s")
@@ -163,7 +163,7 @@ func TestOIDCIdentityGetByProviderSubject(t *testing.T) {
 	ps := newPGOIDCProviderStore(client)
 	is := newPGOIDCIdentityStore(client)
 
-	userID := uuid.New()
+	userID := mustCreateUser(t, client)
 	created, _ := ps.CreateProvider(context.Background(), &OIDCProviderRecord{
 		Name: "P", Issuer: "https://p.example.com", ClientID: "c", Enabled: true,
 	}, "s")

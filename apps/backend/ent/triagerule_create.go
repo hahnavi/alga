@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/triagerule"
+	"alga/ent/user"
 	"context"
 	"errors"
 	"fmt"
@@ -185,6 +186,25 @@ func (_c *TriageRuleCreate) SetNillableID(v *uuid.UUID) *TriageRuleCreate {
 	return _c
 }
 
+// SetCreatedByUserID sets the "created_by_user" edge to the User entity by ID.
+func (_c *TriageRuleCreate) SetCreatedByUserID(id uuid.UUID) *TriageRuleCreate {
+	_c.mutation.SetCreatedByUserID(id)
+	return _c
+}
+
+// SetNillableCreatedByUserID sets the "created_by_user" edge to the User entity by ID if the given value is not nil.
+func (_c *TriageRuleCreate) SetNillableCreatedByUserID(id *uuid.UUID) *TriageRuleCreate {
+	if id != nil {
+		_c = _c.SetCreatedByUserID(*id)
+	}
+	return _c
+}
+
+// SetCreatedByUser sets the "created_by_user" edge to the User entity.
+func (_c *TriageRuleCreate) SetCreatedByUser(v *User) *TriageRuleCreate {
+	return _c.SetCreatedByUserID(v.ID)
+}
+
 // Mutation returns the TriageRuleMutation object of the builder.
 func (_c *TriageRuleCreate) Mutation() *TriageRuleMutation {
 	return _c.mutation
@@ -282,6 +302,11 @@ func (_c *TriageRuleCreate) check() error {
 	if _, ok := _c.mutation.Priority(); !ok {
 		return &ValidationError{Name: "priority", err: errors.New(`ent: missing required field "TriageRule.priority"`)}
 	}
+	if v, ok := _c.mutation.Priority(); ok {
+		if err := triagerule.PriorityValidator(v); err != nil {
+			return &ValidationError{Name: "priority", err: fmt.Errorf(`ent: validator failed for field "TriageRule.priority": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Enabled(); !ok {
 		return &ValidationError{Name: "enabled", err: errors.New(`ent: missing required field "TriageRule.enabled"`)}
 	}
@@ -366,10 +391,6 @@ func (_c *TriageRuleCreate) createSpec() (*TriageRule, *sqlgraph.CreateSpec) {
 		_spec.SetField(triagerule.FieldEnabled, field.TypeBool, value)
 		_node.Enabled = value
 	}
-	if value, ok := _c.mutation.CreatedBy(); ok {
-		_spec.SetField(triagerule.FieldCreatedBy, field.TypeUUID, value)
-		_node.CreatedBy = value
-	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(triagerule.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -377,6 +398,23 @@ func (_c *TriageRuleCreate) createSpec() (*TriageRule, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(triagerule.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if nodes := _c.mutation.CreatedByUserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   triagerule.CreatedByUserTable,
+			Columns: []string{triagerule.CreatedByUserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.CreatedBy = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

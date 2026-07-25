@@ -3,7 +3,9 @@
 package ent
 
 import (
+	"alga/ent/oncallschedule"
 	"alga/ent/scheduleoverride"
+	"alga/ent/user"
 	"context"
 	"errors"
 	"fmt"
@@ -87,6 +89,16 @@ func (_c *ScheduleOverrideCreate) SetNillableID(v *uuid.UUID) *ScheduleOverrideC
 	return _c
 }
 
+// SetSchedule sets the "schedule" edge to the OnCallSchedule entity.
+func (_c *ScheduleOverrideCreate) SetSchedule(v *OnCallSchedule) *ScheduleOverrideCreate {
+	return _c.SetScheduleID(v.ID)
+}
+
+// SetUser sets the "user" edge to the User entity.
+func (_c *ScheduleOverrideCreate) SetUser(v *User) *ScheduleOverrideCreate {
+	return _c.SetUserID(v.ID)
+}
+
 // Mutation returns the ScheduleOverrideMutation object of the builder.
 func (_c *ScheduleOverrideCreate) Mutation() *ScheduleOverrideMutation {
 	return _c.mutation
@@ -149,6 +161,12 @@ func (_c *ScheduleOverrideCreate) check() error {
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "ScheduleOverride.created_at"`)}
 	}
+	if len(_c.mutation.ScheduleIDs()) == 0 {
+		return &ValidationError{Name: "schedule", err: errors.New(`ent: missing required edge "ScheduleOverride.schedule"`)}
+	}
+	if len(_c.mutation.UserIDs()) == 0 {
+		return &ValidationError{Name: "user", err: errors.New(`ent: missing required edge "ScheduleOverride.user"`)}
+	}
 	return nil
 }
 
@@ -184,14 +202,6 @@ func (_c *ScheduleOverrideCreate) createSpec() (*ScheduleOverride, *sqlgraph.Cre
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := _c.mutation.ScheduleID(); ok {
-		_spec.SetField(scheduleoverride.FieldScheduleID, field.TypeUUID, value)
-		_node.ScheduleID = value
-	}
-	if value, ok := _c.mutation.UserID(); ok {
-		_spec.SetField(scheduleoverride.FieldUserID, field.TypeUUID, value)
-		_node.UserID = value
-	}
 	if value, ok := _c.mutation.StartAt(); ok {
 		_spec.SetField(scheduleoverride.FieldStartAt, field.TypeTime, value)
 		_node.StartAt = value
@@ -207,6 +217,40 @@ func (_c *ScheduleOverrideCreate) createSpec() (*ScheduleOverride, *sqlgraph.Cre
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(scheduleoverride.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
+	}
+	if nodes := _c.mutation.ScheduleIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   scheduleoverride.ScheduleTable,
+			Columns: []string{scheduleoverride.ScheduleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oncallschedule.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.ScheduleID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.UserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   scheduleoverride.UserTable,
+			Columns: []string{scheduleoverride.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.UserID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

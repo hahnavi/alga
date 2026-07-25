@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/triageresult"
+	"alga/ent/user"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -64,8 +65,53 @@ type TriageResult struct {
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt    time.Time `json:"updated_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the TriageResultQuery when eager-loading is set.
+	Edges        TriageResultEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// TriageResultEdges holds the relations/edges for other nodes in the graph.
+type TriageResultEdges struct {
+	// Alerts holds the value of the alerts edge.
+	Alerts []*Alert `json:"alerts,omitempty"`
+	// AlertInvestigations holds the value of the alert_investigations edge.
+	AlertInvestigations []*AlertInvestigation `json:"alert_investigations,omitempty"`
+	// OverriddenByUser holds the value of the overridden_by_user edge.
+	OverriddenByUser *User `json:"overridden_by_user,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [3]bool
+}
+
+// AlertsOrErr returns the Alerts value or an error if the edge
+// was not loaded in eager-loading.
+func (e TriageResultEdges) AlertsOrErr() ([]*Alert, error) {
+	if e.loadedTypes[0] {
+		return e.Alerts, nil
+	}
+	return nil, &NotLoadedError{edge: "alerts"}
+}
+
+// AlertInvestigationsOrErr returns the AlertInvestigations value or an error if the edge
+// was not loaded in eager-loading.
+func (e TriageResultEdges) AlertInvestigationsOrErr() ([]*AlertInvestigation, error) {
+	if e.loadedTypes[1] {
+		return e.AlertInvestigations, nil
+	}
+	return nil, &NotLoadedError{edge: "alert_investigations"}
+}
+
+// OverriddenByUserOrErr returns the OverriddenByUser value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e TriageResultEdges) OverriddenByUserOrErr() (*User, error) {
+	if e.OverriddenByUser != nil {
+		return e.OverriddenByUser, nil
+	} else if e.loadedTypes[2] {
+		return nil, &NotFoundError{label: user.Label}
+	}
+	return nil, &NotLoadedError{edge: "overridden_by_user"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -266,6 +312,21 @@ func (_m *TriageResult) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *TriageResult) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
+}
+
+// QueryAlerts queries the "alerts" edge of the TriageResult entity.
+func (_m *TriageResult) QueryAlerts() *AlertQuery {
+	return NewTriageResultClient(_m.config).QueryAlerts(_m)
+}
+
+// QueryAlertInvestigations queries the "alert_investigations" edge of the TriageResult entity.
+func (_m *TriageResult) QueryAlertInvestigations() *AlertInvestigationQuery {
+	return NewTriageResultClient(_m.config).QueryAlertInvestigations(_m)
+}
+
+// QueryOverriddenByUser queries the "overridden_by_user" edge of the TriageResult entity.
+func (_m *TriageResult) QueryOverriddenByUser() *UserQuery {
+	return NewTriageResultClient(_m.config).QueryOverriddenByUser(_m)
 }
 
 // Update returns a builder for updating this TriageResult.

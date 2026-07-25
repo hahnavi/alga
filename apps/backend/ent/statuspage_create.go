@@ -4,6 +4,8 @@ package ent
 
 import (
 	"alga/ent/statuspage"
+	"alga/ent/statuspagecomponent"
+	"alga/ent/team"
 	"context"
 	"errors"
 	"fmt"
@@ -129,6 +131,26 @@ func (_c *StatusPageCreate) SetNillableID(v *uuid.UUID) *StatusPageCreate {
 		_c.SetID(*v)
 	}
 	return _c
+}
+
+// AddComponentIDs adds the "components" edge to the StatusPageComponent entity by IDs.
+func (_c *StatusPageCreate) AddComponentIDs(ids ...uuid.UUID) *StatusPageCreate {
+	_c.mutation.AddComponentIDs(ids...)
+	return _c
+}
+
+// AddComponents adds the "components" edges to the StatusPageComponent entity.
+func (_c *StatusPageCreate) AddComponents(v ...*StatusPageComponent) *StatusPageCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddComponentIDs(ids...)
+}
+
+// SetOwnerTeam sets the "owner_team" edge to the Team entity.
+func (_c *StatusPageCreate) SetOwnerTeam(v *Team) *StatusPageCreate {
+	return _c.SetOwnerTeamID(v.ID)
 }
 
 // Mutation returns the StatusPageMutation object of the builder.
@@ -280,10 +302,6 @@ func (_c *StatusPageCreate) createSpec() (*StatusPage, *sqlgraph.CreateSpec) {
 		_spec.SetField(statuspage.FieldEnabled, field.TypeBool, value)
 		_node.Enabled = value
 	}
-	if value, ok := _c.mutation.OwnerTeamID(); ok {
-		_spec.SetField(statuspage.FieldOwnerTeamID, field.TypeUUID, value)
-		_node.OwnerTeamID = &value
-	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(statuspage.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -291,6 +309,39 @@ func (_c *StatusPageCreate) createSpec() (*StatusPage, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(statuspage.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if nodes := _c.mutation.ComponentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   statuspage.ComponentsTable,
+			Columns: []string{statuspage.ComponentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(statuspagecomponent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.OwnerTeamIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   statuspage.OwnerTeamTable,
+			Columns: []string{statuspage.OwnerTeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.OwnerTeamID = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

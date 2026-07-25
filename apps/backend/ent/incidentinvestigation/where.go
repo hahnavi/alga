@@ -1489,6 +1489,29 @@ func HasParentInvestigationWith(preds ...predicate.IncidentInvestigation) predic
 	})
 }
 
+// HasLinkedCoordinationTasks applies the HasEdge predicate on the "linked_coordination_tasks" edge.
+func HasLinkedCoordinationTasks() predicate.IncidentInvestigation {
+	return predicate.IncidentInvestigation(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, LinkedCoordinationTasksTable, LinkedCoordinationTasksColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasLinkedCoordinationTasksWith applies the HasEdge predicate on the "linked_coordination_tasks" edge with a given conditions (other predicates).
+func HasLinkedCoordinationTasksWith(preds ...predicate.CoordinationTask) predicate.IncidentInvestigation {
+	return predicate.IncidentInvestigation(func(s *sql.Selector) {
+		step := newLinkedCoordinationTasksStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.IncidentInvestigation) predicate.IncidentInvestigation {
 	return predicate.IncidentInvestigation(sql.AndPredicates(predicates...))

@@ -86,6 +86,11 @@ func Source(v string) predicate.AlertEvent {
 	return predicate.AlertEvent(sql.FieldEQ(FieldSource, v))
 }
 
+// AlertID applies equality check predicate on the "alert_id" field. It's identical to AlertIDEQ.
+func AlertID(v uuid.UUID) predicate.AlertEvent {
+	return predicate.AlertEvent(sql.FieldEQ(FieldAlertID, v))
+}
+
 // TypeEQ applies the EQ predicate on the "type" field.
 func TypeEQ(v string) predicate.AlertEvent {
 	return predicate.AlertEvent(sql.FieldEQ(FieldType, v))
@@ -489,6 +494,26 @@ func SourceEqualFold(v string) predicate.AlertEvent {
 // SourceContainsFold applies the ContainsFold predicate on the "source" field.
 func SourceContainsFold(v string) predicate.AlertEvent {
 	return predicate.AlertEvent(sql.FieldContainsFold(FieldSource, v))
+}
+
+// AlertIDEQ applies the EQ predicate on the "alert_id" field.
+func AlertIDEQ(v uuid.UUID) predicate.AlertEvent {
+	return predicate.AlertEvent(sql.FieldEQ(FieldAlertID, v))
+}
+
+// AlertIDNEQ applies the NEQ predicate on the "alert_id" field.
+func AlertIDNEQ(v uuid.UUID) predicate.AlertEvent {
+	return predicate.AlertEvent(sql.FieldNEQ(FieldAlertID, v))
+}
+
+// AlertIDIn applies the In predicate on the "alert_id" field.
+func AlertIDIn(vs ...uuid.UUID) predicate.AlertEvent {
+	return predicate.AlertEvent(sql.FieldIn(FieldAlertID, vs...))
+}
+
+// AlertIDNotIn applies the NotIn predicate on the "alert_id" field.
+func AlertIDNotIn(vs ...uuid.UUID) predicate.AlertEvent {
+	return predicate.AlertEvent(sql.FieldNotIn(FieldAlertID, vs...))
 }
 
 // HasAlert applies the HasEdge predicate on the "alert" edge.

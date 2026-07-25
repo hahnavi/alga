@@ -4,6 +4,8 @@ package ent
 
 import (
 	"alga/ent/predicate"
+	"alga/ent/service"
+	"alga/ent/statuspage"
 	"alga/ent/statuspagecomponent"
 	"context"
 	"errors"
@@ -146,9 +148,31 @@ func (_u *StatusPageComponentUpdate) SetUpdatedAt(v time.Time) *StatusPageCompon
 	return _u
 }
 
+// SetStatusPage sets the "status_page" edge to the StatusPage entity.
+func (_u *StatusPageComponentUpdate) SetStatusPage(v *StatusPage) *StatusPageComponentUpdate {
+	return _u.SetStatusPageID(v.ID)
+}
+
+// SetService sets the "service" edge to the Service entity.
+func (_u *StatusPageComponentUpdate) SetService(v *Service) *StatusPageComponentUpdate {
+	return _u.SetServiceID(v.ID)
+}
+
 // Mutation returns the StatusPageComponentMutation object of the builder.
 func (_u *StatusPageComponentUpdate) Mutation() *StatusPageComponentMutation {
 	return _u.mutation
+}
+
+// ClearStatusPage clears the "status_page" edge to the StatusPage entity.
+func (_u *StatusPageComponentUpdate) ClearStatusPage() *StatusPageComponentUpdate {
+	_u.mutation.ClearStatusPage()
+	return _u
+}
+
+// ClearService clears the "service" edge to the Service entity.
+func (_u *StatusPageComponentUpdate) ClearService() *StatusPageComponentUpdate {
+	_u.mutation.ClearService()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -194,6 +218,14 @@ func (_u *StatusPageComponentUpdate) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "StatusPageComponent.name": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.DisplayOrder(); ok {
+		if err := statuspagecomponent.DisplayOrderValidator(v); err != nil {
+			return &ValidationError{Name: "display_order", err: fmt.Errorf(`ent: validator failed for field "StatusPageComponent.display_order": %w`, err)}
+		}
+	}
+	if _u.mutation.StatusPageCleared() && len(_u.mutation.StatusPageIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "StatusPageComponent.status_page"`)
+	}
 	return nil
 }
 
@@ -209,20 +241,11 @@ func (_u *StatusPageComponentUpdate) sqlSave(ctx context.Context) (_node int, er
 			}
 		}
 	}
-	if value, ok := _u.mutation.StatusPageID(); ok {
-		_spec.SetField(statuspagecomponent.FieldStatusPageID, field.TypeUUID, value)
-	}
 	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(statuspagecomponent.FieldName, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Description(); ok {
 		_spec.SetField(statuspagecomponent.FieldDescription, field.TypeString, value)
-	}
-	if value, ok := _u.mutation.ServiceID(); ok {
-		_spec.SetField(statuspagecomponent.FieldServiceID, field.TypeUUID, value)
-	}
-	if _u.mutation.ServiceIDCleared() {
-		_spec.ClearField(statuspagecomponent.FieldServiceID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.DisplayOrder(); ok {
 		_spec.SetField(statuspagecomponent.FieldDisplayOrder, field.TypeInt, value)
@@ -238,6 +261,64 @@ func (_u *StatusPageComponentUpdate) sqlSave(ctx context.Context) (_node int, er
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(statuspagecomponent.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.StatusPageCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   statuspagecomponent.StatusPageTable,
+			Columns: []string{statuspagecomponent.StatusPageColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(statuspage.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.StatusPageIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   statuspagecomponent.StatusPageTable,
+			Columns: []string{statuspagecomponent.StatusPageColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(statuspage.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ServiceCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   statuspagecomponent.ServiceTable,
+			Columns: []string{statuspagecomponent.ServiceColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ServiceIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   statuspagecomponent.ServiceTable,
+			Columns: []string{statuspagecomponent.ServiceColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -376,9 +457,31 @@ func (_u *StatusPageComponentUpdateOne) SetUpdatedAt(v time.Time) *StatusPageCom
 	return _u
 }
 
+// SetStatusPage sets the "status_page" edge to the StatusPage entity.
+func (_u *StatusPageComponentUpdateOne) SetStatusPage(v *StatusPage) *StatusPageComponentUpdateOne {
+	return _u.SetStatusPageID(v.ID)
+}
+
+// SetService sets the "service" edge to the Service entity.
+func (_u *StatusPageComponentUpdateOne) SetService(v *Service) *StatusPageComponentUpdateOne {
+	return _u.SetServiceID(v.ID)
+}
+
 // Mutation returns the StatusPageComponentMutation object of the builder.
 func (_u *StatusPageComponentUpdateOne) Mutation() *StatusPageComponentMutation {
 	return _u.mutation
+}
+
+// ClearStatusPage clears the "status_page" edge to the StatusPage entity.
+func (_u *StatusPageComponentUpdateOne) ClearStatusPage() *StatusPageComponentUpdateOne {
+	_u.mutation.ClearStatusPage()
+	return _u
+}
+
+// ClearService clears the "service" edge to the Service entity.
+func (_u *StatusPageComponentUpdateOne) ClearService() *StatusPageComponentUpdateOne {
+	_u.mutation.ClearService()
+	return _u
 }
 
 // Where appends a list predicates to the StatusPageComponentUpdate builder.
@@ -437,6 +540,14 @@ func (_u *StatusPageComponentUpdateOne) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "StatusPageComponent.name": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.DisplayOrder(); ok {
+		if err := statuspagecomponent.DisplayOrderValidator(v); err != nil {
+			return &ValidationError{Name: "display_order", err: fmt.Errorf(`ent: validator failed for field "StatusPageComponent.display_order": %w`, err)}
+		}
+	}
+	if _u.mutation.StatusPageCleared() && len(_u.mutation.StatusPageIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "StatusPageComponent.status_page"`)
+	}
 	return nil
 }
 
@@ -469,20 +580,11 @@ func (_u *StatusPageComponentUpdateOne) sqlSave(ctx context.Context) (_node *Sta
 			}
 		}
 	}
-	if value, ok := _u.mutation.StatusPageID(); ok {
-		_spec.SetField(statuspagecomponent.FieldStatusPageID, field.TypeUUID, value)
-	}
 	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(statuspagecomponent.FieldName, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Description(); ok {
 		_spec.SetField(statuspagecomponent.FieldDescription, field.TypeString, value)
-	}
-	if value, ok := _u.mutation.ServiceID(); ok {
-		_spec.SetField(statuspagecomponent.FieldServiceID, field.TypeUUID, value)
-	}
-	if _u.mutation.ServiceIDCleared() {
-		_spec.ClearField(statuspagecomponent.FieldServiceID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.DisplayOrder(); ok {
 		_spec.SetField(statuspagecomponent.FieldDisplayOrder, field.TypeInt, value)
@@ -498,6 +600,64 @@ func (_u *StatusPageComponentUpdateOne) sqlSave(ctx context.Context) (_node *Sta
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(statuspagecomponent.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.StatusPageCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   statuspagecomponent.StatusPageTable,
+			Columns: []string{statuspagecomponent.StatusPageColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(statuspage.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.StatusPageIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   statuspagecomponent.StatusPageTable,
+			Columns: []string{statuspagecomponent.StatusPageColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(statuspage.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ServiceCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   statuspagecomponent.ServiceTable,
+			Columns: []string{statuspagecomponent.ServiceColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ServiceIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   statuspagecomponent.ServiceTable,
+			Columns: []string{statuspagecomponent.ServiceColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &StatusPageComponent{config: _u.config}
 	_spec.Assign = _node.assignValues

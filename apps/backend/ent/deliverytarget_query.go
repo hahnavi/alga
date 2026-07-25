@@ -25,7 +25,6 @@ type DeliveryTargetQuery struct {
 	inters     []Interceptor
 	predicates []predicate.DeliveryTarget
 	withAlert  *AlertQuery
-	withFKs    bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -371,18 +370,11 @@ func (_q *DeliveryTargetQuery) prepareQuery(ctx context.Context) error {
 func (_q *DeliveryTargetQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*DeliveryTarget, error) {
 	var (
 		nodes       = []*DeliveryTarget{}
-		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
 		loadedTypes = [1]bool{
 			_q.withAlert != nil,
 		}
 	)
-	if _q.withAlert != nil {
-		withFKs = true
-	}
-	if withFKs {
-		_spec.Node.Columns = append(_spec.Node.Columns, deliverytarget.ForeignKeys...)
-	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*DeliveryTarget).scanValues(nil, columns)
 	}
@@ -414,10 +406,7 @@ func (_q *DeliveryTargetQuery) loadAlert(ctx context.Context, query *AlertQuery,
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*DeliveryTarget)
 	for i := range nodes {
-		if nodes[i].alert_delivery_targets == nil {
-			continue
-		}
-		fk := *nodes[i].alert_delivery_targets
+		fk := nodes[i].AlertID
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -434,7 +423,7 @@ func (_q *DeliveryTargetQuery) loadAlert(ctx context.Context, query *AlertQuery,
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "alert_delivery_targets" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "alert_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -467,6 +456,9 @@ func (_q *DeliveryTargetQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != deliverytarget.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if _q.withAlert != nil {
+			_spec.Node.AddColumnOnce(deliverytarget.FieldAlertID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

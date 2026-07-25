@@ -113,6 +113,16 @@ const (
 	EdgeCoordinationMessages = "coordination_messages"
 	// EdgeCoordinationTasks holds the string denoting the coordination_tasks edge name in mutations.
 	EdgeCoordinationTasks = "coordination_tasks"
+	// EdgeCommander holds the string denoting the commander edge name in mutations.
+	EdgeCommander = "commander"
+	// EdgeCommunicator holds the string denoting the communicator edge name in mutations.
+	EdgeCommunicator = "communicator"
+	// EdgeOnCallResponder holds the string denoting the on_call_responder edge name in mutations.
+	EdgeOnCallResponder = "on_call_responder"
+	// EdgeService holds the string denoting the service edge name in mutations.
+	EdgeService = "service"
+	// EdgeEscalationPolicy holds the string denoting the escalation_policy edge name in mutations.
+	EdgeEscalationPolicy = "escalation_policy"
 	// Table holds the table name of the incident in the database.
 	Table = "incidents"
 	// AlertsTable is the table that holds the alerts relation/edge. The primary key declared below.
@@ -140,35 +150,35 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "incidenttimelineentry" package.
 	TimelineInverseTable = "incident_timeline_entries"
 	// TimelineColumn is the table column denoting the timeline relation/edge.
-	TimelineColumn = "incident_timeline"
+	TimelineColumn = "incident_id"
 	// PostMortemTable is the table that holds the post_mortem relation/edge.
-	PostMortemTable = "incidents"
+	PostMortemTable = "post_mortems"
 	// PostMortemInverseTable is the table name for the PostMortem entity.
 	// It exists in this package in order to avoid circular dependency with the "postmortem" package.
 	PostMortemInverseTable = "post_mortems"
 	// PostMortemColumn is the table column denoting the post_mortem relation/edge.
-	PostMortemColumn = "incident_post_mortem"
+	PostMortemColumn = "incident_id"
 	// IcsRolesTable is the table that holds the ics_roles relation/edge.
 	IcsRolesTable = "ics_role_assignments"
 	// IcsRolesInverseTable is the table name for the ICSRoleAssignment entity.
 	// It exists in this package in order to avoid circular dependency with the "icsroleassignment" package.
 	IcsRolesInverseTable = "ics_role_assignments"
 	// IcsRolesColumn is the table column denoting the ics_roles relation/edge.
-	IcsRolesColumn = "incident_ics_roles"
+	IcsRolesColumn = "incident_id"
 	// DocumentsTable is the table that holds the documents relation/edge.
 	DocumentsTable = "incident_documents"
 	// DocumentsInverseTable is the table name for the IncidentDocument entity.
 	// It exists in this package in order to avoid circular dependency with the "incidentdocument" package.
 	DocumentsInverseTable = "incident_documents"
 	// DocumentsColumn is the table column denoting the documents relation/edge.
-	DocumentsColumn = "incident_documents"
+	DocumentsColumn = "incident_id"
 	// CoordinationMessagesTable is the table that holds the coordination_messages relation/edge.
 	CoordinationMessagesTable = "incident_coordination_messages"
 	// CoordinationMessagesInverseTable is the table name for the IncidentCoordinationMessage entity.
 	// It exists in this package in order to avoid circular dependency with the "incidentcoordinationmessage" package.
 	CoordinationMessagesInverseTable = "incident_coordination_messages"
 	// CoordinationMessagesColumn is the table column denoting the coordination_messages relation/edge.
-	CoordinationMessagesColumn = "incident_coordination_messages"
+	CoordinationMessagesColumn = "incident_id"
 	// CoordinationTasksTable is the table that holds the coordination_tasks relation/edge.
 	CoordinationTasksTable = "coordination_tasks"
 	// CoordinationTasksInverseTable is the table name for the CoordinationTask entity.
@@ -176,6 +186,41 @@ const (
 	CoordinationTasksInverseTable = "coordination_tasks"
 	// CoordinationTasksColumn is the table column denoting the coordination_tasks relation/edge.
 	CoordinationTasksColumn = "incident_id"
+	// CommanderTable is the table that holds the commander relation/edge.
+	CommanderTable = "incidents"
+	// CommanderInverseTable is the table name for the User entity.
+	// It exists in this package in order to avoid circular dependency with the "user" package.
+	CommanderInverseTable = "users"
+	// CommanderColumn is the table column denoting the commander relation/edge.
+	CommanderColumn = "commander_id"
+	// CommunicatorTable is the table that holds the communicator relation/edge.
+	CommunicatorTable = "incidents"
+	// CommunicatorInverseTable is the table name for the User entity.
+	// It exists in this package in order to avoid circular dependency with the "user" package.
+	CommunicatorInverseTable = "users"
+	// CommunicatorColumn is the table column denoting the communicator relation/edge.
+	CommunicatorColumn = "communicator_id"
+	// OnCallResponderTable is the table that holds the on_call_responder relation/edge.
+	OnCallResponderTable = "incidents"
+	// OnCallResponderInverseTable is the table name for the User entity.
+	// It exists in this package in order to avoid circular dependency with the "user" package.
+	OnCallResponderInverseTable = "users"
+	// OnCallResponderColumn is the table column denoting the on_call_responder relation/edge.
+	OnCallResponderColumn = "on_call_responder_id"
+	// ServiceTable is the table that holds the service relation/edge.
+	ServiceTable = "incidents"
+	// ServiceInverseTable is the table name for the Service entity.
+	// It exists in this package in order to avoid circular dependency with the "service" package.
+	ServiceInverseTable = "services"
+	// ServiceColumn is the table column denoting the service relation/edge.
+	ServiceColumn = "service_id"
+	// EscalationPolicyTable is the table that holds the escalation_policy relation/edge.
+	EscalationPolicyTable = "incidents"
+	// EscalationPolicyInverseTable is the table name for the EscalationPolicy entity.
+	// It exists in this package in order to avoid circular dependency with the "escalationpolicy" package.
+	EscalationPolicyInverseTable = "escalation_policies"
+	// EscalationPolicyColumn is the table column denoting the escalation_policy relation/edge.
+	EscalationPolicyColumn = "escalation_policy_id"
 )
 
 // Columns holds all SQL columns for incident fields.
@@ -223,12 +268,6 @@ var Columns = []string{
 	FieldDeletedAt,
 }
 
-// ForeignKeys holds the SQL foreign-keys that are owned by the "incidents"
-// table and are not defined as standalone fields in the schema.
-var ForeignKeys = []string{
-	"incident_post_mortem",
-}
-
 var (
 	// AlertsPrimaryKey and AlertsColumn2 are the table columns denoting the
 	// primary key for the alerts relation (M2M).
@@ -239,11 +278,6 @@ var (
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
-			return true
-		}
-	}
-	for i := range ForeignKeys {
-		if column == ForeignKeys[i] {
 			return true
 		}
 	}
@@ -608,6 +642,41 @@ func ByCoordinationTasks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption
 		sqlgraph.OrderByNeighborTerms(s, newCoordinationTasksStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByCommanderField orders the results by commander field.
+func ByCommanderField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCommanderStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByCommunicatorField orders the results by communicator field.
+func ByCommunicatorField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCommunicatorStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByOnCallResponderField orders the results by on_call_responder field.
+func ByOnCallResponderField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newOnCallResponderStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByServiceField orders the results by service field.
+func ByServiceField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newServiceStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByEscalationPolicyField orders the results by escalation_policy field.
+func ByEscalationPolicyField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newEscalationPolicyStep(), sql.OrderByField(field, opts...))
+	}
+}
 func newAlertsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -640,7 +709,7 @@ func newPostMortemStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(PostMortemInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, false, PostMortemTable, PostMortemColumn),
+		sqlgraph.Edge(sqlgraph.O2O, false, PostMortemTable, PostMortemColumn),
 	)
 }
 func newIcsRolesStep() *sqlgraph.Step {
@@ -669,5 +738,40 @@ func newCoordinationTasksStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(CoordinationTasksInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, CoordinationTasksTable, CoordinationTasksColumn),
+	)
+}
+func newCommanderStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CommanderInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, CommanderTable, CommanderColumn),
+	)
+}
+func newCommunicatorStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CommunicatorInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, CommunicatorTable, CommunicatorColumn),
+	)
+}
+func newOnCallResponderStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(OnCallResponderInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, OnCallResponderTable, OnCallResponderColumn),
+	)
+}
+func newServiceStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ServiceInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, ServiceTable, ServiceColumn),
+	)
+}
+func newEscalationPolicyStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(EscalationPolicyInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, EscalationPolicyTable, EscalationPolicyColumn),
 	)
 }

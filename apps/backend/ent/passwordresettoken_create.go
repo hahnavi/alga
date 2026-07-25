@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/passwordresettoken"
+	"alga/ent/user"
 	"context"
 	"errors"
 	"fmt"
@@ -81,6 +82,11 @@ func (_c *PasswordResetTokenCreate) SetNillableID(v *uuid.UUID) *PasswordResetTo
 	return _c
 }
 
+// SetUser sets the "user" edge to the User entity.
+func (_c *PasswordResetTokenCreate) SetUser(v *User) *PasswordResetTokenCreate {
+	return _c.SetUserID(v.ID)
+}
+
 // Mutation returns the PasswordResetTokenMutation object of the builder.
 func (_c *PasswordResetTokenCreate) Mutation() *PasswordResetTokenMutation {
 	return _c.mutation
@@ -152,6 +158,9 @@ func (_c *PasswordResetTokenCreate) check() error {
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "PasswordResetToken.created_at"`)}
 	}
+	if len(_c.mutation.UserIDs()) == 0 {
+		return &ValidationError{Name: "user", err: errors.New(`ent: missing required edge "PasswordResetToken.user"`)}
+	}
 	return nil
 }
 
@@ -187,10 +196,6 @@ func (_c *PasswordResetTokenCreate) createSpec() (*PasswordResetToken, *sqlgraph
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := _c.mutation.UserID(); ok {
-		_spec.SetField(passwordresettoken.FieldUserID, field.TypeUUID, value)
-		_node.UserID = value
-	}
 	if value, ok := _c.mutation.TokenHash(); ok {
 		_spec.SetField(passwordresettoken.FieldTokenHash, field.TypeString, value)
 		_node.TokenHash = value
@@ -206,6 +211,23 @@ func (_c *PasswordResetTokenCreate) createSpec() (*PasswordResetToken, *sqlgraph
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(passwordresettoken.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
+	}
+	if nodes := _c.mutation.UserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   passwordresettoken.UserTable,
+			Columns: []string{passwordresettoken.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.UserID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

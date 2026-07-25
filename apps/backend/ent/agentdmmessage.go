@@ -35,11 +35,12 @@ type AgentDMMessage struct {
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// AgentTokenID holds the value of the "agent_token_id" field.
+	AgentTokenID uuid.UUID `json:"agent_token_id,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the AgentDMMessageQuery when eager-loading is set.
-	Edges                   AgentDMMessageEdges `json:"edges"`
-	agent_token_dm_messages *uuid.UUID
-	selectValues            sql.SelectValues
+	Edges        AgentDMMessageEdges `json:"edges"`
+	selectValues sql.SelectValues
 }
 
 // AgentDMMessageEdges holds the relations/edges for other nodes in the graph.
@@ -73,10 +74,8 @@ func (*AgentDMMessage) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case agentdmmessage.FieldCreatedAt, agentdmmessage.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
-		case agentdmmessage.FieldID:
+		case agentdmmessage.FieldID, agentdmmessage.FieldAgentTokenID:
 			values[i] = new(uuid.UUID)
-		case agentdmmessage.ForeignKeys[0]: // agent_token_dm_messages
-			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -148,12 +147,11 @@ func (_m *AgentDMMessage) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.UpdatedAt = value.Time
 			}
-		case agentdmmessage.ForeignKeys[0]:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field agent_token_dm_messages", values[i])
-			} else if value.Valid {
-				_m.agent_token_dm_messages = new(uuid.UUID)
-				*_m.agent_token_dm_messages = *value.S.(*uuid.UUID)
+		case agentdmmessage.FieldAgentTokenID:
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field agent_token_id", values[i])
+			} else if value != nil {
+				_m.AgentTokenID = *value
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
@@ -223,6 +221,9 @@ func (_m *AgentDMMessage) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
 	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("agent_token_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.AgentTokenID))
 	builder.WriteByte(')')
 	return builder.String()
 }

@@ -6,6 +6,7 @@ import (
 	"alga/ent/handoffrecord"
 	"alga/ent/oncallschedule"
 	"alga/ent/predicate"
+	"alga/ent/user"
 	"context"
 	"errors"
 	"fmt"
@@ -203,6 +204,16 @@ func (_u *HandoffRecordUpdate) SetSchedule(v *OnCallSchedule) *HandoffRecordUpda
 	return _u.SetScheduleID(v.ID)
 }
 
+// SetOutgoingUser sets the "outgoing_user" edge to the User entity.
+func (_u *HandoffRecordUpdate) SetOutgoingUser(v *User) *HandoffRecordUpdate {
+	return _u.SetOutgoingUserID(v.ID)
+}
+
+// SetIncomingUser sets the "incoming_user" edge to the User entity.
+func (_u *HandoffRecordUpdate) SetIncomingUser(v *User) *HandoffRecordUpdate {
+	return _u.SetIncomingUserID(v.ID)
+}
+
 // Mutation returns the HandoffRecordMutation object of the builder.
 func (_u *HandoffRecordUpdate) Mutation() *HandoffRecordMutation {
 	return _u.mutation
@@ -211,6 +222,18 @@ func (_u *HandoffRecordUpdate) Mutation() *HandoffRecordMutation {
 // ClearSchedule clears the "schedule" edge to the OnCallSchedule entity.
 func (_u *HandoffRecordUpdate) ClearSchedule() *HandoffRecordUpdate {
 	_u.mutation.ClearSchedule()
+	return _u
+}
+
+// ClearOutgoingUser clears the "outgoing_user" edge to the User entity.
+func (_u *HandoffRecordUpdate) ClearOutgoingUser() *HandoffRecordUpdate {
+	_u.mutation.ClearOutgoingUser()
+	return _u
+}
+
+// ClearIncomingUser clears the "incoming_user" edge to the User entity.
+func (_u *HandoffRecordUpdate) ClearIncomingUser() *HandoffRecordUpdate {
+	_u.mutation.ClearIncomingUser()
 	return _u
 }
 
@@ -275,18 +298,6 @@ func (_u *HandoffRecordUpdate) sqlSave(ctx context.Context) (_node int, err erro
 			}
 		}
 	}
-	if value, ok := _u.mutation.OutgoingUserID(); ok {
-		_spec.SetField(handoffrecord.FieldOutgoingUserID, field.TypeUUID, value)
-	}
-	if _u.mutation.OutgoingUserIDCleared() {
-		_spec.ClearField(handoffrecord.FieldOutgoingUserID, field.TypeUUID)
-	}
-	if value, ok := _u.mutation.IncomingUserID(); ok {
-		_spec.SetField(handoffrecord.FieldIncomingUserID, field.TypeUUID, value)
-	}
-	if _u.mutation.IncomingUserIDCleared() {
-		_spec.ClearField(handoffrecord.FieldIncomingUserID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.HandoffAt(); ok {
 		_spec.SetField(handoffrecord.FieldHandoffAt, field.TypeTime, value)
 	}
@@ -342,6 +353,64 @@ func (_u *HandoffRecordUpdate) sqlSave(ctx context.Context) (_node int, err erro
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(oncallschedule.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.OutgoingUserCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   handoffrecord.OutgoingUserTable,
+			Columns: []string{handoffrecord.OutgoingUserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OutgoingUserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   handoffrecord.OutgoingUserTable,
+			Columns: []string{handoffrecord.OutgoingUserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.IncomingUserCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   handoffrecord.IncomingUserTable,
+			Columns: []string{handoffrecord.IncomingUserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.IncomingUserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   handoffrecord.IncomingUserTable,
+			Columns: []string{handoffrecord.IncomingUserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -542,6 +611,16 @@ func (_u *HandoffRecordUpdateOne) SetSchedule(v *OnCallSchedule) *HandoffRecordU
 	return _u.SetScheduleID(v.ID)
 }
 
+// SetOutgoingUser sets the "outgoing_user" edge to the User entity.
+func (_u *HandoffRecordUpdateOne) SetOutgoingUser(v *User) *HandoffRecordUpdateOne {
+	return _u.SetOutgoingUserID(v.ID)
+}
+
+// SetIncomingUser sets the "incoming_user" edge to the User entity.
+func (_u *HandoffRecordUpdateOne) SetIncomingUser(v *User) *HandoffRecordUpdateOne {
+	return _u.SetIncomingUserID(v.ID)
+}
+
 // Mutation returns the HandoffRecordMutation object of the builder.
 func (_u *HandoffRecordUpdateOne) Mutation() *HandoffRecordMutation {
 	return _u.mutation
@@ -550,6 +629,18 @@ func (_u *HandoffRecordUpdateOne) Mutation() *HandoffRecordMutation {
 // ClearSchedule clears the "schedule" edge to the OnCallSchedule entity.
 func (_u *HandoffRecordUpdateOne) ClearSchedule() *HandoffRecordUpdateOne {
 	_u.mutation.ClearSchedule()
+	return _u
+}
+
+// ClearOutgoingUser clears the "outgoing_user" edge to the User entity.
+func (_u *HandoffRecordUpdateOne) ClearOutgoingUser() *HandoffRecordUpdateOne {
+	_u.mutation.ClearOutgoingUser()
+	return _u
+}
+
+// ClearIncomingUser clears the "incoming_user" edge to the User entity.
+func (_u *HandoffRecordUpdateOne) ClearIncomingUser() *HandoffRecordUpdateOne {
+	_u.mutation.ClearIncomingUser()
 	return _u
 }
 
@@ -644,18 +735,6 @@ func (_u *HandoffRecordUpdateOne) sqlSave(ctx context.Context) (_node *HandoffRe
 			}
 		}
 	}
-	if value, ok := _u.mutation.OutgoingUserID(); ok {
-		_spec.SetField(handoffrecord.FieldOutgoingUserID, field.TypeUUID, value)
-	}
-	if _u.mutation.OutgoingUserIDCleared() {
-		_spec.ClearField(handoffrecord.FieldOutgoingUserID, field.TypeUUID)
-	}
-	if value, ok := _u.mutation.IncomingUserID(); ok {
-		_spec.SetField(handoffrecord.FieldIncomingUserID, field.TypeUUID, value)
-	}
-	if _u.mutation.IncomingUserIDCleared() {
-		_spec.ClearField(handoffrecord.FieldIncomingUserID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.HandoffAt(); ok {
 		_spec.SetField(handoffrecord.FieldHandoffAt, field.TypeTime, value)
 	}
@@ -711,6 +790,64 @@ func (_u *HandoffRecordUpdateOne) sqlSave(ctx context.Context) (_node *HandoffRe
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(oncallschedule.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.OutgoingUserCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   handoffrecord.OutgoingUserTable,
+			Columns: []string{handoffrecord.OutgoingUserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OutgoingUserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   handoffrecord.OutgoingUserTable,
+			Columns: []string{handoffrecord.OutgoingUserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.IncomingUserCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   handoffrecord.IncomingUserTable,
+			Columns: []string{handoffrecord.IncomingUserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.IncomingUserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   handoffrecord.IncomingUserTable,
+			Columns: []string{handoffrecord.IncomingUserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

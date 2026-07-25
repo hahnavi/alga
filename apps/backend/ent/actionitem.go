@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/actionitem"
+	"alga/ent/postmortem"
 	"fmt"
 	"strings"
 	"time"
@@ -37,8 +38,31 @@ type ActionItem struct {
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt    time.Time `json:"updated_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the ActionItemQuery when eager-loading is set.
+	Edges        ActionItemEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// ActionItemEdges holds the relations/edges for other nodes in the graph.
+type ActionItemEdges struct {
+	// PostMortem holds the value of the post_mortem edge.
+	PostMortem *PostMortem `json:"post_mortem,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// PostMortemOrErr returns the PostMortem value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ActionItemEdges) PostMortemOrErr() (*PostMortem, error) {
+	if e.PostMortem != nil {
+		return e.PostMortem, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: postmortem.Label}
+	}
+	return nil, &NotLoadedError{edge: "post_mortem"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -148,6 +172,11 @@ func (_m *ActionItem) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *ActionItem) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
+}
+
+// QueryPostMortem queries the "post_mortem" edge of the ActionItem entity.
+func (_m *ActionItem) QueryPostMortem() *PostMortemQuery {
+	return NewActionItemClient(_m.config).QueryPostMortem(_m)
 }
 
 // Update returns a builder for updating this ActionItem.

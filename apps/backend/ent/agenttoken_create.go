@@ -3,7 +3,9 @@
 package ent
 
 import (
+	"alga/ent/agentask"
 	"alga/ent/agentdmmessage"
+	"alga/ent/agentmemory"
 	"alga/ent/agenttoken"
 	"alga/ent/icsroleassignment"
 	"alga/ent/schema"
@@ -208,6 +210,66 @@ func (_c *AgentTokenCreate) AddIcsRoles(v ...*ICSRoleAssignment) *AgentTokenCrea
 		ids[i] = v[i].ID
 	}
 	return _c.AddIcsRoleIDs(ids...)
+}
+
+// AddMemoryIDs adds the "memories" edge to the AgentMemory entity by IDs.
+func (_c *AgentTokenCreate) AddMemoryIDs(ids ...uuid.UUID) *AgentTokenCreate {
+	_c.mutation.AddMemoryIDs(ids...)
+	return _c
+}
+
+// AddMemories adds the "memories" edges to the AgentMemory entity.
+func (_c *AgentTokenCreate) AddMemories(v ...*AgentMemory) *AgentTokenCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddMemoryIDs(ids...)
+}
+
+// AddSentAskIDs adds the "sent_asks" edge to the AgentAsk entity by IDs.
+func (_c *AgentTokenCreate) AddSentAskIDs(ids ...uuid.UUID) *AgentTokenCreate {
+	_c.mutation.AddSentAskIDs(ids...)
+	return _c
+}
+
+// AddSentAsks adds the "sent_asks" edges to the AgentAsk entity.
+func (_c *AgentTokenCreate) AddSentAsks(v ...*AgentAsk) *AgentTokenCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddSentAskIDs(ids...)
+}
+
+// AddReceivedAskIDs adds the "received_asks" edge to the AgentAsk entity by IDs.
+func (_c *AgentTokenCreate) AddReceivedAskIDs(ids ...uuid.UUID) *AgentTokenCreate {
+	_c.mutation.AddReceivedAskIDs(ids...)
+	return _c
+}
+
+// AddReceivedAsks adds the "received_asks" edges to the AgentAsk entity.
+func (_c *AgentTokenCreate) AddReceivedAsks(v ...*AgentAsk) *AgentTokenCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddReceivedAskIDs(ids...)
+}
+
+// AddRepliedAskIDs adds the "replied_asks" edge to the AgentAsk entity by IDs.
+func (_c *AgentTokenCreate) AddRepliedAskIDs(ids ...uuid.UUID) *AgentTokenCreate {
+	_c.mutation.AddRepliedAskIDs(ids...)
+	return _c
+}
+
+// AddRepliedAsks adds the "replied_asks" edges to the AgentAsk entity.
+func (_c *AgentTokenCreate) AddRepliedAsks(v ...*AgentAsk) *AgentTokenCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddRepliedAskIDs(ids...)
 }
 
 // Mutation returns the AgentTokenMutation object of the builder.
@@ -429,6 +491,70 @@ func (_c *AgentTokenCreate) createSpec() (*AgentToken, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(icsroleassignment.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.MemoriesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.MemoriesTable,
+			Columns: []string{agenttoken.MemoriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentmemory.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.SentAsksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.SentAsksTable,
+			Columns: []string{agenttoken.SentAsksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentask.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ReceivedAsksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.ReceivedAsksTable,
+			Columns: []string{agenttoken.ReceivedAsksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentask.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.RepliedAsksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.RepliedAsksTable,
+			Columns: []string{agenttoken.RepliedAsksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentask.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

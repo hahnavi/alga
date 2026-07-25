@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -320,26 +321,6 @@ func OwnerTeamIDNotIn(vs ...uuid.UUID) predicate.Service {
 	return predicate.Service(sql.FieldNotIn(FieldOwnerTeamID, vs...))
 }
 
-// OwnerTeamIDGT applies the GT predicate on the "owner_team_id" field.
-func OwnerTeamIDGT(v uuid.UUID) predicate.Service {
-	return predicate.Service(sql.FieldGT(FieldOwnerTeamID, v))
-}
-
-// OwnerTeamIDGTE applies the GTE predicate on the "owner_team_id" field.
-func OwnerTeamIDGTE(v uuid.UUID) predicate.Service {
-	return predicate.Service(sql.FieldGTE(FieldOwnerTeamID, v))
-}
-
-// OwnerTeamIDLT applies the LT predicate on the "owner_team_id" field.
-func OwnerTeamIDLT(v uuid.UUID) predicate.Service {
-	return predicate.Service(sql.FieldLT(FieldOwnerTeamID, v))
-}
-
-// OwnerTeamIDLTE applies the LTE predicate on the "owner_team_id" field.
-func OwnerTeamIDLTE(v uuid.UUID) predicate.Service {
-	return predicate.Service(sql.FieldLTE(FieldOwnerTeamID, v))
-}
-
 // OwnerTeamIDIsNil applies the IsNil predicate on the "owner_team_id" field.
 func OwnerTeamIDIsNil() predicate.Service {
 	return predicate.Service(sql.FieldIsNull(FieldOwnerTeamID))
@@ -368,26 +349,6 @@ func EscalationPolicyIDIn(vs ...uuid.UUID) predicate.Service {
 // EscalationPolicyIDNotIn applies the NotIn predicate on the "escalation_policy_id" field.
 func EscalationPolicyIDNotIn(vs ...uuid.UUID) predicate.Service {
 	return predicate.Service(sql.FieldNotIn(FieldEscalationPolicyID, vs...))
-}
-
-// EscalationPolicyIDGT applies the GT predicate on the "escalation_policy_id" field.
-func EscalationPolicyIDGT(v uuid.UUID) predicate.Service {
-	return predicate.Service(sql.FieldGT(FieldEscalationPolicyID, v))
-}
-
-// EscalationPolicyIDGTE applies the GTE predicate on the "escalation_policy_id" field.
-func EscalationPolicyIDGTE(v uuid.UUID) predicate.Service {
-	return predicate.Service(sql.FieldGTE(FieldEscalationPolicyID, v))
-}
-
-// EscalationPolicyIDLT applies the LT predicate on the "escalation_policy_id" field.
-func EscalationPolicyIDLT(v uuid.UUID) predicate.Service {
-	return predicate.Service(sql.FieldLT(FieldEscalationPolicyID, v))
-}
-
-// EscalationPolicyIDLTE applies the LTE predicate on the "escalation_policy_id" field.
-func EscalationPolicyIDLTE(v uuid.UUID) predicate.Service {
-	return predicate.Service(sql.FieldLTE(FieldEscalationPolicyID, v))
 }
 
 // EscalationPolicyIDIsNil applies the IsNil predicate on the "escalation_policy_id" field.
@@ -623,6 +584,144 @@ func UpdatedAtLT(v time.Time) predicate.Service {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.Service {
 	return predicate.Service(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// HasDependencies applies the HasEdge predicate on the "dependencies" edge.
+func HasDependencies() predicate.Service {
+	return predicate.Service(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, DependenciesTable, DependenciesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasDependenciesWith applies the HasEdge predicate on the "dependencies" edge with a given conditions (other predicates).
+func HasDependenciesWith(preds ...predicate.ServiceDependency) predicate.Service {
+	return predicate.Service(func(s *sql.Selector) {
+		step := newDependenciesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasDependedOnBy applies the HasEdge predicate on the "depended_on_by" edge.
+func HasDependedOnBy() predicate.Service {
+	return predicate.Service(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, DependedOnByTable, DependedOnByColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasDependedOnByWith applies the HasEdge predicate on the "depended_on_by" edge with a given conditions (other predicates).
+func HasDependedOnByWith(preds ...predicate.ServiceDependency) predicate.Service {
+	return predicate.Service(func(s *sql.Selector) {
+		step := newDependedOnByStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasStatusPageComponents applies the HasEdge predicate on the "status_page_components" edge.
+func HasStatusPageComponents() predicate.Service {
+	return predicate.Service(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, StatusPageComponentsTable, StatusPageComponentsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasStatusPageComponentsWith applies the HasEdge predicate on the "status_page_components" edge with a given conditions (other predicates).
+func HasStatusPageComponentsWith(preds ...predicate.StatusPageComponent) predicate.Service {
+	return predicate.Service(func(s *sql.Selector) {
+		step := newStatusPageComponentsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasIncidents applies the HasEdge predicate on the "incidents" edge.
+func HasIncidents() predicate.Service {
+	return predicate.Service(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, IncidentsTable, IncidentsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasIncidentsWith applies the HasEdge predicate on the "incidents" edge with a given conditions (other predicates).
+func HasIncidentsWith(preds ...predicate.Incident) predicate.Service {
+	return predicate.Service(func(s *sql.Selector) {
+		step := newIncidentsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasOwnerTeam applies the HasEdge predicate on the "owner_team" edge.
+func HasOwnerTeam() predicate.Service {
+	return predicate.Service(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, OwnerTeamTable, OwnerTeamColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasOwnerTeamWith applies the HasEdge predicate on the "owner_team" edge with a given conditions (other predicates).
+func HasOwnerTeamWith(preds ...predicate.Team) predicate.Service {
+	return predicate.Service(func(s *sql.Selector) {
+		step := newOwnerTeamStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasEscalationPolicy applies the HasEdge predicate on the "escalation_policy" edge.
+func HasEscalationPolicy() predicate.Service {
+	return predicate.Service(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, EscalationPolicyTable, EscalationPolicyColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasEscalationPolicyWith applies the HasEdge predicate on the "escalation_policy" edge with a given conditions (other predicates).
+func HasEscalationPolicyWith(preds ...predicate.EscalationPolicy) predicate.Service {
+	return predicate.Service(func(s *sql.Selector) {
+		step := newEscalationPolicyStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

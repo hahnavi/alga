@@ -75,6 +75,11 @@ func PostID(v string) predicate.DeliveryTarget {
 	return predicate.DeliveryTarget(sql.FieldEQ(FieldPostID, v))
 }
 
+// AlertID applies equality check predicate on the "alert_id" field. It's identical to AlertIDEQ.
+func AlertID(v uuid.UUID) predicate.DeliveryTarget {
+	return predicate.DeliveryTarget(sql.FieldEQ(FieldAlertID, v))
+}
+
 // ProviderEQ applies the EQ predicate on the "provider" field.
 func ProviderEQ(v string) predicate.DeliveryTarget {
 	return predicate.DeliveryTarget(sql.FieldEQ(FieldProvider, v))
@@ -353,6 +358,26 @@ func PostIDEqualFold(v string) predicate.DeliveryTarget {
 // PostIDContainsFold applies the ContainsFold predicate on the "post_id" field.
 func PostIDContainsFold(v string) predicate.DeliveryTarget {
 	return predicate.DeliveryTarget(sql.FieldContainsFold(FieldPostID, v))
+}
+
+// AlertIDEQ applies the EQ predicate on the "alert_id" field.
+func AlertIDEQ(v uuid.UUID) predicate.DeliveryTarget {
+	return predicate.DeliveryTarget(sql.FieldEQ(FieldAlertID, v))
+}
+
+// AlertIDNEQ applies the NEQ predicate on the "alert_id" field.
+func AlertIDNEQ(v uuid.UUID) predicate.DeliveryTarget {
+	return predicate.DeliveryTarget(sql.FieldNEQ(FieldAlertID, v))
+}
+
+// AlertIDIn applies the In predicate on the "alert_id" field.
+func AlertIDIn(vs ...uuid.UUID) predicate.DeliveryTarget {
+	return predicate.DeliveryTarget(sql.FieldIn(FieldAlertID, vs...))
+}
+
+// AlertIDNotIn applies the NotIn predicate on the "alert_id" field.
+func AlertIDNotIn(vs ...uuid.UUID) predicate.DeliveryTarget {
+	return predicate.DeliveryTarget(sql.FieldNotIn(FieldAlertID, vs...))
 }
 
 // HasAlert applies the HasEdge predicate on the "alert" edge.

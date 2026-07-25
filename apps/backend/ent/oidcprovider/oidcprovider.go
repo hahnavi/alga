@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -30,8 +31,17 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// EdgeOidcIdentities holds the string denoting the oidc_identities edge name in mutations.
+	EdgeOidcIdentities = "oidc_identities"
 	// Table holds the table name of the oidcprovider in the database.
 	Table = "oidc_providers"
+	// OidcIdentitiesTable is the table that holds the oidc_identities relation/edge.
+	OidcIdentitiesTable = "oidc_identities"
+	// OidcIdentitiesInverseTable is the table name for the OIDCIdentity entity.
+	// It exists in this package in order to avoid circular dependency with the "oidcidentity" package.
+	OidcIdentitiesInverseTable = "oidc_identities"
+	// OidcIdentitiesColumn is the table column denoting the oidc_identities relation/edge.
+	OidcIdentitiesColumn = "provider_id"
 )
 
 // Columns holds all SQL columns for oidcprovider fields.
@@ -121,4 +131,25 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByOidcIdentitiesCount orders the results by oidc_identities count.
+func ByOidcIdentitiesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newOidcIdentitiesStep(), opts...)
+	}
+}
+
+// ByOidcIdentities orders the results by oidc_identities terms.
+func ByOidcIdentities(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newOidcIdentitiesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+func newOidcIdentitiesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(OidcIdentitiesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, OidcIdentitiesTable, OidcIdentitiesColumn),
+	)
 }

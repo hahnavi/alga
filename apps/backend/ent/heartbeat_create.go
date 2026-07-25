@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/heartbeat"
+	"alga/ent/team"
 	"context"
 	"errors"
 	"fmt"
@@ -233,6 +234,11 @@ func (_c *HeartbeatCreate) SetNillableID(v *uuid.UUID) *HeartbeatCreate {
 	return _c
 }
 
+// SetOwnerTeam sets the "owner_team" edge to the Team entity.
+func (_c *HeartbeatCreate) SetOwnerTeam(v *Team) *HeartbeatCreate {
+	return _c.SetOwnerTeamID(v.ID)
+}
+
 // Mutation returns the HeartbeatMutation object of the builder.
 func (_c *HeartbeatCreate) Mutation() *HeartbeatMutation {
 	return _c.mutation
@@ -417,10 +423,6 @@ func (_c *HeartbeatCreate) createSpec() (*Heartbeat, *sqlgraph.CreateSpec) {
 		_spec.SetField(heartbeat.FieldEnabled, field.TypeBool, value)
 		_node.Enabled = value
 	}
-	if value, ok := _c.mutation.OwnerTeamID(); ok {
-		_spec.SetField(heartbeat.FieldOwnerTeamID, field.TypeUUID, value)
-		_node.OwnerTeamID = &value
-	}
 	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(heartbeat.FieldStatus, field.TypeString, value)
 		_node.Status = value
@@ -464,6 +466,23 @@ func (_c *HeartbeatCreate) createSpec() (*Heartbeat, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(heartbeat.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if nodes := _c.mutation.OwnerTeamIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   heartbeat.OwnerTeamTable,
+			Columns: []string{heartbeat.OwnerTeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.OwnerTeamID = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

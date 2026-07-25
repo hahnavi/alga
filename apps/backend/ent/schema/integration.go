@@ -20,27 +20,34 @@ func (Integration) Annotations() []schema.Annotation {
 
 func (Integration) Fields() []ent.Field {
 	return []ent.Field{
-		field.UUID("id", uuid.UUID{}).Default(uuid.New).StorageKey("id").Default(func() uuid.UUID {
+		// Singleton row; id is fixed so store lookups are deterministic.
+		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID {
 			return uuid.UUID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
-		}),
+		}).StorageKey("id"),
 		field.String("mattermost_url").Optional().Default(""),
-		field.String("mattermost_webhook_secret").Optional().Default(""),
+		// The seven fields below marked .Sensitive() hold AEAD ciphertext at
+		// rest, not plaintext: store/integrations.go encrypts on Save and
+		// decrypts on Get via crypto.Default(). They are marked Sensitive so
+		// ciphertext never leaks into responses or logs. The column names do
+		// not carry an _encrypted suffix for historical reasons; renaming is
+		// tracked as a follow-up hygiene task.
+		field.String("mattermost_webhook_secret").Optional().Default("").Sensitive(),
 		field.String("mattermost_team").Optional().Default(""),
 		field.String("mattermost_default_channel").Optional().Default(""),
 		field.Bool("mattermost_disabled").Default(false),
-		field.String("slack_bot_token").Optional().Default(""),
-		field.String("slack_signing_secret").Optional().Default(""),
+		field.String("slack_bot_token").Optional().Default("").Sensitive(),
+		field.String("slack_signing_secret").Optional().Default("").Sensitive(),
 		field.String("slack_default_channel").Optional().Default(""),
 		field.Bool("slack_disabled").Default(false),
 		field.String("slack_client_id").Optional().Default(""),
-		field.String("slack_client_secret").Optional().Default(""),
+		field.String("slack_client_secret").Optional().Default("").Sensitive(),
 		field.String("slack_workspace_name").Optional().Default(""),
 		field.String("slack_workspace_id").Optional().Default(""),
 		field.String("twilio_account_sid").Optional().Default(""),
-		field.String("twilio_auth_token").Optional().Default(""),
+		field.String("twilio_auth_token").Optional().Default("").Sensitive(),
 		field.String("twilio_from_number").Optional().Default(""),
 		field.Bool("twilio_disabled").Default(false),
-		field.String("telnyx_api_key").Optional().Default(""),
+		field.String("telnyx_api_key").Optional().Default("").Sensitive(),
 		field.String("telnyx_connection_id").Optional().Default(""),
 		field.String("telnyx_from_number").Optional().Default(""),
 		field.String("telnyx_public_key").Optional().Default(""),
@@ -60,7 +67,7 @@ func (Integration) Fields() []ent.Field {
 		field.String("telnyx_tts_api_key_ref").Optional().Default(""),
 		field.String("voice_provider").Optional().Default("twilio"),
 		field.String("hermes_platform_url").Optional().Default(""),
-		field.String("hermes_platform_token").Optional().Default(""),
+		field.String("hermes_platform_token").Optional().Default("").Sensitive(),
 		field.Time("updated_at").Default(timeNow).UpdateDefault(timeNow),
 	}
 }

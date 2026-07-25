@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/heartbeat"
+	"alga/ent/team"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -52,8 +53,31 @@ type Heartbeat struct {
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt    time.Time `json:"updated_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the HeartbeatQuery when eager-loading is set.
+	Edges        HeartbeatEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// HeartbeatEdges holds the relations/edges for other nodes in the graph.
+type HeartbeatEdges struct {
+	// OwnerTeam holds the value of the owner_team edge.
+	OwnerTeam *Team `json:"owner_team,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// OwnerTeamOrErr returns the OwnerTeam value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e HeartbeatEdges) OwnerTeamOrErr() (*Team, error) {
+	if e.OwnerTeam != nil {
+		return e.OwnerTeam, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: team.Label}
+	}
+	return nil, &NotLoadedError{edge: "owner_team"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -215,6 +239,11 @@ func (_m *Heartbeat) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *Heartbeat) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
+}
+
+// QueryOwnerTeam queries the "owner_team" edge of the Heartbeat entity.
+func (_m *Heartbeat) QueryOwnerTeam() *TeamQuery {
+	return NewHeartbeatClient(_m.config).QueryOwnerTeam(_m)
 }
 
 // Update returns a builder for updating this Heartbeat.

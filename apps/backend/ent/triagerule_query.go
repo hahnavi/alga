@@ -5,6 +5,7 @@ package ent
 import (
 	"alga/ent/predicate"
 	"alga/ent/triagerule"
+	"alga/ent/user"
 	"context"
 	"fmt"
 	"math"
@@ -19,10 +20,11 @@ import (
 // TriageRuleQuery is the builder for querying TriageRule entities.
 type TriageRuleQuery struct {
 	config
-	ctx        *QueryContext
-	order      []triagerule.OrderOption
-	inters     []Interceptor
-	predicates []predicate.TriageRule
+	ctx               *QueryContext
+	order             []triagerule.OrderOption
+	inters            []Interceptor
+	predicates        []predicate.TriageRule
+	withCreatedByUser *UserQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -57,6 +59,28 @@ func (_q *TriageRuleQuery) Unique(unique bool) *TriageRuleQuery {
 func (_q *TriageRuleQuery) Order(o ...triagerule.OrderOption) *TriageRuleQuery {
 	_q.order = append(_q.order, o...)
 	return _q
+}
+
+// QueryCreatedByUser chains the current query on the "created_by_user" edge.
+func (_q *TriageRuleQuery) QueryCreatedByUser() *UserQuery {
+	query := (&UserClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(triagerule.Table, triagerule.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, triagerule.CreatedByUserTable, triagerule.CreatedByUserColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first TriageRule entity from the query.
@@ -246,15 +270,27 @@ func (_q *TriageRuleQuery) Clone() *TriageRuleQuery {
 		return nil
 	}
 	return &TriageRuleQuery{
-		config:     _q.config,
-		ctx:        _q.ctx.Clone(),
-		order:      append([]triagerule.OrderOption{}, _q.order...),
-		inters:     append([]Interceptor{}, _q.inters...),
-		predicates: append([]predicate.TriageRule{}, _q.predicates...),
+		config:            _q.config,
+		ctx:               _q.ctx.Clone(),
+		order:             append([]triagerule.OrderOption{}, _q.order...),
+		inters:            append([]Interceptor{}, _q.inters...),
+		predicates:        append([]predicate.TriageRule{}, _q.predicates...),
+		withCreatedByUser: _q.withCreatedByUser.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
+}
+
+// WithCreatedByUser tells the query-builder to eager-load the nodes that are connected to
+// the "created_by_user" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *TriageRuleQuery) WithCreatedByUser(opts ...func(*UserQuery)) *TriageRuleQuery {
+	query := (&UserClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withCreatedByUser = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -333,8 +369,11 @@ func (_q *TriageRuleQuery) prepareQuery(ctx context.Context) error {
 
 func (_q *TriageRuleQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*TriageRule, error) {
 	var (
-		nodes = []*TriageRule{}
-		_spec = _q.querySpec()
+		nodes       = []*TriageRule{}
+		_spec       = _q.querySpec()
+		loadedTypes = [1]bool{
+			_q.withCreatedByUser != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*TriageRule).scanValues(nil, columns)
@@ -342,6 +381,7 @@ func (_q *TriageRuleQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*T
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &TriageRule{config: _q.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -353,7 +393,43 @@ func (_q *TriageRuleQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*T
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := _q.withCreatedByUser; query != nil {
+		if err := _q.loadCreatedByUser(ctx, query, nodes, nil,
+			func(n *TriageRule, e *User) { n.Edges.CreatedByUser = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (_q *TriageRuleQuery) loadCreatedByUser(ctx context.Context, query *UserQuery, nodes []*TriageRule, init func(*TriageRule), assign func(*TriageRule, *User)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*TriageRule)
+	for i := range nodes {
+		fk := nodes[i].CreatedBy
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(user.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "created_by" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
 }
 
 func (_q *TriageRuleQuery) sqlCount(ctx context.Context) (int, error) {
@@ -380,6 +456,9 @@ func (_q *TriageRuleQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != triagerule.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if _q.withCreatedByUser != nil {
+			_spec.Node.AddColumnOnce(triagerule.FieldCreatedBy)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

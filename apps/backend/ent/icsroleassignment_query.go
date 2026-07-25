@@ -9,6 +9,7 @@ import (
 	"alga/ent/predicate"
 	"alga/ent/user"
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -29,8 +30,8 @@ type ICSRoleAssignmentQuery struct {
 	withIncident   *IncidentQuery
 	withUser       *UserQuery
 	withAgentToken *AgentTokenQuery
+	withChildren   *ICSRoleAssignmentQuery
 	withParent     *ICSRoleAssignmentQuery
-	withFKs        bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -133,6 +134,28 @@ func (_q *ICSRoleAssignmentQuery) QueryAgentToken() *AgentTokenQuery {
 	return query
 }
 
+// QueryChildren chains the current query on the "children" edge.
+func (_q *ICSRoleAssignmentQuery) QueryChildren() *ICSRoleAssignmentQuery {
+	query := (&ICSRoleAssignmentClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(icsroleassignment.Table, icsroleassignment.FieldID, selector),
+			sqlgraph.To(icsroleassignment.Table, icsroleassignment.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, icsroleassignment.ChildrenTable, icsroleassignment.ChildrenColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // QueryParent chains the current query on the "parent" edge.
 func (_q *ICSRoleAssignmentQuery) QueryParent() *ICSRoleAssignmentQuery {
 	query := (&ICSRoleAssignmentClient{config: _q.config}).Query()
@@ -147,7 +170,7 @@ func (_q *ICSRoleAssignmentQuery) QueryParent() *ICSRoleAssignmentQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(icsroleassignment.Table, icsroleassignment.FieldID, selector),
 			sqlgraph.To(icsroleassignment.Table, icsroleassignment.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, icsroleassignment.ParentTable, icsroleassignment.ParentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, icsroleassignment.ParentTable, icsroleassignment.ParentColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -350,6 +373,7 @@ func (_q *ICSRoleAssignmentQuery) Clone() *ICSRoleAssignmentQuery {
 		withIncident:   _q.withIncident.Clone(),
 		withUser:       _q.withUser.Clone(),
 		withAgentToken: _q.withAgentToken.Clone(),
+		withChildren:   _q.withChildren.Clone(),
 		withParent:     _q.withParent.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
@@ -390,6 +414,17 @@ func (_q *ICSRoleAssignmentQuery) WithAgentToken(opts ...func(*AgentTokenQuery))
 	return _q
 }
 
+// WithChildren tells the query-builder to eager-load the nodes that are connected to
+// the "children" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ICSRoleAssignmentQuery) WithChildren(opts ...func(*ICSRoleAssignmentQuery)) *ICSRoleAssignmentQuery {
+	query := (&ICSRoleAssignmentClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withChildren = query
+	return _q
+}
+
 // WithParent tells the query-builder to eager-load the nodes that are connected to
 // the "parent" edge. The optional arguments are used to configure the query builder of the edge.
 func (_q *ICSRoleAssignmentQuery) WithParent(opts ...func(*ICSRoleAssignmentQuery)) *ICSRoleAssignmentQuery {
@@ -407,12 +442,12 @@ func (_q *ICSRoleAssignmentQuery) WithParent(opts ...func(*ICSRoleAssignmentQuer
 // Example:
 //
 //	var v []struct {
-//		RoleType string `json:"role_type,omitempty"`
+//		ParentID uuid.UUID `json:"parent_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.ICSRoleAssignment.Query().
-//		GroupBy(icsroleassignment.FieldRoleType).
+//		GroupBy(icsroleassignment.FieldParentID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *ICSRoleAssignmentQuery) GroupBy(field string, fields ...string) *ICSRoleAssignmentGroupBy {
@@ -430,11 +465,11 @@ func (_q *ICSRoleAssignmentQuery) GroupBy(field string, fields ...string) *ICSRo
 // Example:
 //
 //	var v []struct {
-//		RoleType string `json:"role_type,omitempty"`
+//		ParentID uuid.UUID `json:"parent_id,omitempty"`
 //	}
 //
 //	client.ICSRoleAssignment.Query().
-//		Select(icsroleassignment.FieldRoleType).
+//		Select(icsroleassignment.FieldParentID).
 //		Scan(ctx, &v)
 func (_q *ICSRoleAssignmentQuery) Select(fields ...string) *ICSRoleAssignmentSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
@@ -478,21 +513,15 @@ func (_q *ICSRoleAssignmentQuery) prepareQuery(ctx context.Context) error {
 func (_q *ICSRoleAssignmentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*ICSRoleAssignment, error) {
 	var (
 		nodes       = []*ICSRoleAssignment{}
-		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [4]bool{
+		loadedTypes = [5]bool{
 			_q.withIncident != nil,
 			_q.withUser != nil,
 			_q.withAgentToken != nil,
+			_q.withChildren != nil,
 			_q.withParent != nil,
 		}
 	)
-	if _q.withIncident != nil || _q.withUser != nil || _q.withAgentToken != nil || _q.withParent != nil {
-		withFKs = true
-	}
-	if withFKs {
-		_spec.Node.Columns = append(_spec.Node.Columns, icsroleassignment.ForeignKeys...)
-	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*ICSRoleAssignment).scanValues(nil, columns)
 	}
@@ -529,6 +558,13 @@ func (_q *ICSRoleAssignmentQuery) sqlAll(ctx context.Context, hooks ...queryHook
 			return nil, err
 		}
 	}
+	if query := _q.withChildren; query != nil {
+		if err := _q.loadChildren(ctx, query, nodes,
+			func(n *ICSRoleAssignment) { n.Edges.Children = []*ICSRoleAssignment{} },
+			func(n *ICSRoleAssignment, e *ICSRoleAssignment) { n.Edges.Children = append(n.Edges.Children, e) }); err != nil {
+			return nil, err
+		}
+	}
 	if query := _q.withParent; query != nil {
 		if err := _q.loadParent(ctx, query, nodes, nil,
 			func(n *ICSRoleAssignment, e *ICSRoleAssignment) { n.Edges.Parent = e }); err != nil {
@@ -542,10 +578,7 @@ func (_q *ICSRoleAssignmentQuery) loadIncident(ctx context.Context, query *Incid
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ICSRoleAssignment)
 	for i := range nodes {
-		if nodes[i].incident_ics_roles == nil {
-			continue
-		}
-		fk := *nodes[i].incident_ics_roles
+		fk := nodes[i].IncidentID
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -562,7 +595,7 @@ func (_q *ICSRoleAssignmentQuery) loadIncident(ctx context.Context, query *Incid
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "incident_ics_roles" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "incident_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -574,10 +607,10 @@ func (_q *ICSRoleAssignmentQuery) loadUser(ctx context.Context, query *UserQuery
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ICSRoleAssignment)
 	for i := range nodes {
-		if nodes[i].user_ics_role_assignments == nil {
+		if nodes[i].UserID == nil {
 			continue
 		}
-		fk := *nodes[i].user_ics_role_assignments
+		fk := *nodes[i].UserID
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -594,7 +627,7 @@ func (_q *ICSRoleAssignmentQuery) loadUser(ctx context.Context, query *UserQuery
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "user_ics_role_assignments" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "user_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -606,10 +639,10 @@ func (_q *ICSRoleAssignmentQuery) loadAgentToken(ctx context.Context, query *Age
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ICSRoleAssignment)
 	for i := range nodes {
-		if nodes[i].agent_token_ics_roles == nil {
+		if nodes[i].AgentTokenID == nil {
 			continue
 		}
-		fk := *nodes[i].agent_token_ics_roles
+		fk := *nodes[i].AgentTokenID
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -626,7 +659,7 @@ func (_q *ICSRoleAssignmentQuery) loadAgentToken(ctx context.Context, query *Age
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "agent_token_ics_roles" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "agent_token_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -634,14 +667,47 @@ func (_q *ICSRoleAssignmentQuery) loadAgentToken(ctx context.Context, query *Age
 	}
 	return nil
 }
+func (_q *ICSRoleAssignmentQuery) loadChildren(ctx context.Context, query *ICSRoleAssignmentQuery, nodes []*ICSRoleAssignment, init func(*ICSRoleAssignment), assign func(*ICSRoleAssignment, *ICSRoleAssignment)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*ICSRoleAssignment)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(icsroleassignment.FieldParentID)
+	}
+	query.Where(predicate.ICSRoleAssignment(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(icsroleassignment.ChildrenColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ParentID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "parent_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "parent_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
 func (_q *ICSRoleAssignmentQuery) loadParent(ctx context.Context, query *ICSRoleAssignmentQuery, nodes []*ICSRoleAssignment, init func(*ICSRoleAssignment), assign func(*ICSRoleAssignment, *ICSRoleAssignment)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ICSRoleAssignment)
 	for i := range nodes {
-		if nodes[i].ics_role_assignment_parent == nil {
+		if nodes[i].ParentID == nil {
 			continue
 		}
-		fk := *nodes[i].ics_role_assignment_parent
+		fk := *nodes[i].ParentID
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -658,7 +724,7 @@ func (_q *ICSRoleAssignmentQuery) loadParent(ctx context.Context, query *ICSRole
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "ics_role_assignment_parent" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "parent_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -691,6 +757,18 @@ func (_q *ICSRoleAssignmentQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != icsroleassignment.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if _q.withIncident != nil {
+			_spec.Node.AddColumnOnce(icsroleassignment.FieldIncidentID)
+		}
+		if _q.withUser != nil {
+			_spec.Node.AddColumnOnce(icsroleassignment.FieldUserID)
+		}
+		if _q.withAgentToken != nil {
+			_spec.Node.AddColumnOnce(icsroleassignment.FieldAgentTokenID)
+		}
+		if _q.withParent != nil {
+			_spec.Node.AddColumnOnce(icsroleassignment.FieldParentID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

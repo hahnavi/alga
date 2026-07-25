@@ -73,17 +73,19 @@ func (AlertInvestigation) Edges() []ent.Edge {
 			Ref("promoted_alert_investigations").
 			Unique().
 			Field("promoted_incident_investigation_id"),
+		edge.From("triage_result", TriageResult.Type).Ref("alert_investigations").Field("triage_result_id").Unique(),
 	}
 }
 
 func (AlertInvestigation) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("status"),
-		index.Fields("created_at"),
+		index.Fields("status", "created_at"),
 		index.Fields("correlation_key", "status"),
 		index.Fields("promoted_incident_id"),
 		index.Fields("promoted_incident_investigation_id"),
 		index.Fields("primary_alert_fingerprint"),
 		index.Fields("primary_alert_number"),
+		index.Fields("triage_result_id"),
+		index.Fields("assignee_type", "assignee_id", "status"),
 	}
 }

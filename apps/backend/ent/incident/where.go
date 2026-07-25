@@ -831,26 +831,6 @@ func CommanderIDNotIn(vs ...uuid.UUID) predicate.Incident {
 	return predicate.Incident(sql.FieldNotIn(FieldCommanderID, vs...))
 }
 
-// CommanderIDGT applies the GT predicate on the "commander_id" field.
-func CommanderIDGT(v uuid.UUID) predicate.Incident {
-	return predicate.Incident(sql.FieldGT(FieldCommanderID, v))
-}
-
-// CommanderIDGTE applies the GTE predicate on the "commander_id" field.
-func CommanderIDGTE(v uuid.UUID) predicate.Incident {
-	return predicate.Incident(sql.FieldGTE(FieldCommanderID, v))
-}
-
-// CommanderIDLT applies the LT predicate on the "commander_id" field.
-func CommanderIDLT(v uuid.UUID) predicate.Incident {
-	return predicate.Incident(sql.FieldLT(FieldCommanderID, v))
-}
-
-// CommanderIDLTE applies the LTE predicate on the "commander_id" field.
-func CommanderIDLTE(v uuid.UUID) predicate.Incident {
-	return predicate.Incident(sql.FieldLTE(FieldCommanderID, v))
-}
-
 // CommanderIDIsNil applies the IsNil predicate on the "commander_id" field.
 func CommanderIDIsNil() predicate.Incident {
 	return predicate.Incident(sql.FieldIsNull(FieldCommanderID))
@@ -881,26 +861,6 @@ func CommunicatorIDNotIn(vs ...uuid.UUID) predicate.Incident {
 	return predicate.Incident(sql.FieldNotIn(FieldCommunicatorID, vs...))
 }
 
-// CommunicatorIDGT applies the GT predicate on the "communicator_id" field.
-func CommunicatorIDGT(v uuid.UUID) predicate.Incident {
-	return predicate.Incident(sql.FieldGT(FieldCommunicatorID, v))
-}
-
-// CommunicatorIDGTE applies the GTE predicate on the "communicator_id" field.
-func CommunicatorIDGTE(v uuid.UUID) predicate.Incident {
-	return predicate.Incident(sql.FieldGTE(FieldCommunicatorID, v))
-}
-
-// CommunicatorIDLT applies the LT predicate on the "communicator_id" field.
-func CommunicatorIDLT(v uuid.UUID) predicate.Incident {
-	return predicate.Incident(sql.FieldLT(FieldCommunicatorID, v))
-}
-
-// CommunicatorIDLTE applies the LTE predicate on the "communicator_id" field.
-func CommunicatorIDLTE(v uuid.UUID) predicate.Incident {
-	return predicate.Incident(sql.FieldLTE(FieldCommunicatorID, v))
-}
-
 // CommunicatorIDIsNil applies the IsNil predicate on the "communicator_id" field.
 func CommunicatorIDIsNil() predicate.Incident {
 	return predicate.Incident(sql.FieldIsNull(FieldCommunicatorID))
@@ -929,26 +889,6 @@ func OnCallResponderIDIn(vs ...uuid.UUID) predicate.Incident {
 // OnCallResponderIDNotIn applies the NotIn predicate on the "on_call_responder_id" field.
 func OnCallResponderIDNotIn(vs ...uuid.UUID) predicate.Incident {
 	return predicate.Incident(sql.FieldNotIn(FieldOnCallResponderID, vs...))
-}
-
-// OnCallResponderIDGT applies the GT predicate on the "on_call_responder_id" field.
-func OnCallResponderIDGT(v uuid.UUID) predicate.Incident {
-	return predicate.Incident(sql.FieldGT(FieldOnCallResponderID, v))
-}
-
-// OnCallResponderIDGTE applies the GTE predicate on the "on_call_responder_id" field.
-func OnCallResponderIDGTE(v uuid.UUID) predicate.Incident {
-	return predicate.Incident(sql.FieldGTE(FieldOnCallResponderID, v))
-}
-
-// OnCallResponderIDLT applies the LT predicate on the "on_call_responder_id" field.
-func OnCallResponderIDLT(v uuid.UUID) predicate.Incident {
-	return predicate.Incident(sql.FieldLT(FieldOnCallResponderID, v))
-}
-
-// OnCallResponderIDLTE applies the LTE predicate on the "on_call_responder_id" field.
-func OnCallResponderIDLTE(v uuid.UUID) predicate.Incident {
-	return predicate.Incident(sql.FieldLTE(FieldOnCallResponderID, v))
 }
 
 // OnCallResponderIDIsNil applies the IsNil predicate on the "on_call_responder_id" field.
@@ -1131,26 +1071,6 @@ func ServiceIDNotIn(vs ...uuid.UUID) predicate.Incident {
 	return predicate.Incident(sql.FieldNotIn(FieldServiceID, vs...))
 }
 
-// ServiceIDGT applies the GT predicate on the "service_id" field.
-func ServiceIDGT(v uuid.UUID) predicate.Incident {
-	return predicate.Incident(sql.FieldGT(FieldServiceID, v))
-}
-
-// ServiceIDGTE applies the GTE predicate on the "service_id" field.
-func ServiceIDGTE(v uuid.UUID) predicate.Incident {
-	return predicate.Incident(sql.FieldGTE(FieldServiceID, v))
-}
-
-// ServiceIDLT applies the LT predicate on the "service_id" field.
-func ServiceIDLT(v uuid.UUID) predicate.Incident {
-	return predicate.Incident(sql.FieldLT(FieldServiceID, v))
-}
-
-// ServiceIDLTE applies the LTE predicate on the "service_id" field.
-func ServiceIDLTE(v uuid.UUID) predicate.Incident {
-	return predicate.Incident(sql.FieldLTE(FieldServiceID, v))
-}
-
 // ServiceIDIsNil applies the IsNil predicate on the "service_id" field.
 func ServiceIDIsNil() predicate.Incident {
 	return predicate.Incident(sql.FieldIsNull(FieldServiceID))
@@ -1179,26 +1099,6 @@ func EscalationPolicyIDIn(vs ...uuid.UUID) predicate.Incident {
 // EscalationPolicyIDNotIn applies the NotIn predicate on the "escalation_policy_id" field.
 func EscalationPolicyIDNotIn(vs ...uuid.UUID) predicate.Incident {
 	return predicate.Incident(sql.FieldNotIn(FieldEscalationPolicyID, vs...))
-}
-
-// EscalationPolicyIDGT applies the GT predicate on the "escalation_policy_id" field.
-func EscalationPolicyIDGT(v uuid.UUID) predicate.Incident {
-	return predicate.Incident(sql.FieldGT(FieldEscalationPolicyID, v))
-}
-
-// EscalationPolicyIDGTE applies the GTE predicate on the "escalation_policy_id" field.
-func EscalationPolicyIDGTE(v uuid.UUID) predicate.Incident {
-	return predicate.Incident(sql.FieldGTE(FieldEscalationPolicyID, v))
-}
-
-// EscalationPolicyIDLT applies the LT predicate on the "escalation_policy_id" field.
-func EscalationPolicyIDLT(v uuid.UUID) predicate.Incident {
-	return predicate.Incident(sql.FieldLT(FieldEscalationPolicyID, v))
-}
-
-// EscalationPolicyIDLTE applies the LTE predicate on the "escalation_policy_id" field.
-func EscalationPolicyIDLTE(v uuid.UUID) predicate.Incident {
-	return predicate.Incident(sql.FieldLTE(FieldEscalationPolicyID, v))
 }
 
 // EscalationPolicyIDIsNil applies the IsNil predicate on the "escalation_policy_id" field.
@@ -2433,7 +2333,7 @@ func HasPostMortem() predicate.Incident {
 	return predicate.Incident(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, PostMortemTable, PostMortemColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, PostMortemTable, PostMortemColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
@@ -2535,6 +2435,121 @@ func HasCoordinationTasks() predicate.Incident {
 func HasCoordinationTasksWith(preds ...predicate.CoordinationTask) predicate.Incident {
 	return predicate.Incident(func(s *sql.Selector) {
 		step := newCoordinationTasksStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasCommander applies the HasEdge predicate on the "commander" edge.
+func HasCommander() predicate.Incident {
+	return predicate.Incident(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, CommanderTable, CommanderColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCommanderWith applies the HasEdge predicate on the "commander" edge with a given conditions (other predicates).
+func HasCommanderWith(preds ...predicate.User) predicate.Incident {
+	return predicate.Incident(func(s *sql.Selector) {
+		step := newCommanderStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasCommunicator applies the HasEdge predicate on the "communicator" edge.
+func HasCommunicator() predicate.Incident {
+	return predicate.Incident(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, CommunicatorTable, CommunicatorColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCommunicatorWith applies the HasEdge predicate on the "communicator" edge with a given conditions (other predicates).
+func HasCommunicatorWith(preds ...predicate.User) predicate.Incident {
+	return predicate.Incident(func(s *sql.Selector) {
+		step := newCommunicatorStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasOnCallResponder applies the HasEdge predicate on the "on_call_responder" edge.
+func HasOnCallResponder() predicate.Incident {
+	return predicate.Incident(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, OnCallResponderTable, OnCallResponderColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasOnCallResponderWith applies the HasEdge predicate on the "on_call_responder" edge with a given conditions (other predicates).
+func HasOnCallResponderWith(preds ...predicate.User) predicate.Incident {
+	return predicate.Incident(func(s *sql.Selector) {
+		step := newOnCallResponderStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasService applies the HasEdge predicate on the "service" edge.
+func HasService() predicate.Incident {
+	return predicate.Incident(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, ServiceTable, ServiceColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasServiceWith applies the HasEdge predicate on the "service" edge with a given conditions (other predicates).
+func HasServiceWith(preds ...predicate.Service) predicate.Incident {
+	return predicate.Incident(func(s *sql.Selector) {
+		step := newServiceStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasEscalationPolicy applies the HasEdge predicate on the "escalation_policy" edge.
+func HasEscalationPolicy() predicate.Incident {
+	return predicate.Incident(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, EscalationPolicyTable, EscalationPolicyColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasEscalationPolicyWith applies the HasEdge predicate on the "escalation_policy" edge with a given conditions (other predicates).
+func HasEscalationPolicyWith(preds ...predicate.EscalationPolicy) predicate.Incident {
+	return predicate.Incident(func(s *sql.Selector) {
+		step := newEscalationPolicyStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

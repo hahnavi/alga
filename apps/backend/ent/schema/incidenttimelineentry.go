@@ -30,17 +30,18 @@ func (IncidentTimelineEntry) Fields() []ent.Field {
 		field.JSON("metadata", map[string]any{}).Default(map[string]any{}),
 		field.String("ics_event_type").Optional().Nillable(),
 		field.Time("created_at").Default(timeNow),
+		field.UUID("incident_id", uuid.UUID{}),
 	}
 }
 
 func (IncidentTimelineEntry) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.From("incident", Incident.Type).Ref("timeline").Unique().Required(),
+		edge.From("incident", Incident.Type).Ref("timeline").Unique().Required().Field("incident_id"),
 	}
 }
 
 func (IncidentTimelineEntry) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("created_at"),
+		index.Fields("incident_id", "created_at"),
 	}
 }

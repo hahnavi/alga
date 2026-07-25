@@ -4,6 +4,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -25,7 +26,7 @@ func (OIDCProvider) Fields() []ent.Field {
 		field.String("name").NotEmpty(),
 		field.String("issuer").NotEmpty(),
 		field.String("client_id").NotEmpty(),
-		field.String("client_secret_encrypted").Default(""),
+		field.String("client_secret_encrypted").Default("").Sensitive(),
 		field.JSON("scopes", []string{}).Default([]string{"openid", "email", "profile"}),
 		field.Bool("enabled").Default(true),
 		field.Time("created_at").Default(timeNow),
@@ -34,12 +35,16 @@ func (OIDCProvider) Fields() []ent.Field {
 }
 
 func (OIDCProvider) Edges() []ent.Edge {
-	return nil
+	return []ent.Edge{
+		edge.To("oidc_identities", OIDCIdentity.Type).Annotations(entsql.Annotation{OnDelete: entsql.Cascade}),
+	}
 }
 
 func (OIDCProvider) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("enabled"),
+		index.Fields("name").Unique(),
+		index.Fields("issuer").Unique(),
 	}
 }
 
@@ -67,7 +72,10 @@ func (OIDCIdentity) Fields() []ent.Field {
 }
 
 func (OIDCIdentity) Edges() []ent.Edge {
-	return nil
+	return []ent.Edge{
+		edge.From("user", User.Type).Ref("oidc_identities").Field("user_id").Unique().Required(),
+		edge.From("provider", OIDCProvider.Type).Ref("oidc_identities").Field("provider_id").Unique().Required(),
+	}
 }
 
 func (OIDCIdentity) Indexes() []ent.Index {

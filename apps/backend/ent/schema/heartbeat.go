@@ -4,6 +4,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -43,12 +44,15 @@ func (Heartbeat) Fields() []ent.Field {
 }
 
 func (Heartbeat) Edges() []ent.Edge {
-	return nil
+	return []ent.Edge{
+		edge.From("owner_team", Team.Type).Ref("heartbeats").Field("owner_team_id").Unique(),
+	}
 }
 
 func (Heartbeat) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("enabled", "status", "expires_at"),
+		index.Fields("enabled", "last_ping_at"),
 		index.Fields("owner_team_id"),
 		index.Fields("lookup_prefix"),
 	}

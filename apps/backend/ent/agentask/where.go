@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -143,26 +144,6 @@ func FromAgentIDIn(vs ...uuid.UUID) predicate.AgentAsk {
 // FromAgentIDNotIn applies the NotIn predicate on the "from_agent_id" field.
 func FromAgentIDNotIn(vs ...uuid.UUID) predicate.AgentAsk {
 	return predicate.AgentAsk(sql.FieldNotIn(FieldFromAgentID, vs...))
-}
-
-// FromAgentIDGT applies the GT predicate on the "from_agent_id" field.
-func FromAgentIDGT(v uuid.UUID) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldGT(FieldFromAgentID, v))
-}
-
-// FromAgentIDGTE applies the GTE predicate on the "from_agent_id" field.
-func FromAgentIDGTE(v uuid.UUID) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldGTE(FieldFromAgentID, v))
-}
-
-// FromAgentIDLT applies the LT predicate on the "from_agent_id" field.
-func FromAgentIDLT(v uuid.UUID) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldLT(FieldFromAgentID, v))
-}
-
-// FromAgentIDLTE applies the LTE predicate on the "from_agent_id" field.
-func FromAgentIDLTE(v uuid.UUID) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldLTE(FieldFromAgentID, v))
 }
 
 // FromAgentNameEQ applies the EQ predicate on the "from_agent_name" field.
@@ -388,26 +369,6 @@ func ToAgentIDIn(vs ...uuid.UUID) predicate.AgentAsk {
 // ToAgentIDNotIn applies the NotIn predicate on the "to_agent_id" field.
 func ToAgentIDNotIn(vs ...uuid.UUID) predicate.AgentAsk {
 	return predicate.AgentAsk(sql.FieldNotIn(FieldToAgentID, vs...))
-}
-
-// ToAgentIDGT applies the GT predicate on the "to_agent_id" field.
-func ToAgentIDGT(v uuid.UUID) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldGT(FieldToAgentID, v))
-}
-
-// ToAgentIDGTE applies the GTE predicate on the "to_agent_id" field.
-func ToAgentIDGTE(v uuid.UUID) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldGTE(FieldToAgentID, v))
-}
-
-// ToAgentIDLT applies the LT predicate on the "to_agent_id" field.
-func ToAgentIDLT(v uuid.UUID) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldLT(FieldToAgentID, v))
-}
-
-// ToAgentIDLTE applies the LTE predicate on the "to_agent_id" field.
-func ToAgentIDLTE(v uuid.UUID) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldLTE(FieldToAgentID, v))
 }
 
 // ToAgentIDIsNil applies the IsNil predicate on the "to_agent_id" field.
@@ -653,26 +614,6 @@ func RepliedByAgentIDIn(vs ...uuid.UUID) predicate.AgentAsk {
 // RepliedByAgentIDNotIn applies the NotIn predicate on the "replied_by_agent_id" field.
 func RepliedByAgentIDNotIn(vs ...uuid.UUID) predicate.AgentAsk {
 	return predicate.AgentAsk(sql.FieldNotIn(FieldRepliedByAgentID, vs...))
-}
-
-// RepliedByAgentIDGT applies the GT predicate on the "replied_by_agent_id" field.
-func RepliedByAgentIDGT(v uuid.UUID) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldGT(FieldRepliedByAgentID, v))
-}
-
-// RepliedByAgentIDGTE applies the GTE predicate on the "replied_by_agent_id" field.
-func RepliedByAgentIDGTE(v uuid.UUID) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldGTE(FieldRepliedByAgentID, v))
-}
-
-// RepliedByAgentIDLT applies the LT predicate on the "replied_by_agent_id" field.
-func RepliedByAgentIDLT(v uuid.UUID) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldLT(FieldRepliedByAgentID, v))
-}
-
-// RepliedByAgentIDLTE applies the LTE predicate on the "replied_by_agent_id" field.
-func RepliedByAgentIDLTE(v uuid.UUID) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldLTE(FieldRepliedByAgentID, v))
 }
 
 // RepliedByAgentIDIsNil applies the IsNil predicate on the "replied_by_agent_id" field.
@@ -953,6 +894,75 @@ func AnsweredAtIsNil() predicate.AgentAsk {
 // AnsweredAtNotNil applies the NotNil predicate on the "answered_at" field.
 func AnsweredAtNotNil() predicate.AgentAsk {
 	return predicate.AgentAsk(sql.FieldNotNull(FieldAnsweredAt))
+}
+
+// HasFromAgent applies the HasEdge predicate on the "from_agent" edge.
+func HasFromAgent() predicate.AgentAsk {
+	return predicate.AgentAsk(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, FromAgentTable, FromAgentColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasFromAgentWith applies the HasEdge predicate on the "from_agent" edge with a given conditions (other predicates).
+func HasFromAgentWith(preds ...predicate.AgentToken) predicate.AgentAsk {
+	return predicate.AgentAsk(func(s *sql.Selector) {
+		step := newFromAgentStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasToAgent applies the HasEdge predicate on the "to_agent" edge.
+func HasToAgent() predicate.AgentAsk {
+	return predicate.AgentAsk(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, ToAgentTable, ToAgentColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasToAgentWith applies the HasEdge predicate on the "to_agent" edge with a given conditions (other predicates).
+func HasToAgentWith(preds ...predicate.AgentToken) predicate.AgentAsk {
+	return predicate.AgentAsk(func(s *sql.Selector) {
+		step := newToAgentStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasRepliedByAgent applies the HasEdge predicate on the "replied_by_agent" edge.
+func HasRepliedByAgent() predicate.AgentAsk {
+	return predicate.AgentAsk(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, RepliedByAgentTable, RepliedByAgentColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasRepliedByAgentWith applies the HasEdge predicate on the "replied_by_agent" edge with a given conditions (other predicates).
+func HasRepliedByAgentWith(preds ...predicate.AgentToken) predicate.AgentAsk {
+	return predicate.AgentAsk(func(s *sql.Selector) {
+		step := newRepliedByAgentStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

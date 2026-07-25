@@ -5,6 +5,7 @@ package ent
 import (
 	"alga/ent/heartbeat"
 	"alga/ent/predicate"
+	"alga/ent/team"
 	"context"
 	"fmt"
 	"math"
@@ -19,10 +20,11 @@ import (
 // HeartbeatQuery is the builder for querying Heartbeat entities.
 type HeartbeatQuery struct {
 	config
-	ctx        *QueryContext
-	order      []heartbeat.OrderOption
-	inters     []Interceptor
-	predicates []predicate.Heartbeat
+	ctx           *QueryContext
+	order         []heartbeat.OrderOption
+	inters        []Interceptor
+	predicates    []predicate.Heartbeat
+	withOwnerTeam *TeamQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -57,6 +59,28 @@ func (_q *HeartbeatQuery) Unique(unique bool) *HeartbeatQuery {
 func (_q *HeartbeatQuery) Order(o ...heartbeat.OrderOption) *HeartbeatQuery {
 	_q.order = append(_q.order, o...)
 	return _q
+}
+
+// QueryOwnerTeam chains the current query on the "owner_team" edge.
+func (_q *HeartbeatQuery) QueryOwnerTeam() *TeamQuery {
+	query := (&TeamClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(heartbeat.Table, heartbeat.FieldID, selector),
+			sqlgraph.To(team.Table, team.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, heartbeat.OwnerTeamTable, heartbeat.OwnerTeamColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first Heartbeat entity from the query.
@@ -246,15 +270,27 @@ func (_q *HeartbeatQuery) Clone() *HeartbeatQuery {
 		return nil
 	}
 	return &HeartbeatQuery{
-		config:     _q.config,
-		ctx:        _q.ctx.Clone(),
-		order:      append([]heartbeat.OrderOption{}, _q.order...),
-		inters:     append([]Interceptor{}, _q.inters...),
-		predicates: append([]predicate.Heartbeat{}, _q.predicates...),
+		config:        _q.config,
+		ctx:           _q.ctx.Clone(),
+		order:         append([]heartbeat.OrderOption{}, _q.order...),
+		inters:        append([]Interceptor{}, _q.inters...),
+		predicates:    append([]predicate.Heartbeat{}, _q.predicates...),
+		withOwnerTeam: _q.withOwnerTeam.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
+}
+
+// WithOwnerTeam tells the query-builder to eager-load the nodes that are connected to
+// the "owner_team" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *HeartbeatQuery) WithOwnerTeam(opts ...func(*TeamQuery)) *HeartbeatQuery {
+	query := (&TeamClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withOwnerTeam = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -333,8 +369,11 @@ func (_q *HeartbeatQuery) prepareQuery(ctx context.Context) error {
 
 func (_q *HeartbeatQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Heartbeat, error) {
 	var (
-		nodes = []*Heartbeat{}
-		_spec = _q.querySpec()
+		nodes       = []*Heartbeat{}
+		_spec       = _q.querySpec()
+		loadedTypes = [1]bool{
+			_q.withOwnerTeam != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Heartbeat).scanValues(nil, columns)
@@ -342,6 +381,7 @@ func (_q *HeartbeatQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*He
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Heartbeat{config: _q.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -353,7 +393,46 @@ func (_q *HeartbeatQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*He
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := _q.withOwnerTeam; query != nil {
+		if err := _q.loadOwnerTeam(ctx, query, nodes, nil,
+			func(n *Heartbeat, e *Team) { n.Edges.OwnerTeam = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (_q *HeartbeatQuery) loadOwnerTeam(ctx context.Context, query *TeamQuery, nodes []*Heartbeat, init func(*Heartbeat), assign func(*Heartbeat, *Team)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Heartbeat)
+	for i := range nodes {
+		if nodes[i].OwnerTeamID == nil {
+			continue
+		}
+		fk := *nodes[i].OwnerTeamID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(team.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "owner_team_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
 }
 
 func (_q *HeartbeatQuery) sqlCount(ctx context.Context) (int, error) {
@@ -380,6 +459,9 @@ func (_q *HeartbeatQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != heartbeat.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if _q.withOwnerTeam != nil {
+			_spec.Node.AddColumnOnce(heartbeat.FieldOwnerTeamID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

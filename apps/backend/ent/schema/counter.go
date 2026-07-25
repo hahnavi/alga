@@ -20,7 +20,7 @@ func (Counter) Annotations() []schema.Annotation {
 func (Counter) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("id").StorageKey("id").NotEmpty(),
-		field.Int64("seq").Default(0),
+		field.Int64("seq").Default(0).NonNegative(),
 	}
 }
 

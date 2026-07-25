@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -34,8 +35,17 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// EdgePostMortem holds the string denoting the post_mortem edge name in mutations.
+	EdgePostMortem = "post_mortem"
 	// Table holds the table name of the actionitem in the database.
 	Table = "action_items"
+	// PostMortemTable is the table that holds the post_mortem relation/edge.
+	PostMortemTable = "action_items"
+	// PostMortemInverseTable is the table name for the PostMortem entity.
+	// It exists in this package in order to avoid circular dependency with the "postmortem" package.
+	PostMortemInverseTable = "post_mortems"
+	// PostMortemColumn is the table column denoting the post_mortem relation/edge.
+	PostMortemColumn = "post_mortem_id"
 )
 
 // Columns holds all SQL columns for actionitem fields.
@@ -140,4 +150,18 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByPostMortemField orders the results by post_mortem field.
+func ByPostMortemField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newPostMortemStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newPostMortemStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(PostMortemInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, PostMortemTable, PostMortemColumn),
+	)
 }

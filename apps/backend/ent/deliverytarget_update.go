@@ -97,9 +97,17 @@ func (_u *DeliveryTargetUpdate) ClearPostID() *DeliveryTargetUpdate {
 	return _u
 }
 
-// SetAlertID sets the "alert" edge to the Alert entity by ID.
-func (_u *DeliveryTargetUpdate) SetAlertID(id uuid.UUID) *DeliveryTargetUpdate {
-	_u.mutation.SetAlertID(id)
+// SetAlertID sets the "alert_id" field.
+func (_u *DeliveryTargetUpdate) SetAlertID(v uuid.UUID) *DeliveryTargetUpdate {
+	_u.mutation.SetAlertID(v)
+	return _u
+}
+
+// SetNillableAlertID sets the "alert_id" field if the given value is not nil.
+func (_u *DeliveryTargetUpdate) SetNillableAlertID(v *uuid.UUID) *DeliveryTargetUpdate {
+	if v != nil {
+		_u.SetAlertID(*v)
+	}
 	return _u
 }
 
@@ -311,9 +319,17 @@ func (_u *DeliveryTargetUpdateOne) ClearPostID() *DeliveryTargetUpdateOne {
 	return _u
 }
 
-// SetAlertID sets the "alert" edge to the Alert entity by ID.
-func (_u *DeliveryTargetUpdateOne) SetAlertID(id uuid.UUID) *DeliveryTargetUpdateOne {
-	_u.mutation.SetAlertID(id)
+// SetAlertID sets the "alert_id" field.
+func (_u *DeliveryTargetUpdateOne) SetAlertID(v uuid.UUID) *DeliveryTargetUpdateOne {
+	_u.mutation.SetAlertID(v)
+	return _u
+}
+
+// SetNillableAlertID sets the "alert_id" field if the given value is not nil.
+func (_u *DeliveryTargetUpdateOne) SetNillableAlertID(v *uuid.UUID) *DeliveryTargetUpdateOne {
+	if v != nil {
+		_u.SetAlertID(*v)
+	}
 	return _u
 }
 

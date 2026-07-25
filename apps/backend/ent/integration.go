@@ -21,7 +21,7 @@ type Integration struct {
 	// MattermostURL holds the value of the "mattermost_url" field.
 	MattermostURL string `json:"mattermost_url,omitempty"`
 	// MattermostWebhookSecret holds the value of the "mattermost_webhook_secret" field.
-	MattermostWebhookSecret string `json:"mattermost_webhook_secret,omitempty"`
+	MattermostWebhookSecret string `json:"-"`
 	// MattermostTeam holds the value of the "mattermost_team" field.
 	MattermostTeam string `json:"mattermost_team,omitempty"`
 	// MattermostDefaultChannel holds the value of the "mattermost_default_channel" field.
@@ -29,9 +29,9 @@ type Integration struct {
 	// MattermostDisabled holds the value of the "mattermost_disabled" field.
 	MattermostDisabled bool `json:"mattermost_disabled,omitempty"`
 	// SlackBotToken holds the value of the "slack_bot_token" field.
-	SlackBotToken string `json:"slack_bot_token,omitempty"`
+	SlackBotToken string `json:"-"`
 	// SlackSigningSecret holds the value of the "slack_signing_secret" field.
-	SlackSigningSecret string `json:"slack_signing_secret,omitempty"`
+	SlackSigningSecret string `json:"-"`
 	// SlackDefaultChannel holds the value of the "slack_default_channel" field.
 	SlackDefaultChannel string `json:"slack_default_channel,omitempty"`
 	// SlackDisabled holds the value of the "slack_disabled" field.
@@ -39,7 +39,7 @@ type Integration struct {
 	// SlackClientID holds the value of the "slack_client_id" field.
 	SlackClientID string `json:"slack_client_id,omitempty"`
 	// SlackClientSecret holds the value of the "slack_client_secret" field.
-	SlackClientSecret string `json:"slack_client_secret,omitempty"`
+	SlackClientSecret string `json:"-"`
 	// SlackWorkspaceName holds the value of the "slack_workspace_name" field.
 	SlackWorkspaceName string `json:"slack_workspace_name,omitempty"`
 	// SlackWorkspaceID holds the value of the "slack_workspace_id" field.
@@ -47,13 +47,13 @@ type Integration struct {
 	// TwilioAccountSid holds the value of the "twilio_account_sid" field.
 	TwilioAccountSid string `json:"twilio_account_sid,omitempty"`
 	// TwilioAuthToken holds the value of the "twilio_auth_token" field.
-	TwilioAuthToken string `json:"twilio_auth_token,omitempty"`
+	TwilioAuthToken string `json:"-"`
 	// TwilioFromNumber holds the value of the "twilio_from_number" field.
 	TwilioFromNumber string `json:"twilio_from_number,omitempty"`
 	// TwilioDisabled holds the value of the "twilio_disabled" field.
 	TwilioDisabled bool `json:"twilio_disabled,omitempty"`
 	// TelnyxAPIKey holds the value of the "telnyx_api_key" field.
-	TelnyxAPIKey string `json:"telnyx_api_key,omitempty"`
+	TelnyxAPIKey string `json:"-"`
 	// TelnyxConnectionID holds the value of the "telnyx_connection_id" field.
 	TelnyxConnectionID string `json:"telnyx_connection_id,omitempty"`
 	// TelnyxFromNumber holds the value of the "telnyx_from_number" field.
@@ -73,7 +73,7 @@ type Integration struct {
 	// HermesPlatformURL holds the value of the "hermes_platform_url" field.
 	HermesPlatformURL string `json:"hermes_platform_url,omitempty"`
 	// HermesPlatformToken holds the value of the "hermes_platform_token" field.
-	HermesPlatformToken string `json:"hermes_platform_token,omitempty"`
+	HermesPlatformToken string `json:"-"`
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt    time.Time `json:"updated_at,omitempty"`
 	selectValues sql.SelectValues
@@ -326,8 +326,7 @@ func (_m *Integration) String() string {
 	builder.WriteString("mattermost_url=")
 	builder.WriteString(_m.MattermostURL)
 	builder.WriteString(", ")
-	builder.WriteString("mattermost_webhook_secret=")
-	builder.WriteString(_m.MattermostWebhookSecret)
+	builder.WriteString("mattermost_webhook_secret=<sensitive>")
 	builder.WriteString(", ")
 	builder.WriteString("mattermost_team=")
 	builder.WriteString(_m.MattermostTeam)
@@ -338,11 +337,9 @@ func (_m *Integration) String() string {
 	builder.WriteString("mattermost_disabled=")
 	builder.WriteString(fmt.Sprintf("%v", _m.MattermostDisabled))
 	builder.WriteString(", ")
-	builder.WriteString("slack_bot_token=")
-	builder.WriteString(_m.SlackBotToken)
+	builder.WriteString("slack_bot_token=<sensitive>")
 	builder.WriteString(", ")
-	builder.WriteString("slack_signing_secret=")
-	builder.WriteString(_m.SlackSigningSecret)
+	builder.WriteString("slack_signing_secret=<sensitive>")
 	builder.WriteString(", ")
 	builder.WriteString("slack_default_channel=")
 	builder.WriteString(_m.SlackDefaultChannel)
@@ -353,8 +350,7 @@ func (_m *Integration) String() string {
 	builder.WriteString("slack_client_id=")
 	builder.WriteString(_m.SlackClientID)
 	builder.WriteString(", ")
-	builder.WriteString("slack_client_secret=")
-	builder.WriteString(_m.SlackClientSecret)
+	builder.WriteString("slack_client_secret=<sensitive>")
 	builder.WriteString(", ")
 	builder.WriteString("slack_workspace_name=")
 	builder.WriteString(_m.SlackWorkspaceName)
@@ -365,8 +361,7 @@ func (_m *Integration) String() string {
 	builder.WriteString("twilio_account_sid=")
 	builder.WriteString(_m.TwilioAccountSid)
 	builder.WriteString(", ")
-	builder.WriteString("twilio_auth_token=")
-	builder.WriteString(_m.TwilioAuthToken)
+	builder.WriteString("twilio_auth_token=<sensitive>")
 	builder.WriteString(", ")
 	builder.WriteString("twilio_from_number=")
 	builder.WriteString(_m.TwilioFromNumber)
@@ -374,8 +369,7 @@ func (_m *Integration) String() string {
 	builder.WriteString("twilio_disabled=")
 	builder.WriteString(fmt.Sprintf("%v", _m.TwilioDisabled))
 	builder.WriteString(", ")
-	builder.WriteString("telnyx_api_key=")
-	builder.WriteString(_m.TelnyxAPIKey)
+	builder.WriteString("telnyx_api_key=<sensitive>")
 	builder.WriteString(", ")
 	builder.WriteString("telnyx_connection_id=")
 	builder.WriteString(_m.TelnyxConnectionID)
@@ -404,8 +398,7 @@ func (_m *Integration) String() string {
 	builder.WriteString("hermes_platform_url=")
 	builder.WriteString(_m.HermesPlatformURL)
 	builder.WriteString(", ")
-	builder.WriteString("hermes_platform_token=")
-	builder.WriteString(_m.HermesPlatformToken)
+	builder.WriteString("hermes_platform_token=<sensitive>")
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
 	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))

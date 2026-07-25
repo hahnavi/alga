@@ -28,7 +28,6 @@ type IncidentCoordinationMessageQuery struct {
 	withIncident      *IncidentQuery
 	withReplies       *IncidentCoordinationMessageQuery
 	withParentMessage *IncidentCoordinationMessageQuery
-	withFKs           bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -442,7 +441,6 @@ func (_q *IncidentCoordinationMessageQuery) prepareQuery(ctx context.Context) er
 func (_q *IncidentCoordinationMessageQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*IncidentCoordinationMessage, error) {
 	var (
 		nodes       = []*IncidentCoordinationMessage{}
-		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
 		loadedTypes = [3]bool{
 			_q.withIncident != nil,
@@ -450,12 +448,6 @@ func (_q *IncidentCoordinationMessageQuery) sqlAll(ctx context.Context, hooks ..
 			_q.withParentMessage != nil,
 		}
 	)
-	if _q.withIncident != nil {
-		withFKs = true
-	}
-	if withFKs {
-		_spec.Node.Columns = append(_spec.Node.Columns, incidentcoordinationmessage.ForeignKeys...)
-	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*IncidentCoordinationMessage).scanValues(nil, columns)
 	}
@@ -502,10 +494,7 @@ func (_q *IncidentCoordinationMessageQuery) loadIncident(ctx context.Context, qu
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*IncidentCoordinationMessage)
 	for i := range nodes {
-		if nodes[i].incident_coordination_messages == nil {
-			continue
-		}
-		fk := *nodes[i].incident_coordination_messages
+		fk := nodes[i].IncidentID
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -522,7 +511,7 @@ func (_q *IncidentCoordinationMessageQuery) loadIncident(ctx context.Context, qu
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "incident_coordination_messages" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "incident_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -540,7 +529,6 @@ func (_q *IncidentCoordinationMessageQuery) loadReplies(ctx context.Context, que
 			init(nodes[i])
 		}
 	}
-	query.withFKs = true
 	if len(query.ctx.Fields) > 0 {
 		query.ctx.AppendFieldOnce(incidentcoordinationmessage.FieldParentMessageID)
 	}
@@ -621,6 +609,9 @@ func (_q *IncidentCoordinationMessageQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != incidentcoordinationmessage.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if _q.withIncident != nil {
+			_spec.Node.AddColumnOnce(incidentcoordinationmessage.FieldIncidentID)
 		}
 		if _q.withParentMessage != nil {
 			_spec.Node.AddColumnOnce(incidentcoordinationmessage.FieldParentMessageID)

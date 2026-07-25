@@ -80,7 +80,20 @@ func (_u *CounterUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (_u *CounterUpdate) check() error {
+	if v, ok := _u.mutation.Seq(); ok {
+		if err := counter.SeqValidator(v); err != nil {
+			return &ValidationError{Name: "seq", err: fmt.Errorf(`ent: validator failed for field "Counter.seq": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (_u *CounterUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(counter.Table, counter.Columns, sqlgraph.NewFieldSpec(counter.FieldID, field.TypeString))
 	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
@@ -181,7 +194,20 @@ func (_u *CounterUpdateOne) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (_u *CounterUpdateOne) check() error {
+	if v, ok := _u.mutation.Seq(); ok {
+		if err := counter.SeqValidator(v); err != nil {
+			return &ValidationError{Name: "seq", err: fmt.Errorf(`ent: validator failed for field "Counter.seq": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (_u *CounterUpdateOne) sqlSave(ctx context.Context) (_node *Counter, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(counter.Table, counter.Columns, sqlgraph.NewFieldSpec(counter.FieldID, field.TypeString))
 	id, ok := _u.mutation.ID()
 	if !ok {

@@ -4,6 +4,8 @@ package ent
 
 import (
 	"alga/ent/predicate"
+	"alga/ent/service"
+	"alga/ent/statuspage"
 	"alga/ent/statuspagecomponent"
 	"context"
 	"fmt"
@@ -19,10 +21,12 @@ import (
 // StatusPageComponentQuery is the builder for querying StatusPageComponent entities.
 type StatusPageComponentQuery struct {
 	config
-	ctx        *QueryContext
-	order      []statuspagecomponent.OrderOption
-	inters     []Interceptor
-	predicates []predicate.StatusPageComponent
+	ctx            *QueryContext
+	order          []statuspagecomponent.OrderOption
+	inters         []Interceptor
+	predicates     []predicate.StatusPageComponent
+	withStatusPage *StatusPageQuery
+	withService    *ServiceQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -57,6 +61,50 @@ func (_q *StatusPageComponentQuery) Unique(unique bool) *StatusPageComponentQuer
 func (_q *StatusPageComponentQuery) Order(o ...statuspagecomponent.OrderOption) *StatusPageComponentQuery {
 	_q.order = append(_q.order, o...)
 	return _q
+}
+
+// QueryStatusPage chains the current query on the "status_page" edge.
+func (_q *StatusPageComponentQuery) QueryStatusPage() *StatusPageQuery {
+	query := (&StatusPageClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(statuspagecomponent.Table, statuspagecomponent.FieldID, selector),
+			sqlgraph.To(statuspage.Table, statuspage.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, statuspagecomponent.StatusPageTable, statuspagecomponent.StatusPageColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryService chains the current query on the "service" edge.
+func (_q *StatusPageComponentQuery) QueryService() *ServiceQuery {
+	query := (&ServiceClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(statuspagecomponent.Table, statuspagecomponent.FieldID, selector),
+			sqlgraph.To(service.Table, service.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, statuspagecomponent.ServiceTable, statuspagecomponent.ServiceColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first StatusPageComponent entity from the query.
@@ -246,15 +294,39 @@ func (_q *StatusPageComponentQuery) Clone() *StatusPageComponentQuery {
 		return nil
 	}
 	return &StatusPageComponentQuery{
-		config:     _q.config,
-		ctx:        _q.ctx.Clone(),
-		order:      append([]statuspagecomponent.OrderOption{}, _q.order...),
-		inters:     append([]Interceptor{}, _q.inters...),
-		predicates: append([]predicate.StatusPageComponent{}, _q.predicates...),
+		config:         _q.config,
+		ctx:            _q.ctx.Clone(),
+		order:          append([]statuspagecomponent.OrderOption{}, _q.order...),
+		inters:         append([]Interceptor{}, _q.inters...),
+		predicates:     append([]predicate.StatusPageComponent{}, _q.predicates...),
+		withStatusPage: _q.withStatusPage.Clone(),
+		withService:    _q.withService.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
+}
+
+// WithStatusPage tells the query-builder to eager-load the nodes that are connected to
+// the "status_page" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *StatusPageComponentQuery) WithStatusPage(opts ...func(*StatusPageQuery)) *StatusPageComponentQuery {
+	query := (&StatusPageClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withStatusPage = query
+	return _q
+}
+
+// WithService tells the query-builder to eager-load the nodes that are connected to
+// the "service" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *StatusPageComponentQuery) WithService(opts ...func(*ServiceQuery)) *StatusPageComponentQuery {
+	query := (&ServiceClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withService = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -333,8 +405,12 @@ func (_q *StatusPageComponentQuery) prepareQuery(ctx context.Context) error {
 
 func (_q *StatusPageComponentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*StatusPageComponent, error) {
 	var (
-		nodes = []*StatusPageComponent{}
-		_spec = _q.querySpec()
+		nodes       = []*StatusPageComponent{}
+		_spec       = _q.querySpec()
+		loadedTypes = [2]bool{
+			_q.withStatusPage != nil,
+			_q.withService != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*StatusPageComponent).scanValues(nil, columns)
@@ -342,6 +418,7 @@ func (_q *StatusPageComponentQuery) sqlAll(ctx context.Context, hooks ...queryHo
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &StatusPageComponent{config: _q.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -353,7 +430,81 @@ func (_q *StatusPageComponentQuery) sqlAll(ctx context.Context, hooks ...queryHo
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := _q.withStatusPage; query != nil {
+		if err := _q.loadStatusPage(ctx, query, nodes, nil,
+			func(n *StatusPageComponent, e *StatusPage) { n.Edges.StatusPage = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withService; query != nil {
+		if err := _q.loadService(ctx, query, nodes, nil,
+			func(n *StatusPageComponent, e *Service) { n.Edges.Service = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (_q *StatusPageComponentQuery) loadStatusPage(ctx context.Context, query *StatusPageQuery, nodes []*StatusPageComponent, init func(*StatusPageComponent), assign func(*StatusPageComponent, *StatusPage)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*StatusPageComponent)
+	for i := range nodes {
+		fk := nodes[i].StatusPageID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(statuspage.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "status_page_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *StatusPageComponentQuery) loadService(ctx context.Context, query *ServiceQuery, nodes []*StatusPageComponent, init func(*StatusPageComponent), assign func(*StatusPageComponent, *Service)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*StatusPageComponent)
+	for i := range nodes {
+		if nodes[i].ServiceID == nil {
+			continue
+		}
+		fk := *nodes[i].ServiceID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(service.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "service_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
 }
 
 func (_q *StatusPageComponentQuery) sqlCount(ctx context.Context) (int, error) {
@@ -380,6 +531,12 @@ func (_q *StatusPageComponentQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != statuspagecomponent.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if _q.withStatusPage != nil {
+			_spec.Node.AddColumnOnce(statuspagecomponent.FieldStatusPageID)
+		}
+		if _q.withService != nil {
+			_spec.Node.AddColumnOnce(statuspagecomponent.FieldServiceID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

@@ -799,6 +799,22 @@ func (c *ActionItemClient) GetX(ctx context.Context, id uuid.UUID) *ActionItem {
 	return obj
 }
 
+// QueryPostMortem queries the post_mortem edge of a ActionItem.
+func (c *ActionItemClient) QueryPostMortem(_m *ActionItem) *PostMortemQuery {
+	query := (&PostMortemClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(actionitem.Table, actionitem.FieldID, id),
+			sqlgraph.To(postmortem.Table, postmortem.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, actionitem.PostMortemTable, actionitem.PostMortemColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *ActionItemClient) Hooks() []Hook {
 	return c.hooks.ActionItem
@@ -930,6 +946,54 @@ func (c *AgentAskClient) GetX(ctx context.Context, id uuid.UUID) *AgentAsk {
 		panic(err)
 	}
 	return obj
+}
+
+// QueryFromAgent queries the from_agent edge of a AgentAsk.
+func (c *AgentAskClient) QueryFromAgent(_m *AgentAsk) *AgentTokenQuery {
+	query := (&AgentTokenClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(agentask.Table, agentask.FieldID, id),
+			sqlgraph.To(agenttoken.Table, agenttoken.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, agentask.FromAgentTable, agentask.FromAgentColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryToAgent queries the to_agent edge of a AgentAsk.
+func (c *AgentAskClient) QueryToAgent(_m *AgentAsk) *AgentTokenQuery {
+	query := (&AgentTokenClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(agentask.Table, agentask.FieldID, id),
+			sqlgraph.To(agenttoken.Table, agenttoken.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, agentask.ToAgentTable, agentask.ToAgentColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryRepliedByAgent queries the replied_by_agent edge of a AgentAsk.
+func (c *AgentAskClient) QueryRepliedByAgent(_m *AgentAsk) *AgentTokenQuery {
+	query := (&AgentTokenClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(agentask.Table, agentask.FieldID, id),
+			sqlgraph.To(agenttoken.Table, agenttoken.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, agentask.RepliedByAgentTable, agentask.RepliedByAgentColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.
@@ -1214,6 +1278,22 @@ func (c *AgentMemoryClient) GetX(ctx context.Context, id uuid.UUID) *AgentMemory
 	return obj
 }
 
+// QueryAgent queries the agent edge of a AgentMemory.
+func (c *AgentMemoryClient) QueryAgent(_m *AgentMemory) *AgentTokenQuery {
+	query := (&AgentTokenClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(agentmemory.Table, agentmemory.FieldID, id),
+			sqlgraph.To(agenttoken.Table, agenttoken.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, agentmemory.AgentTable, agentmemory.AgentColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *AgentMemoryClient) Hooks() []Hook {
 	return c.hooks.AgentMemory
@@ -1372,6 +1452,70 @@ func (c *AgentTokenClient) QueryIcsRoles(_m *AgentToken) *ICSRoleAssignmentQuery
 			sqlgraph.From(agenttoken.Table, agenttoken.FieldID, id),
 			sqlgraph.To(icsroleassignment.Table, icsroleassignment.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, agenttoken.IcsRolesTable, agenttoken.IcsRolesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryMemories queries the memories edge of a AgentToken.
+func (c *AgentTokenClient) QueryMemories(_m *AgentToken) *AgentMemoryQuery {
+	query := (&AgentMemoryClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(agenttoken.Table, agenttoken.FieldID, id),
+			sqlgraph.To(agentmemory.Table, agentmemory.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, agenttoken.MemoriesTable, agenttoken.MemoriesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QuerySentAsks queries the sent_asks edge of a AgentToken.
+func (c *AgentTokenClient) QuerySentAsks(_m *AgentToken) *AgentAskQuery {
+	query := (&AgentAskClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(agenttoken.Table, agenttoken.FieldID, id),
+			sqlgraph.To(agentask.Table, agentask.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, agenttoken.SentAsksTable, agenttoken.SentAsksColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryReceivedAsks queries the received_asks edge of a AgentToken.
+func (c *AgentTokenClient) QueryReceivedAsks(_m *AgentToken) *AgentAskQuery {
+	query := (&AgentAskClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(agenttoken.Table, agenttoken.FieldID, id),
+			sqlgraph.To(agentask.Table, agentask.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, agenttoken.ReceivedAsksTable, agenttoken.ReceivedAsksColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryRepliedAsks queries the replied_asks edge of a AgentToken.
+func (c *AgentTokenClient) QueryRepliedAsks(_m *AgentToken) *AgentAskQuery {
+	query := (&AgentAskClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(agenttoken.Table, agenttoken.FieldID, id),
+			sqlgraph.To(agentask.Table, agentask.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, agenttoken.RepliedAsksTable, agenttoken.RepliedAsksColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -1569,6 +1713,22 @@ func (c *AlertClient) QueryDeliveryTargets(_m *Alert) *DeliveryTargetQuery {
 			sqlgraph.From(alert.Table, alert.FieldID, id),
 			sqlgraph.To(deliverytarget.Table, deliverytarget.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, alert.DeliveryTargetsTable, alert.DeliveryTargetsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryTriageResult queries the triage_result edge of a Alert.
+func (c *AlertClient) QueryTriageResult(_m *Alert) *TriageResultQuery {
+	query := (&TriageResultClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(alert.Table, alert.FieldID, id),
+			sqlgraph.To(triageresult.Table, triageresult.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, alert.TriageResultTable, alert.TriageResultColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -1947,6 +2107,22 @@ func (c *AlertInvestigationClient) QueryPromotedIncidentInvestigation(_m *AlertI
 			sqlgraph.From(alertinvestigation.Table, alertinvestigation.FieldID, id),
 			sqlgraph.To(incidentinvestigation.Table, incidentinvestigation.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, alertinvestigation.PromotedIncidentInvestigationTable, alertinvestigation.PromotedIncidentInvestigationColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryTriageResult queries the triage_result edge of a AlertInvestigation.
+func (c *AlertInvestigationClient) QueryTriageResult(_m *AlertInvestigation) *TriageResultQuery {
+	query := (&TriageResultClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(alertinvestigation.Table, alertinvestigation.FieldID, id),
+			sqlgraph.To(triageresult.Table, triageresult.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, alertinvestigation.TriageResultTable, alertinvestigation.TriageResultColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -2731,6 +2907,22 @@ func (c *CoordinationTaskClient) QueryParentTask(_m *CoordinationTask) *Coordina
 	return query
 }
 
+// QueryLinkedInvestigation queries the linked_investigation edge of a CoordinationTask.
+func (c *CoordinationTaskClient) QueryLinkedInvestigation(_m *CoordinationTask) *IncidentInvestigationQuery {
+	query := (&IncidentInvestigationClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(coordinationtask.Table, coordinationtask.FieldID, id),
+			sqlgraph.To(incidentinvestigation.Table, incidentinvestigation.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, coordinationtask.LinkedInvestigationTable, coordinationtask.LinkedInvestigationColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *CoordinationTaskClient) Hooks() []Hook {
 	return c.hooks.CoordinationTask
@@ -2995,6 +3187,22 @@ func (c *CredentialProviderClient) GetX(ctx context.Context, id uuid.UUID) *Cred
 		panic(err)
 	}
 	return obj
+}
+
+// QuerySharedSecrets queries the shared_secrets edge of a CredentialProvider.
+func (c *CredentialProviderClient) QuerySharedSecrets(_m *CredentialProvider) *SharedSecretQuery {
+	query := (&SharedSecretClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(credentialprovider.Table, credentialprovider.FieldID, id),
+			sqlgraph.To(sharedsecret.Table, sharedsecret.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, credentialprovider.SharedSecretsTable, credentialprovider.SharedSecretsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.
@@ -3279,6 +3487,38 @@ func (c *EscalationPolicyClient) GetX(ctx context.Context, id uuid.UUID) *Escala
 	return obj
 }
 
+// QueryServices queries the services edge of a EscalationPolicy.
+func (c *EscalationPolicyClient) QueryServices(_m *EscalationPolicy) *ServiceQuery {
+	query := (&ServiceClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(escalationpolicy.Table, escalationpolicy.FieldID, id),
+			sqlgraph.To(service.Table, service.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, escalationpolicy.ServicesTable, escalationpolicy.ServicesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryIncidents queries the incidents edge of a EscalationPolicy.
+func (c *EscalationPolicyClient) QueryIncidents(_m *EscalationPolicy) *IncidentQuery {
+	query := (&IncidentClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(escalationpolicy.Table, escalationpolicy.FieldID, id),
+			sqlgraph.To(incident.Table, incident.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, escalationpolicy.IncidentsTable, escalationpolicy.IncidentsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *EscalationPolicyClient) Hooks() []Hook {
 	return c.hooks.EscalationPolicy
@@ -3428,6 +3668,38 @@ func (c *HandoffRecordClient) QuerySchedule(_m *HandoffRecord) *OnCallScheduleQu
 	return query
 }
 
+// QueryOutgoingUser queries the outgoing_user edge of a HandoffRecord.
+func (c *HandoffRecordClient) QueryOutgoingUser(_m *HandoffRecord) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(handoffrecord.Table, handoffrecord.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, handoffrecord.OutgoingUserTable, handoffrecord.OutgoingUserColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryIncomingUser queries the incoming_user edge of a HandoffRecord.
+func (c *HandoffRecordClient) QueryIncomingUser(_m *HandoffRecord) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(handoffrecord.Table, handoffrecord.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, handoffrecord.IncomingUserTable, handoffrecord.IncomingUserColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *HandoffRecordClient) Hooks() []Hook {
 	return c.hooks.HandoffRecord
@@ -3559,6 +3831,22 @@ func (c *HeartbeatClient) GetX(ctx context.Context, id uuid.UUID) *Heartbeat {
 		panic(err)
 	}
 	return obj
+}
+
+// QueryOwnerTeam queries the owner_team edge of a Heartbeat.
+func (c *HeartbeatClient) QueryOwnerTeam(_m *Heartbeat) *TeamQuery {
+	query := (&TeamClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(heartbeat.Table, heartbeat.FieldID, id),
+			sqlgraph.To(team.Table, team.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, heartbeat.OwnerTeamTable, heartbeat.OwnerTeamColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.
@@ -3742,6 +4030,22 @@ func (c *ICSRoleAssignmentClient) QueryAgentToken(_m *ICSRoleAssignment) *AgentT
 	return query
 }
 
+// QueryChildren queries the children edge of a ICSRoleAssignment.
+func (c *ICSRoleAssignmentClient) QueryChildren(_m *ICSRoleAssignment) *ICSRoleAssignmentQuery {
+	query := (&ICSRoleAssignmentClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(icsroleassignment.Table, icsroleassignment.FieldID, id),
+			sqlgraph.To(icsroleassignment.Table, icsroleassignment.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, icsroleassignment.ChildrenTable, icsroleassignment.ChildrenColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryParent queries the parent edge of a ICSRoleAssignment.
 func (c *ICSRoleAssignmentClient) QueryParent(_m *ICSRoleAssignment) *ICSRoleAssignmentQuery {
 	query := (&ICSRoleAssignmentClient{config: c.config}).Query()
@@ -3750,7 +4054,7 @@ func (c *ICSRoleAssignmentClient) QueryParent(_m *ICSRoleAssignment) *ICSRoleAss
 		step := sqlgraph.NewStep(
 			sqlgraph.From(icsroleassignment.Table, icsroleassignment.FieldID, id),
 			sqlgraph.To(icsroleassignment.Table, icsroleassignment.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, icsroleassignment.ParentTable, icsroleassignment.ParentColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, icsroleassignment.ParentTable, icsroleassignment.ParentColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -3963,7 +4267,7 @@ func (c *IncidentClient) QueryPostMortem(_m *Incident) *PostMortemQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(incident.Table, incident.FieldID, id),
 			sqlgraph.To(postmortem.Table, postmortem.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, incident.PostMortemTable, incident.PostMortemColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, incident.PostMortemTable, incident.PostMortemColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -4028,6 +4332,86 @@ func (c *IncidentClient) QueryCoordinationTasks(_m *Incident) *CoordinationTaskQ
 			sqlgraph.From(incident.Table, incident.FieldID, id),
 			sqlgraph.To(coordinationtask.Table, coordinationtask.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, incident.CoordinationTasksTable, incident.CoordinationTasksColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryCommander queries the commander edge of a Incident.
+func (c *IncidentClient) QueryCommander(_m *Incident) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(incident.Table, incident.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, incident.CommanderTable, incident.CommanderColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryCommunicator queries the communicator edge of a Incident.
+func (c *IncidentClient) QueryCommunicator(_m *Incident) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(incident.Table, incident.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, incident.CommunicatorTable, incident.CommunicatorColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryOnCallResponder queries the on_call_responder edge of a Incident.
+func (c *IncidentClient) QueryOnCallResponder(_m *Incident) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(incident.Table, incident.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, incident.OnCallResponderTable, incident.OnCallResponderColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryService queries the service edge of a Incident.
+func (c *IncidentClient) QueryService(_m *Incident) *ServiceQuery {
+	query := (&ServiceClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(incident.Table, incident.FieldID, id),
+			sqlgraph.To(service.Table, service.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, incident.ServiceTable, incident.ServiceColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryEscalationPolicy queries the escalation_policy edge of a Incident.
+func (c *IncidentClient) QueryEscalationPolicy(_m *Incident) *EscalationPolicyQuery {
+	query := (&EscalationPolicyClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(incident.Table, incident.FieldID, id),
+			sqlgraph.To(escalationpolicy.Table, escalationpolicy.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, incident.EscalationPolicyTable, incident.EscalationPolicyColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -4603,6 +4987,22 @@ func (c *IncidentInvestigationClient) QueryParentInvestigation(_m *IncidentInves
 			sqlgraph.From(incidentinvestigation.Table, incidentinvestigation.FieldID, id),
 			sqlgraph.To(incidentinvestigation.Table, incidentinvestigation.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, incidentinvestigation.ParentInvestigationTable, incidentinvestigation.ParentInvestigationColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryLinkedCoordinationTasks queries the linked_coordination_tasks edge of a IncidentInvestigation.
+func (c *IncidentInvestigationClient) QueryLinkedCoordinationTasks(_m *IncidentInvestigation) *CoordinationTaskQuery {
+	query := (&CoordinationTaskClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(incidentinvestigation.Table, incidentinvestigation.FieldID, id),
+			sqlgraph.To(coordinationtask.Table, coordinationtask.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, incidentinvestigation.LinkedCoordinationTasksTable, incidentinvestigation.LinkedCoordinationTasksColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -5472,6 +5872,22 @@ func (c *KnowledgeNoteClient) GetX(ctx context.Context, id uuid.UUID) *Knowledge
 	return obj
 }
 
+// QueryAuthor queries the author edge of a KnowledgeNote.
+func (c *KnowledgeNoteClient) QueryAuthor(_m *KnowledgeNote) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(knowledgenote.Table, knowledgenote.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, knowledgenote.AuthorTable, knowledgenote.AuthorColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *KnowledgeNoteClient) Hooks() []Hook {
 	return c.hooks.KnowledgeNote
@@ -6004,6 +6420,38 @@ func (c *OIDCIdentityClient) GetX(ctx context.Context, id uuid.UUID) *OIDCIdenti
 	return obj
 }
 
+// QueryUser queries the user edge of a OIDCIdentity.
+func (c *OIDCIdentityClient) QueryUser(_m *OIDCIdentity) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(oidcidentity.Table, oidcidentity.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, oidcidentity.UserTable, oidcidentity.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryProvider queries the provider edge of a OIDCIdentity.
+func (c *OIDCIdentityClient) QueryProvider(_m *OIDCIdentity) *OIDCProviderQuery {
+	query := (&OIDCProviderClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(oidcidentity.Table, oidcidentity.FieldID, id),
+			sqlgraph.To(oidcprovider.Table, oidcprovider.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, oidcidentity.ProviderTable, oidcidentity.ProviderColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *OIDCIdentityClient) Hooks() []Hook {
 	return c.hooks.OIDCIdentity
@@ -6137,6 +6585,22 @@ func (c *OIDCProviderClient) GetX(ctx context.Context, id uuid.UUID) *OIDCProvid
 	return obj
 }
 
+// QueryOidcIdentities queries the oidc_identities edge of a OIDCProvider.
+func (c *OIDCProviderClient) QueryOidcIdentities(_m *OIDCProvider) *OIDCIdentityQuery {
+	query := (&OIDCIdentityClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(oidcprovider.Table, oidcprovider.FieldID, id),
+			sqlgraph.To(oidcidentity.Table, oidcidentity.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, oidcprovider.OidcIdentitiesTable, oidcprovider.OidcIdentitiesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *OIDCProviderClient) Hooks() []Hook {
 	return c.hooks.OIDCProvider
@@ -6268,6 +6732,54 @@ func (c *OnCallScheduleClient) GetX(ctx context.Context, id uuid.UUID) *OnCallSc
 		panic(err)
 	}
 	return obj
+}
+
+// QueryTeam queries the team edge of a OnCallSchedule.
+func (c *OnCallScheduleClient) QueryTeam(_m *OnCallSchedule) *TeamQuery {
+	query := (&TeamClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(oncallschedule.Table, oncallschedule.FieldID, id),
+			sqlgraph.To(team.Table, team.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, oncallschedule.TeamTable, oncallschedule.TeamColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryLayers queries the layers edge of a OnCallSchedule.
+func (c *OnCallScheduleClient) QueryLayers(_m *OnCallSchedule) *ScheduleLayerQuery {
+	query := (&ScheduleLayerClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(oncallschedule.Table, oncallschedule.FieldID, id),
+			sqlgraph.To(schedulelayer.Table, schedulelayer.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, oncallschedule.LayersTable, oncallschedule.LayersColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryOverrides queries the overrides edge of a OnCallSchedule.
+func (c *OnCallScheduleClient) QueryOverrides(_m *OnCallSchedule) *ScheduleOverrideQuery {
+	query := (&ScheduleOverrideClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(oncallschedule.Table, oncallschedule.FieldID, id),
+			sqlgraph.To(scheduleoverride.Table, scheduleoverride.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, oncallschedule.OverridesTable, oncallschedule.OverridesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.
@@ -6536,6 +7048,22 @@ func (c *PasswordResetTokenClient) GetX(ctx context.Context, id uuid.UUID) *Pass
 	return obj
 }
 
+// QueryUser queries the user edge of a PasswordResetToken.
+func (c *PasswordResetTokenClient) QueryUser(_m *PasswordResetToken) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(passwordresettoken.Table, passwordresettoken.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, passwordresettoken.UserTable, passwordresettoken.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *PasswordResetTokenClient) Hooks() []Hook {
 	return c.hooks.PasswordResetToken
@@ -6667,6 +7195,22 @@ func (c *PersonalAccessTokenClient) GetX(ctx context.Context, id uuid.UUID) *Per
 		panic(err)
 	}
 	return obj
+}
+
+// QueryUser queries the user edge of a PersonalAccessToken.
+func (c *PersonalAccessTokenClient) QueryUser(_m *PersonalAccessToken) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(personalaccesstoken.Table, personalaccesstoken.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, personalaccesstoken.UserTable, personalaccesstoken.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.
@@ -7132,6 +7676,54 @@ func (c *PostMortemClient) GetX(ctx context.Context, id uuid.UUID) *PostMortem {
 	return obj
 }
 
+// QueryIncident queries the incident edge of a PostMortem.
+func (c *PostMortemClient) QueryIncident(_m *PostMortem) *IncidentQuery {
+	query := (&IncidentClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(postmortem.Table, postmortem.FieldID, id),
+			sqlgraph.To(incident.Table, incident.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, postmortem.IncidentTable, postmortem.IncidentColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryApprovedBy queries the approved_by edge of a PostMortem.
+func (c *PostMortemClient) QueryApprovedBy(_m *PostMortem) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(postmortem.Table, postmortem.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, postmortem.ApprovedByTable, postmortem.ApprovedByColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryActionItems queries the action_items edge of a PostMortem.
+func (c *PostMortemClient) QueryActionItems(_m *PostMortem) *ActionItemQuery {
+	query := (&ActionItemClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(postmortem.Table, postmortem.FieldID, id),
+			sqlgraph.To(actionitem.Table, actionitem.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, postmortem.ActionItemsTable, postmortem.ActionItemsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *PostMortemClient) Hooks() []Hook {
 	return c.hooks.PostMortem
@@ -7398,6 +7990,22 @@ func (c *ScheduleLayerClient) GetX(ctx context.Context, id uuid.UUID) *ScheduleL
 	return obj
 }
 
+// QuerySchedule queries the schedule edge of a ScheduleLayer.
+func (c *ScheduleLayerClient) QuerySchedule(_m *ScheduleLayer) *OnCallScheduleQuery {
+	query := (&OnCallScheduleClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(schedulelayer.Table, schedulelayer.FieldID, id),
+			sqlgraph.To(oncallschedule.Table, oncallschedule.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, schedulelayer.ScheduleTable, schedulelayer.ScheduleColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *ScheduleLayerClient) Hooks() []Hook {
 	return c.hooks.ScheduleLayer
@@ -7529,6 +8137,38 @@ func (c *ScheduleOverrideClient) GetX(ctx context.Context, id uuid.UUID) *Schedu
 		panic(err)
 	}
 	return obj
+}
+
+// QuerySchedule queries the schedule edge of a ScheduleOverride.
+func (c *ScheduleOverrideClient) QuerySchedule(_m *ScheduleOverride) *OnCallScheduleQuery {
+	query := (&OnCallScheduleClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(scheduleoverride.Table, scheduleoverride.FieldID, id),
+			sqlgraph.To(oncallschedule.Table, oncallschedule.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, scheduleoverride.ScheduleTable, scheduleoverride.ScheduleColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryUser queries the user edge of a ScheduleOverride.
+func (c *ScheduleOverrideClient) QueryUser(_m *ScheduleOverride) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(scheduleoverride.Table, scheduleoverride.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, scheduleoverride.UserTable, scheduleoverride.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.
@@ -7664,6 +8304,102 @@ func (c *ServiceClient) GetX(ctx context.Context, id uuid.UUID) *Service {
 	return obj
 }
 
+// QueryDependencies queries the dependencies edge of a Service.
+func (c *ServiceClient) QueryDependencies(_m *Service) *ServiceDependencyQuery {
+	query := (&ServiceDependencyClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(service.Table, service.FieldID, id),
+			sqlgraph.To(servicedependency.Table, servicedependency.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, service.DependenciesTable, service.DependenciesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryDependedOnBy queries the depended_on_by edge of a Service.
+func (c *ServiceClient) QueryDependedOnBy(_m *Service) *ServiceDependencyQuery {
+	query := (&ServiceDependencyClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(service.Table, service.FieldID, id),
+			sqlgraph.To(servicedependency.Table, servicedependency.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, service.DependedOnByTable, service.DependedOnByColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryStatusPageComponents queries the status_page_components edge of a Service.
+func (c *ServiceClient) QueryStatusPageComponents(_m *Service) *StatusPageComponentQuery {
+	query := (&StatusPageComponentClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(service.Table, service.FieldID, id),
+			sqlgraph.To(statuspagecomponent.Table, statuspagecomponent.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, service.StatusPageComponentsTable, service.StatusPageComponentsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryIncidents queries the incidents edge of a Service.
+func (c *ServiceClient) QueryIncidents(_m *Service) *IncidentQuery {
+	query := (&IncidentClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(service.Table, service.FieldID, id),
+			sqlgraph.To(incident.Table, incident.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, service.IncidentsTable, service.IncidentsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryOwnerTeam queries the owner_team edge of a Service.
+func (c *ServiceClient) QueryOwnerTeam(_m *Service) *TeamQuery {
+	query := (&TeamClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(service.Table, service.FieldID, id),
+			sqlgraph.To(team.Table, team.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, service.OwnerTeamTable, service.OwnerTeamColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryEscalationPolicy queries the escalation_policy edge of a Service.
+func (c *ServiceClient) QueryEscalationPolicy(_m *Service) *EscalationPolicyQuery {
+	query := (&EscalationPolicyClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(service.Table, service.FieldID, id),
+			sqlgraph.To(escalationpolicy.Table, escalationpolicy.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, service.EscalationPolicyTable, service.EscalationPolicyColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *ServiceClient) Hooks() []Hook {
 	return c.hooks.Service
@@ -7795,6 +8531,38 @@ func (c *ServiceDependencyClient) GetX(ctx context.Context, id uuid.UUID) *Servi
 		panic(err)
 	}
 	return obj
+}
+
+// QueryService queries the service edge of a ServiceDependency.
+func (c *ServiceDependencyClient) QueryService(_m *ServiceDependency) *ServiceQuery {
+	query := (&ServiceClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(servicedependency.Table, servicedependency.FieldID, id),
+			sqlgraph.To(service.Table, service.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, servicedependency.ServiceTable, servicedependency.ServiceColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryDependentOnService queries the dependent_on_service edge of a ServiceDependency.
+func (c *ServiceDependencyClient) QueryDependentOnService(_m *ServiceDependency) *ServiceQuery {
+	query := (&ServiceClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(servicedependency.Table, servicedependency.FieldID, id),
+			sqlgraph.To(service.Table, service.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, servicedependency.DependentOnServiceTable, servicedependency.DependentOnServiceColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.
@@ -7930,6 +8698,22 @@ func (c *SessionClient) GetX(ctx context.Context, id uuid.UUID) *Session {
 	return obj
 }
 
+// QueryUser queries the user edge of a Session.
+func (c *SessionClient) QueryUser(_m *Session) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(session.Table, session.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, session.UserTable, session.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *SessionClient) Hooks() []Hook {
 	return c.hooks.Session
@@ -8061,6 +8845,22 @@ func (c *SharedSecretClient) GetX(ctx context.Context, id uuid.UUID) *SharedSecr
 		panic(err)
 	}
 	return obj
+}
+
+// QueryProvider queries the provider edge of a SharedSecret.
+func (c *SharedSecretClient) QueryProvider(_m *SharedSecret) *CredentialProviderQuery {
+	query := (&CredentialProviderClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(sharedsecret.Table, sharedsecret.FieldID, id),
+			sqlgraph.To(credentialprovider.Table, credentialprovider.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, sharedsecret.ProviderTable, sharedsecret.ProviderColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.
@@ -8196,6 +8996,38 @@ func (c *StatusPageClient) GetX(ctx context.Context, id uuid.UUID) *StatusPage {
 	return obj
 }
 
+// QueryComponents queries the components edge of a StatusPage.
+func (c *StatusPageClient) QueryComponents(_m *StatusPage) *StatusPageComponentQuery {
+	query := (&StatusPageComponentClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(statuspage.Table, statuspage.FieldID, id),
+			sqlgraph.To(statuspagecomponent.Table, statuspagecomponent.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, statuspage.ComponentsTable, statuspage.ComponentsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryOwnerTeam queries the owner_team edge of a StatusPage.
+func (c *StatusPageClient) QueryOwnerTeam(_m *StatusPage) *TeamQuery {
+	query := (&TeamClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(statuspage.Table, statuspage.FieldID, id),
+			sqlgraph.To(team.Table, team.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, statuspage.OwnerTeamTable, statuspage.OwnerTeamColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *StatusPageClient) Hooks() []Hook {
 	return c.hooks.StatusPage
@@ -8327,6 +9159,38 @@ func (c *StatusPageComponentClient) GetX(ctx context.Context, id uuid.UUID) *Sta
 		panic(err)
 	}
 	return obj
+}
+
+// QueryStatusPage queries the status_page edge of a StatusPageComponent.
+func (c *StatusPageComponentClient) QueryStatusPage(_m *StatusPageComponent) *StatusPageQuery {
+	query := (&StatusPageClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(statuspagecomponent.Table, statuspagecomponent.FieldID, id),
+			sqlgraph.To(statuspage.Table, statuspage.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, statuspagecomponent.StatusPageTable, statuspagecomponent.StatusPageColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryService queries the service edge of a StatusPageComponent.
+func (c *StatusPageComponentClient) QueryService(_m *StatusPageComponent) *ServiceQuery {
+	query := (&ServiceClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(statuspagecomponent.Table, statuspagecomponent.FieldID, id),
+			sqlgraph.To(service.Table, service.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, statuspagecomponent.ServiceTable, statuspagecomponent.ServiceColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.
@@ -8595,6 +9459,86 @@ func (c *TeamClient) GetX(ctx context.Context, id uuid.UUID) *Team {
 	return obj
 }
 
+// QueryTeamMembers queries the team_members edge of a Team.
+func (c *TeamClient) QueryTeamMembers(_m *Team) *TeamMemberQuery {
+	query := (&TeamMemberClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(team.Table, team.FieldID, id),
+			sqlgraph.To(teammember.Table, teammember.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, team.TeamMembersTable, team.TeamMembersColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryOwnedServices queries the owned_services edge of a Team.
+func (c *TeamClient) QueryOwnedServices(_m *Team) *ServiceQuery {
+	query := (&ServiceClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(team.Table, team.FieldID, id),
+			sqlgraph.To(service.Table, service.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, team.OwnedServicesTable, team.OwnedServicesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryOwnedStatusPages queries the owned_status_pages edge of a Team.
+func (c *TeamClient) QueryOwnedStatusPages(_m *Team) *StatusPageQuery {
+	query := (&StatusPageClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(team.Table, team.FieldID, id),
+			sqlgraph.To(statuspage.Table, statuspage.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, team.OwnedStatusPagesTable, team.OwnedStatusPagesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryOnCallSchedule queries the on_call_schedule edge of a Team.
+func (c *TeamClient) QueryOnCallSchedule(_m *Team) *OnCallScheduleQuery {
+	query := (&OnCallScheduleClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(team.Table, team.FieldID, id),
+			sqlgraph.To(oncallschedule.Table, oncallschedule.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, team.OnCallScheduleTable, team.OnCallScheduleColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryHeartbeats queries the heartbeats edge of a Team.
+func (c *TeamClient) QueryHeartbeats(_m *Team) *HeartbeatQuery {
+	query := (&HeartbeatClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(team.Table, team.FieldID, id),
+			sqlgraph.To(heartbeat.Table, heartbeat.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, team.HeartbeatsTable, team.HeartbeatsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *TeamClient) Hooks() []Hook {
 	return c.hooks.Team
@@ -8726,6 +9670,38 @@ func (c *TeamMemberClient) GetX(ctx context.Context, id uuid.UUID) *TeamMember {
 		panic(err)
 	}
 	return obj
+}
+
+// QueryTeam queries the team edge of a TeamMember.
+func (c *TeamMemberClient) QueryTeam(_m *TeamMember) *TeamQuery {
+	query := (&TeamClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(teammember.Table, teammember.FieldID, id),
+			sqlgraph.To(team.Table, team.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, teammember.TeamTable, teammember.TeamColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryUser queries the user edge of a TeamMember.
+func (c *TeamMemberClient) QueryUser(_m *TeamMember) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(teammember.Table, teammember.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, teammember.UserTable, teammember.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.
@@ -8861,6 +9837,54 @@ func (c *TriageResultClient) GetX(ctx context.Context, id uuid.UUID) *TriageResu
 	return obj
 }
 
+// QueryAlerts queries the alerts edge of a TriageResult.
+func (c *TriageResultClient) QueryAlerts(_m *TriageResult) *AlertQuery {
+	query := (&AlertClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(triageresult.Table, triageresult.FieldID, id),
+			sqlgraph.To(alert.Table, alert.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, triageresult.AlertsTable, triageresult.AlertsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryAlertInvestigations queries the alert_investigations edge of a TriageResult.
+func (c *TriageResultClient) QueryAlertInvestigations(_m *TriageResult) *AlertInvestigationQuery {
+	query := (&AlertInvestigationClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(triageresult.Table, triageresult.FieldID, id),
+			sqlgraph.To(alertinvestigation.Table, alertinvestigation.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, triageresult.AlertInvestigationsTable, triageresult.AlertInvestigationsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryOverriddenByUser queries the overridden_by_user edge of a TriageResult.
+func (c *TriageResultClient) QueryOverriddenByUser(_m *TriageResult) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(triageresult.Table, triageresult.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, triageresult.OverriddenByUserTable, triageresult.OverriddenByUserColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *TriageResultClient) Hooks() []Hook {
 	return c.hooks.TriageResult
@@ -8992,6 +10016,22 @@ func (c *TriageRuleClient) GetX(ctx context.Context, id uuid.UUID) *TriageRule {
 		panic(err)
 	}
 	return obj
+}
+
+// QueryCreatedByUser queries the created_by_user edge of a TriageRule.
+func (c *TriageRuleClient) QueryCreatedByUser(_m *TriageRule) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(triagerule.Table, triagerule.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, triagerule.CreatedByUserTable, triagerule.CreatedByUserColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.
@@ -9127,6 +10167,86 @@ func (c *UserClient) GetX(ctx context.Context, id uuid.UUID) *User {
 	return obj
 }
 
+// QuerySessions queries the sessions edge of a User.
+func (c *UserClient) QuerySessions(_m *User) *SessionQuery {
+	query := (&SessionClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(session.Table, session.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.SessionsTable, user.SessionsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryPasswordResetTokens queries the password_reset_tokens edge of a User.
+func (c *UserClient) QueryPasswordResetTokens(_m *User) *PasswordResetTokenQuery {
+	query := (&PasswordResetTokenClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(passwordresettoken.Table, passwordresettoken.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.PasswordResetTokensTable, user.PasswordResetTokensColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryPersonalAccessTokens queries the personal_access_tokens edge of a User.
+func (c *UserClient) QueryPersonalAccessTokens(_m *User) *PersonalAccessTokenQuery {
+	query := (&PersonalAccessTokenClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(personalaccesstoken.Table, personalaccesstoken.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.PersonalAccessTokensTable, user.PersonalAccessTokensColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryOidcIdentities queries the oidc_identities edge of a User.
+func (c *UserClient) QueryOidcIdentities(_m *User) *OIDCIdentityQuery {
+	query := (&OIDCIdentityClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(oidcidentity.Table, oidcidentity.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.OidcIdentitiesTable, user.OidcIdentitiesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryTeamMembers queries the team_members edge of a User.
+func (c *UserClient) QueryTeamMembers(_m *User) *TeamMemberQuery {
+	query := (&TeamMemberClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(teammember.Table, teammember.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.TeamMembersTable, user.TeamMembersColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryIcsRoleAssignments queries the ics_role_assignments edge of a User.
 func (c *UserClient) QueryIcsRoleAssignments(_m *User) *ICSRoleAssignmentQuery {
 	query := (&ICSRoleAssignmentClient{config: c.config}).Query()
@@ -9152,6 +10272,166 @@ func (c *UserClient) QueryDocumentEdits(_m *User) *IncidentDocumentQuery {
 			sqlgraph.From(user.Table, user.FieldID, id),
 			sqlgraph.To(incidentdocument.Table, incidentdocument.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, user.DocumentEditsTable, user.DocumentEditsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryCommanderIncidents queries the commander_incidents edge of a User.
+func (c *UserClient) QueryCommanderIncidents(_m *User) *IncidentQuery {
+	query := (&IncidentClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(incident.Table, incident.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.CommanderIncidentsTable, user.CommanderIncidentsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryCommunicatorIncidents queries the communicator_incidents edge of a User.
+func (c *UserClient) QueryCommunicatorIncidents(_m *User) *IncidentQuery {
+	query := (&IncidentClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(incident.Table, incident.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.CommunicatorIncidentsTable, user.CommunicatorIncidentsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryResponderIncidents queries the responder_incidents edge of a User.
+func (c *UserClient) QueryResponderIncidents(_m *User) *IncidentQuery {
+	query := (&IncidentClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(incident.Table, incident.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.ResponderIncidentsTable, user.ResponderIncidentsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryTriageOverrides queries the triage_overrides edge of a User.
+func (c *UserClient) QueryTriageOverrides(_m *User) *TriageResultQuery {
+	query := (&TriageResultClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(triageresult.Table, triageresult.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.TriageOverridesTable, user.TriageOverridesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryApprovedPostMortems queries the approved_post_mortems edge of a User.
+func (c *UserClient) QueryApprovedPostMortems(_m *User) *PostMortemQuery {
+	query := (&PostMortemClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(postmortem.Table, postmortem.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.ApprovedPostMortemsTable, user.ApprovedPostMortemsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryTriageRules queries the triage_rules edge of a User.
+func (c *UserClient) QueryTriageRules(_m *User) *TriageRuleQuery {
+	query := (&TriageRuleClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(triagerule.Table, triagerule.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.TriageRulesTable, user.TriageRulesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryKnowledgeNotes queries the knowledge_notes edge of a User.
+func (c *UserClient) QueryKnowledgeNotes(_m *User) *KnowledgeNoteQuery {
+	query := (&KnowledgeNoteClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(knowledgenote.Table, knowledgenote.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.KnowledgeNotesTable, user.KnowledgeNotesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryScheduleOverrides queries the schedule_overrides edge of a User.
+func (c *UserClient) QueryScheduleOverrides(_m *User) *ScheduleOverrideQuery {
+	query := (&ScheduleOverrideClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(scheduleoverride.Table, scheduleoverride.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.ScheduleOverridesTable, user.ScheduleOverridesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryOutgoingHandoffs queries the outgoing_handoffs edge of a User.
+func (c *UserClient) QueryOutgoingHandoffs(_m *User) *HandoffRecordQuery {
+	query := (&HandoffRecordClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(handoffrecord.Table, handoffrecord.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.OutgoingHandoffsTable, user.OutgoingHandoffsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryIncomingHandoffs queries the incoming_handoffs edge of a User.
+func (c *UserClient) QueryIncomingHandoffs(_m *User) *HandoffRecordQuery {
+	query := (&HandoffRecordClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(handoffrecord.Table, handoffrecord.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.IncomingHandoffsTable, user.IncomingHandoffsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil

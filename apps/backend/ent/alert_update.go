@@ -9,6 +9,7 @@ import (
 	"alga/ent/deliverytarget"
 	"alga/ent/incident"
 	"alga/ent/predicate"
+	"alga/ent/triageresult"
 	"context"
 	"errors"
 	"fmt"
@@ -366,6 +367,11 @@ func (_u *AlertUpdate) AddDeliveryTargets(v ...*DeliveryTarget) *AlertUpdate {
 	return _u.AddDeliveryTargetIDs(ids...)
 }
 
+// SetTriageResult sets the "triage_result" edge to the TriageResult entity.
+func (_u *AlertUpdate) SetTriageResult(v *TriageResult) *AlertUpdate {
+	return _u.SetTriageResultID(v.ID)
+}
+
 // Mutation returns the AlertMutation object of the builder.
 func (_u *AlertUpdate) Mutation() *AlertMutation {
 	return _u.mutation
@@ -453,6 +459,12 @@ func (_u *AlertUpdate) RemoveDeliveryTargets(v ...*DeliveryTarget) *AlertUpdate 
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveDeliveryTargetIDs(ids...)
+}
+
+// ClearTriageResult clears the "triage_result" edge to the TriageResult entity.
+func (_u *AlertUpdate) ClearTriageResult() *AlertUpdate {
+	_u.mutation.ClearTriageResult()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -565,12 +577,6 @@ func (_u *AlertUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.AlertNumberCleared() {
 		_spec.ClearField(alert.FieldAlertNumber, field.TypeInt64)
-	}
-	if value, ok := _u.mutation.TriageResultID(); ok {
-		_spec.SetField(alert.FieldTriageResultID, field.TypeUUID, value)
-	}
-	if _u.mutation.TriageResultIDCleared() {
-		_spec.ClearField(alert.FieldTriageResultID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.Enrichment(); ok {
 		_spec.SetField(alert.FieldEnrichment, field.TypeJSON, value)
@@ -775,6 +781,35 @@ func (_u *AlertUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(deliverytarget.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.TriageResultCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   alert.TriageResultTable,
+			Columns: []string{alert.TriageResultColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(triageresult.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TriageResultIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   alert.TriageResultTable,
+			Columns: []string{alert.TriageResultColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(triageresult.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1135,6 +1170,11 @@ func (_u *AlertUpdateOne) AddDeliveryTargets(v ...*DeliveryTarget) *AlertUpdateO
 	return _u.AddDeliveryTargetIDs(ids...)
 }
 
+// SetTriageResult sets the "triage_result" edge to the TriageResult entity.
+func (_u *AlertUpdateOne) SetTriageResult(v *TriageResult) *AlertUpdateOne {
+	return _u.SetTriageResultID(v.ID)
+}
+
 // Mutation returns the AlertMutation object of the builder.
 func (_u *AlertUpdateOne) Mutation() *AlertMutation {
 	return _u.mutation
@@ -1222,6 +1262,12 @@ func (_u *AlertUpdateOne) RemoveDeliveryTargets(v ...*DeliveryTarget) *AlertUpda
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveDeliveryTargetIDs(ids...)
+}
+
+// ClearTriageResult clears the "triage_result" edge to the TriageResult entity.
+func (_u *AlertUpdateOne) ClearTriageResult() *AlertUpdateOne {
+	_u.mutation.ClearTriageResult()
+	return _u
 }
 
 // Where appends a list predicates to the AlertUpdate builder.
@@ -1364,12 +1410,6 @@ func (_u *AlertUpdateOne) sqlSave(ctx context.Context) (_node *Alert, err error)
 	}
 	if _u.mutation.AlertNumberCleared() {
 		_spec.ClearField(alert.FieldAlertNumber, field.TypeInt64)
-	}
-	if value, ok := _u.mutation.TriageResultID(); ok {
-		_spec.SetField(alert.FieldTriageResultID, field.TypeUUID, value)
-	}
-	if _u.mutation.TriageResultIDCleared() {
-		_spec.ClearField(alert.FieldTriageResultID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.Enrichment(); ok {
 		_spec.SetField(alert.FieldEnrichment, field.TypeJSON, value)
@@ -1574,6 +1614,35 @@ func (_u *AlertUpdateOne) sqlSave(ctx context.Context) (_node *Alert, err error)
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(deliverytarget.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.TriageResultCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   alert.TriageResultTable,
+			Columns: []string{alert.TriageResultColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(triageresult.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TriageResultIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   alert.TriageResultTable,
+			Columns: []string{alert.TriageResultColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(triageresult.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

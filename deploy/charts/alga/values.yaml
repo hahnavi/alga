@@ -1,6 +1,6 @@
 backend:
   image:
-    repository: ghcr.io/hahnavi/alga-backend
+    repository: ghcr.io/hahnavi/alga/alga-backend
     tag: latest
     pullPolicy: IfNotPresent
   replicas: 1
@@ -18,7 +18,9 @@ backend:
     sessionExpiryHours: 24
     postgresAutoMigrate: true
   secrets:
-    encryptionKey: ""
+    # Comma-separated `kid:base64(32-byte key)` pairs, e.g. "1:<base64-32B>".
+    # Generate a key with: openssl rand -base64 32
+    encryptionKeys: ""
     secretPepper: ""
     postgresDSN: ""
     valkeyAddr: ""
@@ -27,7 +29,7 @@ backend:
 
 frontend:
   image:
-    repository: ghcr.io/hahnavi/alga-frontend
+    repository: ghcr.io/hahnavi/alga/alga-frontend
     tag: latest
     pullPolicy: IfNotPresent
   replicas: 1
@@ -59,20 +61,6 @@ ingress:
       hosts:
         - alga.example.com
 
-postgresql:
-  enabled: true
-  auth:
-    username: alga
-    password: ""
-    database: alga
-
-valkey:
-  enabled: true
-  auth:
-    password: ""
-
-rabbitmq:
-  enabled: true
-  auth:
-    username: alga
-    password: ""
+# PostgreSQL, Valkey, and RabbitMQ are not bundled with this chart.
+# Point the backend at externally managed instances via backend.secrets
+# (postgresDSN, valkeyAddr/valkeyPassword, rabbitmqURI).

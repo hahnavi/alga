@@ -1,13 +1,14 @@
 services:
   postgres:
-    image: postgres:18-alpine
+    # Backend startup migrations require the pgvector extension.
+    image: pgvector/pgvector:pg18
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-alga}
       POSTGRES_PASSWORD: ${POSTGRES_PASS:-alga_dev_only}
       POSTGRES_DB: alga
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-alga}"]
       interval: 10s
@@ -69,8 +70,8 @@ services:
     # Alga backend API server
     # Integrates with Slack and Mattermost for alert delivery and bidirectional chat
     build:
-      context: ./apps/backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/backend/Dockerfile
     restart: unless-stopped
     env_file:
       - .env

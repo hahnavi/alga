@@ -19,6 +19,34 @@ spec:
         app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/component: backend
     spec:
+      {{- if or .Values.postgresql.enabled .Values.valkey.enabled .Values.rabbitmq.enabled }}
+      # Helm applies all manifests at once and cannot wait for the bundled
+      # services to become ready, so block startup here instead of letting
+      # the backend crash-loop on fresh installs.
+      initContainers:
+        - name: wait-for-deps
+          image: busybox:1.37
+          command:
+            - sh
+            - -c
+            - |
+              wait_for() {
+                until nc -z -w 2 "$1" "$2"; do
+                  echo "waiting for $1:$2..."
+                  sleep 2
+                done
+                echo "$1:$2 is reachable"
+              }
+              {{- if .Values.postgresql.enabled }}
+              wait_for {{ include "alga.fullname" . }}-postgresql 5432
+              {{- end }}
+              {{- if .Values.valkey.enabled }}
+              wait_for {{ include "alga.fullname" . }}-valkey 6379
+              {{- end }}
+              {{- if .Values.rabbitmq.enabled }}
+              wait_for {{ include "alga.fullname" . }}-rabbitmq 5672
+              {{- end }}
+      {{- end }}
       containers:
         - name: backend
           image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"

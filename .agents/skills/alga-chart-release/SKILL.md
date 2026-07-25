@@ -67,7 +67,7 @@ Run all of these before tagging. Stop and report if any fail.
    ```
    The "missing required values" warnings for `postgresql`/`valkey`/`rabbitmq` passwords are expected.
 5. **Tag does not already exist** — `git tag --list 'chart-v*'`.
-6. **Docs are synced** — `grep -rn 'charts/alga' docs/` shows no stale version pin or values reference (see Docs Sync).
+6. **Docs are synced** — `grep -rn 'charts/alga\|helm install' docs/` shows no stale version pin or values reference (see Docs Sync).
 7. **CI is green on the commit you'll tag** — `gh run list --branch main --limit 3`.
 
 ## Execute the Release

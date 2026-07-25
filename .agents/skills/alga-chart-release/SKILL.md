@@ -19,6 +19,7 @@ Before tagging, state: the last chart tag (or "first chart release"), the comput
 - Chart source: `deploy/charts/alga/` — `version` and `appVersion` live in `Chart.yaml`.
 - Last chart tag: `git tag --list 'chart-v*' --sort=-v:refname | head -1` (empty = first chart release).
 - Chart changes since last tag: `git log --oneline <last-chart-tag>..HEAD -- deploy/charts/alga`.
+- Docs that reference the chart: `grep -rn 'charts/alga\|helm install' docs/` — currently `docs/getting-started/installation.md` pins the chart version in its `helm install` command and documents values keys.
 - Branch protection on `main`: version bumps land via PR merge if PRs are required — never a direct push.
 
 ## Version Decision
@@ -42,6 +43,16 @@ The tag is `chart-v<MAJOR>.<MINOR>.<PATCH>[-<prerelease>]` and the workflow **fa
 
 Same SemVer rules as app tags: exactly three numeric components, no leading zeros, optional `-rc.1`-style prerelease (marks the GitHub Release as prerelease). Avoid `+` build metadata — it survives into the OCI tag and registries handle it inconsistently.
 
+## Docs Sync
+
+Docs must land in the same version-bump PR, before tagging:
+
+- **Version pins** — update any chart version pinned in docs (e.g., the `--version <X.Y.Z>` in the `helm install` command in `docs/getting-started/installation.md`) to the new version.
+- **Values changes** — if values were added, removed, renamed, or had defaults changed, update every doc that references them: install commands (`--set` flags), required-values lists, ingress/external-service guidance. Removed or renamed values left in docs produce broken installs for users.
+- **Behavior changes** — new required values, new fail-closed checks, or changed bundled-service defaults must be reflected in the docs' prerequisites and install steps.
+
+No doc changes needed only when the release touches templates without changing any user-facing values or install flow.
+
 ## Pre-Flight Checks
 
 Run all of these before tagging. Stop and report if any fail.
@@ -56,7 +67,8 @@ Run all of these before tagging. Stop and report if any fail.
    ```
    The "missing required values" warnings for `postgresql`/`valkey`/`rabbitmq` passwords are expected.
 5. **Tag does not already exist** — `git tag --list 'chart-v*'`.
-6. **CI is green on the commit you'll tag** — `gh run list --branch main --limit 3`.
+6. **Docs are synced** — `grep -rn 'charts/alga\|helm install' docs/` shows no stale version pin or values reference (see Docs Sync).
+7. **CI is green on the commit you'll tag** — `gh run list --branch main --limit 3`.
 
 ## Execute the Release
 

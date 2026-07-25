@@ -1,6 +1,6 @@
 ---
 title: Installation & Setup
-description: Install Alga via Docker Compose, manual setup, or build from source. Production deployment prerequisites and resource recommendations.
+description: Install Alga via Docker Compose, Helm on Kubernetes, manual setup, or build from source. Production deployment prerequisites and resource recommendations.
 ---
 
 # Installation & Setup
@@ -46,6 +46,71 @@ Contributors who need to build images locally:
 ```sh
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 ```
+
+## Helm (Kubernetes)
+
+The Alga Helm chart is published to GHCR as an OCI artifact at `oci://ghcr.io/hahnavi/charts/alga`. It deploys the backend, frontend, and (by default) bundled PostgreSQL (pgvector), Valkey, and RabbitMQ.
+
+### Prerequisites
+
+- **Kubernetes** cluster with a default StorageClass (for bundled data services)
+- **Helm** 3.8+ (OCI registry support)
+
+### Install
+
+The chart fails closed: `backend.secrets.encryptionKeys`, `backend.secrets.secretPepper`, and a pinned `auth.password` for each enabled bundled service are required.
+
+Put secrets in a values file with owner-only permissions instead of `--set` flags, so they don't land in shell history or process listings:
+
+```sh
+(umask 077; cat > alga-values.yaml <<EOF
+backend:
+  secrets:
+    encryptionKeys: "1:$(openssl rand -base64 32)"
+    secretPepper: "$(openssl rand -base64 32)"
+postgresql:
+  auth:
+    password: "$(openssl rand -hex 16)"
+valkey:
+  auth:
+    password: "$(openssl rand -hex 16)"
+rabbitmq:
+  auth:
+    password: "$(openssl rand -hex 16)"
+EOF
+)
+```
+
+```sh
+helm install alga oci://ghcr.io/hahnavi/charts/alga --version 0.0.1 \
+  --namespace alga --create-namespace \
+  -f alga-values.yaml
+```
+
+Keep `alga-values.yaml` out of version control and reuse it for upgrades — the bundled-service passwords must stay stable across releases and retained volumes.
+
+### Ingress
+
+Ingress is enabled by default with host `alga.example.com`. Set your own host by appending these flags to the `helm install` command above (`--set` merges into the default hosts entry, keeping its paths):
+
+```sh
+helm install alga oci://ghcr.io/hahnavi/charts/alga --version 0.0.1 \
+  --namespace alga --create-namespace \
+  -f alga-values.yaml \
+  --set 'ingress.hosts[0].host=alga.your-domain.com' \
+  --set 'ingress.tls[0].hosts[0]=alga.your-domain.com'
+```
+
+To use externally managed data services, set `postgresql.enabled=false`, `valkey.enabled=false`, or `rabbitmq.enabled=false` and provide `backend.secrets.postgresDSN`, `backend.secrets.valkeyAddr`/`valkeyPassword`, or `backend.secrets.rabbitmqURI`. See `deploy/charts/alga/values.yaml` for all options.
+
+### Verify
+
+```sh
+kubectl get pods -n alga
+helm status alga -n alga
+```
+
+Open the ingress host in a browser and complete the setup wizard to create the initial admin account.
 
 ## Manual Installation
 

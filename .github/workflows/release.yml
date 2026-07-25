@@ -124,11 +124,11 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Extract lowercase repo name
+      - name: Extract lowercase owner name
         id: repo
         run: |
-          repo_lc=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')
-          echo "name=${repo_lc}" >> "$GITHUB_OUTPUT"
+          owner_lc=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')
+          echo "name=${owner_lc}" >> "$GITHUB_OUTPUT"
       - name: Build & push ${{ matrix.target }}
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a  # v7.3.0
         with:
@@ -177,7 +177,7 @@ jobs:
 
             ### Docker images
 
-            Published to `${{ env.REGISTRY }}/${{ github.repository }}`:
+            Published to `${{ env.REGISTRY }}/${{ github.repository_owner }}`:
 
             | Image | Tag |
             |-------|-----|
@@ -187,7 +187,7 @@ jobs:
             Pull with an immutable tag:
 
             ```bash
-            docker pull ${{ env.REGISTRY }}/${{ github.repository }}/alga-backend:${{ needs.meta.outputs.version }}
+            docker pull ${{ env.REGISTRY }}/${{ github.repository_owner }}/alga-backend:${{ needs.meta.outputs.version }}
             ```
 
             ### Backend binary

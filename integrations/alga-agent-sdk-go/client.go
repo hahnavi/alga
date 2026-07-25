@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 // idempotencyKeyHeader is the backend header that turns a state-changing
@@ -286,10 +287,14 @@ func newIdempotencyKey() string {
 	return "alga-" + hex.EncodeToString(buf[:])
 }
 
-// truncate caps s at n bytes.
+// truncate caps s at n bytes, preserving valid UTF-8.
 func truncate(s string, n int) string {
 	if len(s) <= n {
 		return s
+	}
+	// Walk backward from the cutoff to find the last valid rune boundary.
+	for n > 0 && !utf8.RuneStart(s[n]) {
+		n--
 	}
 	return s[:n]
 }

@@ -77,6 +77,10 @@ func incidentTools(c AlgaClient) []Tool {
 				IncidentNumber int64 `json:"incident_number"`
 				OK             bool  `json:"ok"`
 			}](algaCategory),
+			WithCapability[addIncidentTimelineInput, struct {
+				IncidentNumber int64 `json:"incident_number"`
+				OK             bool  `json:"ok"`
+			}]("command"),
 		),
 
 		incidentCommandTool(c, "alga_trigger_escalation",

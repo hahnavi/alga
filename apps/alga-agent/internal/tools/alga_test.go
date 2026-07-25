@@ -281,7 +281,8 @@ func TestAlgaToolCapabilityGating(t *testing.T) {
 	investigateOnly := reg.ListForCapabilities([]string{"investigate"})
 	for _, tool := range investigateOnly {
 		if tool.Name() == "alga_dispatch_task" || tool.Name() == "alga_synthesize_findings" ||
-			tool.Name() == "alga_resolve_incident" || tool.Name() == "alga_mitigate_incident" {
+			tool.Name() == "alga_resolve_incident" || tool.Name() == "alga_mitigate_incident" ||
+			tool.Name() == "alga_add_incident_timeline" {
 			t.Errorf("investigate-only agent should not see %s", tool.Name())
 		}
 	}

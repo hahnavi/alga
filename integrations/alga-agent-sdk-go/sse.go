@@ -285,7 +285,9 @@ func (c *SSEClient) connectAndServe(ctx context.Context) (connected bool, err er
 		// outer loop backs off and reconnects.
 		return true, &AlgaConnectionError{Err: err}
 	}
-	return true, nil
+	// Stream closed cleanly without scanner error. Return a connection error
+	// so sseLoop applies backoff/reconnect instead of treating this as success.
+	return true, &AlgaConnectionError{Err: errors.New("sse stream closed")}
 }
 
 func (c *SSEClient) dispatch(eventType, data string) {
@@ -412,6 +414,13 @@ func (c *SSEClient) heartbeatLoop(ctx context.Context) {
 					case c.ErrChan <- authErr:
 					default:
 					}
+					// Cancel the shared connection context so the SSE loop and
+					// AlgaChannel terminate immediately.
+					c.mu.Lock()
+					if c.cancel != nil {
+						c.cancel()
+					}
+					c.mu.Unlock()
 					return
 				}
 				// Non-auth errors are logged and survived; the SSE loop will

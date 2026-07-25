@@ -1,6 +1,6 @@
 ---
 title: Escalation Policies
-description: Multi-tier escalation policies with configurable delays, looping, per-level channel selection, and user, team, or on-call schedule targets.
+description: Multi-tier escalation policies with configurable delays, looping, per-level channel selection, and user or team targets (a team resolves to its on-call schedule).
 ---
 
 # Escalation Policies
@@ -37,11 +37,12 @@ Incident created
 
 ## Policy Structure
 
-Each escalation policy has multiple **levels** triggered sequentially. Each level specifies:
+Each escalation policy has multiple **levels** triggered sequentially, stored as a JSON array on the policy. Each level specifies:
 
-- **Delay** — wait time before escalating to this level (e.g., `0s` for level 1, `5m` for level 2)
-- **Targets** — who gets notified at this level (users, teams, or on-call schedules)
-- **Notify Channels** — which channels to use at this level (e.g., `["in_app", "email"]`, `["slack", "voice"]`)
+- **`level_number`** — the canonical ordering key (positive integer; levels are consumed in `level_number` order)
+- **`delay_minutes`** — wait time in minutes before escalating to this level (e.g., `0` for level 1, `5` for level 2)
+- **`targets`** — who gets notified at this level (users or teams)
+- **`notify_channels`** — which channels to use at this level (e.g., `["in_app", "email"]`, `["slack", "voice"]`)
 
 ### Example: Three-Tier Policy
 
@@ -53,27 +54,26 @@ A common pattern — page the primary on-call immediately, escalate to the secon
   "repeat_count": 3,
   "levels": [
     {
-      "level": 1,
-      "delay": "0s",
+      "level_number": 1,
+      "delay_minutes": 0,
       "targets": [
-        { "type": "on_call_schedule", "id": "payments-primary" }
+        { "target_type": "team", "target_team_id": "payments-team-id" }
       ],
       "notify_channels": ["in_app", "slack"]
     },
     {
-      "level": 2,
-      "delay": "5m",
+      "level_number": 2,
+      "delay_minutes": 5,
       "targets": [
-        { "type": "on_call_schedule", "id": "payments-secondary" }
+        { "target_type": "team", "target_team_id": "payments-secondary-team-id" }
       ],
       "notify_channels": ["in_app", "slack", "email"]
     },
     {
-      "level": 3,
-      "delay": "15m",
+      "level_number": 3,
+      "delay_minutes": 15,
       "targets": [
-        { "type": "user", "id": "team-lead-user-id" },
-        { "type": "team", "id": "payments-team" }
+        { "target_type": "user", "target_user_id": "team-lead-user-id" }
       ],
       "notify_channels": ["in_app", "slack", "email", "voice"]
     }
@@ -85,9 +85,10 @@ A common pattern — page the primary on-call immediately, escalate to the secon
 
 | Target Type | Description | Use When |
 |-------------|-------------|----------|
-| `user` | A specific person by user ID | You want to page a named individual (e.g., a domain expert or team lead) |
-| `team` | All members of a team | The whole team should be aware (e.g., at the final escalation level) |
-| `on_call_schedule` | Whoever is currently on call per a schedule | The most common target — pages whoever the rotation says is responsible |
+| `user` | A specific person by `target_user_id` | You want to page a named individual (e.g., a domain expert or team lead) |
+| `team` | A team by `target_team_id` | The most common target — resolves to whoever is currently on call for the team's auto-provisioned on-call schedule |
+
+A `team` target does **not** page every member of the team. It resolves through the team's on-call schedule, so the rotation (and any active override) decides who is paged. To page a named person directly, use a `user` target.
 
 ## Looping (Repeat)
 
@@ -111,14 +112,14 @@ SLA targets are derived from the incident's [priority](/incident-management/) (P
 3. Set the **repeat count** (how many times to loop through all levels)
 4. Add levels:
    - Set the **delay** for each level
-   - Add **targets** (users, teams, or on-call schedules)
+   - Add **targets** (users or teams)
    - Choose **channels** for each level
 5. Save
-6. Assign the policy to one or more [services](/service-management/) or [teams](/on-call/)
+6. Assign the policy to one or more [services](/service-management/)
 
 ## Best Practices
 
-- **Start with the on-call schedule** at level 1 — page whoever the rotation says is responsible, not a specific person
+- **Start with a team target** at level 1 — it resolves to whoever the team's on-call rotation says is responsible, not a specific person
 - **Increase urgency per level** — level 1 might be in-app + Slack, level 2 adds email, level 3 adds voice
 - **Don't make levels too deep** — 3–4 levels is usually enough. More levels means slower response
 - **Use looping sparingly** — a high `repeat_count` with voice calls can wake people up repeatedly. 2–3 loops is typical

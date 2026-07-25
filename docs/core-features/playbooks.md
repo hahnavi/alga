@@ -35,9 +35,10 @@ Each step within a playbook contains:
 
 | Field | Type | Description |
 |-------|------|-------------|
+| `step_number` | `int` | Ordering position of the step |
 | `title` | `string` | Step name |
 | `description` | `string` | Detailed instructions |
-| `expected_duration_minutes` | `int` | Estimated time to complete |
+| `expected_duration` | `string` | Estimated time to complete (e.g., `"5m"`) |
 | `command` | `string` | Optional shell command to execute |
 
 ## Creating Playbooks
@@ -60,18 +61,18 @@ curl -X POST http://localhost:8080/api/v1/playbooks \
       {
         "title": "Check active connections",
         "description": "Query pg_stat_activity for active connection count and wait events",
-        "expected_duration_minutes": 5,
+        "expected_duration": "5m",
         "command": "psql -c \"SELECT count(*) FROM pg_stat_activity\""
       },
       {
         "title": "Identify long-running queries",
         "description": "Find queries running longer than 60 seconds",
-        "expected_duration_minutes": 5
+        "expected_duration": "5m"
       },
       {
         "title": "Terminate blocked queries",
         "description": "Terminate queries that are blocking connection pool slots",
-        "expected_duration_minutes": 3
+        "expected_duration": "3m"
       }
     ]
   }'
@@ -87,7 +88,7 @@ curl -X POST http://localhost:8080/api/v1/playbooks \
 | `POST` | `/api/v1/playbooks` | `playbooks:write` | Create playbook |
 | `GET` | `/api/v1/playbooks/{id}` | `playbooks:read` | Get playbook with steps |
 | `PATCH` | `/api/v1/playbooks/{id}` | `playbooks:write` | Update playbook |
-| `DELETE` | `/api/v1/playbooks/{id}` | `playbooks:write` | Delete playbook |
+| `DELETE` | `/api/v1/playbooks/{id}` | `playbooks:delete` | Delete playbook |
 
 ### Step Management
 
@@ -95,7 +96,7 @@ curl -X POST http://localhost:8080/api/v1/playbooks \
 |--------|------|------------|-------------|
 | `POST` | `/api/v1/playbooks/{id}/steps` | `playbooks:write` | Add step |
 | `PATCH` | `/api/v1/playbooks/{id}/steps/{stepId}` | `playbooks:write` | Update step |
-| `DELETE` | `/api/v1/playbooks/{id}/steps/{stepId}` | `playbooks:write` | Delete step |
+| `DELETE` | `/api/v1/playbooks/{id}/steps/{stepId}` | `playbooks:delete` | Delete step |
 | `PUT` | `/api/v1/playbooks/{id}/steps/reorder` | `playbooks:write` | Reorder steps |
 
 ## Automatic Matching

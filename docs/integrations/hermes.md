@@ -107,6 +107,32 @@ The plugin integrates with `hermes gateway setup` — select **"Alga"** from the
 | `ALGA_ALLOWED_USERS` | No | Comma-separated user IDs allowed to use the channel (default: allow all) |
 | `ALGA_ALLOW_ALL_USERS` | No | Set to `true` to allow all users (default) |
 
+## Backend Configuration (Alga Side)
+
+On the Alga backend, the Hermes integration is configured via:
+
+| Variable | Description |
+|----------|-------------|
+| `HERMES_PLATFORM_URL` | URL of the Hermes platform (stored encrypted at rest in `IntegrationConfig`) |
+| `HERMES_PLATFORM_TOKEN` | Platform token for Hermes (stored encrypted at rest in `IntegrationConfig`) |
+
+### Agent Capabilities
+
+When creating a Hermes agent in Alga, you assign capabilities:
+
+| Capability | Description |
+|------------|-------------|
+| `investigate` | Receive automated alert investigation dispatches |
+| `communicate` | Participate in incident communications |
+| `command` | Take incident commander actions |
+
+### Agent Scope
+
+| Scope | Description |
+|-------|-------------|
+| `all` | Catch-all — eligible for any alert dispatch |
+| `label_selectors` | Restricted to alerts matching specific label selectors |
+
 ## What the Plugin Provides
 
 | Component | Description |

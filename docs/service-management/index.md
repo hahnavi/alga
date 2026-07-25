@@ -36,30 +36,30 @@ Status is recalculated automatically as incidents are created, mitigated, or res
 
 | Field | Description |
 |-------|-------------|
-| `name` | Service name |
+| `name` | Service name (unique) |
+| `display_name` | Human-friendly display name |
 | `description` | Service description |
 | `owner_team_id` | Team responsible for the service |
 | `escalation_policy_id` | Escalation policy for incidents on this service |
-| `label_matchers` | Labels for matching alerts to this service |
+| `label_matchers` | JSON array of label conditions for matching alerts to this service |
 | `sla_response_minutes` | Custom SLA response target in minutes |
 | `sla_resolve_minutes` | Custom SLA resolution target in minutes |
+| `status` | Current computed status (`operational`, `degraded`, `partial_outage`, `major_outage`) |
 
 ## Dependencies
 
-Services can declare dependencies on other services. When a service has an incident:
-- Dependent services automatically get timeline entries noting the dependency impact
-- Dependency cascade helps teams understand upstream/downstream impact
+Services can declare dependencies on other services. A dependency is stored as `service_id` → `dependent_on_service_id` with a `dependency_type` (default `depends_on`), forming a directed dependency graph.
 
 ### Dependency Cascade
 
-Dependency propagation uses **BFS (breadth-first search) traversal** of the service dependency graph:
+When an incident transitions state, the affected service's status is recomputed and the change cascades through the graph using **BFS (breadth-first search)**:
 
-1. When an incident transitions to a non-terminal state, `PropagateAndCascade()` is called
-2. The function traverses all services that depend on the affected service (BFS)
-3. For each dependent service, an automatic timeline entry is created noting the upstream impact
-4. The cascade continues transitively — if A depends on B and B depends on C, a C incident cascades to both B and A
+1. `PropagateAndCascade()` starts at the affected service
+2. It recomputes the weighted status for the current service and persists any change
+3. It then enqueues every service that depends on the current service (`GetDependents`)
+4. The cascade continues transitively — if A depends on B and B depends on C, a C incident recomputes status for both B and A
 
-This ensures teams responsible for downstream services are immediately aware of upstream degradation without manual notification.
+Each status change publishes a `service_status_changed` SSE event so the UI updates live. This ensures teams responsible for downstream services see upstream degradation reflected in their own service status without manual notification.
 
 ## API Endpoints
 
@@ -78,6 +78,7 @@ This ensures teams responsible for downstream services are immediately aware of 
 | `GET` | `/api/v1/services/{id}/dependencies` | Session | `services:read` | Get dependency graph |
 | `POST` | `/api/v1/services/{id}/dependencies` | Session | `services:write` | Add dependency |
 | `DELETE` | `/api/v1/services/{id}/dependencies/{targetId}` | Session | `services:write` | Remove dependency |
+| `GET` | `/api/v1/services/{id}/dependents` | Session | `services:read` | List services that depend on this service |
 
 ### Incidents
 | Method | Path | Auth | Permission | Description |

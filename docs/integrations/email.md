@@ -1,11 +1,11 @@
 ---
 title: Email Integration
-description: SMTP-based email notifications for alert delivery, investigation updates, and password resets — with HTML templates, rate limiting, and bounce handling.
+description: SMTP-based email notifications for alert delivery, investigation updates, and password resets — raw SMTP with PLAIN auth, multipart HTML, and 3x retry.
 ---
 
 # Email Integration
 
-Alga integrates with SMTP servers for email notifications, supporting alert notifications, password reset emails, and user notifications.
+Alga sends email notifications via raw SMTP (`net/smtp`) with optional TLS and PLAIN authentication. Emails are dispatched through the `EmailWorker` on the `alga.email.send` RabbitMQ queue with 3x retry. When `SMTP_HOST` is empty, email delivery is log-only (messages are logged but not sent).
 
 ## Configuration
 
@@ -24,10 +24,10 @@ SMTP_SKIP_TLS_VERIFY=false
 
 | Variable | Default | Required | Description |
 |----------|---------|----------|-------------|
-| `SMTP_HOST` | | Yes | SMTP relay hostname |
+| `SMTP_HOST` | | No | SMTP relay hostname. When empty, email delivery is log-only (messages are logged but not sent). |
 | `SMTP_PORT` | `587` | No | SMTP port (typically 587 for STARTTLS, 465 for SMTPS) |
-| `SMTP_USER` | | Yes | SMTP authentication username |
-| `SMTP_PASSWORD` | | Yes | SMTP authentication password |
+| `SMTP_USER` | | No | SMTP authentication username (PLAIN auth). Only needed when the relay requires authentication. |
+| `SMTP_PASSWORD` | | No | SMTP authentication password (PLAIN auth). Only needed when the relay requires authentication. |
 | `SMTP_FROM` | `alga@localhost` | No | From address for email notifications |
 | `SMTP_SKIP_TLS_VERIFY` | `false` | No | When `true`, skips TLS certificate verification for SMTP (implicit-TLS handshake with `InsecureSkipVerify`). Enabling this is an MITM risk and logs a loud warning on startup. |
 
@@ -146,7 +146,7 @@ Different SMTP providers have varying rate limits:
 
 ### Alga Rate Limiting
 
-Alga processes email notifications through the notification dispatch worker. Failed email deliveries are dead-lettered immediately (nacked without requeue) — there are no retry queues for email.
+Alga processes email notifications through the `EmailWorker` on the `alga.email.send` RabbitMQ queue. Failed deliveries are retried up to 3 times before being dead-lettered.
 
 ### Best Practices
 
@@ -164,7 +164,7 @@ Alga tracks email delivery attempts in the `notification_delivery_logs` table. E
 
 ### Retry Logic
 
-Email failures are **not retried**. Failed messages are dead-lettered immediately (nacked without requeue). There are no retry queues for email delivery.
+Email failures are retried up to **3 times** by the `EmailWorker` (`alga.email.send` queue). After exhausting retries, the message is dead-lettered.
 
 ### Bounce Classification
 
@@ -173,9 +173,9 @@ Common bounce scenarios:
 | Bounce Type | SMTP Code | Description | Action |
 |-------------|-----------|-------------|--------|
 | Hard bounce | 5xx | Permanent failure (invalid address) | Review user email address |
-| Soft bounce | 4xx | Temporary failure (mailbox full) | Dead-lettered (no retry) |
+| Soft bounce | 4xx | Temporary failure (mailbox full) | Retried up to 3x, then dead-lettered |
 | Rate limit | 421 / 452 | Too many emails | Reduce send rate |
-| Timeout | - | SMTP server timeout | Dead-lettered (no retry) |
+| Timeout | - | SMTP server timeout | Retried up to 3x, then dead-lettered |
 
 ### Monitoring Bounces
 
@@ -296,8 +296,6 @@ Review logs for detailed email delivery information:
 - Implement batch notifications instead of per-alert emails
 - Upgrade SMTP provider plan for higher limits
 - Configure quiet hours to reduce overnight volume
-
-### Rate Limiting Issues
 
 ## Security Considerations
 

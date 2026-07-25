@@ -58,15 +58,15 @@ Go to **Routes** and create rules to route alerts to specific channels:
 
 Alerts that don't match any rule go to the default channel.
 
-## 6. Create Playbooks
+## 6. Create Knowledge Notes
 
-Playbooks define response procedures for common alerts so your team knows exactly what to do when an alert fires.
+Knowledge notes capture operational runbooks and context so your team (and AI agents) know exactly what to do when an alert fires.
 
 1. Go to **Knowledge** in the sidebar
-2. Create notes with tags matching your alert labels (e.g., `alertname: HighMemory`)
+2. Create notes with tags and selectors matching your alert labels (e.g., `alertname: HighMemory`)
 3. AI agents and operators can reference these during investigations
 
-Playbooks help standardize incident response and reduce mean time to resolution.
+Knowledge notes help standardize incident response and reduce mean time to resolution. For structured, step-by-step procedures, see [Playbooks](/core-features/playbooks).
 
 ## 7. Explore Core Features
 
@@ -92,7 +92,7 @@ On-call schedules ensure the right person is always reachable. Escalation polici
 1. Go to **On-Call → Schedules** and create a rotation
 2. Add layers for follow-the-sun coverage if you have multiple time zones
 3. Create an **Escalation Policy** with tiered levels and delays
-4. Link the escalation policy to a team or service
+4. Assign the escalation policy to a service (target a team or user within each level)
 
 See [Teams & On-Call](/on-call/) for detailed schedule and escalation configuration.
 
@@ -108,15 +108,15 @@ See [AI Investigation](/core-features/investigation) for details.
 
 ## 11. Configure Notifications
 
-Each user can set their own notification preferences for how and when they receive alerts:
+Each user can set their own notification preferences for how they receive alerts:
 
 1. Click your **profile avatar** → **Notification Preferences**
-2. Choose channels (in-app, email, Slack DM, Mattermost DM, voice)
-3. Set severity filters to control which alerts generate notifications
-4. Configure quiet hours to suppress non-critical notifications outside working hours
-5. Link your personal Slack account for DM delivery under **Slack DM** in preferences
+2. Add rules mapping notification types to channels (in-app, email, Slack DM, voice)
+3. Set a default channel for notification types without an explicit rule
+4. Optionally enable the voice opt-out to suppress phone calls
+5. Link your personal Slack account for DM delivery under **Connected Accounts**
 
-See [Notification Preferences](/on-call/notification-preferences) for details on all available channels and filters.
+See [Notification Preferences](/on-call/notification-preferences) for details on all available channels.
 
 ## 12. Secure Your Instance
 

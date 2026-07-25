@@ -92,13 +92,7 @@ Response:
 
 ```json
 {
-  "completed": false,
-  "steps": {
-    "password_changed": true,
-    "settings_configured": false,
-    "webhook_created": false,
-    "setup_verified": false
-  }
+  "completed": false
 }
 ```
 

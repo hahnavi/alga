@@ -34,7 +34,8 @@ Environment variables remain available as a bootstrap fallback and override. Whe
 
 1. An escalation policy fires for an incident.
 2. Alga resolves the current on-call human from the on-call schedule.
-3. Alga pages that user's phone number (`user.phone`) with an interactive voice call.
+3. Alga places an outbound voice call via the Twilio REST API (`Calls.json`) to that user's phone number (`user.phone`).
+4. The call uses TwiML with a `Gather` verb to collect DTMF input (acknowledge or silence).
 
 ### Voice (IVR)
 
@@ -45,11 +46,15 @@ A voice call announces the incident number and the escalation level, then presen
 
 ## Callback
 
-Twilio posts IVR key presses to:
+Twilio posts IVR key presses (DTMF responses) to:
 
 ```
 POST /api/v1/twilio/callback?incident=<n>
 ```
+
+DTMF responses map to incident actions:
+- `1` — Acknowledge the incident (stops escalation)
+- `2` — Silence the incident (suppresses paging for one hour)
 
 - The endpoint validates the `X-Twilio-Signature` HMAC-SHA1 header against the configured auth token using a constant-time comparison. Requests with a missing or invalid signature are rejected with `403`.
 - The `incident` query parameter identifies which incident the call relates to, so the acknowledge or silence action is applied to the correct incident.

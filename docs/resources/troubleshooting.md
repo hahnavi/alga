@@ -114,20 +114,19 @@ description: Common issues and solutions — health checks, logs, metrics, datab
 - Check that an on-call schedule is linked to the escalation policy's targets
 - Ensure the on-call schedule has at least one active rotation with members
 - Confirm the service's ICS auto-assignment setting is enabled
-- Check the escalation policy targets include `on_call` type so Alga can resolve the current responder
+- Check the escalation policy targets include a `team` target so Alga can resolve the current responder via the team's on-call schedule
 - Review incident timeline for any role assignment errors
 
 ### Handoff Not Triggering
 
-**Symptom:** On-call shift transitions happen without a handoff summary.
+**Symptom:** On-call shift transitions happen without a handoff record.
 
 **Fix:**
-- Verify `ON_CALL_REMIND_ENABLED` is set to `true` (default)
-- Confirm the on-call schedule has defined rotation periods and active members
-- Check that the outgoing and incoming engineers have notification preferences configured (in-app, email, or chat)
-- Review `ON_CALL_REMIND_MINUTES` — handoffs are generated this many minutes before the shift change
-- Ensure Valkey is connected (required for schedule caching and handoff scheduling)
-- Check backend logs for any handoff generation errors around shift transition times
+- Confirm the team's on-call schedule has at least one active rotation layer with members
+- Verify the shift actually changes the resolved on-call user (handoffs are generated when the resolved responder changes)
+- Check that the outgoing and incoming engineers have notification preferences configured (in-app, email, Slack, or voice)
+- Ensure Valkey is connected (used for on-call caching)
+- Check backend logs for handoff generation errors around shift transition times
 
 ## Health Checks
 

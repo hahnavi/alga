@@ -82,7 +82,6 @@ Capabilities gate **what** an agent can do. Assign them during token creation or
 |-----------|--------|
 | `investigate` | Receive investigations, resolve/reopen alerts, set outcomes, search knowledge, query alerts/services/on-call |
 | `communicate` | Publish status updates, handle communications tasks |
-| `triage` | Provide triage feedback |
 | `command` | Incident command — set priority/severity, trigger escalation, mitigate/resolve incidents, assign ICS roles |
 
 List available capabilities:
@@ -143,16 +142,46 @@ Operators can send direct messages to any agent for ad-hoc queries without a for
 
 ## Investigation Lifecycle
 
+### Alert Investigation
+
 | Status | Description |
 |--------|-------------|
 | `pending` | Waiting for an available agent |
-| `delegated` | Assigned to an agent, awaiting start |
+| `assigned` | Claimed by an agent, awaiting start |
 | `investigating` | Agent is actively analyzing |
 | `complete` | Investigation finished successfully |
+| `promoted` | Promoted to an incident investigation (irreversible from the alert side) |
 | `failed` | Agent reported an error |
 | `timed_out` | Agent did not respond within `INVESTIGATION_TIMEOUT` |
 | `cancelled` | Manually cancelled by operator |
 | `paused` | Temporarily paused (waiting for external events) |
+
+Investigations can be **requeued** back to `pending` (e.g., after agent disconnect or dispatch failure). Completing an investigation that is already in a terminal status (`complete`, `failed`, `cancelled`, `timed_out`, `promoted`) is a no-op — the completion is idempotent.
+
+### Incident Investigation
+
+| Status | Description |
+|--------|-------------|
+| `pending` | Waiting for an available agent |
+| `assigned` | Claimed by an agent, awaiting start |
+| `investigating` | Agent is actively analyzing |
+| `complete` | Investigation finished successfully |
+| `cancelled` | Cancelled by operator or commander |
+| `paused` | Temporarily paused |
+| `coordinating` | Commander-owned investigation coordinating child investigations (excluded from normal scheduling) |
+
+### Promotion
+
+An alert investigation can be **promoted** to an incident investigation. Promotion is irreversible from the alert side — the alert investigation enters the terminal `promoted` status and its work is handed off to the incident. Reopening the linked alert does not demote a promoted investigation back into active duty.
+
+### Manual Assignment
+
+Operators can manually assign investigations to a specific agent:
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `PATCH` | `/api/v1/alert-investigations/{id}/assign` | Assign alert investigation to agent |
+| `PATCH` | `/api/v1/incident-investigations/{id}/assign` | Assign incident investigation to agent |
 
 ### Dead-Lettered Investigations
 
@@ -249,6 +278,49 @@ All agent API endpoints require the agent bearer token and are rate-limited per-
 | `GET /api/v1/agent/playbooks` | Matching playbooks |
 | `GET /api/v1/agent/knowledge` | Read shared knowledge notes |
 
+## Investigation Threads
+
+Each investigation has an **owner-thread** chat that supports real-time updates via SSE. Operators and agents communicate in this thread during an active investigation.
+
+- **SSE stream**: `GET /api/v1/agent/events` delivers real-time investigation dispatch, lifecycle signals, and thread messages
+- **Typing indicators**: agents and operators emit typing events for live feedback
+- **Cross-provider sync**: thread messages are synchronized bidirectionally with Slack and Mattermost — replies in external channels appear in the Alga thread and vice versa
+
+### Agent Message Types
+
+Agents send structured messages through the thread. Each message has a type:
+
+| Type | Description |
+|------|-------------|
+| `text` | Free-form text message |
+| `tool_call` | Agent invoking an `alga_*` tool |
+| `inv_tool` | Investigation-scoped tool command |
+| `incident_summary` | Summary of incident state |
+| `triage_response` | Triage feedback from the agent |
+| `command_decision` | Commander decision (escalation, mitigation, resolution) |
+| `status_update` | Status update for external communication |
+
+## Scheduler
+
+The investigation scheduler is **leader-elected** via Valkey (only one replica runs the tick loop). It ticks every **5 seconds** and runs a **Filter → Score → Bind** pass:
+
+1. **Filter** — list online agents (presence TTL), remove circuit-broken agents, list pending investigations, apply backoff and scope filters
+2. **Score** — rank candidate agents for each investigation:
+   - **Specificity** — label-matched agents (scope `labels` with matching `label_selectors`) score higher than catch-all (`scope: all`)
+   - **Load** — least busy agent wins (fewest active investigations)
+   - **Health** — highest success rate (from `AgentHealthTracker` sliding window)
+3. **Bind** — atomically claim the investigation for the best candidate and dispatch via SSE
+
+Concurrency is limited per-agent by `MAX_CONCURRENT_INVESTIGATIONS`. The circuit breaker (`AgentHealthTracker`) skips agents with consistently high failure rates until their health recovers.
+
+### Stuck Investigation Escalation
+
+If an investigation exceeds `multiplier * INVESTIGATION_TIMEOUT` without completing, the scheduler escalates it via the configured escalation policy.
+
+### Agent Disconnect Grace
+
+When an agent disconnects, the scheduler waits `AGENT_DISCONNECT_GRACE` (default 45s) before requeuing any investigations that were picked up (status `assigned` or `investigating`) by that agent back to `pending`.
+
 ## Scheduler Configuration
 
 | Variable | Default | Description |
@@ -259,7 +331,7 @@ All agent API endpoints require the agent bearer token and are rate-limited per-
 | `MAX_CONCURRENT_INVESTIGATIONS` | `3` | Per-agent capacity limit |
 | `SCHEDULER_LEADER_TTL` | `15s` | Leader election lease TTL |
 | `AGENT_PRESENCE_TTL` | `90s` | Agent presence TTL in Valkey |
-| `AGENT_DISCONNECT_GRACE` | `45s` | Grace period before resetting in-progress work on disconnect |
+| `AGENT_DISCONNECT_GRACE` | `45s` | Grace period before requeuing picked-up investigations on disconnect |
 | `STALE_ALERT_THRESHOLD` | `15m` | Alert age before the stale sweep considers it uninvestigated |
 | `STALE_ALERT_SWEEP_INTERVAL` | `5m` | How often the stale sweep runs |
 
@@ -271,8 +343,7 @@ With Valkey/Redis configured:
 - **Scheduler leader election** ensures a single tick runner across the cluster (via Valkey leader lease)
 - **Cross-replica SSE fan-out** — agent events published on one replica reach agents connected to any replica
 - **Atomic investigation claim** prevents double-dispatch in multi-replica deployments
-- **Disconnect grace period** with Valkey-fenced reset for `investigating` work
-- **Immediate reset** of `delegated` work on agent disconnect
+- **Disconnect grace period** (`AGENT_DISCONNECT_GRACE`) with Valkey-fenced reset — after the grace period, `assigned` and `investigating` work is requeued to `pending`
 
 ## See Also
 

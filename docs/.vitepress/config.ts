@@ -77,6 +77,7 @@ export default defineConfig({
           { text: "Playbooks", link: "/core-features/playbooks" },
           { text: "Notifications", link: "/core-features/notifications" },
           { text: "Heartbeats", link: "/core-features/heartbeats" },
+          { text: "Maintenance Windows", link: "/core-features/maintenance-windows" },
           { text: "Status Pages", link: "/core-features/status-pages" },
           { text: "Credential Providers", link: "/core-features/credential-providers" },
           { text: "Dashboard", link: "/core-features/dashboard" },

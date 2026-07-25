@@ -55,11 +55,20 @@ Multiple providers are managed from **System → Authentication** (requires the 
 ## Login Flow
 
 1. The login page lists enabled OIDC providers (fetched from `/api/v1/auth/oidc/providers`).
-2. User clicks a provider → Alga generates PKCE verifier + challenge, nonce, and state, then redirects to the IdP authorization endpoint.
+2. User clicks a provider → Alga generates PKCE verifier + challenge, nonce, and state, then stores them in a **Valkey-backed login state store** (single-use, 10-minute TTL). The user is redirected to the IdP authorization endpoint.
 3. The IdP authenticates the user and redirects back to `/api/v1/auth/oidc/{id}/callback`.
-4. Alga exchanges the authorization code for tokens (using PKCE + client secret).
+4. Alga validates the state parameter against the Valkey store (single-use — replayed states are rejected), then exchanges the authorization code for tokens (using PKCE + client secret).
 5. **Alga verifies the ID token**: signature via JWKS, plus `iss`, `aud`, `exp`, and `nonce` checks.
 6. **The `email_verified` claim must be `true`** — unverified emails are rejected to prevent account takeover.
+
+## Data Model
+
+OIDC data is stored in two Ent schemas:
+
+| Schema | Description |
+|--------|-------------|
+| `oidcprovider` | Provider configuration (issuer, client ID, scopes, enabled) |
+| `oidcidentity` | Links an OIDC subject to a local user account (provider_id + subject) |
 
 ## User Provisioning
 
@@ -74,3 +83,14 @@ On callback, Alga resolves the user by:
 3. If no matching account is found → redirects to `/login?error=oidc_no_account`.
 
 Once linked, the identity persists in `oidc_identities`; subsequent logins resolve directly by `(provider_id, subject)`. Account lock (`locked_until`) is honored.
+
+## Google OAuth
+
+In addition to generic OIDC providers, Alga supports Google OAuth as a separate login method with its own configuration:
+
+| Variable | Description |
+|----------|-------------|
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
+
+This is independent of the OIDC multi-provider system and provides a dedicated "Sign in with Google" button on the login page.

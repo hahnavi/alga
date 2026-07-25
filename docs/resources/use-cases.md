@@ -67,7 +67,7 @@ Alerts sharing the same `deployment`, `statefulset`, `daemonset`, or `job` (comb
 **Alga Solution:** Alga provides bidirectional Slack integration:
 
 - **Alert delivery:** Alerts posted directly to Slack channels with rich formatting
-- **Command processing:** Use Slack slash commands to acknowledge, resolve, and investigate
+- **Action buttons:** Acknowledge, resolve, and investigate via interactive buttons on alert messages
 - **Thread conversations:** Investigation discussions happen in alert threads
 - **Mention support:** `@user` and `@group` mentions create notifications and escalate to the right people
 
@@ -140,18 +140,21 @@ Alga automatically:
 ```yaml
 # Example escalation policy
 policy:
-  - delay: 5m
+  - level_number: 1
+    delay_minutes: 5
     targets:
-      - type: on_call
-        schedule_id: "primary-oncall"
-  - delay: 10m
+      - target_type: team        # resolves to the team's on-call schedule
+        target_team_id: "platform-team"
+  - level_number: 2
+    delay_minutes: 10
     targets:
-      - type: team
-        team_id: "platform-team"
-  - delay: 15m
+      - target_type: team
+        target_team_id: "platform-team"
+  - level_number: 3
+    delay_minutes: 15
     targets:
-      - type: user
-        user_id: "engineering-manager"
+      - target_type: user
+        target_user_id: "engineering-manager"
 ```
 
 Escalation stops automatically when the incident is acknowledged.
@@ -262,9 +265,9 @@ services:
 
 **Alga Solution:** Automatic dependency cascade on incidents:
 
-- When a service is in a major outage, dependent services are automatically marked as degraded
-- Cascade events are added to incident timelines
-- Alerts from affected services are correlated to the root incident
+- When a service's status changes, dependent services have their status recomputed transitively (BFS)
+- Each status change publishes a `service_status_changed` event so dashboards update live
+- Downstream teams see upstream degradation reflected in their own service status
 
 ### Service Status Propagation
 
@@ -297,11 +300,10 @@ services:
 
 **Alga Solution:** Intelligent notification routing:
 
-- **Per-user preferences:** Each user controls their notification channels
-- **Quiet hours:** Respect on-call engineer's sleep schedule
-- **Severity filtering:** Only notify for relevant severity levels
-- **Multi-channel:** Send to Slack, email, SMS, voice calls
-- **Reminders:** Shift start reminders (default 15 minutes before)
+- **Per-user preferences:** Each user controls their notification channels via rule-based preferences
+- **Multi-channel:** Send to in-app, email, Slack DM, and voice calls
+- **Voice opt-out:** Per-user flag to suppress voice calls for cost control
+- **Escalation-aware:** Higher escalation levels can add more urgent channels (e.g., voice)
 
 ### Post-Incident Handoff
 

@@ -25,9 +25,15 @@ SLACK_DEFAULT_CHANNEL=#alerts
 
 ```sh
 SLACK_DISABLED=false
+SLACK_CLIENT_ID=your-client-id
+SLACK_CLIENT_SECRET=your-client-secret
+SLACK_OAUTH_REDIRECT_URL=https://alga.yourdomain.com/api/v1/integrations/slack/oauth/callback
 ```
 
 - `SLACK_DISABLED` — Set to `true` to disable Slack delivery even when configured.
+- `SLACK_CLIENT_ID` — Slack app client ID (required for OAuth flows).
+- `SLACK_CLIENT_SECRET` — Slack app client secret (required for OAuth flows).
+- `SLACK_OAUTH_REDIRECT_URL` — OAuth redirect URL override for reverse-proxy setups.
 
 ### OAuth (Multi-Workspace)
 
@@ -38,7 +44,7 @@ For multi-workspace support via OAuth 2.0, see [Slack OAuth Setup](/integrations
 ### 1. Create a Slack App
 
 1. Go to [api.slack.com/apps](https://api.slack.com/apps) → **Create New App** → **From manifest**
-2. Use the manifest from `integrations/alga-slack-app/` in the Alga repository
+2. Use the manifest from `integrations/alga-slack-app/manifest.json` in the Alga repository (or run `integrations/alga-slack-app/setup.sh` for guided setup)
 3. Install the app to your workspace
 4. Copy the **Bot User OAuth Token** to `SLACK_BOT_TOKEN`
 
@@ -125,7 +131,7 @@ Configure via system config (`PUT /api/v1/system/config`):
 |---------|--------|-------------|
 | `slack_incident_channels_enabled` | `true`/`false` | Enable auto-creation |
 | `slack_incident_channel_visibility` | `public`/`private` | Channel visibility |
-| `slack_incident_channel_trigger_status` | `active`/`open` | When to create the channel |
+| `slack_incident_channel_trigger_status` | `active`/`detected` | When to create the channel |
 | `slack_incident_channel_archive_on_close` | `true`/`false` | Archive on incident close |
 
 When `slack_incident_channels_enabled` is `true` and an incident reaches the trigger status, Alga automatically creates a channel named `inc-{incident-number}-{slug}` (for example `inc-1234-database-outage`) and posts the initial incident summary. If the name is already taken in Slack, Alga retries with `-2`, `-3` suffixes.
@@ -153,6 +159,27 @@ Route alerts to specific Slack channels using routing rules:
 2. **Send test alert:** Use the **Create Alert** dialog
 3. **Verify delivery:** Check the target Slack channel
 4. **Test threading:** Reply to the alert in Slack and verify it syncs to Alga
+
+## Bot Methods
+
+The Slack integration exposes these internal methods for sending messages and managing conversations:
+
+| Method | Description |
+|--------|-------------|
+| `PostMessage` | Post a message to a channel (Block Kit formatted) |
+| `PostThreadReply` | Post a threaded reply under an existing message |
+| `OpenConversation` | Open a DM conversation with a user |
+| `GetPermalink` | Get a permanent link to a message |
+| `GetBotUserID` | Resolve the bot's own user ID |
+| `TestConnection` | Verify the bot token is valid and the workspace is reachable |
+
+## Slack Sign-In
+
+Alga supports signing in with Slack as an authentication method (separate from the workspace-level bot integration and user-level OAuth binding):
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/api/v1/auth/slack` | Public | Authenticate a user via Slack identity |
 
 ## API Reference
 

@@ -14,34 +14,30 @@ Teams connect several Alga concepts together:
 ```
   Team ──────── Members (users with admin/member roles)
     │
-    ├── Escalation Policy ── multi-tier targets (users, teams, schedules)
-    │
-    ├── On-Call Schedules ── rotating coverage (who's on call right now)
+    ├── On-Call Schedule ── one auto-provisioned schedule per team
+    │       (rotating coverage: who's on call right now)
     │
     └── Services ── team owns specific services in the catalog
 ```
 
-When an alert becomes an incident on a service the team owns, Alga loads the team's escalation policy, checks who's on call from the team's schedules, and pages them — through the channels each person has configured in their [notification preferences](/on-call/notification-preferences).
+Escalation policies are configured separately and **target** teams (or individual users) as escalation targets — a team is not directly "linked" to a policy. When an alert becomes an incident on a service, Alga loads the service's [escalation policy](/on-call/escalation-policies), and any level that targets a team resolves to whoever is currently on call for that team's schedule. The resolved responder is then paged through the channels they configured in their [notification preferences](/on-call/notification-preferences).
 
 ## Team Structure
 
-Each team has:
+A team has a unique **name** and an optional **description**, plus:
 
-- **Members** — users assigned to the team, each with a role:
-  - **Admin** — can add/remove members, manage schedules and escalation policies
+- **Members** — users assigned to the team (`user_id` + `role`), each with a role:
+  - **Admin** — can add/remove members, manage the schedule and members
   - **Member** — appears in the team's roster and can be targeted by escalation
-- **Escalation Policy** — defines the multi-tier escalation chain for incidents assigned to this team
-- **On-Call Schedules** — one or more rotating schedules that determine who is on call at any given time
+- **On-Call Schedule** — exactly one schedule, auto-provisioned when the team is created. Its display name is derived from the team, and its rotating coverage is defined by [layers](/on-call/schedules)
 
 ## Creating a Team
 
 1. Go to **On-Call → Teams → Create Team**
-2. Give the team a **name** and optional description
+2. Give the team a **name** (unique) and optional description
 3. **Add members** by searching for users and assigning roles
-4. Link an **escalation policy** (or create one inline)
-5. Link one or more **on-call schedules** (or create them inline)
 
-A team doesn't need an escalation policy or schedule immediately — you can create the team first and attach policies and schedules later.
+Creating a team automatically provisions its on-call schedule (one per team). You then configure that schedule's rotation layers separately. Escalation policies are created independently and reference the team (or its members) as targets.
 
 ## Common Patterns
 
@@ -65,7 +61,7 @@ Map teams to your service ownership. The `payments-team` owns payment services a
 |--------|------|------|------------|-------------|
 | `GET` | `/api/v1/teams` | Session | `oncall:read` | List teams |
 | `POST` | `/api/v1/teams` | Session | `oncall:write` | Create team |
-| `GET` | `/api/v1/teams/{id}` | Session | `oncall:read` | Get team (includes members, escalation policy, schedules) |
+| `GET` | `/api/v1/teams/{id}` | Session | `oncall:read` | Get team |
 | `PATCH` | `/api/v1/teams/{id}` | Session | `oncall:write` | Update team |
 | `DELETE` | `/api/v1/teams/{id}` | Session | `oncall:write` | Delete team |
 
@@ -75,6 +71,7 @@ Map teams to your service ownership. The `payments-team` owns payment services a
 |--------|------|------|------------|-------------|
 | `GET` | `/api/v1/teams/{id}/members` | Session | `oncall:read` | List members with roles |
 | `POST` | `/api/v1/teams/{id}/members` | Session | `oncall:write` | Add member (user_id, role) |
+| `PATCH` | `/api/v1/teams/{id}/members/{userId}` | Session | `oncall:write` | Update member role |
 | `DELETE` | `/api/v1/teams/{id}/members/{userId}` | Session | `oncall:write` | Remove member |
 
 ## See Also

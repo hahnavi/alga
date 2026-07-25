@@ -36,6 +36,24 @@ The server listens on the port specified by `PORT` (default: `8080`). On startup
 
 See [Deployment](/operations/deployment) for production setup and [Architecture](/operations/architecture) for component details.
 
+## Version
+
+### `alga version`
+
+Print the build version of the `alga` binary.
+
+```sh
+alga version
+```
+
+Output:
+
+```
+v1.4.0
+```
+
+The version is injected at build time via `-ldflags`; development builds print `dev`.
+
 ## Webhook Token Management
 
 Webhook tokens authenticate external alert sources sending to `POST /webhooks/alerts`.
@@ -164,10 +182,16 @@ When `--days` is not set and `DATA_RETENTION_DAYS` is `0` (or unset), the comman
 
 ### `alga data cleanup-deleted`
 
-Run a one-time backfill to purge soft-deleted records. This permanently removes records previously marked as deleted (soft deletes) from the database.
+Hard-delete stale children of soft-deleted alerts and incidents. This is a one-time backfill that removes investigation artifacts (investigations, events, updates, threads, memories) tied to alerts or incidents that were soft-deleted before cascade-on-delete behavior existed. Idempotent and safe to re-run.
 
 ```sh
 alga data cleanup-deleted
+```
+
+Output:
+
+```
+Expunged children of 3 soft-deleted alert(s) and 1 soft-deleted incident(s).
 ```
 
 ## Demo & Seeding

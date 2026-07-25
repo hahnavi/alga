@@ -240,7 +240,7 @@ These tools are unique to OpenClaw — Hermes does not expose them. They give th
 
 | Tool | Description |
 |------|-------------|
-| `alga_peer_ask` | Ask another agent for help — useful when you need expertise from a specialized agent. Creates a peer-ask request that the target agent receives over SSE. |
+| `alga_peer_ask` | Ask another agent for help — useful when you need expertise from a specialized agent. Creates a peer-ask request that the target agent receives over SSE. Discovers online agents of either type (hermes or openclaw). |
 
 See [Peer Ask](/core-features/peer-ask) for the full agent-to-agent collaboration protocol, SSE frame types, and limits.
 

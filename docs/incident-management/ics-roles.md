@@ -1,105 +1,123 @@
 ---
 title: ICS Incident Command System
-description: Formal Incident Command System roles — Incident Commander, Communications Lead, Responder — with auto-assignment, Google Meet war rooms, and multi-agent coordination.
+description: Formal Incident Command System roles — Incident Commander, Communicator, Responder — with user/agent assignees, role hierarchy, incident documents, and Google Meet war rooms.
 ---
 
 # ICS Incident Command System
 
-Alga implements the Incident Command System (ICS) for structured incident response — a hierarchical command structure with formal role assignments, commander handoffs, and war-room coordination. Every incident gets a clearly defined chain of command with specific responsibilities for each role.
+Alga implements the Incident Command System (ICS) for structured incident response — a hierarchical command structure with formal role assignments and war-room coordination. Every incident can have a clearly defined chain of command with specific responsibilities for each role.
 
 ## Why ICS?
 
-ICS is the same framework used by emergency responders worldwide (FEMA, fire services, etc.), adapted for technology incidents. It solves three problems during high-stress incidents:
+ICS is the same framework used by emergency responders worldwide, adapted for technology incidents. It solves three problems during high-stress incidents:
 
-1. **Who's in charge?** — Every incident has exactly one Incident Commander with final authority
+1. **Who's in charge?** — An Incident Commander owns incident direction and final calls
 2. **Who does what?** — Roles separate command (decision-making), communications (status updates), and response (hands-on fix)
-3. **How do we hand off?** — Formal handoff procedures maintain context across shift changes
+3. **How do we hand off?** — Roles can be ended and reassigned as responders rotate
 
 ## ICS Roles
 
-| Role | Description | Who Can Be Assigned |
-|------|-------------|---------------------|
-| **Incident Commander (IC)** | Overall authority for the incident response. Makes decisions, coordinates responders, drives the incident to resolution. | Any user or agent. Only one active IC at a time. |
-| **Communications Lead** | Handles internal and external communications — publishes status updates, manages stakeholder expectations. | Any user or agent. |
-| **Responder** | General tactical response role — investigates, implements fixes, runs diagnostics. | Any user or agent. Multiple responders can be assigned. |
+| Role Type | Label | Responsibility |
+|-----------|-------|----------------|
+| `incident_commander` | Incident Commander | Owns incident direction, escalation decisions, final calls, and documentation quality |
+| `communications_lead` | Communicator | Owns status updates, stakeholder communication, summaries, and human-facing messages |
+| `responder` | Responder | Owns investigation, mitigation, evidence gathering, and technical recovery work |
 
-::: warning Three Roles Only
-Alga implements three ICS roles: `incident_commander`, `communications_lead`, and `responder`. Additional ICS roles from the FEMA framework (Deputy IC, Technical Lead, SME, Scribe, etc.) are not implemented.
-:::
+Each role maps to a required agent capability: `incident_commander` → command, `communications_lead` → communicate, `responder` → investigate. Agents assigned a role must hold the matching capability.
+
+## Role Assignments
+
+An ICS role assignment (`ICSRoleAssignment`) tracks:
+
+| Field | Description |
+|-------|-------------|
+| `role_type` | `incident_commander`, `communications_lead`, or `responder` |
+| `assignee_type` | `user` or `agent` |
+| `status` | `active` or `ended` |
+| `scope_description` | Optional free-text scope (also used for custom role scoping) |
+| `ended_reason` | Why the role ended (`replaced`, `incident_resolved`, `assigned`, `agent_offline`) |
+| `started_at` / `ended_at` | Role tenure |
+
+Assignments form a parent/child hierarchy via a self-referential `parent` edge, so a commander can have responder or communicator roles nested beneath it. Agents hold roles through the `agent_token` edge; users through the `user` edge.
 
 ## Assigning ICS Roles
 
-### Via the UI
-
-Open any incident detail page and use the **ICS Role Board** to assign or update roles. Each role card shows the assigned person and allows reassignment with a dropdown.
-
 ### Via the API
+
+Assign to a user:
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/incidents/{id}/ics/roles \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "user_id": "550e8400-e29b-41d4-a716-446655440000",
-    "role": "incident_commander"
+    "role_type": "incident_commander",
+    "user_id": "550e8400-e29b-41d4-a716-446655440000"
   }'
 ```
 
-You can assign roles to either human users or AI agents. When an AI agent is the IC, it can dispatch tasks to responder and communicator agents — see [Multi-Agent Coordination](#multi-agent-coordination) below.
-
-## Auto-Assignment
-
-On incident creation, the scheduler automatically assigns the IC role based on:
-
-1. The affected service's linked **on-call schedule** — the current on-call person becomes IC
-2. If no schedule is linked, the **escalation policy** attached to the service
-3. If neither is configured, the IC role is left unassigned for manual assignment
-
-This means well-configured services get instant IC assignment — no manual step needed.
-
-## IC Handoff
-
-When the current IC goes off shift or needs to transfer command, they initiate a formal handoff:
-
-1. Current IC calls `POST /api/v1/incidents/{id}/ics/handoff` with the incoming IC's user ID and optional notes
-2. The incoming IC receives a notification
-3. The incoming IC acknowledges via `POST /api/v1/incidents/{id}/ics/handoff/{handoffId}/acknowledge`
-4. The IC role transfers automatically and a timeline entry is created
+Assign to an agent (provide `agent_token_id` instead of `user_id`; the two are mutually exclusive):
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/incidents/{id}/ics/handoff \
+curl -X POST http://localhost:8080/api/v1/incidents/{id}/ics/roles \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "incoming_user_id": "660e8400-e29b-41d4-a716-446655440001",
-    "notes": "Database failover in progress, waiting for replication catch-up. ETA 15 min."
+    "role_type": "responder",
+    "agent_token_id": "770e8400-e29b-41d4-a716-446655440002",
+    "scope_description": "Investigate database connection pool exhaustion"
   }'
 ```
 
-The handoff notes are critical for continuity — include open issues, ongoing actions, and current context.
+## Auto-Assignment
+
+When an incident is processed, the incident worker auto-assigns the Incident Commander role by resolving the on-call user for the affected service (via its on-call schedule and escalation policy). If an on-call user is found, they become IC and a timeline entry is recorded. If none is found, the IC role is left for manual assignment.
+
+## Ending and Updating Roles
+
+Roles are ended (not deleted) to preserve the role history. Ending sets `status=ended` with an `ended_reason` and stamps `ended_at`. Common end reasons:
+
+- `replaced` — a new assignee took over the role
+- `incident_resolved` — the incident moved to a terminal state
+- `assigned` — superseded by a new assignment
+- `agent_offline` — the assigned agent went offline
+
+## Incident Document
+
+Each incident has a section-based collaborative document used for shared note-taking during response. Sections are version-tracked per section and record the user who last updated them.
+
+| Section | Purpose |
+|---------|---------|
+| `current_status` | Current state of the incident |
+| `impact_assessment` | What is affected, severity, blast radius |
+| `actions_taken` | Remediation steps and outcomes |
+| `open_questions` | Unresolved questions |
+| `resources` | Links and references |
+| `timeline_summary` | Condensed event timeline |
+| `root_cause` | Technical root cause (required to resolve) |
+| `resolution` | How it was resolved (required to resolve) |
+
+`impact_assessment`, `root_cause`, and `resolution` (plus the incident `summary`) must be filled in before the incident can be resolved.
+
+### Document API
+
+| Method | Path | Permission | Description |
+|--------|------|------------|-------------|
+| `GET` | `/api/v1/incidents/{id}/ics/document` | `incidents:read` | Get all document sections |
+| `PUT` | `/api/v1/incidents/{id}/ics/document/{section}` | `incidents:write` | Update a section (version-checked) |
 
 ## Role Management API
 
 | Method | Path | Permission | Description |
 |--------|------|------------|-------------|
 | `GET` | `/api/v1/incidents/{id}/ics/roles` | `incidents:read` | List ICS role assignments |
-| `POST` | `/api/v1/incidents/{id}/ics/roles` | `incidents:command` | Assign ICS role |
-| `PATCH` | `/api/v1/incidents/{id}/ics/roles/{roleId}` | `incidents:command` | Update ICS role |
-| `POST` | `/api/v1/incidents/{id}/ics/handoff` | `incidents:command` | Initiate IC handoff |
-| `POST` | `/api/v1/incidents/{id}/ics/handoff/{handoffId}/acknowledge` | `incidents:command` | Acknowledge handoff |
+| `POST` | `/api/v1/incidents/{id}/ics/roles` | `incidents:command` | Assign ICS role (user or agent) |
+| `PATCH` | `/api/v1/incidents/{id}/ics/roles/{roleId}` | `incidents:command` | Update ICS role assignment |
+| `DELETE` | `/api/v1/incidents/{id}/ics/roles/{roleId}` | `incidents:command` | End ICS role assignment |
 
 ## Google Meet War Rooms
 
-When an incident is active, the team needs a place to coordinate in real time. Alga can automatically provision a **Google Meet conference space** per incident for war-room-style voice/video coordination.
-
-### How It Works
-
-When `GOOGLE_MEET_ENABLED=true` and an incident transitions to active status:
-
-1. Alga's ICS worker provisions a Google Meet conference via the Google Calendar API
-2. The conference link is attached to the incident
-3. Responders see a "Join War Room" button on the incident detail page
-4. The conference link is included in incident notifications
+When an incident is active, the team needs a place to coordinate in real time. Alga can provision a **Google Meet conference space** per incident for war-room-style voice/video coordination. The Meet space name and conference URL are stored on the incident; unlinking clears both.
 
 ### Enabling War Rooms
 
@@ -108,46 +126,30 @@ Set these environment variables:
 | Variable | Description |
 |----------|-------------|
 | `GOOGLE_MEET_ENABLED` | Set to `true` to enable war-room provisioning |
-| `GOOGLE_MEET_CREDENTIALS_JSON` | Google service account JSON (must have Calendar API access) |
-| `GOOGLE_MEET_CALENDAR_ID` | Calendar ID to create conferences under |
-
-Users must also link their Google account via **Profile → Link Google Account** so Alga can create conferences on their behalf.
+| `GOOGLE_MEET_CREDENTIALS_PATH` | Path to a service-account JSON with the Meet API enabled and domain-wide delegation for `https://www.googleapis.com/auth/meet.space.admin` |
+| `GOOGLE_MEET_AUTO_CREATE` | Set to `true` to auto-create a Meet space per incident |
 
 ### API Endpoints
 
 | Method | Path | Permission | Description |
 |--------|------|------------|-------------|
-| `GET` | `/api/v1/incidents/{id}/google-meet` | `incidents:read` | Get the incident's Google Meet conference |
-| `POST` | `/api/v1/incidents/{id}/google-meet` | `incidents:command` | Provision a conference manually |
+| `POST` | `/api/v1/incidents/{id}/google-meet` | `incidents:command` | Create a Meet space for the incident |
+| `DELETE` | `/api/v1/incidents/{id}/google-meet` | `incidents:command` | Unlink the Meet space |
 
 ## Multi-Agent Coordination
 
-When AI agents are assigned ICS roles, they collaborate through a **task-driven coordination model**:
-
-1. The **Commander agent** decomposes the incident into typed tasks (`investigate`, `communicate`, `verify`, `mitigate`) via `alga_dispatch_task`
-2. Each dispatched task **wakes the assigned agent** through the `coordination_task_dispatched` SSE event
-3. The agent acts on the task and **completes it** via `alga_complete_task` with a typed result
-4. The commander tracks progress via `alga_list_tasks` and writes the conclusion via `alga_synthesize_findings`
-
-This replaces ad-hoc @mention coordination with structured, typed work units — reducing cross-talk and ping-pong between agents.
-
-::: tip Resolution Requires Structured Artifacts
-An incident can only be resolved when the commander supplies five resolution documents: `summary`, `impact_assessment`, `actions_taken`, `root_cause`, and `resolution`. The `root_cause` and `resolution` sections are independently mandatory. The commander stages them with `alga_set_incident_resolution_docs` or supplies them inline to `alga_resolve_incident`.
-:::
-
-See the [Hermes](/integrations/hermes#multi-agent-incident-coordination) integration guide for detailed coordination guidance.
+When AI agents are assigned ICS roles, they collaborate through a **task-driven coordination model**: the commander dispatches typed coordination tasks, the assigned responder/communicator agents execute them, and report results back. This replaces ad-hoc coordination with structured, typed work units. See [Coordination](/incident-management/coordination) for the coordination task and message model.
 
 ## Best Practices
 
-- **One IC at a time** — use formal handoff for shift changes; never leave the IC role vacant
-- **Include handoff notes** — open issues, ongoing actions, and context for the incoming IC
-- **Formally end roles** when no longer needed to keep the role board clean
+- **Keep a single active commander** — end the outgoing commander role before or as you assign a new one
+- **Formally end roles** when no longer needed to keep the role board clean and the history accurate
 - **Assign communicators early** — stakeholders need updates fast; don't wait until the incident is resolved to communicate
-- **Let agents handle routine** — if you have AI agents, assign them responder or communicator roles for parallel investigation and status publishing
+- **Let agents handle routine work** — assign agents responder or communicator roles for parallel investigation and status publishing (they must hold the matching capability)
 
 ## See Also
 
 - [Lifecycle & States](/incident-management/lifecycle) — incident state machine and transitions
-- [Incident Coordination](/incident-management/coordination) — communication channels during incidents
+- [Incident Coordination](/incident-management/coordination) — coordination messages, tasks, and status updates
+- [Handoffs](/incident-management/handoffs) — on-call shift handoffs
 - [AI Investigation](/core-features/investigation) — how AI agents participate in incident response
-- [Hermes Integration](/integrations/hermes) — agent coordination protocol details

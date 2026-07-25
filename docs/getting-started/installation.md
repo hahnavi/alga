@@ -22,7 +22,7 @@ docker compose up -d
 
 | Service | Image | Port | Purpose |
 |---------|-------|------|---------|
-| `postgres` | postgres:18-alpine | 5432 | PostgreSQL database |
+| `postgres` | pgvector/pgvector:pg18 | 5432 | PostgreSQL database (with pgvector) |
 | `valkey` | valkey/valkey:9.1-alpine | 6379 | Sessions, caching, leader election |
 | `rabbitmq` | rabbitmq:4.3.3-management-alpine | 5672, 15672 | Async message queue |
 | `backend` | Built locally | 8080 | Go API server |

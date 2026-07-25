@@ -18,7 +18,8 @@ Understanding how Alga's pieces fit together makes everything else easier to con
                          ▼
 ┌─────────────────────────────────────────────────────┐
 │                    INGESTION                         │
-│  Webhook token auth → dedup → route → deliver       │
+│  Webhook token auth → dedup → maintenance window    │
+│  check → route → deliver                            │
 └──────────────────────┬──────────────────────────────┘
                        │
                        ▼
@@ -39,12 +40,12 @@ Understanding how Alga's pieces fit together makes everything else easier to con
      investigate              escalate
            │                      │
            ▼                      ▼
-┌──────────────────┐   ┌───────────────────┐
-│   AI AGENT       │   │  INCIDENT         │
-│   (Hermes /      │   │  Created with     │
-│    OpenClaw)     │   │  ICS roles, SLA,  │
-│                  │   │  escalation       │
-│  Receives via    │   └───────────────────┘
+┌──────────────────┐   ┌───────────────────────────┐
+│   AI AGENT       │   │  INCIDENT                 │
+│   (Hermes /      │   │  Created with ICS roles,  │
+│    OpenClaw)     │   │  SLA, escalation, war     │
+│                  │   │  room, coordination tasks  │
+│  Receives via    │   └───────────────────────────┘
 │  SSE dispatch    │
 │  Investigates,   │
 │  resolves, or    │
@@ -67,7 +68,7 @@ An **alert** is a single firing or resolved event from a monitoring system. Each
 
 - A **fingerprint** — a dedup key derived from its labels. Multiple firings of the same alert dedup to one record.
 - An **alert number** — the human-readable unique ID (e.g. `#42`). This is what you'll reference in threads, URLs, and conversations.
-- **Labels** — key-value pairs (e.g. `alertname=HighCPU`, `namespace=production`, `service=api-gateway`) used for routing, correlation, triage rules, and agent scope matching.
+- **Labels** — key-value pairs (e.g. `alertname=HighCPU`, `namespace=production`, `service=api-gateway`) used for routing, correlation, triage rules, agent scope matching, and maintenance window suppression.
 - **Annotations** — free-text metadata (summary, description, runbook URL).
 
 ::: tip The fingerprint is the dedup key, not the ID
@@ -83,7 +84,23 @@ An **investigation** is the AI analysis of one or more correlated alerts. When a
 3. The **scheduler** picks an online agent with matching capabilities and scope
 4. The agent receives the investigation via SSE and begins analyzing
 
-The investigation lifecycle: `pending → delegated → investigating → complete` (or `failed`, `timed_out`, `cancelled`, `paused`).
+There are two kinds of investigations, each with its own lifecycle:
+
+**Alert Investigation** (triggered by correlated alerts):
+
+`pending → assigned → investigating → complete`
+
+Additional states: `promoted` (escalated to an incident), `failed`, `cancelled`, `timed_out`, `paused`. Investigations can be `requeued` back to `pending` for reassignment.
+
+**Incident Investigation** (triggered by an active incident):
+
+`pending → assigned → investigating → complete`
+
+Additional states: `cancelled`, `paused`, `coordinating` (agent is coordinating multi-agent tasks).
+
+::: warning "assigned" not "delegated"
+The scheduler *assigns* investigations to agents. You may see older references to "delegated" — the correct status is `assigned`.
+:::
 
 ### Incidents
 
@@ -95,6 +112,13 @@ An **incident** is a declared event requiring coordinated response. Incidents ca
 
 Incidents follow a formal lifecycle: `detected → triaging → active → mitigated → resolved → closed` (with `cancelled` as a terminal state).
 
+Beyond the lifecycle, incidents carry several collaboration features:
+
+- **Coordination tasks** — parent/child task trees dispatched to agents (claim/complete lifecycle: `pending → assigned → in_progress → complete`, or `failed`/`cancelled`)
+- **ICS documents** — structured incident sections (`current_status`, `impact_assessment`, `root_cause`, `resolution`, `actions_taken`, `open_questions`, `resources`, `timeline_summary`) that are collaboratively edited by agents and operators
+- **Status updates** — public incident status updates posted to notification channels
+- **War rooms** — auto-created Google Meet spaces for real-time coordination (provisioned asynchronously by the ICS worker)
+
 ### Services
 
 A **service** is a tracked component in your infrastructure (e.g. `api-gateway`, `payment-service`, `postgres-primary`). Services have:
@@ -102,6 +126,18 @@ A **service** is a tracked component in your infrastructure (e.g. `api-gateway`,
 - A **priority weight** used for status scoring
 - **Dependencies** — a directed graph for cascade analysis (if service A depends on B, and B has an incident, A's status is affected)
 - A linked **on-call schedule** and **escalation policy**
+
+### Maintenance Windows
+
+A **maintenance window** is a label-matched suppression window that silences alerts during planned maintenance. Each window has:
+
+- A **name** and a time range (`start_time` to `end_time`)
+- **Label matchers** — alerts whose labels match are suppressed for the duration of the window
+- An **enabled** flag to toggle without deleting
+
+::: tip Maintenance windows suppress, not delete
+Alerts matching an active maintenance window are suppressed at ingestion — they are recorded but not routed, triaged, or dispatched. This keeps your alert history intact while avoiding noise during planned work.
+:::
 
 ## How Components Relate
 
@@ -111,7 +147,7 @@ These four stages process every alert, in order:
 
 1. **Routing** — label-based rules determine *where* to deliver the alert (Slack, Mattermost, etc.) and whether to suppress it
 2. **Correlation** — related alerts within the time window are grouped into one investigation
-3. **Triage** — deterministic rules first (fast, free), then LLM (smart, costs tokens) decide what to do: investigate, auto-resolve, suppress, escalate, or just enrich
+3. **Triage** — deterministic rules first (fast, free), then LLM (smart, costs tokens) decide what to do: `investigate`, `auto_resolve`, `suppress`, `escalate`, or `enrich_only`
 4. **Investigation** — the scheduler dispatches the grouped alerts to an AI agent
 
 ### On-Call → Escalation → SLA
@@ -136,10 +172,26 @@ All three are injected into the agent's dispatch prompt automatically.
 
 AI agents (Hermes, OpenClaw, or custom SDK agents) connect via SSE and receive investigation dispatches. Two gates control which investigations an agent receives:
 
-- **Capabilities** (`investigate`, `communicate`, `triage`, `command`) — what the agent is allowed to *do*
-- **Scope** (`all` or `labels`) — which investigations the agent is allowed to *receive*
+- **Capabilities** (`investigate`, `communicate`, `command`) — what the agent is allowed to *do*
+- **Scope** (`all` or `labels` via label selectors) — which investigations the agent is allowed to *receive*
 
 The scheduler scores all eligible agents by specificity (label-matched > catch-all), then by load (least busy), then by health (success rate).
+
+::: tip Capability meanings
+- `investigate` — receive and work alert/incident investigations
+- `communicate` — post messages to alert and incident threads
+- `command` — coordinate incident command decisions, escalation, and multi-agent task dispatch
+:::
+
+### Threads → Real-Time Chat
+
+Alerts and incidents have **owner-thread chat** — a conversation thread scoped to the alert or incident. Threads support:
+
+- Real-time message delivery via SSE
+- Typing indicators
+- Cross-provider sync (messages posted in Alga appear in the linked Slack or Mattermost thread, and vice versa)
+
+Thread owners include alert investigations, incident investigations, and incident coordination channels.
 
 ## Key Design Principles
 
@@ -158,6 +210,29 @@ Every create, update, delete, command, and state transition produces an audit ev
 ### Async Everything
 
 Alert processing, notifications, investigations, escalation, SLA timers, and triage all run through RabbitMQ queues with tiered retry and dead-letter handling. The HTTP ingestion path returns immediately after persisting the alert — all downstream work is async.
+
+The specific workers that consume these queues:
+
+| Worker | Responsibility |
+|--------|---------------|
+| AlertWorker | Webhook ingestion, dedup, routing, delivery |
+| InvestigateWorker | Dispatch investigations to agents, manage lifecycle |
+| IncidentWorker | Incident state transitions, ICS role assignment |
+| EscalationWorker | Execute escalation policy levels |
+| SLAWorker | Track SLA timers, trigger breach escalation |
+| NotificationDispatchWorker | Fan out notifications to configured channels |
+| EmailWorker | Send transactional and notification emails |
+| ICSWorker | Provision incident war rooms (Google Meet) |
+
+Sweep workers run on timers to reconcile state:
+
+| Sweep Worker | Responsibility |
+|-------------|---------------|
+| EscalationSweep | Detect stalled escalations and advance them |
+| HeartbeatSweep | Detect missing heartbeats and fire stale alerts |
+| StuckInvestigationEscalation | Escalate investigations stuck too long in active states |
+| ActionItemSweep | Track overdue incident action items |
+| Outbox | Retry and publish pending outbox messages |
 
 ### Fail-Closed Security
 

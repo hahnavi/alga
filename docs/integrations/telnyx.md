@@ -25,9 +25,9 @@ Credentials are managed in the DB via the Integrations UI (stored encrypted), th
 | `TELNYX_FROM_NUMBER` | | No | Telnyx outbound phone number |
 | `TELNYX_PUBLIC_KEY` | | No* | Ed25519 public key (base64) from the Telnyx portal. **Required** when `VOICE_PROVIDER=telnyx` — used to verify inbound webhook signatures |
 | `TELNYX_DISABLED` | `false` | No | Disable Telnyx entirely |
-| `TELNYX_TTS_VOICE` | `Telnyx.KokoroTTS.af_something` | No | TTS voice for spoken prompts. Provider encoded in prefix (e.g. `Polly.Brian`, `Azure.en-CA-ClaraNeural`, `ElevenLabs.eleven_flash_v2_5.<voice_id>`) |
+| `TELNYX_TTS_VOICE` | `KokoroTTS` | No | TTS voice for spoken prompts. Provider-prefixed (e.g. `kokoro/af_something`, `Polly.Brian`, `Azure.en-CA-ClaraNeural`, `ElevenLabs.eleven_flash_v2_5.<voice_id>`) |
 | `TELNYX_TTS_LANGUAGE` | `en-US` | No | TTS language |
-| `TELNYX_TTS_API_KEY_REF` | | No | Identifier of a Telnyx integration secret holding the ElevenLabs API key. Required only when `TELNYX_TTS_VOICE` starts with `ElevenLabs.` |
+| `TELNYX_TTS_API_KEY_REF` | | No | Identifier of a Telnyx integration secret holding the ElevenLabs API key (BYOK). Required only when `TELNYX_TTS_VOICE` starts with `ElevenLabs.` |
 
 ## Callback Verification
 
@@ -38,6 +38,17 @@ Telnyx sends call-control webhooks to `POST /api/v1/telnyx/callback`. Verificati
 3. Verifies `ed25519.Verify(publicKey, timestamp+body, signature)` against the configured `TELNYX_PUBLIC_KEY`.
 
 If verification fails, the callback is rejected with HTTP 403.
+
+## Call Control API Methods
+
+Alga uses the Telnyx REST v2 `/calls` API with these methods:
+
+| Method | Description |
+|--------|-------------|
+| `Answer` | Answer an inbound call |
+| `GatherUsingSpeak` | Speak a TTS prompt and collect DTMF input (used for the IVR menu) |
+| `Speak` | Speak a TTS message without collecting input (confirmations) |
+| `Hangup` | End the call |
 
 ## IVR Flow
 

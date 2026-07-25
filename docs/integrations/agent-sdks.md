@@ -14,6 +14,17 @@ Alga ships **four standalone Agent SDKs** for building custom AI agents that con
 | **Python** | Python 3.10+ (async) | `alga-agent-sdk` | `pip install alga-agent-sdk` |
 | **Rust** | Rust (Tokio) | `alga-agent-sdk` | `cargo add alga-agent-sdk` |
 
+## Source Layout
+
+| SDK | Path | Key Files |
+|-----|------|-----------|
+| Go | `integrations/alga-agent-sdk-go` | `client.go`, `commands.go`, `dedup.go`, `errors.go`, `log.go`, `models.go`, `options.go`, `sse.go`, `util.go` + examples |
+| JavaScript | `integrations/alga-agent-sdk-js` | npm package with `src/` + `dist/` |
+| Python | `integrations/alga-agent-sdk-py` | `alga_agent_sdk/` package, `pyproject.toml` |
+| Rust | `integrations/alga-agent-sdk-rs` | `src/` + `tests/`, `Cargo.toml` |
+
+All four SDKs implement: SSE client with reconnect, command handling (investigation lifecycle commands), message deduplication, and typed models for events and commands.
+
 ::: tip Prerequisites
 You need an **agent token** (`alga_agent_...`) created from **Agents** in the Alga UI. See [AI Investigation](/core-features/investigation) for how agents are dispatched.
 :::

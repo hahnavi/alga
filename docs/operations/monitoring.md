@@ -7,32 +7,36 @@ description: Health endpoints, Prometheus metrics, Grafana dashboards, structure
 
 ## Health Endpoints
 
+All health and metrics endpoints are unauthenticated. Gate `/metrics` at the network level (firewall, security group, or internal-only bind) so it is not reachable from the public internet.
+
 | Endpoint | Purpose | Auth |
 |----------|---------|------|
-| `GET /health` | Liveness check | None |
-| `GET /api/v1/readiness` | Pipeline readiness + scheduler/correlator snapshot | None |
-| `GET /metrics` | Prometheus-format metrics (primary scrape target) | None |
+| `GET /live` | Liveness only — no dependency checks | None |
+| `GET /ready` | Readiness with dependency checks | None |
+| `GET /health` | Readiness (alias for `/ready`) | None |
+| `GET /api/v1/readiness` | Readiness (alias for `/ready`) | None |
+| `GET /metrics` | Prometheus-format metrics (primary scrape target) | None (network-gate it) |
 | `GET /debug/vars` | expvar metrics (secondary) | None |
 
 ### Liveness
 
 ```sh
-curl http://localhost:8080/health
+curl http://localhost:8080/live
 ```
 
-Returns `200 OK` if the HTTP server is running.
+Returns `200 OK` if the HTTP server is running. Use this for container liveness probes — it does not check downstream dependencies, so a wedged database connection will not cause restarts.
 
 ### Readiness
 
 ```sh
-curl http://localhost:8080/api/v1/readiness
+curl http://localhost:8080/ready
 ```
 
-Returns JSON with pipeline readiness status, scheduler state, correlator snapshot, and component connectivity. Use this for load balancer health checks.
+Returns JSON with dependency connectivity (PostgreSQL, Valkey, RabbitMQ). `/health` and `/api/v1/readiness` are aliases that return the same response. Use one of these for load balancer health checks and Kubernetes readiness probes.
 
 ## Metrics
 
-All metrics are exposed in Prometheus format at `/metrics` (the primary scrape target for Prometheus). The same metrics are also available in expvar format at `/debug/vars` as a secondary endpoint.
+All metrics are exposed in Prometheus format at `/metrics` (the primary scrape target for Prometheus). The same metrics are also available in expvar format at `/debug/vars` as a secondary endpoint. Both endpoints are unauthenticated — restrict access at the network level.
 
 ### Correlator Metrics
 
@@ -151,14 +155,40 @@ Import `deploy/grafana/alga-dashboard.json` into Grafana for a pre-built monitor
 - Investigation lifecycle (pending → complete → failed)
 - SLA breach rate
 
+## OpenTelemetry Tracing
+
+Alga exports distributed traces via OTLP/HTTP when tracing is enabled. Tracing activates when `ALGA_OTEL_ENABLED=true` or when an OTLP endpoint is configured.
+
+| Variable | Description |
+|----------|-------------|
+| `ALGA_OTEL_ENABLED` | Set to `true` to enable trace export |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP collector endpoint (a gRPC `:4317` endpoint is rewritten to `:4318` for HTTP export) |
+| `ALGA_OTEL_SAMPLE_RATIO` | Sampling ratio for the ParentBased(TraceIDRatioBased) sampler (0.0–1.0) |
+
+### Cross-Broker Trace Propagation
+
+Trace context propagates across the RabbitMQ broker boundary using W3C `traceparent`/`tracestate` headers injected into AMQP message headers (`rabbitmq/trace_carrier.go`). This means a trace started at the webhook or API layer continues through correlation, scheduling, and investigation workers as a single distributed trace.
+
+## Request ID Correlation
+
+Every HTTP request passes through a request ID middleware that:
+- Reads an incoming `X-Request-ID` header (or generates one if absent)
+- Echoes it back in the response `X-Request-ID` header
+- Attaches it to the structured logger context so all log lines for that request share the same ID
+
+Use the request ID to correlate client-side errors with backend log entries.
+
 ## Logging
 
 ### Configuration
 
 ```sh
-LOG_LEVEL=info    # debug, info, warn, error
-LOG_FILE=/var/log/alga/app.log  # Optional file output
+LOG_LEVEL=info                      # debug, info, warn, error, fatal
+LOG_FORMAT=json                     # text (default) or json
+LOG_FILE=/var/log/alga/app.log      # Optional file output
 ```
+
+The Docker Compose deployment sets `LOG_FORMAT=json` for structured log ingestion.
 
 ### Log Levels
 
@@ -179,6 +209,8 @@ docker compose logs -f backend
 # Direct
 LOG_LEVEL=debug ./alga
 ```
+
+The log level can also be changed at runtime without a restart via the [System Configuration API](/configuration/system-config) (`PUT /api/v1/system/config` with `log_level`).
 
 ## Alerting on Alga Itself
 

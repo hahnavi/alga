@@ -22,9 +22,9 @@ docker compose up -d
 
 | Service | Image | Port | Purpose |
 |---------|-------|------|---------|
-| `postgres` | postgres:17-alpine | 5432 | PostgreSQL database |
-| `valkey` | valkey/valkey:8.1-alpine | 6379 | Sessions, caching, leader election |
-| `rabbitmq` | rabbitmq:4.2.4-management-alpine | 5672, 15672 | Async message queue |
+| `postgres` | postgres:18-alpine | 5432 | PostgreSQL database |
+| `valkey` | valkey/valkey:9.1-alpine | 6379 | Sessions, caching, leader election |
+| `rabbitmq` | rabbitmq:4.3.3-management-alpine | 5672, 15672 | Async message queue |
 | `backend` | Built locally | 8080 | Go API server |
 | `frontend` | Built locally | 3000 | Vue web UI (nginx) |
 
@@ -43,9 +43,9 @@ Open `http://localhost:3000` and complete the setup wizard to create the initial
 
 - **Go** 1.26+
 - **Node.js** 22+ with **pnpm** 10
-- **PostgreSQL** 17
-- **Valkey** 8.1+ (or Redis 7+)
-- **RabbitMQ** 4.2+
+- **PostgreSQL** 18
+- **Valkey** 9+
+- **RabbitMQ** 4.3+
 
 ### Steps
 

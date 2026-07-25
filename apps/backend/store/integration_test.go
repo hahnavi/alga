@@ -45,7 +45,7 @@ func TestMain(m *testing.M) {
 	dsn := os.Getenv("ALGA_TEST_PG_DSN")
 	if dsn == "" {
 		c, err := tcpostgres.Run(ctx,
-			"postgres:17-alpine",
+			"postgres:18-alpine",
 			tcpostgres.WithDatabase("alga_test"),
 			tcpostgres.WithUsername("test"),
 			tcpostgres.WithPassword("test"),

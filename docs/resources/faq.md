@@ -381,7 +381,7 @@ curl -X POST http://localhost:8080/api/v1/agent/messages \
 
 ### What database does Alga use?
 
-**PostgreSQL 15+** is required.
+**PostgreSQL 18** is required.
 
 - Used for all persistent data (alerts, incidents, users, etc.)
 - Schema managed via Ent ORM migrations

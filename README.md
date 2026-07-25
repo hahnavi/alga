@@ -113,7 +113,7 @@ flowchart LR
 | --- | --- |
 | Backend | Go 1.26, method-based `net/http` routing, Ent ORM, RabbitMQ, Valkey |
 | Frontend | Vue 3.5 + TypeScript, Vite, Pinia, Tailwind CSS v4, TipTap, Chart.js |
-| Database | PostgreSQL 17 with pgvector |
+| Database | PostgreSQL 18 with pgvector |
 | Infra | Docker Compose, Caddy (HTTPS), Helm chart, Moonrepo build orchestration |
 
 ## Integrations

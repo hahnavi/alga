@@ -18,9 +18,9 @@ docker compose up -d
 
 | Service | Image | Port | Description |
 |---------|-------|------|-------------|
-| `postgres` | postgres:17-alpine | 5432 | PostgreSQL database |
-| `valkey` | valkey:8.1-alpine | — | In-memory store (internal only) |
-| `rabbitmq` | rabbitmq:4.2.4-management-alpine | 5672, 15672 | Message queue |
+| `postgres` | postgres:18-alpine | 5432 | PostgreSQL database |
+| `valkey` | valkey/valkey:9.1-alpine | — | In-memory store (internal only) |
+| `rabbitmq` | rabbitmq:4.3.3-management-alpine | 5672, 15672 | Message queue |
 | `backend` | Built locally | 8080 | Go API server |
 | `frontend` | Built locally | 3000 | Vue web UI (nginx) |
 

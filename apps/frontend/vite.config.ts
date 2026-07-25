@@ -24,11 +24,11 @@ export default defineConfig(({ mode }) => {
       // the policy comes exclusively from the nginx response header so it can
       // be adjusted per deployment (see security-headers.conf.template and
       // the Helm chart). The dev server has no such header, so inject a
-      // dev-only meta CSP here. It mirrors security-headers.dev.conf:
-      // identical to the
-      // production policy except script-src gains 'unsafe-eval', which Vite
-      // needs for HMR and source maps. Gating on apply: "serve" guarantees
-      // the tag never appears in ANY build output, including staging.
+      // dev-only meta CSP here. It covers meta-supported CSP directives only
+      // (script-src gains 'unsafe-eval' for Vite HMR/source maps); directives
+      // not supported via <meta> tags (e.g. frame-ancestors) remain enforced
+      // via the dev server's response header instead. Gating on apply: "serve"
+      // guarantees the tag never appears in ANY build output, including staging.
       {
         name: "alga-csp-dev",
         apply: "serve",

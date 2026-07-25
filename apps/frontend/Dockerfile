@@ -41,6 +41,7 @@ COPY apps/frontend/hsts-map.conf /etc/nginx/conf.d/hsts-map.conf
 # strict. Space-separated CSP source expressions, empty means "no additions":
 ENV ALGA_CSP_SCRIPT_SRC_EXTRA=""
 ENV ALGA_CSP_CONNECT_SRC_EXTRA=""
+ENV NGINX_ENVSUBST_FILTER='^(ALGA_CSP_SCRIPT_SRC_EXTRA|ALGA_CSP_CONNECT_SRC_EXTRA)$'
 ENV NGINX_ENVSUBST_OUTPUT_DIR=/etc/nginx/snippets
 COPY apps/frontend/security-headers.conf.template /etc/nginx/templates/security-headers.conf.template
 RUN mkdir -p /etc/nginx/snippets && chown nginx:nginx /etc/nginx/snippets

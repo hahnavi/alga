@@ -1,11 +1,9 @@
 package alga
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -18,9 +16,9 @@ import (
 // --- REST: idempotency ---
 
 // TestIdempotencyKeyAutoInjected verifies the SDK stamps an Idempotency-Key
-// header on every state-changing request even when the caller doesn't supply
-// one. Without this, a retry of a transient 503 would double-fire the
-// mutation.
+// header on POST /api/v1/agent/messages even when the caller doesn't supply
+// one. That is the only endpoint where the backend replays cached responses,
+// so it is the only place auto-keys (and therefore retries) are safe.
 func TestIdempotencyKeyAutoInjected(t *testing.T) {
 	var gotKey string
 	var seenPath string
@@ -33,7 +31,7 @@ func TestIdempotencyKeyAutoInjected(t *testing.T) {
 	defer srv.Close()
 
 	c := NewAlgaClient(srv.URL, "tok", WithMaxRESTRetries(0))
-	_, _ = c.SendCommand(context.Background(), "investigation_x", ResolveAlert("fp"))
+	_, _ = c.SendCommand(context.Background(), "alert_1", ResolveAlert("fp"))
 
 	if !strings.HasPrefix(gotKey, "alga-") {
 		t.Errorf("Idempotency-Key = %q, want prefix alga-", gotKey)
@@ -55,7 +53,7 @@ func TestIdempotencyKeyCallerSupplied(t *testing.T) {
 	defer srv.Close()
 
 	c := NewAlgaClient(srv.URL, "tok", WithMaxRESTRetries(0))
-	_, _ = c.SendCommandWithKey(context.Background(), "chat", ResolveAlert("fp"), "my-outbox-key-1")
+	_, _ = c.SendCommandWithKey(context.Background(), "alert_1", ResolveAlert("fp"), "my-outbox-key-1")
 
 	if gotKey != "my-outbox-key-1" {
 		t.Errorf("Idempotency-Key = %q, want my-outbox-key-1", gotKey)
@@ -69,7 +67,7 @@ func TestIdempotencyKeyNotInjectedOnGET(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotKey = r.Header.Get("Idempotency-Key")
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"alerts":[]}`))
+		_, _ = w.Write([]byte(`{"data":[]}`))
 	}))
 	defer srv.Close()
 
@@ -82,10 +80,31 @@ func TestIdempotencyKeyNotInjectedOnGET(t *testing.T) {
 	}
 }
 
+// TestIdempotencyKeyNotInjectedOnOtherMutations verifies mutations outside
+// /api/v1/agent/messages never get an auto-key — the backend has no replay
+// cache there, so a key would be misleading.
+func TestIdempotencyKeyNotInjectedOnOtherMutations(t *testing.T) {
+	var gotKey string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotKey = r.Header.Get("Idempotency-Key")
+		w.WriteHeader(http.StatusOK)
+		_, _ = io.Copy(io.Discard, r.Body)
+	}))
+	defer srv.Close()
+
+	c := NewAlgaClient(srv.URL, "tok", WithMaxRESTRetries(3))
+	if err := c.AddIncidentTimeline(context.Background(), 7, "note", "update"); err != nil {
+		t.Fatal(err)
+	}
+	if gotKey != "" {
+		t.Errorf("Idempotency-Key on non-message mutation = %q, want empty", gotKey)
+	}
+}
+
 // --- REST: retries ---
 
-// TestRESTRetriesTransient verifies the SDK retries 503 and 429 responses
-// when MaxRESTRetries > 0.
+// TestRESTRetriesTransient verifies the SDK retries 503 and 429 responses on
+// GETs when MaxRESTRetries > 0.
 func TestRESTRetriesTransient(t *testing.T) {
 	var calls int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -95,7 +114,7 @@ func TestRESTRetriesTransient(t *testing.T) {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"alerts":[]}`))
+		_, _ = w.Write([]byte(`{"data":[]}`))
 	}))
 	defer srv.Close()
 
@@ -106,6 +125,59 @@ func TestRESTRetriesTransient(t *testing.T) {
 	}
 	if got := atomic.LoadInt32(&calls); got != 3 {
 		t.Errorf("server was hit %d times, want 3", got)
+	}
+}
+
+// TestMessagesMutationRetriedWithKey verifies POST /messages is retried on
+// transient failures because the auto-injected key makes replays safe.
+func TestMessagesMutationRetriedWithKey(t *testing.T) {
+	var calls int32
+	keys := map[string]int{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := atomic.AddInt32(&calls, 1)
+		keys[r.Header.Get("Idempotency-Key")]++
+		if n == 1 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":{"status":"ok","message_id":"m1"}}`))
+	}))
+	defer srv.Close()
+
+	c := NewAlgaClient(srv.URL, "tok", WithMaxRESTRetries(2))
+	resp, err := c.SendMessage(context.Background(), "alert_1", "hi", nil)
+	if err != nil {
+		t.Fatalf("expected success after retry, got %v", err)
+	}
+	if resp.MessageID != "m1" {
+		t.Errorf("MessageID = %q, want m1", resp.MessageID)
+	}
+	if got := atomic.LoadInt32(&calls); got != 2 {
+		t.Errorf("server was hit %d times, want 2", got)
+	}
+	if len(keys) != 1 {
+		t.Errorf("retries used %d distinct idempotency keys, want 1: %v", len(keys), keys)
+	}
+}
+
+// TestNonReplaySafeMutationNotRetried verifies mutations without a replay
+// cache are executed exactly once even when retries are enabled.
+func TestNonReplaySafeMutationNotRetried(t *testing.T) {
+	var calls int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&calls, 1)
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer srv.Close()
+
+	c := NewAlgaClient(srv.URL, "tok", WithMaxRESTRetries(5))
+	err := c.AddIncidentTimeline(context.Background(), 7, "note", "update")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if got := atomic.LoadInt32(&calls); got != 1 {
+		t.Errorf("server was hit %d times, want 1 (mutation must not be re-fired)", got)
 	}
 }
 
@@ -164,7 +236,7 @@ func TestRetryAfterHeaderHonored(t *testing.T) {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"alerts":[]}`))
+		_, _ = w.Write([]byte(`{"data":[]}`))
 	}))
 	defer srv.Close()
 
@@ -178,32 +250,90 @@ func TestRetryAfterHeaderHonored(t *testing.T) {
 	}
 }
 
-// --- REST: list normalization at call sites ---
+// --- REST: envelope decoding at call sites ---
 
-func TestListAlertsReturnsParsedBody(t *testing.T) {
+func TestListAlertsDecodesEnvelope(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"items":[{"fingerprint":"fp"}],"total":1}`))
+		_, _ = w.Write([]byte(`{"data":[{"fingerprint":"fp","status":"active"}]}`))
 	}))
 	defer srv.Close()
 
 	c := NewAlgaClient(srv.URL, "tok", WithMaxRESTRetries(0))
-	resp, err := c.ListAlerts(context.Background(), map[string]string{"status": "active"})
+	alerts, err := c.ListAlerts(context.Background(), map[string]string{"status": "active"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	all := resp.All()
-	if len(all) != 1 || all[0].Fingerprint != "fp" {
-		t.Errorf("All() = %+v", all)
+	if len(alerts) != 1 || alerts[0].Fingerprint != "fp" {
+		t.Errorf("alerts = %+v", alerts)
+	}
+}
+
+func TestListIncidentTasksDecodesEnvelope(t *testing.T) {
+	var seenPath string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		seenPath = r.URL.Path
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":[{"task_id":"t1","incident_number":42,"kind":"investigate","goal":"g","status":"pending"}]}`))
+	}))
+	defer srv.Close()
+
+	c := NewAlgaClient(srv.URL, "tok", WithMaxRESTRetries(0))
+	tasks, err := c.ListIncidentTasks(context.Background(), 42, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if seenPath != "/api/v1/agent/incidents/42/tasks" {
+		t.Errorf("path = %q", seenPath)
+	}
+	if len(tasks) != 1 || tasks[0].TaskID != "t1" || tasks[0].IncidentNumber != 42 {
+		t.Errorf("tasks = %+v", tasks)
+	}
+}
+
+func TestGetIncidentDecodesContext(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":{"incident":{"id":"i1","incident_number":7,"title":"boom","status":"active","severity":"sev1","priority":"p1","created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:00:00Z"},"roles":[{"role_type":"commander","assignee_type":"agent","agent_token_id":"tok1","status":"active"}]}}`))
+	}))
+	defer srv.Close()
+
+	c := NewAlgaClient(srv.URL, "tok", WithMaxRESTRetries(0))
+	inc, err := c.GetIncident(context.Background(), 7)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if inc.Incident.IncidentNumber != 7 || inc.Incident.Title != "boom" {
+		t.Errorf("incident = %+v", inc.Incident)
+	}
+	if len(inc.Roles) != 1 || inc.Roles[0].RoleType != "commander" {
+		t.Errorf("roles = %+v", inc.Roles)
+	}
+}
+
+func TestListKnowledgePaginatedEnvelope(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":{"items":[{"id":"k1","kind":"runbook","title":"t","body_markdown":"b","author_type":"agent"}],"total":1},"meta":{"total":1}}`))
+	}))
+	defer srv.Close()
+
+	c := NewAlgaClient(srv.URL, "tok", WithMaxRESTRetries(0))
+	resp, err := c.ListKnowledge(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resp.Items) != 1 || resp.Items[0].ID != "k1" || resp.Total != 1 {
+		t.Errorf("resp = %+v", resp)
 	}
 }
 
 // --- SSE: parsing ---
 
 // TestSSEDispatchMessage verifies event/data parsing and that the OnMessage
-// callback fires with the right payload.
+// callback fires with the right payload including the trigger field.
 func TestSSEDispatchMessage(t *testing.T) {
-	payload := "event: message\ndata: {\"type\":\"message\",\"chat_id\":\"investigation_1\",\"text\":\"hi\",\"message_id\":\"m1\"}\n\n"
+	payload := "event: message\ndata: {\"type\":\"message\",\"chat_id\":\"alert_1\",\"text\":\"hi\",\"message_id\":\"m1\",\"trigger\":\"dispatch\"}\n\n"
 	srv := newSSEServer(t, payload, http.StatusOK)
 
 	got := make(chan MessageEvent, 1)
@@ -217,7 +347,7 @@ func TestSSEDispatchMessage(t *testing.T) {
 
 	select {
 	case ev := <-got:
-		if ev.ChatID != "investigation_1" || ev.Text != "hi" {
+		if ev.ChatID != "alert_1" || ev.Text != "hi" || ev.Trigger != "dispatch" {
 			t.Errorf("got %+v", ev)
 		}
 	case <-time.After(2 * time.Second):
@@ -225,10 +355,10 @@ func TestSSEDispatchMessage(t *testing.T) {
 	}
 }
 
-// TestSSEDispatchCoordinationTask verifies the new coordination_task_dispatched
+// TestSSEDispatchCoordinationTask verifies the coordination_task_dispatched
 // event is decoded and routed.
 func TestSSEDispatchCoordinationTask(t *testing.T) {
-	payload := "event: coordination_task_dispatched\ndata: {\"type\":\"coordination_task_dispatched\",\"task_id\":\"t1\",\"incident_number\":42,\"kind\":\"investigate\",\"goal\":\"find rc\",\"assignee_role\":\"responder\"}\n\n"
+	payload := "event: coordination_task_dispatched\ndata: {\"type\":\"coordination_task_dispatched\",\"task_id\":\"t1\",\"incident_number\":42,\"kind\":\"investigate\",\"goal\":\"find rc\",\"assignee_role\":\"responder\",\"chat_id\":\"incident_coord_42\"}\n\n"
 	srv := newSSEServer(t, payload, http.StatusOK)
 
 	got := make(chan CoordinationTaskEvent, 1)
@@ -242,11 +372,66 @@ func TestSSEDispatchCoordinationTask(t *testing.T) {
 
 	select {
 	case ev := <-got:
-		if ev.TaskID != "t1" || ev.IncidentNumber != 42 || ev.Kind != TaskKindInvestigate || ev.AssigneeRole != "responder" {
+		if ev.TaskID != "t1" || ev.IncidentNumber != 42 || ev.Kind != TaskKindInvestigate || ev.ChatID != "incident_coord_42" {
 			t.Errorf("got %+v", ev)
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("OnCoordinationTask did not fire within 2s")
+	}
+}
+
+// TestSSEDispatchSummarizeIncident verifies the summarize_incident event.
+func TestSSEDispatchSummarizeIncident(t *testing.T) {
+	payload := "event: summarize_incident\ndata: {\"incident_number\":9,\"chat_id\":\"incident_coord_9\"}\n\n"
+	srv := newSSEServer(t, payload, http.StatusOK)
+
+	got := make(chan SummarizeIncidentEvent, 1)
+	c := NewAlgaClient(srv.URL, "tok", WithMaxRESTRetries(0))
+	c.OnSummarizeIncident = func(ev SummarizeIncidentEvent) { got <- ev }
+
+	if err := c.Connect(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer c.Disconnect()
+
+	select {
+	case ev := <-got:
+		if ev.IncidentNumber != 9 || ev.ChatID != "incident_coord_9" {
+			t.Errorf("got %+v", ev)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("OnSummarizeIncident did not fire within 2s")
+	}
+}
+
+// TestSSEUnknownEventRouted verifies unrecognized event types reach
+// OnUnknownEvent instead of being silently dropped.
+func TestSSEUnknownEventRouted(t *testing.T) {
+	payload := "event: brand_new_event\ndata: {\"x\":1}\n\n"
+	srv := newSSEServer(t, payload, http.StatusOK)
+
+	type unknown struct {
+		typ  string
+		data string
+	}
+	got := make(chan unknown, 1)
+	c := NewAlgaClient(srv.URL, "tok", WithMaxRESTRetries(0))
+	c.OnUnknownEvent = func(eventType string, data []byte) {
+		got <- unknown{typ: eventType, data: string(data)}
+	}
+
+	if err := c.Connect(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer c.Disconnect()
+
+	select {
+	case ev := <-got:
+		if ev.typ != "brand_new_event" || ev.data != `{"x":1}` {
+			t.Errorf("got %+v", ev)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("OnUnknownEvent did not fire within 2s")
 	}
 }
 
@@ -275,7 +460,7 @@ func TestSSEDedup(t *testing.T) {
 }
 
 // TestSSEAuthStopsLoop verifies auth errors terminate the reconnect loop and
-// surface on ErrChan.
+// surface on the client's Err() channel.
 func TestSSEAuthStopsLoop(t *testing.T) {
 	srv := newSSEServer(t, "", http.StatusUnauthorized)
 	c := NewAlgaClient(srv.URL, "stale-tok", WithMaxRESTRetries(0))
@@ -286,12 +471,12 @@ func TestSSEAuthStopsLoop(t *testing.T) {
 	defer c.Disconnect()
 
 	select {
-	case err := <-c.sse.ErrChan:
+	case err := <-c.Err():
 		if !IsAuthError(err) {
-			t.Errorf("expected auth error on ErrChan, got %T: %v", err, err)
+			t.Errorf("expected auth error on Err(), got %T: %v", err, err)
 		}
 	case <-time.After(2 * time.Second):
-		t.Fatal("auth error did not surface on ErrChan within 2s")
+		t.Fatal("auth error did not surface on Err() within 2s")
 	}
 }
 
@@ -332,6 +517,39 @@ func TestHeartbeatFired(t *testing.T) {
 	}
 }
 
+// TestHeartbeatAuthSurfacesOnErrChan verifies a revoked token detected by the
+// heartbeat loop is pushed to the client's Err() channel.
+func TestHeartbeatAuthSurfacesOnErrChan(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/v1/agent/heartbeat" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		// Keep the SSE stream open so only the heartbeat fails.
+		w.WriteHeader(http.StatusOK)
+		if f, ok := w.(http.Flusher); ok {
+			f.Flush()
+		}
+		time.Sleep(3 * time.Second)
+	}))
+	defer srv.Close()
+
+	c := NewAlgaClient(srv.URL, "revoked-tok", WithHeartbeatInterval(time.Second))
+	if err := c.Connect(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer c.Disconnect()
+
+	select {
+	case err := <-c.Err():
+		if !IsAuthError(err) {
+			t.Errorf("expected auth error, got %T: %v", err, err)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("heartbeat auth error did not surface on Err() within 3s")
+	}
+}
+
 // --- helpers ---
 
 // newSSEServer returns an httptest server that responds to /events with the
@@ -340,7 +558,7 @@ func TestHeartbeatFired(t *testing.T) {
 func newSSEServer(t *testing.T, payload string, status int) *httptest.Server {
 	t.Helper()
 	var hits int32
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/v1/agent/events" && r.URL.Path != "/api/v1/agent/heartbeat" {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -367,6 +585,8 @@ func newSSEServer(t *testing.T, payload string, status int) *httptest.Server {
 			f.Flush()
 		}
 	}))
+	t.Cleanup(srv.Close)
+	return srv
 }
 
 // TestCommandsRoundTrip ensures each builder round-trips through JSON without
@@ -388,7 +608,8 @@ func TestCommandsRoundTrip(t *testing.T) {
 		ResolveIncident(1, "r"),
 		BeginTriage(1),
 		PromoteIncident(1),
-		AssignIncidentRole(1, "commander", "u", "t", "scope"),
+		AssignIncidentRoleToUser(1, "commander", "u", "scope"),
+		AssignIncidentRoleToAgent(1, "commander", "t", ""),
 		PostHandoff(1, "m", "a", "u"),
 		PublishStatusUpdate(1, "m", "identified"),
 		SetIncidentResolutionDocs(1, "s", "i", "a", "r", "res"),
@@ -397,7 +618,6 @@ func TestCommandsRoundTrip(t *testing.T) {
 		ClaimTask("t1"),
 		CompleteTask("t1", map[string]any{"k": "v"}),
 		SynthesizeFindings(1, "s", nil),
-		PostInvestigationThreadMessage("m", false),
 	}
 	for i, op := range ops {
 		raw, err := json.Marshal(op)
@@ -429,8 +649,6 @@ func TestServerURLTrim(t *testing.T) {
 // TestContextCancelDuringCall verifies a canceled context aborts the request.
 func TestContextCancelDuringCall(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Block until the request is canceled; we expect the SDK to surface
-		// the cancellation rather than hang.
 		time.Sleep(200 * time.Millisecond)
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -454,34 +672,51 @@ func TestContextCancelDuringCall(t *testing.T) {
 	}
 }
 
-// TestSendCommandResultShape verifies the CommandResponse JSON envelope is
-// parsed correctly into the new struct fields (IncidentNumber, etc.).
+// TestSendCommandResultShape verifies the enveloped CommandResponse is parsed
+// into the struct fields (IncidentNumber etc.).
 func TestSendCommandResultShape(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ := io.ReadAll(r.Body)
-		var req struct {
-			Kind    string          `json:"kind"`
-			Command json.RawMessage `json:"command"`
-		}
-		_ = json.Unmarshal(body, &req)
+		_, _ = io.Copy(io.Discard, r.Body)
 		w.Header().Set("Content-Type", "application/json")
-		// Echo back a promotion outcome.
-		_ = json.NewEncoder(w).Encode(CommandResponse{
-			Ok:                      true,
-			Op:                      "promote_to_incident",
-			IncidentNumber:          42,
-			IncidentInvestigationID: "inv-99",
-		})
+		_, _ = w.Write([]byte(`{"data":{"ok":true,"op":"promote_to_incident","chat_id":"alert_1","incident_number":42}}`))
 	}))
 	defer srv.Close()
 
 	c := NewAlgaClient(srv.URL, "tok", WithMaxRESTRetries(0))
-	resp, err := c.SendCommand(context.Background(), "investigation_1", PromoteToIncident("t", "sev", "p"))
+	resp, err := c.SendCommand(context.Background(), "alert_1", PromoteToIncident("t", "sev", "p"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !resp.Ok || resp.IncidentNumber != 42 || resp.IncidentInvestigationID != "inv-99" {
+	if !resp.Ok || resp.IncidentNumber != 42 || resp.ChatID != "alert_1" {
 		t.Errorf("unexpected response: %+v", resp)
+	}
+}
+
+// TestSendCommandFailureIsAPIError verifies backend inv_tool failures (flat
+// 422 bodies) surface as *AlgaAPIError carrying the outcome JSON.
+func TestSendCommandFailureIsAPIError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.Copy(io.Discard, r.Body)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		_, _ = w.Write([]byte(`{"ok":false,"op":"resolve_alert","error":"alert already resolved"}`))
+	}))
+	defer srv.Close()
+
+	c := NewAlgaClient(srv.URL, "tok", WithMaxRESTRetries(0))
+	_, err := c.SendCommand(context.Background(), "alert_1", ResolveAlert("fp"))
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	var apiErr *AlgaAPIError
+	if !errors.As(err, &apiErr) {
+		t.Fatalf("expected *AlgaAPIError, got %T: %v", err, err)
+	}
+	if apiErr.StatusCode != http.StatusUnprocessableEntity {
+		t.Errorf("status = %d, want 422", apiErr.StatusCode)
+	}
+	if !strings.Contains(apiErr.Message, "alert already resolved") {
+		t.Errorf("message %q should carry the backend outcome", apiErr.Message)
 	}
 }
 
@@ -491,7 +726,7 @@ func TestUserAgentHeader(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		seenUA = r.Header.Get("User-Agent")
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"alerts":[]}`))
+		_, _ = w.Write([]byte(`{"data":[]}`))
 	}))
 	defer srv.Close()
 
@@ -518,19 +753,19 @@ func TestSendCommandSerializesChatID(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotBody, _ = io.ReadAll(r.Body)
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"ok":true,"op":"resolve_alert"}`))
+		_, _ = w.Write([]byte(`{"data":{"ok":true,"op":"resolve_alert"}}`))
 	}))
 	defer srv.Close()
 
 	c := NewAlgaClient(srv.URL, "tok", WithMaxRESTRetries(0))
-	_, err := c.SendCommand(context.Background(), "investigation_42", ResolveAlert("fp"))
+	_, err := c.SendCommand(context.Background(), "alert_42", ResolveAlert("fp"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	var got map[string]any
 	_ = json.Unmarshal(gotBody, &got)
-	if got["chat_id"] != "investigation_42" {
-		t.Errorf("chat_id = %v, want investigation_42", got["chat_id"])
+	if got["chat_id"] != "alert_42" {
+		t.Errorf("chat_id = %v, want alert_42", got["chat_id"])
 	}
 	if got["kind"] != "inv_tool" {
 		t.Errorf("kind = %v, want inv_tool", got["kind"])
@@ -544,30 +779,26 @@ func TestSendCommandSerializesChatID(t *testing.T) {
 	}
 }
 
-// TestListIncidentTasks verifies the coordination task listing parses.
-func TestListIncidentTasks(t *testing.T) {
+// TestSendIncidentSummarySerializesChatID verifies the incident_summary kind
+// targets the coordination thread derived from the incident number.
+func TestSendIncidentSummarySerializesChatID(t *testing.T) {
+	var gotBody []byte
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/v1/agent/incidents/42/tasks" {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"tasks":[{"task_id":"t1","kind":"investigate","goal":"g","status":"claimed"}],"total":1}`))
+		gotBody, _ = io.ReadAll(r.Body)
+		w.WriteHeader(http.StatusOK)
 	}))
 	defer srv.Close()
 
 	c := NewAlgaClient(srv.URL, "tok", WithMaxRESTRetries(0))
-	tasks, err := c.ListIncidentTasks(context.Background(), 42)
-	if err != nil {
+	if err := c.SendIncidentSummary(context.Background(), 42, "all clear"); err != nil {
 		t.Fatal(err)
 	}
-	if len(tasks) != 1 || tasks[0].TaskID != "t1" || tasks[0].Kind != TaskKindInvestigate {
-		t.Errorf("tasks = %+v", tasks)
+	var got map[string]any
+	_ = json.Unmarshal(gotBody, &got)
+	if got["chat_id"] != "incident_coord_42" {
+		t.Errorf("chat_id = %v, want incident_coord_42", got["chat_id"])
+	}
+	if got["kind"] != "incident_summary" {
+		t.Errorf("kind = %v, want incident_summary", got["kind"])
 	}
 }
-
-// ensure bytes is referenced even if future edits remove the only use.
-var _ = bytes.NewReader
-
-// suppress unused-import in case a future trim drops one of these.
-var _ = fmt.Sprintf

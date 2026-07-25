@@ -1,9 +1,9 @@
 package alga
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"time"
 )
@@ -67,17 +67,16 @@ func (e *AlgaConnectionError) Error() string {
 
 func (e *AlgaConnectionError) Unwrap() error { return e.Err }
 
-// IsRetryable reports whether a connection error is worth retrying. Timeouts
-// and transient network failures are retryable; everything else is treated as
-// retryable too because the underlying TCP/TLS layer rarely surfaces
-// permanent conditions through net.Error.
+// IsRetryable reports whether a connection error is worth retrying. Context
+// cancellation and deadline expiry are deliberate caller decisions and are
+// never retried; all other transport failures (DNS, TCP reset, TLS, timeout)
+// are treated as transient.
 func (e *AlgaConnectionError) IsRetryable() bool {
 	if e.Err == nil {
 		return false
 	}
-	var netErr net.Error
-	if errors.As(e.Err, &netErr) {
-		return netErr.Timeout()
+	if errors.Is(e.Err, context.Canceled) || errors.Is(e.Err, context.DeadlineExceeded) {
+		return false
 	}
 	return true
 }

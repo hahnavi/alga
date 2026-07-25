@@ -3,30 +3,35 @@ package alga
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"mime/multipart"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"time"
-
-	"crypto/rand"
-	"encoding/hex"
 )
-
-// MaxMediaUploadBytes bounds the size of a single UploadMedia call to avoid
-// unbounded memory growth inside the SDK process.
-const MaxMediaUploadBytes = 32 * 1024 * 1024
 
 // idempotencyKeyHeader is the backend header that turns a state-changing
 // request into a replay-safe one. Defined here rather than imported from the
 // backend so the SDK stays stdlib-only.
 const idempotencyKeyHeader = "Idempotency-Key"
+
+// agentMessagesPath is the only agent endpoint where the backend honors
+// Idempotency-Key (scope "agent:message"). Mutations elsewhere are not
+// replay-safe and are therefore never auto-retried by the SDK.
+const agentMessagesPath = "/api/v1/agent/messages"
+
+// maxResponseBytes bounds how much of a response body the SDK will read.
+const maxResponseBytes = 8 * 1024 * 1024
+
+// maxErrorMessageBytes bounds how much of an error response body is retained
+// in error values (and therefore in logs).
+const maxErrorMessageBytes = 4 * 1024
 
 type AlgaClient struct {
 	serverURL  string
@@ -36,6 +41,7 @@ type AlgaClient struct {
 	sse        *SSEClient
 	dedup      *MessageDedup
 	logger     Logger
+	errCh      chan error
 	// maxRESTRetries is the max number of retry attempts for transient REST
 	// failures. Zero disables retries.
 	maxRESTRetries int
@@ -45,14 +51,18 @@ type AlgaClient struct {
 	OnConnected           func(ConnectedEvent)
 	OnMessage             func(MessageEvent)
 	OnTyping              func(TypingEvent)
-	OnInvestigationCancel func(InvestigationSignalEvent)
-	OnInvestigationPause  func(InvestigationSignalEvent)
 	OnInvestigationResume func(InvestigationSignalEvent)
 	OnPeerFinding         func(PeerFindingEvent)
 	OnPeerAsk             func(PeerAskEvent)
 	OnPeerReply           func(PeerReplyEvent)
-	OnAgentPresence       func(AgentPresenceEvent)
 	OnCoordinationTask    func(CoordinationTaskEvent)
+	OnSummarizeIncident   func(SummarizeIncidentEvent)
+	OnAlertAutoResolved   func(AlertAutoResolvedEvent)
+	OnIncidentCommsStale  func(IncidentCommsStaleEvent)
+	// OnUnknownEvent receives any SSE event type the SDK has no dedicated
+	// handler for, so consumers can react to backend additions without an SDK
+	// upgrade.
+	OnUnknownEvent func(eventType string, data []byte)
 }
 
 // NewAlgaClient constructs an AlgaClient for the given server URL and bearer
@@ -71,6 +81,7 @@ func NewAlgaClient(serverURL, token string, opts ...Option) *AlgaClient {
 		userAgent:         o.UserAgent,
 		dedup:             o.Dedup,
 		logger:            o.Logger,
+		errCh:             make(chan error, 1),
 		maxRESTRetries:    o.MaxRESTRetries,
 		heartbeatInterval: o.HeartbeatInterval,
 	}
@@ -80,24 +91,31 @@ func NewAlgaClient(serverURL, token string, opts ...Option) *AlgaClient {
 // ServerURL returns the configured backend URL (without trailing slash).
 func (c *AlgaClient) ServerURL() string { return c.serverURL }
 
+// Err returns the channel that receives terminal errors from the SSE and
+// heartbeat loops (e.g. a revoked token). Once an error arrives the client has
+// stopped reconnecting; the caller must obtain a valid token and Connect again.
+func (c *AlgaClient) Err() <-chan error { return c.errCh }
+
 func (c *AlgaClient) Connect(ctx context.Context) error {
 	sseClient := NewSSEClient(c.serverURL, c.token, c.dedup,
 		WithSSELogger(c.logger),
 		WithSSEHTTPClient(c.httpClient),
 		WithSSEHeartbeat(c.heartbeatInterval),
 	)
+	sseClient.ErrChan = c.errCh
 
 	sseClient.OnConnected = c.OnConnected
 	sseClient.OnMessage = c.OnMessage
 	sseClient.OnTyping = c.OnTyping
-	sseClient.OnInvestigationCancel = c.OnInvestigationCancel
-	sseClient.OnInvestigationPause = c.OnInvestigationPause
 	sseClient.OnInvestigationResume = c.OnInvestigationResume
 	sseClient.OnPeerFinding = c.OnPeerFinding
 	sseClient.OnPeerAsk = c.OnPeerAsk
 	sseClient.OnPeerReply = c.OnPeerReply
-	sseClient.OnAgentPresence = c.OnAgentPresence
 	sseClient.OnCoordinationTask = c.OnCoordinationTask
+	sseClient.OnSummarizeIncident = c.OnSummarizeIncident
+	sseClient.OnAlertAutoResolved = c.OnAlertAutoResolved
+	sseClient.OnIncidentCommsStale = c.OnIncidentCommsStale
+	sseClient.OnUnknownEvent = c.OnUnknownEvent
 
 	c.sse = sseClient
 	return sseClient.Start(ctx)
@@ -115,23 +133,7 @@ func (c *AlgaClient) Disconnect() {
 
 // --- HTTP plumbing ---
 
-// requestOption mutates an outbound *http.Request (e.g. to add headers).
-type requestOption func(*http.Request)
-
-// withIdempotency sets the Idempotency-Key header. The backend caches the
-// response under this key for ~24h, so a retry that hits the same key
-// replays the original response rather than re-executing the mutation.
-// Pass an explicit key when the caller has a natural stable identifier
-// (e.g. an outbox message ID); otherwise omit and the SDK will derive one.
-func withIdempotency(key string) requestOption {
-	return func(req *http.Request) {
-		if key != "" {
-			req.Header.Set(idempotencyKeyHeader, key)
-		}
-	}
-}
-
-func (c *AlgaClient) doRequest(ctx context.Context, method, path string, body io.Reader, contentType string, reqOpts ...requestOption) (*http.Response, error) {
+func (c *AlgaClient) doRequest(ctx context.Context, method, path string, body io.Reader, contentType, idempotencyKey string) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, method, c.serverURL+path, body)
 	if err != nil {
 		return nil, err
@@ -141,18 +143,25 @@ func (c *AlgaClient) doRequest(ctx context.Context, method, path string, body io
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
 	}
-	for _, opt := range reqOpts {
-		if opt != nil {
-			opt(req)
-		}
+	if idempotencyKey != "" {
+		req.Header.Set(idempotencyKeyHeader, idempotencyKey)
 	}
 	return c.httpClient.Do(req)
 }
 
-// doJSON performs a JSON REST call with retries on transient errors. payload
-// is marshaled as the request body; result, if non-nil, is unmarshaled from
-// the response. reqOpts can carry an Idempotency-Key for retry-safe writes.
-func (c *AlgaClient) doJSON(ctx context.Context, method, path string, payload, result any, reqOpts ...requestOption) error {
+// doJSON performs a JSON REST call. GETs are retried on transient errors;
+// mutations are not (see doJSONIdem for the replay-safe variant).
+func (c *AlgaClient) doJSON(ctx context.Context, method, path string, payload, result any) error {
+	return c.doJSONIdem(ctx, method, path, payload, result, "")
+}
+
+// doJSONIdem is doJSON with an explicit Idempotency-Key. The backend honors
+// the key only on POST /api/v1/agent/messages; for that path a key is
+// auto-generated when the caller does not supply one, making retries
+// replay-safe. Mutations on any other path are performed exactly once — a
+// retry there could double-execute the mutation because the backend has no
+// replay cache for it.
+func (c *AlgaClient) doJSONIdem(ctx context.Context, method, path string, payload, result any, idempotencyKey string) error {
 	var bodyData []byte
 	if payload != nil {
 		var err error
@@ -162,15 +171,17 @@ func (c *AlgaClient) doJSON(ctx context.Context, method, path string, payload, r
 		}
 	}
 
-	// If the caller did not provide an Idempotency-Key for a mutating call,
-	// derive one from the request shape so retries are replay-safe. We only
-	// do this for state-changing methods; GETs are inherently idempotent.
-	if method != http.MethodGet && method != http.MethodHead && !hasIdempotencyHeader(reqOpts) {
-		reqOpts = append(reqOpts, withIdempotency(deriveIdempotencyKey(method, path, bodyData)))
+	mutating := method != http.MethodGet && method != http.MethodHead
+	if mutating && idempotencyKey == "" && path == agentMessagesPath {
+		idempotencyKey = newIdempotencyKey()
+	}
+
+	attempts := c.maxRESTRetries
+	if mutating && idempotencyKey == "" {
+		attempts = 0
 	}
 
 	var lastErr error
-	attempts := c.maxRESTRetries
 	for attempt := 0; attempt <= attempts; attempt++ {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -184,7 +195,7 @@ func (c *AlgaClient) doJSON(ctx context.Context, method, path string, payload, r
 			contentType = "application/json"
 		}
 
-		resp, err := c.doRequest(ctx, method, path, body, contentType, reqOpts...)
+		resp, err := c.doRequest(ctx, method, path, body, contentType, idempotencyKey)
 		if err != nil {
 			wrapped := &AlgaConnectionError{Err: err}
 			lastErr = wrapped
@@ -199,7 +210,7 @@ func (c *AlgaClient) doJSON(ctx context.Context, method, path string, payload, r
 			continue
 		}
 
-		respBody, readErr := io.ReadAll(io.LimitReader(resp.Body, 32*1024*1024))
+		respBody, readErr := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes))
 		resp.Body.Close()
 		if readErr != nil {
 			wrapped := &AlgaConnectionError{Err: readErr}
@@ -215,13 +226,13 @@ func (c *AlgaClient) doJSON(ctx context.Context, method, path string, payload, r
 		}
 
 		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-			return &AlgaAuthError{StatusCode: resp.StatusCode, Message: string(respBody)}
+			return &AlgaAuthError{StatusCode: resp.StatusCode, Message: truncate(string(respBody), maxErrorMessageBytes)}
 		}
 
 		if resp.StatusCode >= 400 {
 			apiErr := &AlgaAPIError{
 				StatusCode: resp.StatusCode,
-				Message:    string(respBody),
+				Message:    truncate(string(respBody), maxErrorMessageBytes),
 				RetryAfter: parseRetryAfter(resp.Header),
 			}
 			if !apiErr.IsRetryable() || attempt == attempts {
@@ -237,7 +248,7 @@ func (c *AlgaClient) doJSON(ctx context.Context, method, path string, payload, r
 		}
 
 		if result != nil && len(respBody) > 0 {
-			if err := json.Unmarshal(respBody, result); err != nil {
+			if err := unmarshalData(respBody, result); err != nil {
 				return fmt.Errorf("decode response: %w", err)
 			}
 		}
@@ -247,37 +258,40 @@ func (c *AlgaClient) doJSON(ctx context.Context, method, path string, payload, r
 	return lastErr
 }
 
-// hasIdempotencyHeader reports whether any of reqOpts already sets the
-// Idempotency-Key header, so the SDK doesn't override a caller-provided key.
-func hasIdempotencyHeader(reqOpts []requestOption) bool {
-	dummy, _ := http.NewRequest(http.MethodPost, "http://x", nil)
-	for _, opt := range reqOpts {
-		if opt == nil {
-			continue
-		}
-		opt(dummy)
-		if dummy.Header.Get(idempotencyKeyHeader) != "" {
-			return true
-		}
+// unmarshalData decodes a backend response into out, unwrapping the standard
+// {"data": ...} success envelope when present. Some endpoints (message
+// edit/delete acks, memory and peer-ask creation, secrets) write flat bodies;
+// those fall through to a plain decode.
+func unmarshalData(body []byte, out any) error {
+	var env struct {
+		Data json.RawMessage `json:"data"`
 	}
-	return false
+	if err := json.Unmarshal(body, &env); err == nil && len(env.Data) > 0 && !bytes.Equal(env.Data, []byte("null")) {
+		return json.Unmarshal(env.Data, out)
+	}
+	return json.Unmarshal(body, out)
 }
 
-// deriveIdempotencyKey generates a stable-per-payload key so a retry of the
-// same call hits the cached response. We use crypto/rand rather than a hash
-// of the body because the body may carry timestamps that differ across
-// retries (e.g. in case of a partial replay) and we still want the dedupe to
-// be keyed to the logical request, not its byte-identical form. Per-attempt
-// uniqueness is good enough: the backend replays by exact header match.
-func deriveIdempotencyKey(method, path string, body []byte) string {
+// newIdempotencyKey generates a random key. It is computed once per logical
+// call (before the retry loop), so every retry of that call replays the same
+// key and the backend serves the cached response instead of re-executing.
+func newIdempotencyKey() string {
 	var buf [16]byte
 	if _, err := rand.Read(buf[:]); err != nil {
-		// rand.Read on Linux CSPRNG only fails if /dev/urandom is unreadable,
-		// in which case we have bigger problems. Fall back to a time-based
-		// key so the call still proceeds without retry safety.
+		// rand.Read only fails if the OS CSPRNG is unreadable, in which case
+		// we have bigger problems. Fall back to a time-based key so the call
+		// still proceeds.
 		return fmt.Sprintf("alga-%d", Now().UnixNano())
 	}
 	return "alga-" + hex.EncodeToString(buf[:])
+}
+
+// truncate caps s at n bytes.
+func truncate(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n]
 }
 
 // sleep waits for d (or ctx cancellation). Returns false if ctx fired first.
@@ -295,35 +309,30 @@ func (c *AlgaClient) sleep(ctx context.Context, d time.Duration) bool {
 	}
 }
 
-// backoffFor returns exponential backoff for an attempt index, capped at 30s,
-// honoring server-supplied RetryAfter when present. Uses the Go 1.22+
-// auto-seeded crypto-grade rand only at the call site (here we use math/rand/v2
-// for jitter via the SDK's package-level helper).
+// backoffFor returns exponential backoff for an attempt index, capped at 30s
+// plus up to 20% additive jitter, honoring server-supplied RetryAfter when
+// present.
 func backoffFor(attempt int, retryAfter time.Duration) time.Duration {
 	if retryAfter > 0 {
-		if retryAfter > 10*time.Minute {
-			return 10 * time.Minute
-		}
-		return retryAfter
+		return min(retryAfter, 10*time.Minute)
 	}
 	base := time.Second * time.Duration(int64(1)<<attempt)
-	if base > 30*time.Second {
-		base = 30 * time.Second
-	}
-	// ±10% jitter.
+	base = min(base, 30*time.Second)
 	jitter := time.Duration(randInt64N(int64(float64(base) * 0.2)))
 	return base + jitter
 }
 
 // --- REST methods ---
 
-func (c *AlgaClient) ListAlerts(ctx context.Context, params map[string]string) (*AlertListResponse, error) {
+// ListAlerts returns alerts matching the given query params (status, severity,
+// search, limit, skip, sort).
+func (c *AlgaClient) ListAlerts(ctx context.Context, params map[string]string) ([]Alert, error) {
 	path := withQuery("/api/v1/agent/alerts", params)
-	var result AlertListResponse
+	var result []Alert
 	if err := c.doJSON(ctx, http.MethodGet, path, nil, &result); err != nil {
 		return nil, err
 	}
-	return &result, nil
+	return result, nil
 }
 
 func (c *AlgaClient) GetAlert(ctx context.Context, fingerprint string) (*Alert, error) {
@@ -342,51 +351,19 @@ func (c *AlgaClient) ReopenAlert(ctx context.Context, fingerprint string) error 
 	return c.doJSON(ctx, http.MethodPost, "/api/v1/agent/alerts/"+url.PathEscape(fingerprint)+"/reopen", nil, nil)
 }
 
-func (c *AlgaClient) ListInvestigations(ctx context.Context, params map[string]string) (*InvestigationListResponse, error) {
-	path := withQuery("/api/v1/agent/investigations", params)
-	var result InvestigationListResponse
+// ListIncidentTasks returns the coordination tasks for an incident. This is
+// the read side of dispatch_task / claim_task / complete_task.
+func (c *AlgaClient) ListIncidentTasks(ctx context.Context, incidentNumber int64, params map[string]string) ([]CoordinationTask, error) {
+	path := withQuery(fmt.Sprintf("/api/v1/agent/incidents/%d/tasks", incidentNumber), params)
+	var result []CoordinationTask
 	if err := c.doJSON(ctx, http.MethodGet, path, nil, &result); err != nil {
 		return nil, err
 	}
-	return &result, nil
+	return result, nil
 }
 
-func (c *AlgaClient) GetInvestigation(ctx context.Context, id string) (*Investigation, error) {
-	var result Investigation
-	if err := c.doJSON(ctx, http.MethodGet, "/api/v1/agent/investigations/"+url.PathEscape(id), nil, &result); err != nil {
-		return nil, err
-	}
-	return &result, nil
-}
-
-func (c *AlgaClient) PostUpdate(ctx context.Context, id, updateType, message string) (*Investigation, error) {
-	payload := map[string]string{
-		"type":    updateType,
-		"message": message,
-	}
-	var result Investigation
-	if err := c.doJSON(ctx, http.MethodPost, "/api/v1/agent/investigations/"+url.PathEscape(id)+"/updates", payload, &result); err != nil {
-		return nil, err
-	}
-	return &result, nil
-}
-
-// ListIncidentTasks returns the coordination tasks for an incident. This is
-// the read side of dispatch_task / claim_task / complete_task. The backend
-// exposes it as GET /api/v1/agent/incidents/{id}/tasks.
-func (c *AlgaClient) ListIncidentTasks(ctx context.Context, incidentNumber int64) ([]CoordinationTask, error) {
-	var result struct {
-		Tasks []CoordinationTask `json:"tasks"`
-		Total int                `json:"total"`
-	}
-	if err := c.doJSON(ctx, http.MethodGet, fmt.Sprintf("/api/v1/agent/incidents/%d/tasks", incidentNumber), nil, &result); err != nil {
-		return nil, err
-	}
-	return result.Tasks, nil
-}
-
-// SendMessage sends a text message to a chat. When idempotencyKey is non-empty
-// it is forwarded as the Idempotency-Key header so retries are replay-safe.
+// SendMessage sends a text message to a chat. An Idempotency-Key is
+// auto-generated so retries are replay-safe.
 func (c *AlgaClient) SendMessage(ctx context.Context, chatID, text string, mentions []string) (*SendMessageResponse, error) {
 	return c.SendMessageWithKey(ctx, chatID, text, mentions, "")
 }
@@ -401,7 +378,7 @@ func (c *AlgaClient) SendMessageWithKey(ctx context.Context, chatID, text string
 		"mentions": mentions,
 	}
 	var result SendMessageResponse
-	if err := c.doJSON(ctx, http.MethodPost, "/api/v1/agent/messages", payload, &result, withIdempotency(idempotencyKey)); err != nil {
+	if err := c.doJSONIdem(ctx, http.MethodPost, agentMessagesPath, payload, &result, idempotencyKey); err != nil {
 		return nil, err
 	}
 	return &result, nil
@@ -409,7 +386,8 @@ func (c *AlgaClient) SendMessageWithKey(ctx context.Context, chatID, text string
 
 // SendCommand sends a kind=inv_tool command. The SDK auto-injects an
 // Idempotency-Key so a retry of the same logical command is replayed from the
-// backend cache rather than re-executed.
+// backend cache rather than re-executed. Command failures surface as an
+// *AlgaAPIError (404/422/500) whose Message carries the backend outcome JSON.
 func (c *AlgaClient) SendCommand(ctx context.Context, chatID string, cmd InvestigationCommand) (*CommandResponse, error) {
 	return c.SendCommandWithKey(ctx, chatID, cmd, "")
 }
@@ -423,7 +401,7 @@ func (c *AlgaClient) SendCommandWithKey(ctx context.Context, chatID string, cmd 
 		"command": cmd,
 	}
 	var result CommandResponse
-	if err := c.doJSON(ctx, http.MethodPost, "/api/v1/agent/messages", payload, &result, withIdempotency(idempotencyKey)); err != nil {
+	if err := c.doJSONIdem(ctx, http.MethodPost, agentMessagesPath, payload, &result, idempotencyKey); err != nil {
 		return nil, err
 	}
 	return &result, nil
@@ -435,14 +413,25 @@ func (c *AlgaClient) EditMessage(ctx context.Context, messageID, chatID, text st
 		"kind":    "text",
 		"text":    text,
 	}
-	return c.doJSON(ctx, http.MethodPut, "/api/v1/agent/messages/"+url.PathEscape(messageID), payload, nil)
+	return c.doJSON(ctx, http.MethodPut, agentMessagesPath+"/"+url.PathEscape(messageID), payload, nil)
 }
 
 func (c *AlgaClient) DeleteMessage(ctx context.Context, messageID, chatID string) error {
 	payload := map[string]string{
 		"chat_id": chatID,
 	}
-	return c.doJSON(ctx, http.MethodDelete, "/api/v1/agent/messages/"+url.PathEscape(messageID), payload, nil)
+	return c.doJSON(ctx, http.MethodDelete, agentMessagesPath+"/"+url.PathEscape(messageID), payload, nil)
+}
+
+// SendDraft streams a partial ("draft") message into a chat. Repeated posts
+// with the same draftID replace the draft text until a final message is sent.
+func (c *AlgaClient) SendDraft(ctx context.Context, chatID, draftID, text string) error {
+	payload := map[string]string{
+		"chat_id":  chatID,
+		"draft_id": draftID,
+		"text":     text,
+	}
+	return c.doJSON(ctx, http.MethodPost, "/api/v1/agent/drafts", payload, nil)
 }
 
 func (c *AlgaClient) SendTyping(ctx context.Context, chatID string, active bool) error {
@@ -466,6 +455,16 @@ func (c *AlgaClient) ListKnowledge(ctx context.Context, params map[string]string
 	return &result, nil
 }
 
+func (c *AlgaClient) GetKnowledge(ctx context.Context, id string) (*KnowledgeNote, error) {
+	var result KnowledgeNote
+	if err := c.doJSON(ctx, http.MethodGet, "/api/v1/agent/knowledge/"+url.PathEscape(id), nil, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// CreateKnowledge creates a knowledge note. The backend requires
+// source_investigation_id and confidence.
 func (c *AlgaClient) CreateKnowledge(ctx context.Context, params map[string]any) (*KnowledgeNote, error) {
 	var result KnowledgeNote
 	if err := c.doJSON(ctx, http.MethodPost, "/api/v1/agent/knowledge", params, &result); err != nil {
@@ -541,41 +540,58 @@ func (c *AlgaClient) CancelPeerAsk(ctx context.Context, id string) error {
 	return c.doJSON(ctx, http.MethodPost, "/api/v1/agent/peer-ask/"+url.PathEscape(id)+"/cancel", nil, nil)
 }
 
-func (c *AlgaClient) GetIncident(ctx context.Context, id string) (*Incident, error) {
-	var result Incident
-	if err := c.doJSON(ctx, http.MethodGet, "/api/v1/agent/incidents/"+url.PathEscape(id), nil, &result); err != nil {
+// GetIncident returns the incident record plus its role assignments.
+func (c *AlgaClient) GetIncident(ctx context.Context, incidentNumber int64) (*IncidentContext, error) {
+	var result IncidentContext
+	if err := c.doJSON(ctx, http.MethodGet, fmt.Sprintf("/api/v1/agent/incidents/%d", incidentNumber), nil, &result); err != nil {
 		return nil, err
 	}
 	return &result, nil
 }
 
-func (c *AlgaClient) AddIncidentTimeline(ctx context.Context, id, message, eventType string) error {
+// GetIncidentTimeline returns the incident timeline entries, newest ordering
+// as defined by the backend.
+func (c *AlgaClient) GetIncidentTimeline(ctx context.Context, incidentNumber int64) ([]map[string]any, error) {
+	var result []map[string]any
+	if err := c.doJSON(ctx, http.MethodGet, fmt.Sprintf("/api/v1/agent/incidents/%d/timeline", incidentNumber), nil, &result); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (c *AlgaClient) AddIncidentTimeline(ctx context.Context, incidentNumber int64, message, eventType string) error {
 	payload := map[string]string{
 		"message":    message,
 		"event_type": eventType,
 	}
-	return c.doJSON(ctx, http.MethodPost, "/api/v1/agent/incidents/"+url.PathEscape(id)+"/timeline", payload, nil)
+	return c.doJSON(ctx, http.MethodPost, fmt.Sprintf("/api/v1/agent/incidents/%d/timeline", incidentNumber), payload, nil)
 }
 
-func (c *AlgaClient) ListServices(ctx context.Context) ([]Service, error) {
-	var result []Service
-	if err := c.doJSON(ctx, http.MethodGet, "/api/v1/agent/services", nil, &result); err != nil {
+// UpdateIncidentSummary patches the incident summary. The agent must be
+// assigned to an investigation within the incident.
+func (c *AlgaClient) UpdateIncidentSummary(ctx context.Context, incidentNumber int64, summary string) (*Incident, error) {
+	payload := map[string]string{"summary": summary}
+	var result Incident
+	if err := c.doJSON(ctx, http.MethodPatch, fmt.Sprintf("/api/v1/agent/incidents/%d", incidentNumber), payload, &result); err != nil {
 		return nil, err
 	}
-	return result, nil
+	return &result, nil
 }
 
-func (c *AlgaClient) WhoIsOnCall(ctx context.Context) (map[string]any, error) {
-	var result map[string]any
+func (c *AlgaClient) ListServices(ctx context.Context, params map[string]string) (*ServiceListResponse, error) {
+	path := withQuery("/api/v1/agent/services", params)
+	var result ServiceListResponse
+	if err := c.doJSON(ctx, http.MethodGet, path, nil, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// WhoIsOnCall returns the users currently on call across schedules. Requires
+// the command capability.
+func (c *AlgaClient) WhoIsOnCall(ctx context.Context) ([]OnCallEntry, error) {
+	var result []OnCallEntry
 	if err := c.doJSON(ctx, http.MethodGet, "/api/v1/agent/on-call/current", nil, &result); err != nil {
-		return nil, err
-	}
-	return result, nil
-}
-
-func (c *AlgaClient) GetCapabilities(ctx context.Context) ([]Capability, error) {
-	var result []Capability
-	if err := c.doJSON(ctx, http.MethodGet, "/api/v1/agent/capabilities", nil, &result); err != nil {
 		return nil, err
 	}
 	return result, nil
@@ -590,71 +606,25 @@ func (c *AlgaClient) GetPlaybooks(ctx context.Context, alertFingerprint string) 
 	return result, nil
 }
 
-func (c *AlgaClient) SendIncidentSummary(ctx context.Context, incidentID, text string) error {
+// GetSecret fetches an allow-listed shared secret value. Not-found and
+// not-allow-listed both surface as 404 by backend design.
+func (c *AlgaClient) GetSecret(ctx context.Context, secretID string) (*SecretValue, error) {
+	var result SecretValue
+	if err := c.doJSON(ctx, http.MethodGet, "/api/v1/agent/secrets/"+url.PathEscape(secretID), nil, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// SendIncidentSummary posts a kind=incident_summary message into the incident
+// coordination thread. Requires the communicate capability.
+func (c *AlgaClient) SendIncidentSummary(ctx context.Context, incidentNumber int64, text string) error {
 	payload := map[string]string{
-		"chat_id": "incident_coord_" + incidentID,
+		"chat_id": fmt.Sprintf("incident_coord_%d", incidentNumber),
 		"kind":    "incident_summary",
 		"text":    text,
 	}
-	return c.doJSON(ctx, http.MethodPost, "/api/v1/agent/messages", payload, nil)
-}
-
-// UploadMedia uploads a file via multipart form. The file size is bounded by
-// MaxMediaUploadBytes to avoid unbounded memory growth inside the SDK.
-func (c *AlgaClient) UploadMedia(ctx context.Context, filePath string) error {
-	fi, err := os.Stat(filePath)
-	if err != nil {
-		return err
-	}
-	if fi.Size() > MaxMediaUploadBytes {
-		return fmt.Errorf("upload of %d bytes exceeds the %d byte limit", fi.Size(), MaxMediaUploadBytes)
-	}
-
-	f, err := os.Open(filePath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	var buf bytes.Buffer
-	w := multipart.NewWriter(&buf)
-	part, err := w.CreateFormFile("file", filePath)
-	if err != nil {
-		return err
-	}
-	if _, err := io.Copy(part, io.LimitReader(f, MaxMediaUploadBytes+1)); err != nil {
-		return err
-	}
-	w.Close()
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.serverURL+"/api/v1/agent/media", &buf)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Authorization", "Bearer "+c.token)
-	req.Header.Set("User-Agent", c.userAgent)
-	req.Header.Set("Content-Type", w.FormDataContentType())
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return &AlgaConnectionError{Err: err}
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, 32*1024*1024))
-		return &AlgaAuthError{StatusCode: resp.StatusCode, Message: string(body)}
-	}
-	if resp.StatusCode >= 400 {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, 32*1024*1024))
-		return &AlgaAPIError{
-			StatusCode: resp.StatusCode,
-			Message:    string(body),
-			RetryAfter: parseRetryAfter(resp.Header),
-		}
-	}
-
-	return nil
+	return c.doJSON(ctx, http.MethodPost, agentMessagesPath, payload, nil)
 }
 
 // --- helpers ---
@@ -686,17 +656,11 @@ func parseRetryAfter(h http.Header) time.Duration {
 		if secs < 0 {
 			return 0
 		}
-		if secs > 600 {
-			secs = 600
-		}
-		return time.Duration(secs) * time.Second
+		return min(time.Duration(secs)*time.Second, 10*time.Minute)
 	}
 	if t, err := http.ParseTime(raw); err == nil {
 		if d := time.Until(t); d > 0 {
-			if d > 10*time.Minute {
-				return 10 * time.Minute
-			}
-			return d
+			return min(d, 10*time.Minute)
 		}
 	}
 	return 0

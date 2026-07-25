@@ -26,6 +26,10 @@ func main() {
 
 	client.OnMessage = func(evt alga.MessageEvent) {
 		fmt.Printf("Message in %s from %s: %s\n", evt.ChatID, evt.SenderName, evt.Text)
+		if evt.Trigger == "observe" {
+			// Context-only delivery; do not reply.
+			return
+		}
 
 		resp, err := client.SendMessage(context.Background(), evt.ChatID, "Acknowledged, investigating...", nil)
 		if err != nil {
@@ -45,8 +49,11 @@ func main() {
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-	<-sigCh
-
-	fmt.Println("Shutting down...")
+	select {
+	case <-sigCh:
+		fmt.Println("Shutting down...")
+	case err := <-client.Err():
+		fmt.Fprintf(os.Stderr, "Terminal error (token revoked?): %v\n", err)
+	}
 	client.Disconnect()
 }

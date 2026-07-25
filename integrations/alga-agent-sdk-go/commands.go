@@ -8,10 +8,11 @@ import "time"
 // the backend supports. Fields are omitempty to keep payloads small.
 type InvestigationCommand struct {
 	Op string `json:"op"`
-	// ChatID is the agent chat thread identifier (e.g.
-	// "investigation_<id>", "alert_<number>", "incident_coord_<id>"). Most
-	// ops require this to be set so the backend can authorize the caller
-	// against the investigation the chat represents.
+	// ChatID is the agent chat thread identifier. The backend grammar is
+	// "alert_<number>" for alert investigations, "incident_coord_<number>"
+	// for incident coordination threads, and "incident_inv_<number>" for
+	// incident-scoped investigations. Most ops require this to be set so the
+	// backend can authorize the caller against the underlying investigation.
 	ChatID string `json:"chat_id,omitempty"`
 
 	// --- Alert-scoped ---
@@ -111,13 +112,6 @@ func PromoteToIncident(title, severity, priority string) InvestigationCommand {
 	return InvestigationCommand{Op: "promote_to_incident", Title: title, Severity: severity, Priority: priority}
 }
 
-// PostInvestigationThreadMessage posts a chat message that is logically
-// attached to the investigation but routed to a different chat (e.g. an
-// incident coordination thread cross-posting back into the investigation).
-func PostInvestigationThreadMessage(message string, internal bool) InvestigationCommand {
-	return InvestigationCommand{Op: "post_investigation_thread_message", Message: message, Internal: internal}
-}
-
 // --- Incident tools ---
 
 func SetIncidentPriority(incidentNumber int64, priority string) InvestigationCommand {
@@ -151,15 +145,36 @@ func PromoteIncident(incidentNumber int64) InvestigationCommand {
 	return InvestigationCommand{Op: "promote_incident", IncidentNumber: incidentNumber}
 }
 
-func AssignIncidentRole(incidentNumber int64, roleType, userID, agentTokenID, scopeDescription string) InvestigationCommand {
-	return InvestigationCommand{
-		Op:               "assign_incident_role",
-		IncidentNumber:   incidentNumber,
-		RoleType:         roleType,
-		UserID:           userID,
-		AgentTokenID:     agentTokenID,
-		ScopeDescription: &scopeDescription,
+// AssignIncidentRoleToUser assigns an incident role (e.g. "commander",
+// "communicator") to a human user. The backend requires exactly one assignee,
+// so this sets user_id only. Pass scopeDescription "" to omit it.
+func AssignIncidentRoleToUser(incidentNumber int64, roleType, userID, scopeDescription string) InvestigationCommand {
+	cmd := InvestigationCommand{
+		Op:             "assign_incident_role",
+		IncidentNumber: incidentNumber,
+		RoleType:       roleType,
+		UserID:         userID,
 	}
+	if scopeDescription != "" {
+		cmd.ScopeDescription = &scopeDescription
+	}
+	return cmd
+}
+
+// AssignIncidentRoleToAgent assigns an incident role to an agent token. The
+// backend requires exactly one assignee, so this sets agent_token_id only.
+// Pass scopeDescription "" to omit it.
+func AssignIncidentRoleToAgent(incidentNumber int64, roleType, agentTokenID, scopeDescription string) InvestigationCommand {
+	cmd := InvestigationCommand{
+		Op:             "assign_incident_role",
+		IncidentNumber: incidentNumber,
+		RoleType:       roleType,
+		AgentTokenID:   agentTokenID,
+	}
+	if scopeDescription != "" {
+		cmd.ScopeDescription = &scopeDescription
+	}
+	return cmd
 }
 
 // --- Coordination / status tools ---

@@ -63,7 +63,7 @@ Run all of these before tagging. Stop and report if any fail.
    cd apps/alga-agent && CGO_ENABLED=0 go build -ldflags="-X main.version=test" -o /tmp/alga-agent . && rm /tmp/alga-agent
    ```
 5. **Agent tests pass** — `cd apps/alga-agent && go test ./...`.
-6. **Docker image builds from the repo root** (context must include `go.work` and `integrations/alga-agent-sdk-go/`):
+6. **Docker image builds from the repo root** (context must include `integrations/alga-agent-sdk-go/`; the image builds with `GOWORK=off`):
    ```bash
    docker build -f apps/alga-agent/Dockerfile --build-arg VERSION=test .
    ```

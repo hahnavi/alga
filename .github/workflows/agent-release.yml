@@ -77,8 +77,8 @@ jobs:
         run: |
           owner_lc=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')
           echo "name=${owner_lc}" >> "$GITHUB_OUTPUT"
-      # Context is the repo root so the Dockerfile can read go.work and the
-      # local SDK at integrations/alga-agent-sdk-go.
+      # Context is the repo root so the Dockerfile can read the local SDK at
+      # integrations/alga-agent-sdk-go (built with GOWORK=off).
       - name: Build & push alga-agent
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a  # v7.3.0
         with:

@@ -33,6 +33,21 @@ frontend:
     tag: latest
     pullPolicy: IfNotPresent
   replicas: 1
+  # Content-Security-Policy additions for the SPA. The image ships a strict
+  # policy (script-src 'self'); these lists are passed to the container as
+  # ALGA_CSP_SCRIPT_SRC_EXTRA / ALGA_CSP_CONNECT_SRC_EXTRA and appended to
+  # script-src / connect-src when nginx renders its config at startup.
+  # Needed when a proxy/CDN in front of Alga injects scripts into the page.
+  # Example for Cloudflare Web Analytics:
+  #   csp:
+  #     scriptSrcExtra: ["https://static.cloudflareinsights.com"]
+  #     connectSrcExtra: ["https://cloudflareinsights.com"]
+  # Note: Cloudflare Rocket Loader rewrites module scripts and requires
+  # 'unsafe-eval'; prefer disabling Rocket Loader for the Alga host instead
+  # of weakening script-src.
+  csp:
+    scriptSrcExtra: []
+    connectSrcExtra: []
   resources:
     requests:
       memory: 128Mi

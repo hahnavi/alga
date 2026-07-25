@@ -7,9 +7,21 @@
 # security_headers.go, and double-emission (two CSP / two HSTS headers) would
 # otherwise occur. See refs/plan/operations/security.md.
 #
-# This policy must stay in sync with the fallback <meta http-equiv=
-# "Content-Security-Policy"> in apps/frontend/index.html. The response header
-# wins over the meta tag, so this is the authoritative policy.
+# This response header is the single authoritative CSP: index.html
+# intentionally has no CSP <meta> tag (browsers enforce the intersection of
+# all policies, which would make deploy-time adjustments impossible).
+#
+# This file is an nginx envsubst template. The official nginx image entrypoint
+# renders it at container startup to /etc/nginx/snippets/security-headers.conf
+# (see NGINX_ENVSUBST_OUTPUT_DIR in apps/frontend/Dockerfile), substituting
+# ONLY the two ${ALGA_CSP_*} placeholders below; nginx runtime variables such
+# as $strict_transport_security are left untouched because envsubst is invoked
+# with an explicit variable allow-list. Both env vars default to "" in the
+# Dockerfile, which renders the strict baseline policy. Deployments fronted by
+# a CDN that injects scripts (e.g. Cloudflare Web Analytics) append sources by
+# setting the env vars — space-separated CSP source expressions:
+#   ALGA_CSP_SCRIPT_SRC_EXTRA="https://static.cloudflareinsights.com"
+#   ALGA_CSP_CONNECT_SRC_EXTRA="https://cloudflareinsights.com"
 
 # X-Content-Type-Options: block MIME sniffing (ASVS V12.4 / Gresto 32.29).
 add_header X-Content-Type-Options "nosniff" always;
@@ -42,10 +54,13 @@ add_header Permissions-Policy "accelerometer=(), autoplay=(), camera=(), display
 #   - connect-src 'self': API + SSE (/api/v1/events) are same-origin.
 #   - object-src 'none': no <object>/<embed>/<applet> plugins.
 #   - frame-ancestors 'none': no framing (clickjacking).
+#   - ALGA_CSP_SCRIPT_SRC_EXTRA / ALGA_CSP_CONNECT_SRC_EXTRA: deploy-time
+#     additions (see header comment); empty by default, and an empty expansion
+#     is harmless because CSP source lists are whitespace-separated.
 # Tiptap/ProseMirror rendering is XSS-sensitive, but it operates on the DOM
 # client-side and is sanitized by DOMPurify (src/components/ui/MarkdownRenderer
 # .vue); CSP is defense-in-depth, DOMPurify remains the primary control.
-add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';" always;
+add_header Content-Security-Policy "default-src 'self'; script-src 'self' ${ALGA_CSP_SCRIPT_SRC_EXTRA}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' ${ALGA_CSP_CONNECT_SRC_EXTRA}; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';" always;
 
 # HSTS: emit only when the request arrived over TLS, including via a trusted
 # reverse proxy that sets X-Forwarded-Proto (the container itself listens on

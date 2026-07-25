@@ -32,7 +32,18 @@ COPY apps/frontend/hsts-map.conf /etc/nginx/conf.d/hsts-map.conf
 # keep it OUT of conf.d/ (which is auto-globbed at http scope) so its
 # add_header directives apply only where explicitly included and do not leak
 # SPA CSP/HSTS into the /api/, /api/v1/events and /webhooks/ proxy locations.
-COPY apps/frontend/security-headers.conf /etc/nginx/snippets/security-headers.conf
+#
+# It ships as an envsubst template: the stock nginx entrypoint renders
+# /etc/nginx/templates/*.template into NGINX_ENVSUBST_OUTPUT_DIR at startup,
+# substituting only defined environment variables. This lets deployments
+# extend the CSP (e.g. allow a CDN-injected analytics script) via env vars
+# without rebuilding the image, while the defaults below keep the policy
+# strict. Space-separated CSP source expressions, empty means "no additions":
+ENV ALGA_CSP_SCRIPT_SRC_EXTRA=""
+ENV ALGA_CSP_CONNECT_SRC_EXTRA=""
+ENV NGINX_ENVSUBST_OUTPUT_DIR=/etc/nginx/snippets
+COPY apps/frontend/security-headers.conf.template /etc/nginx/templates/security-headers.conf.template
+RUN mkdir -p /etc/nginx/snippets && chown nginx:nginx /etc/nginx/snippets
 COPY --from=builder /app/apps/frontend/dist /usr/share/nginx/html
 RUN chown -R nginx:nginx /usr/share/nginx/html \
     && mkdir -p /var/cache/nginx \

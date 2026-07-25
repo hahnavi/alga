@@ -13,7 +13,7 @@ import (
 	entsql "entgo.io/ent/dialect/sql"
 	"github.com/jackc/pgx/v5"
 	pgxstdlib "github.com/jackc/pgx/v5/stdlib"
-	"github.com/nyaruka/phonenumbers"
+	"github.com/nyaruka/phonenumbers/v2"
 
 	"alga/ent"
 	"alga/logger"

@@ -7,25 +7,23 @@ description: Deploy Alga with Docker Compose, Kubernetes/Helm, or a production o
 
 ## Docker Compose (Recommended)
 
-Alga ships a ready-to-use Compose deployment in `deploy/compose/` that pulls prebuilt images from GitHub Container Registry — no source checkout required.
+Production deployments use the base compose file with the production overlay, which enforces required secrets, adds container hardening, and routes all traffic through Caddy:
 
 ```sh
-# On the target host:
-mkdir alga && cd alga
-# Copy docker-compose.yml and .env.example from deploy/compose/
-cp .env.example .env
-# Edit .env — fill in every required value (see table below)
-docker compose up -d
+git clone https://github.com/hahnavi/alga.git && cd alga
+./setup.sh
+# Edit .env — set DOMAIN, and verify the generated secrets
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
-The UI is served on `http://<host>:${ALGA_HTTP_PORT:-3000}`. The nginx-based frontend image proxies `/api`, `/api/v1/events` (SSE), and `/webhooks` to the backend internally.
+The UI is served on `https://${DOMAIN}`. The nginx-based frontend image proxies `/api`, `/api/v1/events` (SSE), and `/webhooks` to the backend internally.
 
 ### Environment Variables
 
 | Variable | Default | Required | Description |
 |----------|---------|----------|-------------|
 | `ALGA_VERSION` | `latest` | No | Image tag for `ghcr.io/hahnavi/alga-{backend,frontend}` |
-| `ALGA_HTTP_PORT` | `3000` | No | Host port serving the UI |
+| `DOMAIN` | `localhost` | **Yes** | Public hostname for Caddy TLS |
 | `SECURE_COOKIES` | `false` | No | Set `true` only behind HTTPS (TLS-terminating proxy) |
 | `POSTGRES_USER` | `alga` | No | PostgreSQL user |
 | `POSTGRES_PASS` | — | **Yes** | PostgreSQL password |
@@ -39,7 +37,7 @@ The UI is served on `http://<host>:${ALGA_HTTP_PORT:-3000}`. The nginx-based fro
 | `ENVIRONMENT` | `production` | No | Runtime environment label |
 | `SESSION_EXPIRY_HOURS` | `24` | No | Session lifetime in hours |
 
-Generate the required secrets:
+`setup.sh` generates all required secrets automatically. To generate them manually:
 
 ```sh
 # ENCRYPTION_KEYS (kid:base64 format)
@@ -57,23 +55,24 @@ openssl rand -base64 32
 | `valkey` | `valkey/valkey:9.1-alpine` | — (internal) | In-memory store (sessions, leader election, pub/sub) |
 | `rabbitmq` | `rabbitmq:4.3.3-management-alpine` | — (internal) | Message queue (async pipeline) |
 | `backend` | `ghcr.io/hahnavi/alga-backend:${ALGA_VERSION}` | — (internal) | Go API server + workers |
-| `frontend` | `ghcr.io/hahnavi/alga-frontend:${ALGA_VERSION}` | `${ALGA_HTTP_PORT}:80` | Vue web UI (nginx) |
+| `frontend` | `ghcr.io/hahnavi/alga-frontend:${ALGA_VERSION}` | — (internal) | Vue web UI (nginx) |
+| `caddy` | `caddy:2-alpine` | 80, 443 | TLS-terminating reverse proxy |
 
-All services run on an internal bridge network. Only the frontend port is published to the host. Put a TLS-terminating reverse proxy in front for production and set `SECURE_COOKIES=true`.
+All services run on an internal bridge network. Only Caddy ports are published to the host.
 
 ### Upgrading
 
 ```sh
-# Pull newer image tags
-docker compose pull
-docker compose up -d
+git pull
+docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
 Auto-migration handles schema changes on backend startup (`POSTGRES_AUTO_MIGRATE=true`).
 
 ## Local Development Infrastructure
 
-The root `docker-compose.yml` builds the backend and frontend from source and provides the full local development stack. Use `setup.sh` to bootstrap secrets:
+The root `docker-compose.yml` pulls pre-built images from GitHub Container Registry and provides the full local stack. Use `setup.sh` to bootstrap secrets:
 
 ```sh
 git clone https://github.com/hahnavi/alga.git
@@ -82,9 +81,15 @@ cd alga
 docker compose up -d
 ```
 
+To build from source instead (for contributors):
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+```
+
 `setup.sh` generates:
 - Root `.env` with random `POSTGRES_PASS`, `VALKEY_PASSWORD`, `RABBITMQ_PASS`
-- `apps/backend/.env` with random `ENCRYPTION_KEY` and `SECRET_PEPPER`
+- `apps/backend/.env` with random `ENCRYPTION_KEYS` and `SECRET_PEPPER`
 - `apps/frontend/.env` (empty placeholder)
 
 Infrastructure ports are bound to `127.0.0.1` only (PostgreSQL 5432, RabbitMQ 5672/15672).

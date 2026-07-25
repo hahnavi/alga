@@ -32,11 +32,11 @@ fi
 
 if [ ! -f apps/backend/.env ]; then
     cp apps/backend/.env.example apps/backend/.env
-    ENCRYPTION_KEY=$(generate_secret)
+    ENCRYPTION_KEYS="1:$(generate_secret)"
     SECRET_PEPPER=$(generate_secret)
     cat >> apps/backend/.env <<EOF
 
-ENCRYPTION_KEY=${ENCRYPTION_KEY}
+ENCRYPTION_KEYS=${ENCRYPTION_KEYS}
 SECRET_PEPPER=${SECRET_PEPPER}
 POSTGRES_AUTO_MIGRATE=true
 EOF

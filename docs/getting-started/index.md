@@ -14,7 +14,7 @@ cd alga
 docker compose up -d
 ```
 
-Open `http://localhost:3000`. When no users exist in the database, Alga automatically redirects to the setup wizard — create the initial admin account by entering an email, password, and full name. The setup wizard is only available the first time, before any admin exists, so complete it before logging in.
+This pulls pre-built images from GitHub Container Registry — no compilation required. Open `http://localhost:3000`. When no users exist in the database, Alga automatically redirects to the setup wizard — create the initial admin account by entering an email, password, and full name. The setup wizard is only available the first time, before any admin exists, so complete it before logging in.
 
 After the initial admin account is created, your first login triggers the [Onboarding Wizard](/getting-started/onboarding), which walks you through changing the admin password, connecting integrations, and configuring your first routing rules.
 
@@ -51,9 +51,10 @@ After the initial admin account is created, your first login triggers the [Onboa
 
 ```sh
 git pull
+docker compose pull
 docker compose up -d
 ```
 
-Alga auto-migrates the database schema on startup when `POSTGRES_AUTO_MIGRATE=true` (enabled by default in Docker Compose).
+Alga auto-migrates the database schema on startup when `POSTGRES_AUTO_MIGRATE=true` (enabled by default in Docker Compose). Pin a specific version by setting `ALGA_VERSION=v1.2.3` in `.env`.
 
 For manual migrations: `./alga db migrate`

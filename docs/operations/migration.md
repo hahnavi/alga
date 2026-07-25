@@ -55,9 +55,10 @@ For destructive changes, you need to handle them manually.
    cd apps/backend && go mod tidy
    ```
 5. **Review configuration changes** — new env vars may be required
-6. **Rebuild and restart:**
+6. **Pull new images and restart:**
    ```sh
-   docker compose up -d --build
+   docker compose pull
+   docker compose up -d
    ```
 7. **Verify:**
    ```sh
@@ -92,8 +93,9 @@ If issues occur after upgrade:
 
 2. **Code rollback:**
    ```sh
-   git checkout v1.2.3  # Previous version
-   docker compose up -d --build
+   # Pin ALGA_VERSION=v1.2.3 in .env, then:
+   docker compose pull
+   docker compose up -d
    ```
 
 3. **Configuration rollback** — restore previous `.env` values

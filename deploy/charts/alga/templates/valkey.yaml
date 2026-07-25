@@ -1,14 +1,6 @@
 {{- if .Values.valkey.enabled }}
 {{- $name := printf "%s-valkey" (include "alga.fullname" .) }}
-{{- $password := .Values.valkey.auth.password }}
-{{- if not $password }}
-{{- $existing := lookup "v1" "Secret" .Release.Namespace $name }}
-{{- if $existing }}
-{{- $password = index $existing.data "password" | b64dec }}
-{{- else }}
-{{- $password = randAlphaNum 24 }}
-{{- end }}
-{{- end }}
+{{- $password := required "valkey.auth.password is required when valkey.enabled is true" .Values.valkey.auth.password }}
 apiVersion: v1
 kind: Secret
 metadata:
@@ -19,6 +11,9 @@ metadata:
 type: Opaque
 data:
   password: {{ $password | b64enc | quote }}
+  # Config file mounted into the server so the password never appears in
+  # process arguments.
+  valkey.conf: {{ printf "requirepass %s\ndir /data\n" $password | b64enc | quote }}
 ---
 apiVersion: v1
 kind: Service
@@ -65,14 +60,7 @@ spec:
         - name: valkey
           image: "{{ .Values.valkey.image.repository }}:{{ .Values.valkey.image.tag }}"
           imagePullPolicy: {{ .Values.valkey.image.pullPolicy }}
-          command: ["valkey-server"]
-          args: ["--requirepass", "$(VALKEY_PASSWORD)", "--dir", "/data"]
-          env:
-            - name: VALKEY_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ $name }}
-                  key: password
+          command: ["valkey-server", "/etc/valkey/valkey.conf"]
           ports:
             - name: valkey
               containerPort: 6379
@@ -92,6 +80,20 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
+            - name: config
+              mountPath: /etc/valkey
+              readOnly: true
+      volumes:
+        - name: config
+          secret:
+            secretName: {{ $name }}
+            items:
+              - key: valkey.conf
+                path: valkey.conf
+        {{- if not .Values.valkey.persistence.enabled }}
+        - name: data
+          emptyDir: {}
+        {{- end }}
   {{- if .Values.valkey.persistence.enabled }}
   volumeClaimTemplates:
     - metadata:
@@ -104,9 +106,5 @@ spec:
         resources:
           requests:
             storage: {{ .Values.valkey.persistence.size }}
-  {{- else }}
-      volumes:
-        - name: data
-          emptyDir: {}
   {{- end }}
 {{- end }}

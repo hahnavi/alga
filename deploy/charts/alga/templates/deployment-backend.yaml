@@ -31,9 +31,15 @@ spec:
             - -c
             - |
               wait_for() {
+                elapsed=0
                 until nc -z -w 2 "$1" "$2"; do
+                  if [ "$elapsed" -ge 300 ]; then
+                    echo "timed out after ${elapsed}s waiting for dependency $1:$2" >&2
+                    exit 1
+                  fi
                   echo "waiting for $1:$2..."
                   sleep 2
+                  elapsed=$((elapsed + 4))
                 done
                 echo "$1:$2 is reachable"
               }

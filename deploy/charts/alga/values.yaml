@@ -66,8 +66,9 @@ ingress:
 # To use an externally managed instance instead, set `enabled: false` and
 # provide the matching connection settings under backend.secrets
 # (postgresDSN, valkeyAddr/valkeyPassword, rabbitmqURI).
-# When a bundled service is enabled and its password is left empty, a random
-# password is generated at install time and reused across upgrades.
+# When a bundled service is enabled, its auth.password must be set to a
+# pinned value; installs fail otherwise. Pinned passwords keep renders
+# deterministic and stay valid across upgrades and retained volumes.
 
 postgresql:
   enabled: true

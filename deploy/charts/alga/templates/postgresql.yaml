@@ -1,14 +1,6 @@
 {{- if .Values.postgresql.enabled }}
 {{- $name := printf "%s-postgresql" (include "alga.fullname" .) }}
-{{- $password := .Values.postgresql.auth.password }}
-{{- if not $password }}
-{{- $existing := lookup "v1" "Secret" .Release.Namespace $name }}
-{{- if $existing }}
-{{- $password = index $existing.data "password" | b64dec }}
-{{- else }}
-{{- $password = randAlphaNum 24 }}
-{{- end }}
-{{- end }}
+{{- $password := required "postgresql.auth.password is required when postgresql.enabled is true" .Values.postgresql.auth.password }}
 apiVersion: v1
 kind: Secret
 metadata:

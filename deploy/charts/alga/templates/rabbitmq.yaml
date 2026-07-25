@@ -1,14 +1,6 @@
 {{- if .Values.rabbitmq.enabled }}
 {{- $name := printf "%s-rabbitmq" (include "alga.fullname" .) }}
-{{- $password := .Values.rabbitmq.auth.password }}
-{{- if not $password }}
-{{- $existing := lookup "v1" "Secret" .Release.Namespace $name }}
-{{- if $existing }}
-{{- $password = index $existing.data "password" | b64dec }}
-{{- else }}
-{{- $password = randAlphaNum 24 }}
-{{- end }}
-{{- end }}
+{{- $password := required "rabbitmq.auth.password is required when rabbitmq.enabled is true" .Values.rabbitmq.auth.password }}
 apiVersion: v1
 kind: Secret
 metadata:
@@ -80,15 +72,17 @@ spec:
               containerPort: 5672
               protocol: TCP
           readinessProbe:
-            tcpSocket:
-              port: amqp
+            exec:
+              command: ["rabbitmq-diagnostics", "check_port_connectivity"]
             initialDelaySeconds: 10
             periodSeconds: 10
+            timeoutSeconds: 10
           livenessProbe:
-            tcpSocket:
-              port: amqp
+            exec:
+              command: ["rabbitmq-diagnostics", "ping"]
             initialDelaySeconds: 30
             periodSeconds: 30
+            timeoutSeconds: 10
           resources:
             {{- toYaml .Values.rabbitmq.resources | nindent 12 }}
           volumeMounts:

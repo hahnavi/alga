@@ -82,7 +82,7 @@ EOF
 ```
 
 ```sh
-helm install alga oci://ghcr.io/hahnavi/charts/alga --version 0.0.3 \
+helm install alga oci://ghcr.io/hahnavi/charts/alga --version 0.0.4 \
   --namespace alga --create-namespace \
   -f alga-values.yaml
 ```
@@ -94,7 +94,7 @@ Keep `alga-values.yaml` out of version control and reuse it for upgrades — the
 Ingress is enabled by default with host `alga.example.com`. Set your own host by appending these flags to the `helm install` command above (`--set` merges into the default hosts entry, keeping its paths):
 
 ```sh
-helm install alga oci://ghcr.io/hahnavi/charts/alga --version 0.0.3 \
+helm install alga oci://ghcr.io/hahnavi/charts/alga --version 0.0.4 \
   --namespace alga --create-namespace \
   -f alga-values.yaml \
   --set 'ingress.hosts[0].host=alga.your-domain.com' \

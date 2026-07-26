@@ -3,6 +3,8 @@
 package deliverytarget
 
 import (
+	"fmt"
+
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
@@ -21,6 +23,8 @@ const (
 	FieldChannelName = "channel_name"
 	// FieldPostID holds the string denoting the post_id field in the database.
 	FieldPostID = "post_id"
+	// FieldAlertID holds the string denoting the alert_id field in the database.
+	FieldAlertID = "alert_id"
 	// EdgeAlert holds the string denoting the alert edge name in mutations.
 	EdgeAlert = "alert"
 	// Table holds the table name of the deliverytarget in the database.
@@ -31,7 +35,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "alert" package.
 	AlertInverseTable = "alerts"
 	// AlertColumn is the table column denoting the alert relation/edge.
-	AlertColumn = "alert_delivery_targets"
+	AlertColumn = "alert_id"
 )
 
 // Columns holds all SQL columns for deliverytarget fields.
@@ -41,12 +45,7 @@ var Columns = []string{
 	FieldChannel,
 	FieldChannelName,
 	FieldPostID,
-}
-
-// ForeignKeys holds the SQL foreign-keys that are owned by the "delivery_targets"
-// table and are not defined as standalone fields in the schema.
-var ForeignKeys = []string{
-	"alert_delivery_targets",
+	FieldAlertID,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -56,17 +55,10 @@ func ValidColumn(column string) bool {
 			return true
 		}
 	}
-	for i := range ForeignKeys {
-		if column == ForeignKeys[i] {
-			return true
-		}
-	}
 	return false
 }
 
 var (
-	// ProviderValidator is a validator for the "provider" field. It is called by the builders before save.
-	ProviderValidator func(string) error
 	// ChannelValidator is a validator for the "channel" field. It is called by the builders before save.
 	ChannelValidator func(string) error
 	// DefaultChannelName holds the default value on creation for the "channel_name" field.
@@ -76,6 +68,30 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// Provider defines the type for the "provider" enum field.
+type Provider string
+
+// Provider values.
+const (
+	ProviderSlack      Provider = "slack"
+	ProviderMattermost Provider = "mattermost"
+	ProviderPagerduty  Provider = "pagerduty"
+)
+
+func (pr Provider) String() string {
+	return string(pr)
+}
+
+// ProviderValidator is a validator for the "provider" field enum values. It is called by the builders before save.
+func ProviderValidator(pr Provider) error {
+	switch pr {
+	case ProviderSlack, ProviderMattermost, ProviderPagerduty:
+		return nil
+	default:
+		return fmt.Errorf("deliverytarget: invalid enum value for provider field: %q", pr)
+	}
+}
 
 // OrderOption defines the ordering options for the DeliveryTarget queries.
 type OrderOption func(*sql.Selector)
@@ -103,6 +119,11 @@ func ByChannelName(opts ...sql.OrderTermOption) OrderOption {
 // ByPostID orders the results by the post_id field.
 func ByPostID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldPostID, opts...).ToFunc()
+}
+
+// ByAlertID orders the results by the alert_id field.
+func ByAlertID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAlertID, opts...).ToFunc()
 }
 
 // ByAlertField orders the results by alert field.

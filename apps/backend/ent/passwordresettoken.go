@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/passwordresettoken"
+	"alga/ent/user"
 	"fmt"
 	"strings"
 	"time"
@@ -21,14 +22,37 @@ type PasswordResetToken struct {
 	// UserID holds the value of the "user_id" field.
 	UserID uuid.UUID `json:"user_id,omitempty"`
 	// TokenHash holds the value of the "token_hash" field.
-	TokenHash string `json:"token_hash,omitempty"`
+	TokenHash string `json:"-"`
 	// ExpiresAt holds the value of the "expires_at" field.
 	ExpiresAt time.Time `json:"expires_at,omitempty"`
 	// Used holds the value of the "used" field.
 	Used bool `json:"used,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
-	CreatedAt    time.Time `json:"created_at,omitempty"`
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the PasswordResetTokenQuery when eager-loading is set.
+	Edges        PasswordResetTokenEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// PasswordResetTokenEdges holds the relations/edges for other nodes in the graph.
+type PasswordResetTokenEdges struct {
+	// User holds the value of the user edge.
+	User *User `json:"user,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// UserOrErr returns the User value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e PasswordResetTokenEdges) UserOrErr() (*User, error) {
+	if e.User != nil {
+		return e.User, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: user.Label}
+	}
+	return nil, &NotLoadedError{edge: "user"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -108,6 +132,11 @@ func (_m *PasswordResetToken) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
 }
 
+// QueryUser queries the "user" edge of the PasswordResetToken entity.
+func (_m *PasswordResetToken) QueryUser() *UserQuery {
+	return NewPasswordResetTokenClient(_m.config).QueryUser(_m)
+}
+
 // Update returns a builder for updating this PasswordResetToken.
 // Note that you need to call PasswordResetToken.Unwrap() before calling this method if this PasswordResetToken
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -134,8 +163,7 @@ func (_m *PasswordResetToken) String() string {
 	builder.WriteString("user_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.UserID))
 	builder.WriteString(", ")
-	builder.WriteString("token_hash=")
-	builder.WriteString(_m.TokenHash)
+	builder.WriteString("token_hash=<sensitive>")
 	builder.WriteString(", ")
 	builder.WriteString("expires_at=")
 	builder.WriteString(_m.ExpiresAt.Format(time.ANSIC))

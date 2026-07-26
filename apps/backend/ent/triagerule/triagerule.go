@@ -3,9 +3,11 @@
 package triagerule
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -40,8 +42,17 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// EdgeCreatedByUser holds the string denoting the created_by_user edge name in mutations.
+	EdgeCreatedByUser = "created_by_user"
 	// Table holds the table name of the triagerule in the database.
 	Table = "triage_rules"
+	// CreatedByUserTable is the table that holds the created_by_user relation/edge.
+	CreatedByUserTable = "triage_rules"
+	// CreatedByUserInverseTable is the table name for the User entity.
+	// It exists in this package in order to avoid circular dependency with the "user" package.
+	CreatedByUserInverseTable = "users"
+	// CreatedByUserColumn is the table column denoting the created_by_user relation/edge.
+	CreatedByUserColumn = "created_by"
 )
 
 // Columns holds all SQL columns for triagerule fields.
@@ -77,16 +88,10 @@ var (
 	NameValidator func(string) error
 	// DefaultDescription holds the default value on creation for the "description" field.
 	DefaultDescription string
-	// DefaultMatchMode holds the default value on creation for the "match_mode" field.
-	DefaultMatchMode string
-	// DecisionValidator is a validator for the "decision" field. It is called by the builders before save.
-	DecisionValidator func(string) error
-	// DefaultSeverity holds the default value on creation for the "severity" field.
-	DefaultSeverity string
-	// DefaultCategory holds the default value on creation for the "category" field.
-	DefaultCategory string
 	// DefaultPriority holds the default value on creation for the "priority" field.
 	DefaultPriority int
+	// PriorityValidator is a validator for the "priority" field. It is called by the builders before save.
+	PriorityValidator func(int) error
 	// DefaultEnabled holds the default value on creation for the "enabled" field.
 	DefaultEnabled bool
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
@@ -98,6 +103,110 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// MatchMode defines the type for the "match_mode" enum field.
+type MatchMode string
+
+// MatchModeAll is the default value of the MatchMode enum.
+const DefaultMatchMode = MatchModeAll
+
+// MatchMode values.
+const (
+	MatchModeAll MatchMode = "all"
+	MatchModeAny MatchMode = "any"
+)
+
+func (mm MatchMode) String() string {
+	return string(mm)
+}
+
+// MatchModeValidator is a validator for the "match_mode" field enum values. It is called by the builders before save.
+func MatchModeValidator(mm MatchMode) error {
+	switch mm {
+	case MatchModeAll, MatchModeAny:
+		return nil
+	default:
+		return fmt.Errorf("triagerule: invalid enum value for match_mode field: %q", mm)
+	}
+}
+
+// Decision defines the type for the "decision" enum field.
+type Decision string
+
+// Decision values.
+const (
+	DecisionInvestigate Decision = "investigate"
+	DecisionAutoResolve Decision = "auto_resolve"
+	DecisionSuppress    Decision = "suppress"
+	DecisionEscalate    Decision = "escalate"
+	DecisionEnrichOnly  Decision = "enrich_only"
+)
+
+func (d Decision) String() string {
+	return string(d)
+}
+
+// DecisionValidator is a validator for the "decision" field enum values. It is called by the builders before save.
+func DecisionValidator(d Decision) error {
+	switch d {
+	case DecisionInvestigate, DecisionAutoResolve, DecisionSuppress, DecisionEscalate, DecisionEnrichOnly:
+		return nil
+	default:
+		return fmt.Errorf("triagerule: invalid enum value for decision field: %q", d)
+	}
+}
+
+// Severity defines the type for the "severity" enum field.
+type Severity string
+
+// Severity values.
+const (
+	SeverityCritical Severity = "critical"
+	SeverityHigh     Severity = "high"
+	SeverityWarning  Severity = "warning"
+	SeverityInfo     Severity = "info"
+	SeverityLow      Severity = "low"
+)
+
+func (s Severity) String() string {
+	return string(s)
+}
+
+// SeverityValidator is a validator for the "severity" field enum values. It is called by the builders before save.
+func SeverityValidator(s Severity) error {
+	switch s {
+	case SeverityCritical, SeverityHigh, SeverityWarning, SeverityInfo, SeverityLow:
+		return nil
+	default:
+		return fmt.Errorf("triagerule: invalid enum value for severity field: %q", s)
+	}
+}
+
+// Category defines the type for the "category" enum field.
+type Category string
+
+// Category values.
+const (
+	CategoryInfrastructure Category = "infrastructure"
+	CategoryApplication    Category = "application"
+	CategoryNetwork        Category = "network"
+	CategorySecurity       Category = "security"
+	CategoryOther          Category = "other"
+)
+
+func (c Category) String() string {
+	return string(c)
+}
+
+// CategoryValidator is a validator for the "category" field enum values. It is called by the builders before save.
+func CategoryValidator(c Category) error {
+	switch c {
+	case CategoryInfrastructure, CategoryApplication, CategoryNetwork, CategorySecurity, CategoryOther:
+		return nil
+	default:
+		return fmt.Errorf("triagerule: invalid enum value for category field: %q", c)
+	}
+}
 
 // OrderOption defines the ordering options for the TriageRule queries.
 type OrderOption func(*sql.Selector)
@@ -160,4 +269,18 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByCreatedByUserField orders the results by created_by_user field.
+func ByCreatedByUserField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCreatedByUserStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newCreatedByUserStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CreatedByUserInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, CreatedByUserTable, CreatedByUserColumn),
+	)
 }

@@ -24,8 +24,8 @@ func (AgentToken) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
 		field.String("name").NotEmpty(),
-		field.String("agent_type").Default("hermes"),
-		field.String("token_hash").Unique().NotEmpty(),
+		field.Enum("agent_type").Values("hermes", "openclaw", "other").Default("hermes"),
+		field.String("token_hash").Unique().NotEmpty().Sensitive(),
 		field.String("lookup_prefix").NotEmpty(),
 		field.Time("created_at").Default(timeNow),
 		field.Time("last_used_at").Optional().Nillable(),
@@ -43,11 +43,19 @@ func (AgentToken) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("dm_messages", AgentDMMessage.Type),
 		edge.To("ics_roles", ICSRoleAssignment.Type),
+		edge.To("memories", AgentMemory.Type).Annotations(entsql.Annotation{OnDelete: entsql.SetNull}),
+		edge.To("sent_asks", AgentAsk.Type).Annotations(entsql.Annotation{OnDelete: entsql.Restrict}),
+		edge.To("received_asks", AgentAsk.Type).Annotations(entsql.Annotation{OnDelete: entsql.SetNull}),
+		edge.To("replied_asks", AgentAsk.Type).Annotations(entsql.Annotation{OnDelete: entsql.SetNull}),
 	}
 }
 
 func (AgentToken) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("lookup_prefix", "revoked"),
+		index.Fields("lookup_prefix").
+			Annotations(entsql.IndexWhere("revoked = false AND enabled = true")),
+		index.Fields("expires_at"),
+		index.Fields("default_for_investigation").
+			Annotations(entsql.IndexWhere("default_for_investigation = true")),
 	}
 }

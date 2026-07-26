@@ -21,8 +21,8 @@ type AlertInvestigationAlert struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
-	// AlertInvestigationUUID holds the value of the "alert_investigation_uuid" field.
-	AlertInvestigationUUID uuid.UUID `json:"alert_investigation_uuid,omitempty"`
+	// AlertInvestigationID holds the value of the "alert_investigation_id" field.
+	AlertInvestigationID uuid.UUID `json:"alert_investigation_id,omitempty"`
 	// AlertID holds the value of the "alert_id" field.
 	AlertID *uuid.UUID `json:"alert_id,omitempty"`
 	// Fingerprint holds the value of the "fingerprint" field.
@@ -105,7 +105,7 @@ func (*AlertInvestigationAlert) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case alertinvestigationalert.FieldStartsAt, alertinvestigationalert.FieldEndsAt:
 			values[i] = new(sql.NullTime)
-		case alertinvestigationalert.FieldID, alertinvestigationalert.FieldAlertInvestigationUUID:
+		case alertinvestigationalert.FieldID, alertinvestigationalert.FieldAlertInvestigationID:
 			values[i] = new(uuid.UUID)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -128,11 +128,11 @@ func (_m *AlertInvestigationAlert) assignValues(columns []string, values []any) 
 			} else if value != nil {
 				_m.ID = *value
 			}
-		case alertinvestigationalert.FieldAlertInvestigationUUID:
+		case alertinvestigationalert.FieldAlertInvestigationID:
 			if value, ok := values[i].(*uuid.UUID); !ok {
-				return fmt.Errorf("unexpected type %T for field alert_investigation_uuid", values[i])
+				return fmt.Errorf("unexpected type %T for field alert_investigation_id", values[i])
 			} else if value != nil {
-				_m.AlertInvestigationUUID = *value
+				_m.AlertInvestigationID = *value
 			}
 		case alertinvestigationalert.FieldAlertID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -265,8 +265,8 @@ func (_m *AlertInvestigationAlert) String() string {
 	var builder strings.Builder
 	builder.WriteString("AlertInvestigationAlert(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
-	builder.WriteString("alert_investigation_uuid=")
-	builder.WriteString(fmt.Sprintf("%v", _m.AlertInvestigationUUID))
+	builder.WriteString("alert_investigation_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.AlertInvestigationID))
 	builder.WriteString(", ")
 	if v := _m.AlertID; v != nil {
 		builder.WriteString("alert_id=")

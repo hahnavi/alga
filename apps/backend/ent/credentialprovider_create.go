@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/credentialprovider"
+	"alga/ent/sharedsecret"
 	"context"
 	"errors"
 	"fmt"
@@ -28,13 +29,13 @@ func (_c *CredentialProviderCreate) SetName(v string) *CredentialProviderCreate 
 }
 
 // SetType sets the "type" field.
-func (_c *CredentialProviderCreate) SetType(v string) *CredentialProviderCreate {
+func (_c *CredentialProviderCreate) SetType(v credentialprovider.Type) *CredentialProviderCreate {
 	_c.mutation.SetType(v)
 	return _c
 }
 
 // SetNillableType sets the "type" field if the given value is not nil.
-func (_c *CredentialProviderCreate) SetNillableType(v *string) *CredentialProviderCreate {
+func (_c *CredentialProviderCreate) SetNillableType(v *credentialprovider.Type) *CredentialProviderCreate {
 	if v != nil {
 		_c.SetType(*v)
 	}
@@ -125,6 +126,21 @@ func (_c *CredentialProviderCreate) SetNillableID(v *uuid.UUID) *CredentialProvi
 	return _c
 }
 
+// AddSharedSecretIDs adds the "shared_secrets" edge to the SharedSecret entity by IDs.
+func (_c *CredentialProviderCreate) AddSharedSecretIDs(ids ...uuid.UUID) *CredentialProviderCreate {
+	_c.mutation.AddSharedSecretIDs(ids...)
+	return _c
+}
+
+// AddSharedSecrets adds the "shared_secrets" edges to the SharedSecret entity.
+func (_c *CredentialProviderCreate) AddSharedSecrets(v ...*SharedSecret) *CredentialProviderCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddSharedSecretIDs(ids...)
+}
+
 // Mutation returns the CredentialProviderMutation object of the builder.
 func (_c *CredentialProviderCreate) Mutation() *CredentialProviderMutation {
 	return _c.mutation
@@ -203,6 +219,11 @@ func (_c *CredentialProviderCreate) check() error {
 	if _, ok := _c.mutation.GetType(); !ok {
 		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "CredentialProvider.type"`)}
 	}
+	if v, ok := _c.mutation.GetType(); ok {
+		if err := credentialprovider.TypeValidator(v); err != nil {
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "CredentialProvider.type": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.ConfigEncrypted(); !ok {
 		return &ValidationError{Name: "config_encrypted", err: errors.New(`ent: missing required field "CredentialProvider.config_encrypted"`)}
 	}
@@ -258,7 +279,7 @@ func (_c *CredentialProviderCreate) createSpec() (*CredentialProvider, *sqlgraph
 		_node.Name = value
 	}
 	if value, ok := _c.mutation.GetType(); ok {
-		_spec.SetField(credentialprovider.FieldType, field.TypeString, value)
+		_spec.SetField(credentialprovider.FieldType, field.TypeEnum, value)
 		_node.Type = value
 	}
 	if value, ok := _c.mutation.ConfigEncrypted(); ok {
@@ -280,6 +301,22 @@ func (_c *CredentialProviderCreate) createSpec() (*CredentialProvider, *sqlgraph
 	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(credentialprovider.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if nodes := _c.mutation.SharedSecretsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   credentialprovider.SharedSecretsTable,
+			Columns: []string{credentialprovider.SharedSecretsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(sharedsecret.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

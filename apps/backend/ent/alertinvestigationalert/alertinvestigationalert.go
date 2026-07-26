@@ -13,8 +13,8 @@ const (
 	Label = "alert_investigation_alert"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
-	// FieldAlertInvestigationUUID holds the string denoting the alert_investigation_uuid field in the database.
-	FieldAlertInvestigationUUID = "alert_investigation_uuid"
+	// FieldAlertInvestigationID holds the string denoting the alert_investigation_id field in the database.
+	FieldAlertInvestigationID = "alert_investigation_id"
 	// FieldAlertID holds the string denoting the alert_id field in the database.
 	FieldAlertID = "alert_id"
 	// FieldFingerprint holds the string denoting the fingerprint field in the database.
@@ -53,7 +53,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "alertinvestigation" package.
 	AlertInvestigationInverseTable = "alert_investigations"
 	// AlertInvestigationColumn is the table column denoting the alert_investigation relation/edge.
-	AlertInvestigationColumn = "alert_investigation_uuid"
+	AlertInvestigationColumn = "alert_investigation_id"
 	// AlertTable is the table that holds the alert relation/edge.
 	AlertTable = "alert_investigation_alerts"
 	// AlertInverseTable is the table name for the Alert entity.
@@ -66,7 +66,7 @@ const (
 // Columns holds all SQL columns for alertinvestigationalert fields.
 var Columns = []string{
 	FieldID,
-	FieldAlertInvestigationUUID,
+	FieldAlertInvestigationID,
 	FieldAlertID,
 	FieldFingerprint,
 	FieldAlertNumber,
@@ -121,9 +121,9 @@ func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
 }
 
-// ByAlertInvestigationUUID orders the results by the alert_investigation_uuid field.
-func ByAlertInvestigationUUID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldAlertInvestigationUUID, opts...).ToFunc()
+// ByAlertInvestigationID orders the results by the alert_investigation_id field.
+func ByAlertInvestigationID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAlertInvestigationID, opts...).ToFunc()
 }
 
 // ByAlertID orders the results by the alert_id field.

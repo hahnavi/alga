@@ -3,6 +3,7 @@
 package incident
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -113,6 +114,16 @@ const (
 	EdgeCoordinationMessages = "coordination_messages"
 	// EdgeCoordinationTasks holds the string denoting the coordination_tasks edge name in mutations.
 	EdgeCoordinationTasks = "coordination_tasks"
+	// EdgeCommander holds the string denoting the commander edge name in mutations.
+	EdgeCommander = "commander"
+	// EdgeCommunicator holds the string denoting the communicator edge name in mutations.
+	EdgeCommunicator = "communicator"
+	// EdgeOnCallResponder holds the string denoting the on_call_responder edge name in mutations.
+	EdgeOnCallResponder = "on_call_responder"
+	// EdgeService holds the string denoting the service edge name in mutations.
+	EdgeService = "service"
+	// EdgeEscalationPolicy holds the string denoting the escalation_policy edge name in mutations.
+	EdgeEscalationPolicy = "escalation_policy"
 	// Table holds the table name of the incident in the database.
 	Table = "incidents"
 	// AlertsTable is the table that holds the alerts relation/edge. The primary key declared below.
@@ -140,35 +151,35 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "incidenttimelineentry" package.
 	TimelineInverseTable = "incident_timeline_entries"
 	// TimelineColumn is the table column denoting the timeline relation/edge.
-	TimelineColumn = "incident_timeline"
+	TimelineColumn = "incident_id"
 	// PostMortemTable is the table that holds the post_mortem relation/edge.
-	PostMortemTable = "incidents"
+	PostMortemTable = "post_mortems"
 	// PostMortemInverseTable is the table name for the PostMortem entity.
 	// It exists in this package in order to avoid circular dependency with the "postmortem" package.
 	PostMortemInverseTable = "post_mortems"
 	// PostMortemColumn is the table column denoting the post_mortem relation/edge.
-	PostMortemColumn = "incident_post_mortem"
+	PostMortemColumn = "incident_id"
 	// IcsRolesTable is the table that holds the ics_roles relation/edge.
 	IcsRolesTable = "ics_role_assignments"
 	// IcsRolesInverseTable is the table name for the ICSRoleAssignment entity.
 	// It exists in this package in order to avoid circular dependency with the "icsroleassignment" package.
 	IcsRolesInverseTable = "ics_role_assignments"
 	// IcsRolesColumn is the table column denoting the ics_roles relation/edge.
-	IcsRolesColumn = "incident_ics_roles"
+	IcsRolesColumn = "incident_id"
 	// DocumentsTable is the table that holds the documents relation/edge.
 	DocumentsTable = "incident_documents"
 	// DocumentsInverseTable is the table name for the IncidentDocument entity.
 	// It exists in this package in order to avoid circular dependency with the "incidentdocument" package.
 	DocumentsInverseTable = "incident_documents"
 	// DocumentsColumn is the table column denoting the documents relation/edge.
-	DocumentsColumn = "incident_documents"
+	DocumentsColumn = "incident_id"
 	// CoordinationMessagesTable is the table that holds the coordination_messages relation/edge.
 	CoordinationMessagesTable = "incident_coordination_messages"
 	// CoordinationMessagesInverseTable is the table name for the IncidentCoordinationMessage entity.
 	// It exists in this package in order to avoid circular dependency with the "incidentcoordinationmessage" package.
 	CoordinationMessagesInverseTable = "incident_coordination_messages"
 	// CoordinationMessagesColumn is the table column denoting the coordination_messages relation/edge.
-	CoordinationMessagesColumn = "incident_coordination_messages"
+	CoordinationMessagesColumn = "incident_id"
 	// CoordinationTasksTable is the table that holds the coordination_tasks relation/edge.
 	CoordinationTasksTable = "coordination_tasks"
 	// CoordinationTasksInverseTable is the table name for the CoordinationTask entity.
@@ -176,6 +187,41 @@ const (
 	CoordinationTasksInverseTable = "coordination_tasks"
 	// CoordinationTasksColumn is the table column denoting the coordination_tasks relation/edge.
 	CoordinationTasksColumn = "incident_id"
+	// CommanderTable is the table that holds the commander relation/edge.
+	CommanderTable = "incidents"
+	// CommanderInverseTable is the table name for the User entity.
+	// It exists in this package in order to avoid circular dependency with the "user" package.
+	CommanderInverseTable = "users"
+	// CommanderColumn is the table column denoting the commander relation/edge.
+	CommanderColumn = "commander_id"
+	// CommunicatorTable is the table that holds the communicator relation/edge.
+	CommunicatorTable = "incidents"
+	// CommunicatorInverseTable is the table name for the User entity.
+	// It exists in this package in order to avoid circular dependency with the "user" package.
+	CommunicatorInverseTable = "users"
+	// CommunicatorColumn is the table column denoting the communicator relation/edge.
+	CommunicatorColumn = "communicator_id"
+	// OnCallResponderTable is the table that holds the on_call_responder relation/edge.
+	OnCallResponderTable = "incidents"
+	// OnCallResponderInverseTable is the table name for the User entity.
+	// It exists in this package in order to avoid circular dependency with the "user" package.
+	OnCallResponderInverseTable = "users"
+	// OnCallResponderColumn is the table column denoting the on_call_responder relation/edge.
+	OnCallResponderColumn = "on_call_responder_id"
+	// ServiceTable is the table that holds the service relation/edge.
+	ServiceTable = "incidents"
+	// ServiceInverseTable is the table name for the Service entity.
+	// It exists in this package in order to avoid circular dependency with the "service" package.
+	ServiceInverseTable = "services"
+	// ServiceColumn is the table column denoting the service relation/edge.
+	ServiceColumn = "service_id"
+	// EscalationPolicyTable is the table that holds the escalation_policy relation/edge.
+	EscalationPolicyTable = "incidents"
+	// EscalationPolicyInverseTable is the table name for the EscalationPolicy entity.
+	// It exists in this package in order to avoid circular dependency with the "escalationpolicy" package.
+	EscalationPolicyInverseTable = "escalation_policies"
+	// EscalationPolicyColumn is the table column denoting the escalation_policy relation/edge.
+	EscalationPolicyColumn = "escalation_policy_id"
 )
 
 // Columns holds all SQL columns for incident fields.
@@ -223,12 +269,6 @@ var Columns = []string{
 	FieldDeletedAt,
 }
 
-// ForeignKeys holds the SQL foreign-keys that are owned by the "incidents"
-// table and are not defined as standalone fields in the schema.
-var ForeignKeys = []string{
-	"incident_post_mortem",
-}
-
 var (
 	// AlertsPrimaryKey and AlertsColumn2 are the table columns denoting the
 	// primary key for the alerts relation (M2M).
@@ -239,11 +279,6 @@ var (
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
-			return true
-		}
-	}
-	for i := range ForeignKeys {
-		if column == ForeignKeys[i] {
 			return true
 		}
 	}
@@ -259,20 +294,6 @@ var (
 	DefaultDescription string
 	// DefaultSummary holds the default value on creation for the "summary" field.
 	DefaultSummary string
-	// DefaultStatus holds the default value on creation for the "status" field.
-	DefaultStatus string
-	// DefaultSeverity holds the default value on creation for the "severity" field.
-	DefaultSeverity string
-	// DefaultImpactLevel holds the default value on creation for the "impact_level" field.
-	DefaultImpactLevel string
-	// DefaultPriority holds the default value on creation for the "priority" field.
-	DefaultPriority string
-	// DefaultIncidentType holds the default value on creation for the "incident_type" field.
-	DefaultIncidentType string
-	// DefaultCommanderAssigneeType holds the default value on creation for the "commander_assignee_type" field.
-	DefaultCommanderAssigneeType string
-	// DefaultCommunicatorAssigneeType holds the default value on creation for the "communicator_assignee_type" field.
-	DefaultCommunicatorAssigneeType string
 	// DefaultConferenceURL holds the default value on creation for the "conference_url" field.
 	DefaultConferenceURL string
 	// DefaultSlackChannelName holds the default value on creation for the "slack_channel_name" field.
@@ -296,6 +317,200 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// Status defines the type for the "status" enum field.
+type Status string
+
+// StatusDetected is the default value of the Status enum.
+const DefaultStatus = StatusDetected
+
+// Status values.
+const (
+	StatusDetected  Status = "detected"
+	StatusTriaging  Status = "triaging"
+	StatusActive    Status = "active"
+	StatusMitigated Status = "mitigated"
+	StatusResolved  Status = "resolved"
+	StatusClosed    Status = "closed"
+	StatusCancelled Status = "cancelled"
+)
+
+func (s Status) String() string {
+	return string(s)
+}
+
+// StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
+func StatusValidator(s Status) error {
+	switch s {
+	case StatusDetected, StatusTriaging, StatusActive, StatusMitigated, StatusResolved, StatusClosed, StatusCancelled:
+		return nil
+	default:
+		return fmt.Errorf("incident: invalid enum value for status field: %q", s)
+	}
+}
+
+// Severity defines the type for the "severity" enum field.
+type Severity string
+
+// SeverityWarning is the default value of the Severity enum.
+const DefaultSeverity = SeverityWarning
+
+// Severity values.
+const (
+	SeverityCritical Severity = "critical"
+	SeverityHigh     Severity = "high"
+	SeverityWarning  Severity = "warning"
+	SeverityInfo     Severity = "info"
+)
+
+func (s Severity) String() string {
+	return string(s)
+}
+
+// SeverityValidator is a validator for the "severity" field enum values. It is called by the builders before save.
+func SeverityValidator(s Severity) error {
+	switch s {
+	case SeverityCritical, SeverityHigh, SeverityWarning, SeverityInfo:
+		return nil
+	default:
+		return fmt.Errorf("incident: invalid enum value for severity field: %q", s)
+	}
+}
+
+// ImpactLevel defines the type for the "impact_level" enum field.
+type ImpactLevel string
+
+// ImpactLevelMedium is the default value of the ImpactLevel enum.
+const DefaultImpactLevel = ImpactLevelMedium
+
+// ImpactLevel values.
+const (
+	ImpactLevelHigh   ImpactLevel = "high"
+	ImpactLevelMedium ImpactLevel = "medium"
+	ImpactLevelLow    ImpactLevel = "low"
+)
+
+func (il ImpactLevel) String() string {
+	return string(il)
+}
+
+// ImpactLevelValidator is a validator for the "impact_level" field enum values. It is called by the builders before save.
+func ImpactLevelValidator(il ImpactLevel) error {
+	switch il {
+	case ImpactLevelHigh, ImpactLevelMedium, ImpactLevelLow:
+		return nil
+	default:
+		return fmt.Errorf("incident: invalid enum value for impact_level field: %q", il)
+	}
+}
+
+// Priority defines the type for the "priority" enum field.
+type Priority string
+
+// PriorityP4 is the default value of the Priority enum.
+const DefaultPriority = PriorityP4
+
+// Priority values.
+const (
+	PriorityP1 Priority = "P1"
+	PriorityP2 Priority = "P2"
+	PriorityP3 Priority = "P3"
+	PriorityP4 Priority = "P4"
+	PriorityP5 Priority = "P5"
+)
+
+func (pr Priority) String() string {
+	return string(pr)
+}
+
+// PriorityValidator is a validator for the "priority" field enum values. It is called by the builders before save.
+func PriorityValidator(pr Priority) error {
+	switch pr {
+	case PriorityP1, PriorityP2, PriorityP3, PriorityP4, PriorityP5:
+		return nil
+	default:
+		return fmt.Errorf("incident: invalid enum value for priority field: %q", pr)
+	}
+}
+
+// IncidentType defines the type for the "incident_type" enum field.
+type IncidentType string
+
+// IncidentTypeReal is the default value of the IncidentType enum.
+const DefaultIncidentType = IncidentTypeReal
+
+// IncidentType values.
+const (
+	IncidentTypeReal        IncidentType = "real"
+	IncidentTypeAlert       IncidentType = "alert"
+	IncidentTypeDegradation IncidentType = "degradation"
+)
+
+func (it IncidentType) String() string {
+	return string(it)
+}
+
+// IncidentTypeValidator is a validator for the "incident_type" field enum values. It is called by the builders before save.
+func IncidentTypeValidator(it IncidentType) error {
+	switch it {
+	case IncidentTypeReal, IncidentTypeAlert, IncidentTypeDegradation:
+		return nil
+	default:
+		return fmt.Errorf("incident: invalid enum value for incident_type field: %q", it)
+	}
+}
+
+// CommanderAssigneeType defines the type for the "commander_assignee_type" enum field.
+type CommanderAssigneeType string
+
+// CommanderAssigneeTypeUser is the default value of the CommanderAssigneeType enum.
+const DefaultCommanderAssigneeType = CommanderAssigneeTypeUser
+
+// CommanderAssigneeType values.
+const (
+	CommanderAssigneeTypeUser  CommanderAssigneeType = "user"
+	CommanderAssigneeTypeAgent CommanderAssigneeType = "agent"
+)
+
+func (cat CommanderAssigneeType) String() string {
+	return string(cat)
+}
+
+// CommanderAssigneeTypeValidator is a validator for the "commander_assignee_type" field enum values. It is called by the builders before save.
+func CommanderAssigneeTypeValidator(cat CommanderAssigneeType) error {
+	switch cat {
+	case CommanderAssigneeTypeUser, CommanderAssigneeTypeAgent:
+		return nil
+	default:
+		return fmt.Errorf("incident: invalid enum value for commander_assignee_type field: %q", cat)
+	}
+}
+
+// CommunicatorAssigneeType defines the type for the "communicator_assignee_type" enum field.
+type CommunicatorAssigneeType string
+
+// CommunicatorAssigneeTypeUser is the default value of the CommunicatorAssigneeType enum.
+const DefaultCommunicatorAssigneeType = CommunicatorAssigneeTypeUser
+
+// CommunicatorAssigneeType values.
+const (
+	CommunicatorAssigneeTypeUser  CommunicatorAssigneeType = "user"
+	CommunicatorAssigneeTypeAgent CommunicatorAssigneeType = "agent"
+)
+
+func (cat CommunicatorAssigneeType) String() string {
+	return string(cat)
+}
+
+// CommunicatorAssigneeTypeValidator is a validator for the "communicator_assignee_type" field enum values. It is called by the builders before save.
+func CommunicatorAssigneeTypeValidator(cat CommunicatorAssigneeType) error {
+	switch cat {
+	case CommunicatorAssigneeTypeUser, CommunicatorAssigneeTypeAgent:
+		return nil
+	default:
+		return fmt.Errorf("incident: invalid enum value for communicator_assignee_type field: %q", cat)
+	}
+}
 
 // OrderOption defines the ordering options for the Incident queries.
 type OrderOption func(*sql.Selector)
@@ -608,6 +823,41 @@ func ByCoordinationTasks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption
 		sqlgraph.OrderByNeighborTerms(s, newCoordinationTasksStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByCommanderField orders the results by commander field.
+func ByCommanderField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCommanderStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByCommunicatorField orders the results by communicator field.
+func ByCommunicatorField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCommunicatorStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByOnCallResponderField orders the results by on_call_responder field.
+func ByOnCallResponderField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newOnCallResponderStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByServiceField orders the results by service field.
+func ByServiceField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newServiceStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByEscalationPolicyField orders the results by escalation_policy field.
+func ByEscalationPolicyField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newEscalationPolicyStep(), sql.OrderByField(field, opts...))
+	}
+}
 func newAlertsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -640,7 +890,7 @@ func newPostMortemStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(PostMortemInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, false, PostMortemTable, PostMortemColumn),
+		sqlgraph.Edge(sqlgraph.O2O, false, PostMortemTable, PostMortemColumn),
 	)
 }
 func newIcsRolesStep() *sqlgraph.Step {
@@ -669,5 +919,40 @@ func newCoordinationTasksStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(CoordinationTasksInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, CoordinationTasksTable, CoordinationTasksColumn),
+	)
+}
+func newCommanderStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CommanderInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, CommanderTable, CommanderColumn),
+	)
+}
+func newCommunicatorStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CommunicatorInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, CommunicatorTable, CommunicatorColumn),
+	)
+}
+func newOnCallResponderStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(OnCallResponderInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, OnCallResponderTable, OnCallResponderColumn),
+	)
+}
+func newServiceStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ServiceInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, ServiceTable, ServiceColumn),
+	)
+}
+func newEscalationPolicyStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(EscalationPolicyInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, EscalationPolicyTable, EscalationPolicyColumn),
 	)
 }

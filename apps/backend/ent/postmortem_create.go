@@ -3,7 +3,10 @@
 package ent
 
 import (
+	"alga/ent/actionitem"
+	"alga/ent/incident"
 	"alga/ent/postmortem"
+	"alga/ent/user"
 	"context"
 	"errors"
 	"fmt"
@@ -42,13 +45,13 @@ func (_c *PostMortemCreate) SetNillableTitle(v *string) *PostMortemCreate {
 }
 
 // SetStatus sets the "status" field.
-func (_c *PostMortemCreate) SetStatus(v string) *PostMortemCreate {
+func (_c *PostMortemCreate) SetStatus(v postmortem.Status) *PostMortemCreate {
 	_c.mutation.SetStatus(v)
 	return _c
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_c *PostMortemCreate) SetNillableStatus(v *string) *PostMortemCreate {
+func (_c *PostMortemCreate) SetNillableStatus(v *postmortem.Status) *PostMortemCreate {
 	if v != nil {
 		_c.SetStatus(*v)
 	}
@@ -249,6 +252,31 @@ func (_c *PostMortemCreate) SetNillableID(v *uuid.UUID) *PostMortemCreate {
 	return _c
 }
 
+// SetIncident sets the "incident" edge to the Incident entity.
+func (_c *PostMortemCreate) SetIncident(v *Incident) *PostMortemCreate {
+	return _c.SetIncidentID(v.ID)
+}
+
+// SetApprovedBy sets the "approved_by" edge to the User entity.
+func (_c *PostMortemCreate) SetApprovedBy(v *User) *PostMortemCreate {
+	return _c.SetApprovedByID(v.ID)
+}
+
+// AddActionItemIDs adds the "action_items" edge to the ActionItem entity by IDs.
+func (_c *PostMortemCreate) AddActionItemIDs(ids ...uuid.UUID) *PostMortemCreate {
+	_c.mutation.AddActionItemIDs(ids...)
+	return _c
+}
+
+// AddActionItems adds the "action_items" edges to the ActionItem entity.
+func (_c *PostMortemCreate) AddActionItems(v ...*ActionItem) *PostMortemCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddActionItemIDs(ids...)
+}
+
 // Mutation returns the PostMortemMutation object of the builder.
 func (_c *PostMortemCreate) Mutation() *PostMortemMutation {
 	return _c.mutation
@@ -349,6 +377,11 @@ func (_c *PostMortemCreate) check() error {
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "PostMortem.status"`)}
 	}
+	if v, ok := _c.mutation.Status(); ok {
+		if err := postmortem.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "PostMortem.status": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Summary(); !ok {
 		return &ValidationError{Name: "summary", err: errors.New(`ent: missing required field "PostMortem.summary"`)}
 	}
@@ -378,6 +411,9 @@ func (_c *PostMortemCreate) check() error {
 	}
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "PostMortem.updated_at"`)}
+	}
+	if len(_c.mutation.IncidentIDs()) == 0 {
+		return &ValidationError{Name: "incident", err: errors.New(`ent: missing required edge "PostMortem.incident"`)}
 	}
 	return nil
 }
@@ -414,16 +450,12 @@ func (_c *PostMortemCreate) createSpec() (*PostMortem, *sqlgraph.CreateSpec) {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := _c.mutation.IncidentID(); ok {
-		_spec.SetField(postmortem.FieldIncidentID, field.TypeUUID, value)
-		_node.IncidentID = value
-	}
 	if value, ok := _c.mutation.Title(); ok {
 		_spec.SetField(postmortem.FieldTitle, field.TypeString, value)
 		_node.Title = value
 	}
 	if value, ok := _c.mutation.Status(); ok {
-		_spec.SetField(postmortem.FieldStatus, field.TypeString, value)
+		_spec.SetField(postmortem.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
 	}
 	if value, ok := _c.mutation.Summary(); ok {
@@ -466,10 +498,6 @@ func (_c *PostMortemCreate) createSpec() (*PostMortem, *sqlgraph.CreateSpec) {
 		_spec.SetField(postmortem.FieldBlamelessNotes, field.TypeString, value)
 		_node.BlamelessNotes = value
 	}
-	if value, ok := _c.mutation.ApprovedByID(); ok {
-		_spec.SetField(postmortem.FieldApprovedByID, field.TypeUUID, value)
-		_node.ApprovedByID = &value
-	}
 	if value, ok := _c.mutation.PublishedAt(); ok {
 		_spec.SetField(postmortem.FieldPublishedAt, field.TypeTime, value)
 		_node.PublishedAt = &value
@@ -481,6 +509,56 @@ func (_c *PostMortemCreate) createSpec() (*PostMortem, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(postmortem.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if nodes := _c.mutation.IncidentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   postmortem.IncidentTable,
+			Columns: []string{postmortem.IncidentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.IncidentID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ApprovedByIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   postmortem.ApprovedByTable,
+			Columns: []string{postmortem.ApprovedByColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.ApprovedByID = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ActionItemsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   postmortem.ActionItemsTable,
+			Columns: []string{postmortem.ActionItemsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(actionitem.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

@@ -5,6 +5,7 @@ package ent
 import (
 	"alga/ent/predicate"
 	"alga/ent/triagerule"
+	"alga/ent/user"
 	"context"
 	"errors"
 	"fmt"
@@ -83,13 +84,13 @@ func (_u *TriageRuleUpdate) ClearConditions() *TriageRuleUpdate {
 }
 
 // SetMatchMode sets the "match_mode" field.
-func (_u *TriageRuleUpdate) SetMatchMode(v string) *TriageRuleUpdate {
+func (_u *TriageRuleUpdate) SetMatchMode(v triagerule.MatchMode) *TriageRuleUpdate {
 	_u.mutation.SetMatchMode(v)
 	return _u
 }
 
 // SetNillableMatchMode sets the "match_mode" field if the given value is not nil.
-func (_u *TriageRuleUpdate) SetNillableMatchMode(v *string) *TriageRuleUpdate {
+func (_u *TriageRuleUpdate) SetNillableMatchMode(v *triagerule.MatchMode) *TriageRuleUpdate {
 	if v != nil {
 		_u.SetMatchMode(*v)
 	}
@@ -97,13 +98,13 @@ func (_u *TriageRuleUpdate) SetNillableMatchMode(v *string) *TriageRuleUpdate {
 }
 
 // SetDecision sets the "decision" field.
-func (_u *TriageRuleUpdate) SetDecision(v string) *TriageRuleUpdate {
+func (_u *TriageRuleUpdate) SetDecision(v triagerule.Decision) *TriageRuleUpdate {
 	_u.mutation.SetDecision(v)
 	return _u
 }
 
 // SetNillableDecision sets the "decision" field if the given value is not nil.
-func (_u *TriageRuleUpdate) SetNillableDecision(v *string) *TriageRuleUpdate {
+func (_u *TriageRuleUpdate) SetNillableDecision(v *triagerule.Decision) *TriageRuleUpdate {
 	if v != nil {
 		_u.SetDecision(*v)
 	}
@@ -111,13 +112,13 @@ func (_u *TriageRuleUpdate) SetNillableDecision(v *string) *TriageRuleUpdate {
 }
 
 // SetSeverity sets the "severity" field.
-func (_u *TriageRuleUpdate) SetSeverity(v string) *TriageRuleUpdate {
+func (_u *TriageRuleUpdate) SetSeverity(v triagerule.Severity) *TriageRuleUpdate {
 	_u.mutation.SetSeverity(v)
 	return _u
 }
 
 // SetNillableSeverity sets the "severity" field if the given value is not nil.
-func (_u *TriageRuleUpdate) SetNillableSeverity(v *string) *TriageRuleUpdate {
+func (_u *TriageRuleUpdate) SetNillableSeverity(v *triagerule.Severity) *TriageRuleUpdate {
 	if v != nil {
 		_u.SetSeverity(*v)
 	}
@@ -131,13 +132,13 @@ func (_u *TriageRuleUpdate) ClearSeverity() *TriageRuleUpdate {
 }
 
 // SetCategory sets the "category" field.
-func (_u *TriageRuleUpdate) SetCategory(v string) *TriageRuleUpdate {
+func (_u *TriageRuleUpdate) SetCategory(v triagerule.Category) *TriageRuleUpdate {
 	_u.mutation.SetCategory(v)
 	return _u
 }
 
 // SetNillableCategory sets the "category" field if the given value is not nil.
-func (_u *TriageRuleUpdate) SetNillableCategory(v *string) *TriageRuleUpdate {
+func (_u *TriageRuleUpdate) SetNillableCategory(v *triagerule.Category) *TriageRuleUpdate {
 	if v != nil {
 		_u.SetCategory(*v)
 	}
@@ -237,9 +238,34 @@ func (_u *TriageRuleUpdate) SetUpdatedAt(v time.Time) *TriageRuleUpdate {
 	return _u
 }
 
+// SetCreatedByUserID sets the "created_by_user" edge to the User entity by ID.
+func (_u *TriageRuleUpdate) SetCreatedByUserID(id uuid.UUID) *TriageRuleUpdate {
+	_u.mutation.SetCreatedByUserID(id)
+	return _u
+}
+
+// SetNillableCreatedByUserID sets the "created_by_user" edge to the User entity by ID if the given value is not nil.
+func (_u *TriageRuleUpdate) SetNillableCreatedByUserID(id *uuid.UUID) *TriageRuleUpdate {
+	if id != nil {
+		_u = _u.SetCreatedByUserID(*id)
+	}
+	return _u
+}
+
+// SetCreatedByUser sets the "created_by_user" edge to the User entity.
+func (_u *TriageRuleUpdate) SetCreatedByUser(v *User) *TriageRuleUpdate {
+	return _u.SetCreatedByUserID(v.ID)
+}
+
 // Mutation returns the TriageRuleMutation object of the builder.
 func (_u *TriageRuleUpdate) Mutation() *TriageRuleMutation {
 	return _u.mutation
+}
+
+// ClearCreatedByUser clears the "created_by_user" edge to the User entity.
+func (_u *TriageRuleUpdate) ClearCreatedByUser() *TriageRuleUpdate {
+	_u.mutation.ClearCreatedByUser()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -285,9 +311,29 @@ func (_u *TriageRuleUpdate) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "TriageRule.name": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.MatchMode(); ok {
+		if err := triagerule.MatchModeValidator(v); err != nil {
+			return &ValidationError{Name: "match_mode", err: fmt.Errorf(`ent: validator failed for field "TriageRule.match_mode": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Decision(); ok {
 		if err := triagerule.DecisionValidator(v); err != nil {
 			return &ValidationError{Name: "decision", err: fmt.Errorf(`ent: validator failed for field "TriageRule.decision": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Severity(); ok {
+		if err := triagerule.SeverityValidator(v); err != nil {
+			return &ValidationError{Name: "severity", err: fmt.Errorf(`ent: validator failed for field "TriageRule.severity": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Category(); ok {
+		if err := triagerule.CategoryValidator(v); err != nil {
+			return &ValidationError{Name: "category", err: fmt.Errorf(`ent: validator failed for field "TriageRule.category": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Priority(); ok {
+		if err := triagerule.PriorityValidator(v); err != nil {
+			return &ValidationError{Name: "priority", err: fmt.Errorf(`ent: validator failed for field "TriageRule.priority": %w`, err)}
 		}
 	}
 	return nil
@@ -326,22 +372,22 @@ func (_u *TriageRuleUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 		_spec.ClearField(triagerule.FieldConditions, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.MatchMode(); ok {
-		_spec.SetField(triagerule.FieldMatchMode, field.TypeString, value)
+		_spec.SetField(triagerule.FieldMatchMode, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Decision(); ok {
-		_spec.SetField(triagerule.FieldDecision, field.TypeString, value)
+		_spec.SetField(triagerule.FieldDecision, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Severity(); ok {
-		_spec.SetField(triagerule.FieldSeverity, field.TypeString, value)
+		_spec.SetField(triagerule.FieldSeverity, field.TypeEnum, value)
 	}
 	if _u.mutation.SeverityCleared() {
-		_spec.ClearField(triagerule.FieldSeverity, field.TypeString)
+		_spec.ClearField(triagerule.FieldSeverity, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.Category(); ok {
-		_spec.SetField(triagerule.FieldCategory, field.TypeString, value)
+		_spec.SetField(triagerule.FieldCategory, field.TypeEnum, value)
 	}
 	if _u.mutation.CategoryCleared() {
-		_spec.ClearField(triagerule.FieldCategory, field.TypeString)
+		_spec.ClearField(triagerule.FieldCategory, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.Enrichment(); ok {
 		_spec.SetField(triagerule.FieldEnrichment, field.TypeJSON, value)
@@ -358,17 +404,40 @@ func (_u *TriageRuleUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if value, ok := _u.mutation.Enabled(); ok {
 		_spec.SetField(triagerule.FieldEnabled, field.TypeBool, value)
 	}
-	if value, ok := _u.mutation.CreatedBy(); ok {
-		_spec.SetField(triagerule.FieldCreatedBy, field.TypeUUID, value)
-	}
-	if _u.mutation.CreatedByCleared() {
-		_spec.ClearField(triagerule.FieldCreatedBy, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.CreatedAt(); ok {
 		_spec.SetField(triagerule.FieldCreatedAt, field.TypeTime, value)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(triagerule.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.CreatedByUserCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   triagerule.CreatedByUserTable,
+			Columns: []string{triagerule.CreatedByUserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CreatedByUserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   triagerule.CreatedByUserTable,
+			Columns: []string{triagerule.CreatedByUserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -443,13 +512,13 @@ func (_u *TriageRuleUpdateOne) ClearConditions() *TriageRuleUpdateOne {
 }
 
 // SetMatchMode sets the "match_mode" field.
-func (_u *TriageRuleUpdateOne) SetMatchMode(v string) *TriageRuleUpdateOne {
+func (_u *TriageRuleUpdateOne) SetMatchMode(v triagerule.MatchMode) *TriageRuleUpdateOne {
 	_u.mutation.SetMatchMode(v)
 	return _u
 }
 
 // SetNillableMatchMode sets the "match_mode" field if the given value is not nil.
-func (_u *TriageRuleUpdateOne) SetNillableMatchMode(v *string) *TriageRuleUpdateOne {
+func (_u *TriageRuleUpdateOne) SetNillableMatchMode(v *triagerule.MatchMode) *TriageRuleUpdateOne {
 	if v != nil {
 		_u.SetMatchMode(*v)
 	}
@@ -457,13 +526,13 @@ func (_u *TriageRuleUpdateOne) SetNillableMatchMode(v *string) *TriageRuleUpdate
 }
 
 // SetDecision sets the "decision" field.
-func (_u *TriageRuleUpdateOne) SetDecision(v string) *TriageRuleUpdateOne {
+func (_u *TriageRuleUpdateOne) SetDecision(v triagerule.Decision) *TriageRuleUpdateOne {
 	_u.mutation.SetDecision(v)
 	return _u
 }
 
 // SetNillableDecision sets the "decision" field if the given value is not nil.
-func (_u *TriageRuleUpdateOne) SetNillableDecision(v *string) *TriageRuleUpdateOne {
+func (_u *TriageRuleUpdateOne) SetNillableDecision(v *triagerule.Decision) *TriageRuleUpdateOne {
 	if v != nil {
 		_u.SetDecision(*v)
 	}
@@ -471,13 +540,13 @@ func (_u *TriageRuleUpdateOne) SetNillableDecision(v *string) *TriageRuleUpdateO
 }
 
 // SetSeverity sets the "severity" field.
-func (_u *TriageRuleUpdateOne) SetSeverity(v string) *TriageRuleUpdateOne {
+func (_u *TriageRuleUpdateOne) SetSeverity(v triagerule.Severity) *TriageRuleUpdateOne {
 	_u.mutation.SetSeverity(v)
 	return _u
 }
 
 // SetNillableSeverity sets the "severity" field if the given value is not nil.
-func (_u *TriageRuleUpdateOne) SetNillableSeverity(v *string) *TriageRuleUpdateOne {
+func (_u *TriageRuleUpdateOne) SetNillableSeverity(v *triagerule.Severity) *TriageRuleUpdateOne {
 	if v != nil {
 		_u.SetSeverity(*v)
 	}
@@ -491,13 +560,13 @@ func (_u *TriageRuleUpdateOne) ClearSeverity() *TriageRuleUpdateOne {
 }
 
 // SetCategory sets the "category" field.
-func (_u *TriageRuleUpdateOne) SetCategory(v string) *TriageRuleUpdateOne {
+func (_u *TriageRuleUpdateOne) SetCategory(v triagerule.Category) *TriageRuleUpdateOne {
 	_u.mutation.SetCategory(v)
 	return _u
 }
 
 // SetNillableCategory sets the "category" field if the given value is not nil.
-func (_u *TriageRuleUpdateOne) SetNillableCategory(v *string) *TriageRuleUpdateOne {
+func (_u *TriageRuleUpdateOne) SetNillableCategory(v *triagerule.Category) *TriageRuleUpdateOne {
 	if v != nil {
 		_u.SetCategory(*v)
 	}
@@ -597,9 +666,34 @@ func (_u *TriageRuleUpdateOne) SetUpdatedAt(v time.Time) *TriageRuleUpdateOne {
 	return _u
 }
 
+// SetCreatedByUserID sets the "created_by_user" edge to the User entity by ID.
+func (_u *TriageRuleUpdateOne) SetCreatedByUserID(id uuid.UUID) *TriageRuleUpdateOne {
+	_u.mutation.SetCreatedByUserID(id)
+	return _u
+}
+
+// SetNillableCreatedByUserID sets the "created_by_user" edge to the User entity by ID if the given value is not nil.
+func (_u *TriageRuleUpdateOne) SetNillableCreatedByUserID(id *uuid.UUID) *TriageRuleUpdateOne {
+	if id != nil {
+		_u = _u.SetCreatedByUserID(*id)
+	}
+	return _u
+}
+
+// SetCreatedByUser sets the "created_by_user" edge to the User entity.
+func (_u *TriageRuleUpdateOne) SetCreatedByUser(v *User) *TriageRuleUpdateOne {
+	return _u.SetCreatedByUserID(v.ID)
+}
+
 // Mutation returns the TriageRuleMutation object of the builder.
 func (_u *TriageRuleUpdateOne) Mutation() *TriageRuleMutation {
 	return _u.mutation
+}
+
+// ClearCreatedByUser clears the "created_by_user" edge to the User entity.
+func (_u *TriageRuleUpdateOne) ClearCreatedByUser() *TriageRuleUpdateOne {
+	_u.mutation.ClearCreatedByUser()
+	return _u
 }
 
 // Where appends a list predicates to the TriageRuleUpdate builder.
@@ -658,9 +752,29 @@ func (_u *TriageRuleUpdateOne) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "TriageRule.name": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.MatchMode(); ok {
+		if err := triagerule.MatchModeValidator(v); err != nil {
+			return &ValidationError{Name: "match_mode", err: fmt.Errorf(`ent: validator failed for field "TriageRule.match_mode": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Decision(); ok {
 		if err := triagerule.DecisionValidator(v); err != nil {
 			return &ValidationError{Name: "decision", err: fmt.Errorf(`ent: validator failed for field "TriageRule.decision": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Severity(); ok {
+		if err := triagerule.SeverityValidator(v); err != nil {
+			return &ValidationError{Name: "severity", err: fmt.Errorf(`ent: validator failed for field "TriageRule.severity": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Category(); ok {
+		if err := triagerule.CategoryValidator(v); err != nil {
+			return &ValidationError{Name: "category", err: fmt.Errorf(`ent: validator failed for field "TriageRule.category": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Priority(); ok {
+		if err := triagerule.PriorityValidator(v); err != nil {
+			return &ValidationError{Name: "priority", err: fmt.Errorf(`ent: validator failed for field "TriageRule.priority": %w`, err)}
 		}
 	}
 	return nil
@@ -716,22 +830,22 @@ func (_u *TriageRuleUpdateOne) sqlSave(ctx context.Context) (_node *TriageRule, 
 		_spec.ClearField(triagerule.FieldConditions, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.MatchMode(); ok {
-		_spec.SetField(triagerule.FieldMatchMode, field.TypeString, value)
+		_spec.SetField(triagerule.FieldMatchMode, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Decision(); ok {
-		_spec.SetField(triagerule.FieldDecision, field.TypeString, value)
+		_spec.SetField(triagerule.FieldDecision, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Severity(); ok {
-		_spec.SetField(triagerule.FieldSeverity, field.TypeString, value)
+		_spec.SetField(triagerule.FieldSeverity, field.TypeEnum, value)
 	}
 	if _u.mutation.SeverityCleared() {
-		_spec.ClearField(triagerule.FieldSeverity, field.TypeString)
+		_spec.ClearField(triagerule.FieldSeverity, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.Category(); ok {
-		_spec.SetField(triagerule.FieldCategory, field.TypeString, value)
+		_spec.SetField(triagerule.FieldCategory, field.TypeEnum, value)
 	}
 	if _u.mutation.CategoryCleared() {
-		_spec.ClearField(triagerule.FieldCategory, field.TypeString)
+		_spec.ClearField(triagerule.FieldCategory, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.Enrichment(); ok {
 		_spec.SetField(triagerule.FieldEnrichment, field.TypeJSON, value)
@@ -748,17 +862,40 @@ func (_u *TriageRuleUpdateOne) sqlSave(ctx context.Context) (_node *TriageRule, 
 	if value, ok := _u.mutation.Enabled(); ok {
 		_spec.SetField(triagerule.FieldEnabled, field.TypeBool, value)
 	}
-	if value, ok := _u.mutation.CreatedBy(); ok {
-		_spec.SetField(triagerule.FieldCreatedBy, field.TypeUUID, value)
-	}
-	if _u.mutation.CreatedByCleared() {
-		_spec.ClearField(triagerule.FieldCreatedBy, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.CreatedAt(); ok {
 		_spec.SetField(triagerule.FieldCreatedAt, field.TypeTime, value)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(triagerule.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.CreatedByUserCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   triagerule.CreatedByUserTable,
+			Columns: []string{triagerule.CreatedByUserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CreatedByUserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   triagerule.CreatedByUserTable,
+			Columns: []string{triagerule.CreatedByUserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &TriageRule{config: _u.config}
 	_spec.Assign = _node.assignValues

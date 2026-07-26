@@ -32,14 +32,88 @@ func (_u *ICSRoleAssignmentUpdate) Where(ps ...predicate.ICSRoleAssignment) *ICS
 	return _u
 }
 
+// SetParentID sets the "parent_id" field.
+func (_u *ICSRoleAssignmentUpdate) SetParentID(v uuid.UUID) *ICSRoleAssignmentUpdate {
+	_u.mutation.SetParentID(v)
+	return _u
+}
+
+// SetNillableParentID sets the "parent_id" field if the given value is not nil.
+func (_u *ICSRoleAssignmentUpdate) SetNillableParentID(v *uuid.UUID) *ICSRoleAssignmentUpdate {
+	if v != nil {
+		_u.SetParentID(*v)
+	}
+	return _u
+}
+
+// ClearParentID clears the value of the "parent_id" field.
+func (_u *ICSRoleAssignmentUpdate) ClearParentID() *ICSRoleAssignmentUpdate {
+	_u.mutation.ClearParentID()
+	return _u
+}
+
+// SetIncidentID sets the "incident_id" field.
+func (_u *ICSRoleAssignmentUpdate) SetIncidentID(v uuid.UUID) *ICSRoleAssignmentUpdate {
+	_u.mutation.SetIncidentID(v)
+	return _u
+}
+
+// SetNillableIncidentID sets the "incident_id" field if the given value is not nil.
+func (_u *ICSRoleAssignmentUpdate) SetNillableIncidentID(v *uuid.UUID) *ICSRoleAssignmentUpdate {
+	if v != nil {
+		_u.SetIncidentID(*v)
+	}
+	return _u
+}
+
+// SetUserID sets the "user_id" field.
+func (_u *ICSRoleAssignmentUpdate) SetUserID(v uuid.UUID) *ICSRoleAssignmentUpdate {
+	_u.mutation.SetUserID(v)
+	return _u
+}
+
+// SetNillableUserID sets the "user_id" field if the given value is not nil.
+func (_u *ICSRoleAssignmentUpdate) SetNillableUserID(v *uuid.UUID) *ICSRoleAssignmentUpdate {
+	if v != nil {
+		_u.SetUserID(*v)
+	}
+	return _u
+}
+
+// ClearUserID clears the value of the "user_id" field.
+func (_u *ICSRoleAssignmentUpdate) ClearUserID() *ICSRoleAssignmentUpdate {
+	_u.mutation.ClearUserID()
+	return _u
+}
+
+// SetAgentTokenID sets the "agent_token_id" field.
+func (_u *ICSRoleAssignmentUpdate) SetAgentTokenID(v uuid.UUID) *ICSRoleAssignmentUpdate {
+	_u.mutation.SetAgentTokenID(v)
+	return _u
+}
+
+// SetNillableAgentTokenID sets the "agent_token_id" field if the given value is not nil.
+func (_u *ICSRoleAssignmentUpdate) SetNillableAgentTokenID(v *uuid.UUID) *ICSRoleAssignmentUpdate {
+	if v != nil {
+		_u.SetAgentTokenID(*v)
+	}
+	return _u
+}
+
+// ClearAgentTokenID clears the value of the "agent_token_id" field.
+func (_u *ICSRoleAssignmentUpdate) ClearAgentTokenID() *ICSRoleAssignmentUpdate {
+	_u.mutation.ClearAgentTokenID()
+	return _u
+}
+
 // SetRoleType sets the "role_type" field.
-func (_u *ICSRoleAssignmentUpdate) SetRoleType(v string) *ICSRoleAssignmentUpdate {
+func (_u *ICSRoleAssignmentUpdate) SetRoleType(v icsroleassignment.RoleType) *ICSRoleAssignmentUpdate {
 	_u.mutation.SetRoleType(v)
 	return _u
 }
 
 // SetNillableRoleType sets the "role_type" field if the given value is not nil.
-func (_u *ICSRoleAssignmentUpdate) SetNillableRoleType(v *string) *ICSRoleAssignmentUpdate {
+func (_u *ICSRoleAssignmentUpdate) SetNillableRoleType(v *icsroleassignment.RoleType) *ICSRoleAssignmentUpdate {
 	if v != nil {
 		_u.SetRoleType(*v)
 	}
@@ -47,13 +121,13 @@ func (_u *ICSRoleAssignmentUpdate) SetNillableRoleType(v *string) *ICSRoleAssign
 }
 
 // SetStatus sets the "status" field.
-func (_u *ICSRoleAssignmentUpdate) SetStatus(v string) *ICSRoleAssignmentUpdate {
+func (_u *ICSRoleAssignmentUpdate) SetStatus(v icsroleassignment.Status) *ICSRoleAssignmentUpdate {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *ICSRoleAssignmentUpdate) SetNillableStatus(v *string) *ICSRoleAssignmentUpdate {
+func (_u *ICSRoleAssignmentUpdate) SetNillableStatus(v *icsroleassignment.Status) *ICSRoleAssignmentUpdate {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -61,13 +135,13 @@ func (_u *ICSRoleAssignmentUpdate) SetNillableStatus(v *string) *ICSRoleAssignme
 }
 
 // SetAssigneeType sets the "assignee_type" field.
-func (_u *ICSRoleAssignmentUpdate) SetAssigneeType(v string) *ICSRoleAssignmentUpdate {
+func (_u *ICSRoleAssignmentUpdate) SetAssigneeType(v icsroleassignment.AssigneeType) *ICSRoleAssignmentUpdate {
 	_u.mutation.SetAssigneeType(v)
 	return _u
 }
 
 // SetNillableAssigneeType sets the "assignee_type" field if the given value is not nil.
-func (_u *ICSRoleAssignmentUpdate) SetNillableAssigneeType(v *string) *ICSRoleAssignmentUpdate {
+func (_u *ICSRoleAssignmentUpdate) SetNillableAssigneeType(v *icsroleassignment.AssigneeType) *ICSRoleAssignmentUpdate {
 	if v != nil {
 		_u.SetAssigneeType(*v)
 	}
@@ -95,13 +169,13 @@ func (_u *ICSRoleAssignmentUpdate) ClearScopeDescription() *ICSRoleAssignmentUpd
 }
 
 // SetEndedReason sets the "ended_reason" field.
-func (_u *ICSRoleAssignmentUpdate) SetEndedReason(v string) *ICSRoleAssignmentUpdate {
+func (_u *ICSRoleAssignmentUpdate) SetEndedReason(v icsroleassignment.EndedReason) *ICSRoleAssignmentUpdate {
 	_u.mutation.SetEndedReason(v)
 	return _u
 }
 
 // SetNillableEndedReason sets the "ended_reason" field if the given value is not nil.
-func (_u *ICSRoleAssignmentUpdate) SetNillableEndedReason(v *string) *ICSRoleAssignmentUpdate {
+func (_u *ICSRoleAssignmentUpdate) SetNillableEndedReason(v *icsroleassignment.EndedReason) *ICSRoleAssignmentUpdate {
 	if v != nil {
 		_u.SetEndedReason(*v)
 	}
@@ -148,29 +222,9 @@ func (_u *ICSRoleAssignmentUpdate) ClearEndedAt() *ICSRoleAssignmentUpdate {
 	return _u
 }
 
-// SetIncidentID sets the "incident" edge to the Incident entity by ID.
-func (_u *ICSRoleAssignmentUpdate) SetIncidentID(id uuid.UUID) *ICSRoleAssignmentUpdate {
-	_u.mutation.SetIncidentID(id)
-	return _u
-}
-
 // SetIncident sets the "incident" edge to the Incident entity.
 func (_u *ICSRoleAssignmentUpdate) SetIncident(v *Incident) *ICSRoleAssignmentUpdate {
 	return _u.SetIncidentID(v.ID)
-}
-
-// SetUserID sets the "user" edge to the User entity by ID.
-func (_u *ICSRoleAssignmentUpdate) SetUserID(id uuid.UUID) *ICSRoleAssignmentUpdate {
-	_u.mutation.SetUserID(id)
-	return _u
-}
-
-// SetNillableUserID sets the "user" edge to the User entity by ID if the given value is not nil.
-func (_u *ICSRoleAssignmentUpdate) SetNillableUserID(id *uuid.UUID) *ICSRoleAssignmentUpdate {
-	if id != nil {
-		_u = _u.SetUserID(*id)
-	}
-	return _u
 }
 
 // SetUser sets the "user" edge to the User entity.
@@ -178,37 +232,24 @@ func (_u *ICSRoleAssignmentUpdate) SetUser(v *User) *ICSRoleAssignmentUpdate {
 	return _u.SetUserID(v.ID)
 }
 
-// SetAgentTokenID sets the "agent_token" edge to the AgentToken entity by ID.
-func (_u *ICSRoleAssignmentUpdate) SetAgentTokenID(id uuid.UUID) *ICSRoleAssignmentUpdate {
-	_u.mutation.SetAgentTokenID(id)
-	return _u
-}
-
-// SetNillableAgentTokenID sets the "agent_token" edge to the AgentToken entity by ID if the given value is not nil.
-func (_u *ICSRoleAssignmentUpdate) SetNillableAgentTokenID(id *uuid.UUID) *ICSRoleAssignmentUpdate {
-	if id != nil {
-		_u = _u.SetAgentTokenID(*id)
-	}
-	return _u
-}
-
 // SetAgentToken sets the "agent_token" edge to the AgentToken entity.
 func (_u *ICSRoleAssignmentUpdate) SetAgentToken(v *AgentToken) *ICSRoleAssignmentUpdate {
 	return _u.SetAgentTokenID(v.ID)
 }
 
-// SetParentID sets the "parent" edge to the ICSRoleAssignment entity by ID.
-func (_u *ICSRoleAssignmentUpdate) SetParentID(id uuid.UUID) *ICSRoleAssignmentUpdate {
-	_u.mutation.SetParentID(id)
+// AddChildIDs adds the "children" edge to the ICSRoleAssignment entity by IDs.
+func (_u *ICSRoleAssignmentUpdate) AddChildIDs(ids ...uuid.UUID) *ICSRoleAssignmentUpdate {
+	_u.mutation.AddChildIDs(ids...)
 	return _u
 }
 
-// SetNillableParentID sets the "parent" edge to the ICSRoleAssignment entity by ID if the given value is not nil.
-func (_u *ICSRoleAssignmentUpdate) SetNillableParentID(id *uuid.UUID) *ICSRoleAssignmentUpdate {
-	if id != nil {
-		_u = _u.SetParentID(*id)
+// AddChildren adds the "children" edges to the ICSRoleAssignment entity.
+func (_u *ICSRoleAssignmentUpdate) AddChildren(v ...*ICSRoleAssignment) *ICSRoleAssignmentUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return _u
+	return _u.AddChildIDs(ids...)
 }
 
 // SetParent sets the "parent" edge to the ICSRoleAssignment entity.
@@ -237,6 +278,27 @@ func (_u *ICSRoleAssignmentUpdate) ClearUser() *ICSRoleAssignmentUpdate {
 func (_u *ICSRoleAssignmentUpdate) ClearAgentToken() *ICSRoleAssignmentUpdate {
 	_u.mutation.ClearAgentToken()
 	return _u
+}
+
+// ClearChildren clears all "children" edges to the ICSRoleAssignment entity.
+func (_u *ICSRoleAssignmentUpdate) ClearChildren() *ICSRoleAssignmentUpdate {
+	_u.mutation.ClearChildren()
+	return _u
+}
+
+// RemoveChildIDs removes the "children" edge to ICSRoleAssignment entities by IDs.
+func (_u *ICSRoleAssignmentUpdate) RemoveChildIDs(ids ...uuid.UUID) *ICSRoleAssignmentUpdate {
+	_u.mutation.RemoveChildIDs(ids...)
+	return _u
+}
+
+// RemoveChildren removes "children" edges to ICSRoleAssignment entities.
+func (_u *ICSRoleAssignmentUpdate) RemoveChildren(v ...*ICSRoleAssignment) *ICSRoleAssignmentUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveChildIDs(ids...)
 }
 
 // ClearParent clears the "parent" edge to the ICSRoleAssignment entity.
@@ -274,6 +336,26 @@ func (_u *ICSRoleAssignmentUpdate) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *ICSRoleAssignmentUpdate) check() error {
+	if v, ok := _u.mutation.RoleType(); ok {
+		if err := icsroleassignment.RoleTypeValidator(v); err != nil {
+			return &ValidationError{Name: "role_type", err: fmt.Errorf(`ent: validator failed for field "ICSRoleAssignment.role_type": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := icsroleassignment.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "ICSRoleAssignment.status": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.AssigneeType(); ok {
+		if err := icsroleassignment.AssigneeTypeValidator(v); err != nil {
+			return &ValidationError{Name: "assignee_type", err: fmt.Errorf(`ent: validator failed for field "ICSRoleAssignment.assignee_type": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.EndedReason(); ok {
+		if err := icsroleassignment.EndedReasonValidator(v); err != nil {
+			return &ValidationError{Name: "ended_reason", err: fmt.Errorf(`ent: validator failed for field "ICSRoleAssignment.ended_reason": %w`, err)}
+		}
+	}
 	if _u.mutation.IncidentCleared() && len(_u.mutation.IncidentIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ICSRoleAssignment.incident"`)
 	}
@@ -293,13 +375,13 @@ func (_u *ICSRoleAssignmentUpdate) sqlSave(ctx context.Context) (_node int, err 
 		}
 	}
 	if value, ok := _u.mutation.RoleType(); ok {
-		_spec.SetField(icsroleassignment.FieldRoleType, field.TypeString, value)
+		_spec.SetField(icsroleassignment.FieldRoleType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(icsroleassignment.FieldStatus, field.TypeString, value)
+		_spec.SetField(icsroleassignment.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.AssigneeType(); ok {
-		_spec.SetField(icsroleassignment.FieldAssigneeType, field.TypeString, value)
+		_spec.SetField(icsroleassignment.FieldAssigneeType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.ScopeDescription(); ok {
 		_spec.SetField(icsroleassignment.FieldScopeDescription, field.TypeString, value)
@@ -308,10 +390,10 @@ func (_u *ICSRoleAssignmentUpdate) sqlSave(ctx context.Context) (_node int, err 
 		_spec.ClearField(icsroleassignment.FieldScopeDescription, field.TypeString)
 	}
 	if value, ok := _u.mutation.EndedReason(); ok {
-		_spec.SetField(icsroleassignment.FieldEndedReason, field.TypeString, value)
+		_spec.SetField(icsroleassignment.FieldEndedReason, field.TypeEnum, value)
 	}
 	if _u.mutation.EndedReasonCleared() {
-		_spec.ClearField(icsroleassignment.FieldEndedReason, field.TypeString)
+		_spec.ClearField(icsroleassignment.FieldEndedReason, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.StartedAt(); ok {
 		_spec.SetField(icsroleassignment.FieldStartedAt, field.TypeTime, value)
@@ -409,13 +491,58 @@ func (_u *ICSRoleAssignmentUpdate) sqlSave(ctx context.Context) (_node int, err 
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.ChildrenCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   icsroleassignment.ChildrenTable,
+			Columns: []string{icsroleassignment.ChildrenColumn},
+			Bidi:    true,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(icsroleassignment.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedChildrenIDs(); len(nodes) > 0 && !_u.mutation.ChildrenCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   icsroleassignment.ChildrenTable,
+			Columns: []string{icsroleassignment.ChildrenColumn},
+			Bidi:    true,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(icsroleassignment.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ChildrenIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   icsroleassignment.ChildrenTable,
+			Columns: []string{icsroleassignment.ChildrenColumn},
+			Bidi:    true,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(icsroleassignment.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _u.mutation.ParentCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: false,
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
 			Table:   icsroleassignment.ParentTable,
 			Columns: []string{icsroleassignment.ParentColumn},
-			Bidi:    true,
+			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(icsroleassignment.FieldID, field.TypeUUID),
 			},
@@ -424,11 +551,11 @@ func (_u *ICSRoleAssignmentUpdate) sqlSave(ctx context.Context) (_node int, err 
 	}
 	if nodes := _u.mutation.ParentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: false,
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
 			Table:   icsroleassignment.ParentTable,
 			Columns: []string{icsroleassignment.ParentColumn},
-			Bidi:    true,
+			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(icsroleassignment.FieldID, field.TypeUUID),
 			},
@@ -458,14 +585,88 @@ type ICSRoleAssignmentUpdateOne struct {
 	mutation *ICSRoleAssignmentMutation
 }
 
+// SetParentID sets the "parent_id" field.
+func (_u *ICSRoleAssignmentUpdateOne) SetParentID(v uuid.UUID) *ICSRoleAssignmentUpdateOne {
+	_u.mutation.SetParentID(v)
+	return _u
+}
+
+// SetNillableParentID sets the "parent_id" field if the given value is not nil.
+func (_u *ICSRoleAssignmentUpdateOne) SetNillableParentID(v *uuid.UUID) *ICSRoleAssignmentUpdateOne {
+	if v != nil {
+		_u.SetParentID(*v)
+	}
+	return _u
+}
+
+// ClearParentID clears the value of the "parent_id" field.
+func (_u *ICSRoleAssignmentUpdateOne) ClearParentID() *ICSRoleAssignmentUpdateOne {
+	_u.mutation.ClearParentID()
+	return _u
+}
+
+// SetIncidentID sets the "incident_id" field.
+func (_u *ICSRoleAssignmentUpdateOne) SetIncidentID(v uuid.UUID) *ICSRoleAssignmentUpdateOne {
+	_u.mutation.SetIncidentID(v)
+	return _u
+}
+
+// SetNillableIncidentID sets the "incident_id" field if the given value is not nil.
+func (_u *ICSRoleAssignmentUpdateOne) SetNillableIncidentID(v *uuid.UUID) *ICSRoleAssignmentUpdateOne {
+	if v != nil {
+		_u.SetIncidentID(*v)
+	}
+	return _u
+}
+
+// SetUserID sets the "user_id" field.
+func (_u *ICSRoleAssignmentUpdateOne) SetUserID(v uuid.UUID) *ICSRoleAssignmentUpdateOne {
+	_u.mutation.SetUserID(v)
+	return _u
+}
+
+// SetNillableUserID sets the "user_id" field if the given value is not nil.
+func (_u *ICSRoleAssignmentUpdateOne) SetNillableUserID(v *uuid.UUID) *ICSRoleAssignmentUpdateOne {
+	if v != nil {
+		_u.SetUserID(*v)
+	}
+	return _u
+}
+
+// ClearUserID clears the value of the "user_id" field.
+func (_u *ICSRoleAssignmentUpdateOne) ClearUserID() *ICSRoleAssignmentUpdateOne {
+	_u.mutation.ClearUserID()
+	return _u
+}
+
+// SetAgentTokenID sets the "agent_token_id" field.
+func (_u *ICSRoleAssignmentUpdateOne) SetAgentTokenID(v uuid.UUID) *ICSRoleAssignmentUpdateOne {
+	_u.mutation.SetAgentTokenID(v)
+	return _u
+}
+
+// SetNillableAgentTokenID sets the "agent_token_id" field if the given value is not nil.
+func (_u *ICSRoleAssignmentUpdateOne) SetNillableAgentTokenID(v *uuid.UUID) *ICSRoleAssignmentUpdateOne {
+	if v != nil {
+		_u.SetAgentTokenID(*v)
+	}
+	return _u
+}
+
+// ClearAgentTokenID clears the value of the "agent_token_id" field.
+func (_u *ICSRoleAssignmentUpdateOne) ClearAgentTokenID() *ICSRoleAssignmentUpdateOne {
+	_u.mutation.ClearAgentTokenID()
+	return _u
+}
+
 // SetRoleType sets the "role_type" field.
-func (_u *ICSRoleAssignmentUpdateOne) SetRoleType(v string) *ICSRoleAssignmentUpdateOne {
+func (_u *ICSRoleAssignmentUpdateOne) SetRoleType(v icsroleassignment.RoleType) *ICSRoleAssignmentUpdateOne {
 	_u.mutation.SetRoleType(v)
 	return _u
 }
 
 // SetNillableRoleType sets the "role_type" field if the given value is not nil.
-func (_u *ICSRoleAssignmentUpdateOne) SetNillableRoleType(v *string) *ICSRoleAssignmentUpdateOne {
+func (_u *ICSRoleAssignmentUpdateOne) SetNillableRoleType(v *icsroleassignment.RoleType) *ICSRoleAssignmentUpdateOne {
 	if v != nil {
 		_u.SetRoleType(*v)
 	}
@@ -473,13 +674,13 @@ func (_u *ICSRoleAssignmentUpdateOne) SetNillableRoleType(v *string) *ICSRoleAss
 }
 
 // SetStatus sets the "status" field.
-func (_u *ICSRoleAssignmentUpdateOne) SetStatus(v string) *ICSRoleAssignmentUpdateOne {
+func (_u *ICSRoleAssignmentUpdateOne) SetStatus(v icsroleassignment.Status) *ICSRoleAssignmentUpdateOne {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *ICSRoleAssignmentUpdateOne) SetNillableStatus(v *string) *ICSRoleAssignmentUpdateOne {
+func (_u *ICSRoleAssignmentUpdateOne) SetNillableStatus(v *icsroleassignment.Status) *ICSRoleAssignmentUpdateOne {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -487,13 +688,13 @@ func (_u *ICSRoleAssignmentUpdateOne) SetNillableStatus(v *string) *ICSRoleAssig
 }
 
 // SetAssigneeType sets the "assignee_type" field.
-func (_u *ICSRoleAssignmentUpdateOne) SetAssigneeType(v string) *ICSRoleAssignmentUpdateOne {
+func (_u *ICSRoleAssignmentUpdateOne) SetAssigneeType(v icsroleassignment.AssigneeType) *ICSRoleAssignmentUpdateOne {
 	_u.mutation.SetAssigneeType(v)
 	return _u
 }
 
 // SetNillableAssigneeType sets the "assignee_type" field if the given value is not nil.
-func (_u *ICSRoleAssignmentUpdateOne) SetNillableAssigneeType(v *string) *ICSRoleAssignmentUpdateOne {
+func (_u *ICSRoleAssignmentUpdateOne) SetNillableAssigneeType(v *icsroleassignment.AssigneeType) *ICSRoleAssignmentUpdateOne {
 	if v != nil {
 		_u.SetAssigneeType(*v)
 	}
@@ -521,13 +722,13 @@ func (_u *ICSRoleAssignmentUpdateOne) ClearScopeDescription() *ICSRoleAssignment
 }
 
 // SetEndedReason sets the "ended_reason" field.
-func (_u *ICSRoleAssignmentUpdateOne) SetEndedReason(v string) *ICSRoleAssignmentUpdateOne {
+func (_u *ICSRoleAssignmentUpdateOne) SetEndedReason(v icsroleassignment.EndedReason) *ICSRoleAssignmentUpdateOne {
 	_u.mutation.SetEndedReason(v)
 	return _u
 }
 
 // SetNillableEndedReason sets the "ended_reason" field if the given value is not nil.
-func (_u *ICSRoleAssignmentUpdateOne) SetNillableEndedReason(v *string) *ICSRoleAssignmentUpdateOne {
+func (_u *ICSRoleAssignmentUpdateOne) SetNillableEndedReason(v *icsroleassignment.EndedReason) *ICSRoleAssignmentUpdateOne {
 	if v != nil {
 		_u.SetEndedReason(*v)
 	}
@@ -574,29 +775,9 @@ func (_u *ICSRoleAssignmentUpdateOne) ClearEndedAt() *ICSRoleAssignmentUpdateOne
 	return _u
 }
 
-// SetIncidentID sets the "incident" edge to the Incident entity by ID.
-func (_u *ICSRoleAssignmentUpdateOne) SetIncidentID(id uuid.UUID) *ICSRoleAssignmentUpdateOne {
-	_u.mutation.SetIncidentID(id)
-	return _u
-}
-
 // SetIncident sets the "incident" edge to the Incident entity.
 func (_u *ICSRoleAssignmentUpdateOne) SetIncident(v *Incident) *ICSRoleAssignmentUpdateOne {
 	return _u.SetIncidentID(v.ID)
-}
-
-// SetUserID sets the "user" edge to the User entity by ID.
-func (_u *ICSRoleAssignmentUpdateOne) SetUserID(id uuid.UUID) *ICSRoleAssignmentUpdateOne {
-	_u.mutation.SetUserID(id)
-	return _u
-}
-
-// SetNillableUserID sets the "user" edge to the User entity by ID if the given value is not nil.
-func (_u *ICSRoleAssignmentUpdateOne) SetNillableUserID(id *uuid.UUID) *ICSRoleAssignmentUpdateOne {
-	if id != nil {
-		_u = _u.SetUserID(*id)
-	}
-	return _u
 }
 
 // SetUser sets the "user" edge to the User entity.
@@ -604,37 +785,24 @@ func (_u *ICSRoleAssignmentUpdateOne) SetUser(v *User) *ICSRoleAssignmentUpdateO
 	return _u.SetUserID(v.ID)
 }
 
-// SetAgentTokenID sets the "agent_token" edge to the AgentToken entity by ID.
-func (_u *ICSRoleAssignmentUpdateOne) SetAgentTokenID(id uuid.UUID) *ICSRoleAssignmentUpdateOne {
-	_u.mutation.SetAgentTokenID(id)
-	return _u
-}
-
-// SetNillableAgentTokenID sets the "agent_token" edge to the AgentToken entity by ID if the given value is not nil.
-func (_u *ICSRoleAssignmentUpdateOne) SetNillableAgentTokenID(id *uuid.UUID) *ICSRoleAssignmentUpdateOne {
-	if id != nil {
-		_u = _u.SetAgentTokenID(*id)
-	}
-	return _u
-}
-
 // SetAgentToken sets the "agent_token" edge to the AgentToken entity.
 func (_u *ICSRoleAssignmentUpdateOne) SetAgentToken(v *AgentToken) *ICSRoleAssignmentUpdateOne {
 	return _u.SetAgentTokenID(v.ID)
 }
 
-// SetParentID sets the "parent" edge to the ICSRoleAssignment entity by ID.
-func (_u *ICSRoleAssignmentUpdateOne) SetParentID(id uuid.UUID) *ICSRoleAssignmentUpdateOne {
-	_u.mutation.SetParentID(id)
+// AddChildIDs adds the "children" edge to the ICSRoleAssignment entity by IDs.
+func (_u *ICSRoleAssignmentUpdateOne) AddChildIDs(ids ...uuid.UUID) *ICSRoleAssignmentUpdateOne {
+	_u.mutation.AddChildIDs(ids...)
 	return _u
 }
 
-// SetNillableParentID sets the "parent" edge to the ICSRoleAssignment entity by ID if the given value is not nil.
-func (_u *ICSRoleAssignmentUpdateOne) SetNillableParentID(id *uuid.UUID) *ICSRoleAssignmentUpdateOne {
-	if id != nil {
-		_u = _u.SetParentID(*id)
+// AddChildren adds the "children" edges to the ICSRoleAssignment entity.
+func (_u *ICSRoleAssignmentUpdateOne) AddChildren(v ...*ICSRoleAssignment) *ICSRoleAssignmentUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return _u
+	return _u.AddChildIDs(ids...)
 }
 
 // SetParent sets the "parent" edge to the ICSRoleAssignment entity.
@@ -663,6 +831,27 @@ func (_u *ICSRoleAssignmentUpdateOne) ClearUser() *ICSRoleAssignmentUpdateOne {
 func (_u *ICSRoleAssignmentUpdateOne) ClearAgentToken() *ICSRoleAssignmentUpdateOne {
 	_u.mutation.ClearAgentToken()
 	return _u
+}
+
+// ClearChildren clears all "children" edges to the ICSRoleAssignment entity.
+func (_u *ICSRoleAssignmentUpdateOne) ClearChildren() *ICSRoleAssignmentUpdateOne {
+	_u.mutation.ClearChildren()
+	return _u
+}
+
+// RemoveChildIDs removes the "children" edge to ICSRoleAssignment entities by IDs.
+func (_u *ICSRoleAssignmentUpdateOne) RemoveChildIDs(ids ...uuid.UUID) *ICSRoleAssignmentUpdateOne {
+	_u.mutation.RemoveChildIDs(ids...)
+	return _u
+}
+
+// RemoveChildren removes "children" edges to ICSRoleAssignment entities.
+func (_u *ICSRoleAssignmentUpdateOne) RemoveChildren(v ...*ICSRoleAssignment) *ICSRoleAssignmentUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveChildIDs(ids...)
 }
 
 // ClearParent clears the "parent" edge to the ICSRoleAssignment entity.
@@ -713,6 +902,26 @@ func (_u *ICSRoleAssignmentUpdateOne) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *ICSRoleAssignmentUpdateOne) check() error {
+	if v, ok := _u.mutation.RoleType(); ok {
+		if err := icsroleassignment.RoleTypeValidator(v); err != nil {
+			return &ValidationError{Name: "role_type", err: fmt.Errorf(`ent: validator failed for field "ICSRoleAssignment.role_type": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := icsroleassignment.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "ICSRoleAssignment.status": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.AssigneeType(); ok {
+		if err := icsroleassignment.AssigneeTypeValidator(v); err != nil {
+			return &ValidationError{Name: "assignee_type", err: fmt.Errorf(`ent: validator failed for field "ICSRoleAssignment.assignee_type": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.EndedReason(); ok {
+		if err := icsroleassignment.EndedReasonValidator(v); err != nil {
+			return &ValidationError{Name: "ended_reason", err: fmt.Errorf(`ent: validator failed for field "ICSRoleAssignment.ended_reason": %w`, err)}
+		}
+	}
 	if _u.mutation.IncidentCleared() && len(_u.mutation.IncidentIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ICSRoleAssignment.incident"`)
 	}
@@ -749,13 +958,13 @@ func (_u *ICSRoleAssignmentUpdateOne) sqlSave(ctx context.Context) (_node *ICSRo
 		}
 	}
 	if value, ok := _u.mutation.RoleType(); ok {
-		_spec.SetField(icsroleassignment.FieldRoleType, field.TypeString, value)
+		_spec.SetField(icsroleassignment.FieldRoleType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(icsroleassignment.FieldStatus, field.TypeString, value)
+		_spec.SetField(icsroleassignment.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.AssigneeType(); ok {
-		_spec.SetField(icsroleassignment.FieldAssigneeType, field.TypeString, value)
+		_spec.SetField(icsroleassignment.FieldAssigneeType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.ScopeDescription(); ok {
 		_spec.SetField(icsroleassignment.FieldScopeDescription, field.TypeString, value)
@@ -764,10 +973,10 @@ func (_u *ICSRoleAssignmentUpdateOne) sqlSave(ctx context.Context) (_node *ICSRo
 		_spec.ClearField(icsroleassignment.FieldScopeDescription, field.TypeString)
 	}
 	if value, ok := _u.mutation.EndedReason(); ok {
-		_spec.SetField(icsroleassignment.FieldEndedReason, field.TypeString, value)
+		_spec.SetField(icsroleassignment.FieldEndedReason, field.TypeEnum, value)
 	}
 	if _u.mutation.EndedReasonCleared() {
-		_spec.ClearField(icsroleassignment.FieldEndedReason, field.TypeString)
+		_spec.ClearField(icsroleassignment.FieldEndedReason, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.StartedAt(); ok {
 		_spec.SetField(icsroleassignment.FieldStartedAt, field.TypeTime, value)
@@ -865,13 +1074,58 @@ func (_u *ICSRoleAssignmentUpdateOne) sqlSave(ctx context.Context) (_node *ICSRo
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.ChildrenCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   icsroleassignment.ChildrenTable,
+			Columns: []string{icsroleassignment.ChildrenColumn},
+			Bidi:    true,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(icsroleassignment.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedChildrenIDs(); len(nodes) > 0 && !_u.mutation.ChildrenCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   icsroleassignment.ChildrenTable,
+			Columns: []string{icsroleassignment.ChildrenColumn},
+			Bidi:    true,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(icsroleassignment.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ChildrenIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   icsroleassignment.ChildrenTable,
+			Columns: []string{icsroleassignment.ChildrenColumn},
+			Bidi:    true,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(icsroleassignment.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _u.mutation.ParentCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: false,
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
 			Table:   icsroleassignment.ParentTable,
 			Columns: []string{icsroleassignment.ParentColumn},
-			Bidi:    true,
+			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(icsroleassignment.FieldID, field.TypeUUID),
 			},
@@ -880,11 +1134,11 @@ func (_u *ICSRoleAssignmentUpdateOne) sqlSave(ctx context.Context) (_node *ICSRo
 	}
 	if nodes := _u.mutation.ParentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
-			Inverse: false,
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
 			Table:   icsroleassignment.ParentTable,
 			Columns: []string{icsroleassignment.ParentColumn},
-			Bidi:    true,
+			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(icsroleassignment.FieldID, field.TypeUUID),
 			},

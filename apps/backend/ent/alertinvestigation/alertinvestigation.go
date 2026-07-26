@@ -3,6 +3,7 @@
 package alertinvestigation
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -93,6 +94,8 @@ const (
 	EdgePromotedIncident = "promoted_incident"
 	// EdgePromotedIncidentInvestigation holds the string denoting the promoted_incident_investigation edge name in mutations.
 	EdgePromotedIncidentInvestigation = "promoted_incident_investigation"
+	// EdgeTriageResult holds the string denoting the triage_result edge name in mutations.
+	EdgeTriageResult = "triage_result"
 	// Table holds the table name of the alertinvestigation in the database.
 	Table = "alert_investigations"
 	// AlertsTable is the table that holds the alerts relation/edge.
@@ -101,21 +104,21 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "alertinvestigationalert" package.
 	AlertsInverseTable = "alert_investigation_alerts"
 	// AlertsColumn is the table column denoting the alerts relation/edge.
-	AlertsColumn = "alert_investigation_uuid"
+	AlertsColumn = "alert_investigation_id"
 	// UpdatesTable is the table that holds the updates relation/edge.
 	UpdatesTable = "alert_investigation_updates"
 	// UpdatesInverseTable is the table name for the AlertInvestigationUpdateEntry entity.
 	// It exists in this package in order to avoid circular dependency with the "alertinvestigationupdateentry" package.
 	UpdatesInverseTable = "alert_investigation_updates"
 	// UpdatesColumn is the table column denoting the updates relation/edge.
-	UpdatesColumn = "alert_investigation_uuid"
+	UpdatesColumn = "alert_investigation_id"
 	// EventsTable is the table that holds the events relation/edge.
 	EventsTable = "alert_investigation_events"
 	// EventsInverseTable is the table name for the AlertInvestigationEvent entity.
 	// It exists in this package in order to avoid circular dependency with the "alertinvestigationevent" package.
 	EventsInverseTable = "alert_investigation_events"
 	// EventsColumn is the table column denoting the events relation/edge.
-	EventsColumn = "alert_investigation_uuid"
+	EventsColumn = "alert_investigation_id"
 	// IncidentInvestigationsTable is the table that holds the incident_investigations relation/edge.
 	IncidentInvestigationsTable = "incident_investigations"
 	// IncidentInvestigationsInverseTable is the table name for the IncidentInvestigation entity.
@@ -137,6 +140,13 @@ const (
 	PromotedIncidentInvestigationInverseTable = "incident_investigations"
 	// PromotedIncidentInvestigationColumn is the table column denoting the promoted_incident_investigation relation/edge.
 	PromotedIncidentInvestigationColumn = "promoted_incident_investigation_id"
+	// TriageResultTable is the table that holds the triage_result relation/edge.
+	TriageResultTable = "alert_investigations"
+	// TriageResultInverseTable is the table name for the TriageResult entity.
+	// It exists in this package in order to avoid circular dependency with the "triageresult" package.
+	TriageResultInverseTable = "triage_results"
+	// TriageResultColumn is the table column denoting the triage_result relation/edge.
+	TriageResultColumn = "triage_result_id"
 )
 
 // Columns holds all SQL columns for alertinvestigation fields.
@@ -192,8 +202,6 @@ var (
 	AlertInvestigationIDValidator func(string) error
 	// DefaultCorrelationKey holds the default value on creation for the "correlation_key" field.
 	DefaultCorrelationKey string
-	// DefaultStatus holds the default value on creation for the "status" field.
-	DefaultStatus string
 	// DefaultAgentID holds the default value on creation for the "agent_id" field.
 	DefaultAgentID string
 	// DefaultAgentName holds the default value on creation for the "agent_name" field.
@@ -234,11 +242,70 @@ var (
 	DefaultEscalationLevel string
 	// DefaultTriageDecision holds the default value on creation for the "triage_decision" field.
 	DefaultTriageDecision string
-	// DefaultAssigneeType holds the default value on creation for the "assignee_type" field.
-	DefaultAssigneeType string
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// Status defines the type for the "status" enum field.
+type Status string
+
+// StatusPending is the default value of the Status enum.
+const DefaultStatus = StatusPending
+
+// Status values.
+const (
+	StatusPending       Status = "pending"
+	StatusAssigned      Status = "assigned"
+	StatusInvestigating Status = "investigating"
+	StatusPromoted      Status = "promoted"
+	StatusComplete      Status = "complete"
+	StatusFailed        Status = "failed"
+	StatusCancelled     Status = "cancelled"
+	StatusTimedOut      Status = "timed_out"
+	StatusPaused        Status = "paused"
+)
+
+func (s Status) String() string {
+	return string(s)
+}
+
+// StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
+func StatusValidator(s Status) error {
+	switch s {
+	case StatusPending, StatusAssigned, StatusInvestigating, StatusPromoted, StatusComplete, StatusFailed, StatusCancelled, StatusTimedOut, StatusPaused:
+		return nil
+	default:
+		return fmt.Errorf("alertinvestigation: invalid enum value for status field: %q", s)
+	}
+}
+
+// AssigneeType defines the type for the "assignee_type" enum field.
+type AssigneeType string
+
+// AssigneeTypeAgent is the default value of the AssigneeType enum.
+const DefaultAssigneeType = AssigneeTypeAgent
+
+// AssigneeType values.
+const (
+	AssigneeTypeAgent   AssigneeType = "agent"
+	AssigneeTypeUser    AssigneeType = "user"
+	AssigneeTypeSystem  AssigneeType = "system"
+	AssigneeTypeGrafana AssigneeType = "grafana"
+)
+
+func (at AssigneeType) String() string {
+	return string(at)
+}
+
+// AssigneeTypeValidator is a validator for the "assignee_type" field enum values. It is called by the builders before save.
+func AssigneeTypeValidator(at AssigneeType) error {
+	switch at {
+	case AssigneeTypeAgent, AssigneeTypeUser, AssigneeTypeSystem, AssigneeTypeGrafana:
+		return nil
+	default:
+		return fmt.Errorf("alertinvestigation: invalid enum value for assignee_type field: %q", at)
+	}
+}
 
 // OrderOption defines the ordering options for the AlertInvestigation queries.
 type OrderOption func(*sql.Selector)
@@ -462,6 +529,13 @@ func ByPromotedIncidentInvestigationField(field string, opts ...sql.OrderTermOpt
 		sqlgraph.OrderByNeighborTerms(s, newPromotedIncidentInvestigationStep(), sql.OrderByField(field, opts...))
 	}
 }
+
+// ByTriageResultField orders the results by triage_result field.
+func ByTriageResultField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newTriageResultStep(), sql.OrderByField(field, opts...))
+	}
+}
 func newAlertsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -502,5 +576,12 @@ func newPromotedIncidentInvestigationStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(PromotedIncidentInvestigationInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, PromotedIncidentInvestigationTable, PromotedIncidentInvestigationColumn),
+	)
+}
+func newTriageResultStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(TriageResultInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, TriageResultTable, TriageResultColumn),
 	)
 }

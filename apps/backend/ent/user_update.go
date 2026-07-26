@@ -3,9 +3,21 @@
 package ent
 
 import (
+	"alga/ent/handoffrecord"
 	"alga/ent/icsroleassignment"
+	"alga/ent/incident"
 	"alga/ent/incidentdocument"
+	"alga/ent/knowledgenote"
+	"alga/ent/oidcidentity"
+	"alga/ent/passwordresettoken"
+	"alga/ent/personalaccesstoken"
+	"alga/ent/postmortem"
 	"alga/ent/predicate"
+	"alga/ent/scheduleoverride"
+	"alga/ent/session"
+	"alga/ent/teammember"
+	"alga/ent/triageresult"
+	"alga/ent/triagerule"
 	"alga/ent/user"
 	"context"
 	"errors"
@@ -60,13 +72,13 @@ func (_u *UserUpdate) SetNillablePassword(v *string) *UserUpdate {
 }
 
 // SetRole sets the "role" field.
-func (_u *UserUpdate) SetRole(v string) *UserUpdate {
+func (_u *UserUpdate) SetRole(v user.Role) *UserUpdate {
 	_u.mutation.SetRole(v)
 	return _u
 }
 
 // SetNillableRole sets the "role" field if the given value is not nil.
-func (_u *UserUpdate) SetNillableRole(v *string) *UserUpdate {
+func (_u *UserUpdate) SetNillableRole(v *user.Role) *UserUpdate {
 	if v != nil {
 		_u.SetRole(*v)
 	}
@@ -340,6 +352,81 @@ func (_u *UserUpdate) SetUpdatedAt(v time.Time) *UserUpdate {
 	return _u
 }
 
+// AddSessionIDs adds the "sessions" edge to the Session entity by IDs.
+func (_u *UserUpdate) AddSessionIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.AddSessionIDs(ids...)
+	return _u
+}
+
+// AddSessions adds the "sessions" edges to the Session entity.
+func (_u *UserUpdate) AddSessions(v ...*Session) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddSessionIDs(ids...)
+}
+
+// AddPasswordResetTokenIDs adds the "password_reset_tokens" edge to the PasswordResetToken entity by IDs.
+func (_u *UserUpdate) AddPasswordResetTokenIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.AddPasswordResetTokenIDs(ids...)
+	return _u
+}
+
+// AddPasswordResetTokens adds the "password_reset_tokens" edges to the PasswordResetToken entity.
+func (_u *UserUpdate) AddPasswordResetTokens(v ...*PasswordResetToken) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddPasswordResetTokenIDs(ids...)
+}
+
+// AddPersonalAccessTokenIDs adds the "personal_access_tokens" edge to the PersonalAccessToken entity by IDs.
+func (_u *UserUpdate) AddPersonalAccessTokenIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.AddPersonalAccessTokenIDs(ids...)
+	return _u
+}
+
+// AddPersonalAccessTokens adds the "personal_access_tokens" edges to the PersonalAccessToken entity.
+func (_u *UserUpdate) AddPersonalAccessTokens(v ...*PersonalAccessToken) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddPersonalAccessTokenIDs(ids...)
+}
+
+// AddOidcIdentityIDs adds the "oidc_identities" edge to the OIDCIdentity entity by IDs.
+func (_u *UserUpdate) AddOidcIdentityIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.AddOidcIdentityIDs(ids...)
+	return _u
+}
+
+// AddOidcIdentities adds the "oidc_identities" edges to the OIDCIdentity entity.
+func (_u *UserUpdate) AddOidcIdentities(v ...*OIDCIdentity) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddOidcIdentityIDs(ids...)
+}
+
+// AddTeamMemberIDs adds the "team_members" edge to the TeamMember entity by IDs.
+func (_u *UserUpdate) AddTeamMemberIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.AddTeamMemberIDs(ids...)
+	return _u
+}
+
+// AddTeamMembers adds the "team_members" edges to the TeamMember entity.
+func (_u *UserUpdate) AddTeamMembers(v ...*TeamMember) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddTeamMemberIDs(ids...)
+}
+
 // AddIcsRoleAssignmentIDs adds the "ics_role_assignments" edge to the ICSRoleAssignment entity by IDs.
 func (_u *UserUpdate) AddIcsRoleAssignmentIDs(ids ...uuid.UUID) *UserUpdate {
 	_u.mutation.AddIcsRoleAssignmentIDs(ids...)
@@ -370,9 +457,264 @@ func (_u *UserUpdate) AddDocumentEdits(v ...*IncidentDocument) *UserUpdate {
 	return _u.AddDocumentEditIDs(ids...)
 }
 
+// AddCommanderIncidentIDs adds the "commander_incidents" edge to the Incident entity by IDs.
+func (_u *UserUpdate) AddCommanderIncidentIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.AddCommanderIncidentIDs(ids...)
+	return _u
+}
+
+// AddCommanderIncidents adds the "commander_incidents" edges to the Incident entity.
+func (_u *UserUpdate) AddCommanderIncidents(v ...*Incident) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddCommanderIncidentIDs(ids...)
+}
+
+// AddCommunicatorIncidentIDs adds the "communicator_incidents" edge to the Incident entity by IDs.
+func (_u *UserUpdate) AddCommunicatorIncidentIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.AddCommunicatorIncidentIDs(ids...)
+	return _u
+}
+
+// AddCommunicatorIncidents adds the "communicator_incidents" edges to the Incident entity.
+func (_u *UserUpdate) AddCommunicatorIncidents(v ...*Incident) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddCommunicatorIncidentIDs(ids...)
+}
+
+// AddResponderIncidentIDs adds the "responder_incidents" edge to the Incident entity by IDs.
+func (_u *UserUpdate) AddResponderIncidentIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.AddResponderIncidentIDs(ids...)
+	return _u
+}
+
+// AddResponderIncidents adds the "responder_incidents" edges to the Incident entity.
+func (_u *UserUpdate) AddResponderIncidents(v ...*Incident) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddResponderIncidentIDs(ids...)
+}
+
+// AddTriageOverrideIDs adds the "triage_overrides" edge to the TriageResult entity by IDs.
+func (_u *UserUpdate) AddTriageOverrideIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.AddTriageOverrideIDs(ids...)
+	return _u
+}
+
+// AddTriageOverrides adds the "triage_overrides" edges to the TriageResult entity.
+func (_u *UserUpdate) AddTriageOverrides(v ...*TriageResult) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddTriageOverrideIDs(ids...)
+}
+
+// AddApprovedPostMortemIDs adds the "approved_post_mortems" edge to the PostMortem entity by IDs.
+func (_u *UserUpdate) AddApprovedPostMortemIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.AddApprovedPostMortemIDs(ids...)
+	return _u
+}
+
+// AddApprovedPostMortems adds the "approved_post_mortems" edges to the PostMortem entity.
+func (_u *UserUpdate) AddApprovedPostMortems(v ...*PostMortem) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddApprovedPostMortemIDs(ids...)
+}
+
+// AddTriageRuleIDs adds the "triage_rules" edge to the TriageRule entity by IDs.
+func (_u *UserUpdate) AddTriageRuleIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.AddTriageRuleIDs(ids...)
+	return _u
+}
+
+// AddTriageRules adds the "triage_rules" edges to the TriageRule entity.
+func (_u *UserUpdate) AddTriageRules(v ...*TriageRule) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddTriageRuleIDs(ids...)
+}
+
+// AddKnowledgeNoteIDs adds the "knowledge_notes" edge to the KnowledgeNote entity by IDs.
+func (_u *UserUpdate) AddKnowledgeNoteIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.AddKnowledgeNoteIDs(ids...)
+	return _u
+}
+
+// AddKnowledgeNotes adds the "knowledge_notes" edges to the KnowledgeNote entity.
+func (_u *UserUpdate) AddKnowledgeNotes(v ...*KnowledgeNote) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddKnowledgeNoteIDs(ids...)
+}
+
+// AddScheduleOverrideIDs adds the "schedule_overrides" edge to the ScheduleOverride entity by IDs.
+func (_u *UserUpdate) AddScheduleOverrideIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.AddScheduleOverrideIDs(ids...)
+	return _u
+}
+
+// AddScheduleOverrides adds the "schedule_overrides" edges to the ScheduleOverride entity.
+func (_u *UserUpdate) AddScheduleOverrides(v ...*ScheduleOverride) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddScheduleOverrideIDs(ids...)
+}
+
+// AddOutgoingHandoffIDs adds the "outgoing_handoffs" edge to the HandoffRecord entity by IDs.
+func (_u *UserUpdate) AddOutgoingHandoffIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.AddOutgoingHandoffIDs(ids...)
+	return _u
+}
+
+// AddOutgoingHandoffs adds the "outgoing_handoffs" edges to the HandoffRecord entity.
+func (_u *UserUpdate) AddOutgoingHandoffs(v ...*HandoffRecord) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddOutgoingHandoffIDs(ids...)
+}
+
+// AddIncomingHandoffIDs adds the "incoming_handoffs" edge to the HandoffRecord entity by IDs.
+func (_u *UserUpdate) AddIncomingHandoffIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.AddIncomingHandoffIDs(ids...)
+	return _u
+}
+
+// AddIncomingHandoffs adds the "incoming_handoffs" edges to the HandoffRecord entity.
+func (_u *UserUpdate) AddIncomingHandoffs(v ...*HandoffRecord) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddIncomingHandoffIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (_u *UserUpdate) Mutation() *UserMutation {
 	return _u.mutation
+}
+
+// ClearSessions clears all "sessions" edges to the Session entity.
+func (_u *UserUpdate) ClearSessions() *UserUpdate {
+	_u.mutation.ClearSessions()
+	return _u
+}
+
+// RemoveSessionIDs removes the "sessions" edge to Session entities by IDs.
+func (_u *UserUpdate) RemoveSessionIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.RemoveSessionIDs(ids...)
+	return _u
+}
+
+// RemoveSessions removes "sessions" edges to Session entities.
+func (_u *UserUpdate) RemoveSessions(v ...*Session) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveSessionIDs(ids...)
+}
+
+// ClearPasswordResetTokens clears all "password_reset_tokens" edges to the PasswordResetToken entity.
+func (_u *UserUpdate) ClearPasswordResetTokens() *UserUpdate {
+	_u.mutation.ClearPasswordResetTokens()
+	return _u
+}
+
+// RemovePasswordResetTokenIDs removes the "password_reset_tokens" edge to PasswordResetToken entities by IDs.
+func (_u *UserUpdate) RemovePasswordResetTokenIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.RemovePasswordResetTokenIDs(ids...)
+	return _u
+}
+
+// RemovePasswordResetTokens removes "password_reset_tokens" edges to PasswordResetToken entities.
+func (_u *UserUpdate) RemovePasswordResetTokens(v ...*PasswordResetToken) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemovePasswordResetTokenIDs(ids...)
+}
+
+// ClearPersonalAccessTokens clears all "personal_access_tokens" edges to the PersonalAccessToken entity.
+func (_u *UserUpdate) ClearPersonalAccessTokens() *UserUpdate {
+	_u.mutation.ClearPersonalAccessTokens()
+	return _u
+}
+
+// RemovePersonalAccessTokenIDs removes the "personal_access_tokens" edge to PersonalAccessToken entities by IDs.
+func (_u *UserUpdate) RemovePersonalAccessTokenIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.RemovePersonalAccessTokenIDs(ids...)
+	return _u
+}
+
+// RemovePersonalAccessTokens removes "personal_access_tokens" edges to PersonalAccessToken entities.
+func (_u *UserUpdate) RemovePersonalAccessTokens(v ...*PersonalAccessToken) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemovePersonalAccessTokenIDs(ids...)
+}
+
+// ClearOidcIdentities clears all "oidc_identities" edges to the OIDCIdentity entity.
+func (_u *UserUpdate) ClearOidcIdentities() *UserUpdate {
+	_u.mutation.ClearOidcIdentities()
+	return _u
+}
+
+// RemoveOidcIdentityIDs removes the "oidc_identities" edge to OIDCIdentity entities by IDs.
+func (_u *UserUpdate) RemoveOidcIdentityIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.RemoveOidcIdentityIDs(ids...)
+	return _u
+}
+
+// RemoveOidcIdentities removes "oidc_identities" edges to OIDCIdentity entities.
+func (_u *UserUpdate) RemoveOidcIdentities(v ...*OIDCIdentity) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveOidcIdentityIDs(ids...)
+}
+
+// ClearTeamMembers clears all "team_members" edges to the TeamMember entity.
+func (_u *UserUpdate) ClearTeamMembers() *UserUpdate {
+	_u.mutation.ClearTeamMembers()
+	return _u
+}
+
+// RemoveTeamMemberIDs removes the "team_members" edge to TeamMember entities by IDs.
+func (_u *UserUpdate) RemoveTeamMemberIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.RemoveTeamMemberIDs(ids...)
+	return _u
+}
+
+// RemoveTeamMembers removes "team_members" edges to TeamMember entities.
+func (_u *UserUpdate) RemoveTeamMembers(v ...*TeamMember) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveTeamMemberIDs(ids...)
 }
 
 // ClearIcsRoleAssignments clears all "ics_role_assignments" edges to the ICSRoleAssignment entity.
@@ -415,6 +757,216 @@ func (_u *UserUpdate) RemoveDocumentEdits(v ...*IncidentDocument) *UserUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveDocumentEditIDs(ids...)
+}
+
+// ClearCommanderIncidents clears all "commander_incidents" edges to the Incident entity.
+func (_u *UserUpdate) ClearCommanderIncidents() *UserUpdate {
+	_u.mutation.ClearCommanderIncidents()
+	return _u
+}
+
+// RemoveCommanderIncidentIDs removes the "commander_incidents" edge to Incident entities by IDs.
+func (_u *UserUpdate) RemoveCommanderIncidentIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.RemoveCommanderIncidentIDs(ids...)
+	return _u
+}
+
+// RemoveCommanderIncidents removes "commander_incidents" edges to Incident entities.
+func (_u *UserUpdate) RemoveCommanderIncidents(v ...*Incident) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveCommanderIncidentIDs(ids...)
+}
+
+// ClearCommunicatorIncidents clears all "communicator_incidents" edges to the Incident entity.
+func (_u *UserUpdate) ClearCommunicatorIncidents() *UserUpdate {
+	_u.mutation.ClearCommunicatorIncidents()
+	return _u
+}
+
+// RemoveCommunicatorIncidentIDs removes the "communicator_incidents" edge to Incident entities by IDs.
+func (_u *UserUpdate) RemoveCommunicatorIncidentIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.RemoveCommunicatorIncidentIDs(ids...)
+	return _u
+}
+
+// RemoveCommunicatorIncidents removes "communicator_incidents" edges to Incident entities.
+func (_u *UserUpdate) RemoveCommunicatorIncidents(v ...*Incident) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveCommunicatorIncidentIDs(ids...)
+}
+
+// ClearResponderIncidents clears all "responder_incidents" edges to the Incident entity.
+func (_u *UserUpdate) ClearResponderIncidents() *UserUpdate {
+	_u.mutation.ClearResponderIncidents()
+	return _u
+}
+
+// RemoveResponderIncidentIDs removes the "responder_incidents" edge to Incident entities by IDs.
+func (_u *UserUpdate) RemoveResponderIncidentIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.RemoveResponderIncidentIDs(ids...)
+	return _u
+}
+
+// RemoveResponderIncidents removes "responder_incidents" edges to Incident entities.
+func (_u *UserUpdate) RemoveResponderIncidents(v ...*Incident) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveResponderIncidentIDs(ids...)
+}
+
+// ClearTriageOverrides clears all "triage_overrides" edges to the TriageResult entity.
+func (_u *UserUpdate) ClearTriageOverrides() *UserUpdate {
+	_u.mutation.ClearTriageOverrides()
+	return _u
+}
+
+// RemoveTriageOverrideIDs removes the "triage_overrides" edge to TriageResult entities by IDs.
+func (_u *UserUpdate) RemoveTriageOverrideIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.RemoveTriageOverrideIDs(ids...)
+	return _u
+}
+
+// RemoveTriageOverrides removes "triage_overrides" edges to TriageResult entities.
+func (_u *UserUpdate) RemoveTriageOverrides(v ...*TriageResult) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveTriageOverrideIDs(ids...)
+}
+
+// ClearApprovedPostMortems clears all "approved_post_mortems" edges to the PostMortem entity.
+func (_u *UserUpdate) ClearApprovedPostMortems() *UserUpdate {
+	_u.mutation.ClearApprovedPostMortems()
+	return _u
+}
+
+// RemoveApprovedPostMortemIDs removes the "approved_post_mortems" edge to PostMortem entities by IDs.
+func (_u *UserUpdate) RemoveApprovedPostMortemIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.RemoveApprovedPostMortemIDs(ids...)
+	return _u
+}
+
+// RemoveApprovedPostMortems removes "approved_post_mortems" edges to PostMortem entities.
+func (_u *UserUpdate) RemoveApprovedPostMortems(v ...*PostMortem) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveApprovedPostMortemIDs(ids...)
+}
+
+// ClearTriageRules clears all "triage_rules" edges to the TriageRule entity.
+func (_u *UserUpdate) ClearTriageRules() *UserUpdate {
+	_u.mutation.ClearTriageRules()
+	return _u
+}
+
+// RemoveTriageRuleIDs removes the "triage_rules" edge to TriageRule entities by IDs.
+func (_u *UserUpdate) RemoveTriageRuleIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.RemoveTriageRuleIDs(ids...)
+	return _u
+}
+
+// RemoveTriageRules removes "triage_rules" edges to TriageRule entities.
+func (_u *UserUpdate) RemoveTriageRules(v ...*TriageRule) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveTriageRuleIDs(ids...)
+}
+
+// ClearKnowledgeNotes clears all "knowledge_notes" edges to the KnowledgeNote entity.
+func (_u *UserUpdate) ClearKnowledgeNotes() *UserUpdate {
+	_u.mutation.ClearKnowledgeNotes()
+	return _u
+}
+
+// RemoveKnowledgeNoteIDs removes the "knowledge_notes" edge to KnowledgeNote entities by IDs.
+func (_u *UserUpdate) RemoveKnowledgeNoteIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.RemoveKnowledgeNoteIDs(ids...)
+	return _u
+}
+
+// RemoveKnowledgeNotes removes "knowledge_notes" edges to KnowledgeNote entities.
+func (_u *UserUpdate) RemoveKnowledgeNotes(v ...*KnowledgeNote) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveKnowledgeNoteIDs(ids...)
+}
+
+// ClearScheduleOverrides clears all "schedule_overrides" edges to the ScheduleOverride entity.
+func (_u *UserUpdate) ClearScheduleOverrides() *UserUpdate {
+	_u.mutation.ClearScheduleOverrides()
+	return _u
+}
+
+// RemoveScheduleOverrideIDs removes the "schedule_overrides" edge to ScheduleOverride entities by IDs.
+func (_u *UserUpdate) RemoveScheduleOverrideIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.RemoveScheduleOverrideIDs(ids...)
+	return _u
+}
+
+// RemoveScheduleOverrides removes "schedule_overrides" edges to ScheduleOverride entities.
+func (_u *UserUpdate) RemoveScheduleOverrides(v ...*ScheduleOverride) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveScheduleOverrideIDs(ids...)
+}
+
+// ClearOutgoingHandoffs clears all "outgoing_handoffs" edges to the HandoffRecord entity.
+func (_u *UserUpdate) ClearOutgoingHandoffs() *UserUpdate {
+	_u.mutation.ClearOutgoingHandoffs()
+	return _u
+}
+
+// RemoveOutgoingHandoffIDs removes the "outgoing_handoffs" edge to HandoffRecord entities by IDs.
+func (_u *UserUpdate) RemoveOutgoingHandoffIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.RemoveOutgoingHandoffIDs(ids...)
+	return _u
+}
+
+// RemoveOutgoingHandoffs removes "outgoing_handoffs" edges to HandoffRecord entities.
+func (_u *UserUpdate) RemoveOutgoingHandoffs(v ...*HandoffRecord) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveOutgoingHandoffIDs(ids...)
+}
+
+// ClearIncomingHandoffs clears all "incoming_handoffs" edges to the HandoffRecord entity.
+func (_u *UserUpdate) ClearIncomingHandoffs() *UserUpdate {
+	_u.mutation.ClearIncomingHandoffs()
+	return _u
+}
+
+// RemoveIncomingHandoffIDs removes the "incoming_handoffs" edge to HandoffRecord entities by IDs.
+func (_u *UserUpdate) RemoveIncomingHandoffIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.RemoveIncomingHandoffIDs(ids...)
+	return _u
+}
+
+// RemoveIncomingHandoffs removes "incoming_handoffs" edges to HandoffRecord entities.
+func (_u *UserUpdate) RemoveIncomingHandoffs(v ...*HandoffRecord) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveIncomingHandoffIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -465,6 +1017,11 @@ func (_u *UserUpdate) check() error {
 			return &ValidationError{Name: "password", err: fmt.Errorf(`ent: validator failed for field "User.password": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Role(); ok {
+		if err := user.RoleValidator(v); err != nil {
+			return &ValidationError{Name: "role", err: fmt.Errorf(`ent: validator failed for field "User.role": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.FailedLoginAttempts(); ok {
 		if err := user.FailedLoginAttemptsValidator(v); err != nil {
 			return &ValidationError{Name: "failed_login_attempts", err: fmt.Errorf(`ent: validator failed for field "User.failed_login_attempts": %w`, err)}
@@ -492,7 +1049,7 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		_spec.SetField(user.FieldPassword, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Role(); ok {
-		_spec.SetField(user.FieldRole, field.TypeString, value)
+		_spec.SetField(user.FieldRole, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.FullName(); ok {
 		_spec.SetField(user.FieldFullName, field.TypeString, value)
@@ -574,6 +1131,231 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(user.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.SessionsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SessionsTable,
+			Columns: []string{user.SessionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedSessionsIDs(); len(nodes) > 0 && !_u.mutation.SessionsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SessionsTable,
+			Columns: []string{user.SessionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.SessionsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SessionsTable,
+			Columns: []string{user.SessionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.PasswordResetTokensCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PasswordResetTokensTable,
+			Columns: []string{user.PasswordResetTokensColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(passwordresettoken.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedPasswordResetTokensIDs(); len(nodes) > 0 && !_u.mutation.PasswordResetTokensCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PasswordResetTokensTable,
+			Columns: []string{user.PasswordResetTokensColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(passwordresettoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.PasswordResetTokensIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PasswordResetTokensTable,
+			Columns: []string{user.PasswordResetTokensColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(passwordresettoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.PersonalAccessTokensCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PersonalAccessTokensTable,
+			Columns: []string{user.PersonalAccessTokensColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(personalaccesstoken.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedPersonalAccessTokensIDs(); len(nodes) > 0 && !_u.mutation.PersonalAccessTokensCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PersonalAccessTokensTable,
+			Columns: []string{user.PersonalAccessTokensColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(personalaccesstoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.PersonalAccessTokensIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PersonalAccessTokensTable,
+			Columns: []string{user.PersonalAccessTokensColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(personalaccesstoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.OidcIdentitiesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.OidcIdentitiesTable,
+			Columns: []string{user.OidcIdentitiesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oidcidentity.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedOidcIdentitiesIDs(); len(nodes) > 0 && !_u.mutation.OidcIdentitiesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.OidcIdentitiesTable,
+			Columns: []string{user.OidcIdentitiesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oidcidentity.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OidcIdentitiesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.OidcIdentitiesTable,
+			Columns: []string{user.OidcIdentitiesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oidcidentity.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.TeamMembersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TeamMembersTable,
+			Columns: []string{user.TeamMembersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(teammember.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedTeamMembersIDs(); len(nodes) > 0 && !_u.mutation.TeamMembersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TeamMembersTable,
+			Columns: []string{user.TeamMembersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(teammember.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TeamMembersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TeamMembersTable,
+			Columns: []string{user.TeamMembersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(teammember.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _u.mutation.IcsRoleAssignmentsCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -665,6 +1447,456 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.CommanderIncidentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CommanderIncidentsTable,
+			Columns: []string{user.CommanderIncidentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedCommanderIncidentsIDs(); len(nodes) > 0 && !_u.mutation.CommanderIncidentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CommanderIncidentsTable,
+			Columns: []string{user.CommanderIncidentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CommanderIncidentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CommanderIncidentsTable,
+			Columns: []string{user.CommanderIncidentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.CommunicatorIncidentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CommunicatorIncidentsTable,
+			Columns: []string{user.CommunicatorIncidentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedCommunicatorIncidentsIDs(); len(nodes) > 0 && !_u.mutation.CommunicatorIncidentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CommunicatorIncidentsTable,
+			Columns: []string{user.CommunicatorIncidentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CommunicatorIncidentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CommunicatorIncidentsTable,
+			Columns: []string{user.CommunicatorIncidentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ResponderIncidentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ResponderIncidentsTable,
+			Columns: []string{user.ResponderIncidentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedResponderIncidentsIDs(); len(nodes) > 0 && !_u.mutation.ResponderIncidentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ResponderIncidentsTable,
+			Columns: []string{user.ResponderIncidentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ResponderIncidentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ResponderIncidentsTable,
+			Columns: []string{user.ResponderIncidentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.TriageOverridesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TriageOverridesTable,
+			Columns: []string{user.TriageOverridesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(triageresult.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedTriageOverridesIDs(); len(nodes) > 0 && !_u.mutation.TriageOverridesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TriageOverridesTable,
+			Columns: []string{user.TriageOverridesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(triageresult.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TriageOverridesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TriageOverridesTable,
+			Columns: []string{user.TriageOverridesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(triageresult.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ApprovedPostMortemsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ApprovedPostMortemsTable,
+			Columns: []string{user.ApprovedPostMortemsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(postmortem.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedApprovedPostMortemsIDs(); len(nodes) > 0 && !_u.mutation.ApprovedPostMortemsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ApprovedPostMortemsTable,
+			Columns: []string{user.ApprovedPostMortemsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(postmortem.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ApprovedPostMortemsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ApprovedPostMortemsTable,
+			Columns: []string{user.ApprovedPostMortemsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(postmortem.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.TriageRulesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TriageRulesTable,
+			Columns: []string{user.TriageRulesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(triagerule.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedTriageRulesIDs(); len(nodes) > 0 && !_u.mutation.TriageRulesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TriageRulesTable,
+			Columns: []string{user.TriageRulesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(triagerule.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TriageRulesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TriageRulesTable,
+			Columns: []string{user.TriageRulesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(triagerule.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.KnowledgeNotesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.KnowledgeNotesTable,
+			Columns: []string{user.KnowledgeNotesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(knowledgenote.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedKnowledgeNotesIDs(); len(nodes) > 0 && !_u.mutation.KnowledgeNotesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.KnowledgeNotesTable,
+			Columns: []string{user.KnowledgeNotesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(knowledgenote.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.KnowledgeNotesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.KnowledgeNotesTable,
+			Columns: []string{user.KnowledgeNotesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(knowledgenote.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ScheduleOverridesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ScheduleOverridesTable,
+			Columns: []string{user.ScheduleOverridesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(scheduleoverride.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedScheduleOverridesIDs(); len(nodes) > 0 && !_u.mutation.ScheduleOverridesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ScheduleOverridesTable,
+			Columns: []string{user.ScheduleOverridesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(scheduleoverride.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ScheduleOverridesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ScheduleOverridesTable,
+			Columns: []string{user.ScheduleOverridesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(scheduleoverride.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.OutgoingHandoffsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.OutgoingHandoffsTable,
+			Columns: []string{user.OutgoingHandoffsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(handoffrecord.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedOutgoingHandoffsIDs(); len(nodes) > 0 && !_u.mutation.OutgoingHandoffsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.OutgoingHandoffsTable,
+			Columns: []string{user.OutgoingHandoffsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(handoffrecord.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OutgoingHandoffsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.OutgoingHandoffsTable,
+			Columns: []string{user.OutgoingHandoffsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(handoffrecord.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.IncomingHandoffsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.IncomingHandoffsTable,
+			Columns: []string{user.IncomingHandoffsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(handoffrecord.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedIncomingHandoffsIDs(); len(nodes) > 0 && !_u.mutation.IncomingHandoffsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.IncomingHandoffsTable,
+			Columns: []string{user.IncomingHandoffsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(handoffrecord.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.IncomingHandoffsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.IncomingHandoffsTable,
+			Columns: []string{user.IncomingHandoffsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(handoffrecord.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{user.Label}
@@ -714,13 +1946,13 @@ func (_u *UserUpdateOne) SetNillablePassword(v *string) *UserUpdateOne {
 }
 
 // SetRole sets the "role" field.
-func (_u *UserUpdateOne) SetRole(v string) *UserUpdateOne {
+func (_u *UserUpdateOne) SetRole(v user.Role) *UserUpdateOne {
 	_u.mutation.SetRole(v)
 	return _u
 }
 
 // SetNillableRole sets the "role" field if the given value is not nil.
-func (_u *UserUpdateOne) SetNillableRole(v *string) *UserUpdateOne {
+func (_u *UserUpdateOne) SetNillableRole(v *user.Role) *UserUpdateOne {
 	if v != nil {
 		_u.SetRole(*v)
 	}
@@ -994,6 +2226,81 @@ func (_u *UserUpdateOne) SetUpdatedAt(v time.Time) *UserUpdateOne {
 	return _u
 }
 
+// AddSessionIDs adds the "sessions" edge to the Session entity by IDs.
+func (_u *UserUpdateOne) AddSessionIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.AddSessionIDs(ids...)
+	return _u
+}
+
+// AddSessions adds the "sessions" edges to the Session entity.
+func (_u *UserUpdateOne) AddSessions(v ...*Session) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddSessionIDs(ids...)
+}
+
+// AddPasswordResetTokenIDs adds the "password_reset_tokens" edge to the PasswordResetToken entity by IDs.
+func (_u *UserUpdateOne) AddPasswordResetTokenIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.AddPasswordResetTokenIDs(ids...)
+	return _u
+}
+
+// AddPasswordResetTokens adds the "password_reset_tokens" edges to the PasswordResetToken entity.
+func (_u *UserUpdateOne) AddPasswordResetTokens(v ...*PasswordResetToken) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddPasswordResetTokenIDs(ids...)
+}
+
+// AddPersonalAccessTokenIDs adds the "personal_access_tokens" edge to the PersonalAccessToken entity by IDs.
+func (_u *UserUpdateOne) AddPersonalAccessTokenIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.AddPersonalAccessTokenIDs(ids...)
+	return _u
+}
+
+// AddPersonalAccessTokens adds the "personal_access_tokens" edges to the PersonalAccessToken entity.
+func (_u *UserUpdateOne) AddPersonalAccessTokens(v ...*PersonalAccessToken) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddPersonalAccessTokenIDs(ids...)
+}
+
+// AddOidcIdentityIDs adds the "oidc_identities" edge to the OIDCIdentity entity by IDs.
+func (_u *UserUpdateOne) AddOidcIdentityIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.AddOidcIdentityIDs(ids...)
+	return _u
+}
+
+// AddOidcIdentities adds the "oidc_identities" edges to the OIDCIdentity entity.
+func (_u *UserUpdateOne) AddOidcIdentities(v ...*OIDCIdentity) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddOidcIdentityIDs(ids...)
+}
+
+// AddTeamMemberIDs adds the "team_members" edge to the TeamMember entity by IDs.
+func (_u *UserUpdateOne) AddTeamMemberIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.AddTeamMemberIDs(ids...)
+	return _u
+}
+
+// AddTeamMembers adds the "team_members" edges to the TeamMember entity.
+func (_u *UserUpdateOne) AddTeamMembers(v ...*TeamMember) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddTeamMemberIDs(ids...)
+}
+
 // AddIcsRoleAssignmentIDs adds the "ics_role_assignments" edge to the ICSRoleAssignment entity by IDs.
 func (_u *UserUpdateOne) AddIcsRoleAssignmentIDs(ids ...uuid.UUID) *UserUpdateOne {
 	_u.mutation.AddIcsRoleAssignmentIDs(ids...)
@@ -1024,9 +2331,264 @@ func (_u *UserUpdateOne) AddDocumentEdits(v ...*IncidentDocument) *UserUpdateOne
 	return _u.AddDocumentEditIDs(ids...)
 }
 
+// AddCommanderIncidentIDs adds the "commander_incidents" edge to the Incident entity by IDs.
+func (_u *UserUpdateOne) AddCommanderIncidentIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.AddCommanderIncidentIDs(ids...)
+	return _u
+}
+
+// AddCommanderIncidents adds the "commander_incidents" edges to the Incident entity.
+func (_u *UserUpdateOne) AddCommanderIncidents(v ...*Incident) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddCommanderIncidentIDs(ids...)
+}
+
+// AddCommunicatorIncidentIDs adds the "communicator_incidents" edge to the Incident entity by IDs.
+func (_u *UserUpdateOne) AddCommunicatorIncidentIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.AddCommunicatorIncidentIDs(ids...)
+	return _u
+}
+
+// AddCommunicatorIncidents adds the "communicator_incidents" edges to the Incident entity.
+func (_u *UserUpdateOne) AddCommunicatorIncidents(v ...*Incident) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddCommunicatorIncidentIDs(ids...)
+}
+
+// AddResponderIncidentIDs adds the "responder_incidents" edge to the Incident entity by IDs.
+func (_u *UserUpdateOne) AddResponderIncidentIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.AddResponderIncidentIDs(ids...)
+	return _u
+}
+
+// AddResponderIncidents adds the "responder_incidents" edges to the Incident entity.
+func (_u *UserUpdateOne) AddResponderIncidents(v ...*Incident) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddResponderIncidentIDs(ids...)
+}
+
+// AddTriageOverrideIDs adds the "triage_overrides" edge to the TriageResult entity by IDs.
+func (_u *UserUpdateOne) AddTriageOverrideIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.AddTriageOverrideIDs(ids...)
+	return _u
+}
+
+// AddTriageOverrides adds the "triage_overrides" edges to the TriageResult entity.
+func (_u *UserUpdateOne) AddTriageOverrides(v ...*TriageResult) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddTriageOverrideIDs(ids...)
+}
+
+// AddApprovedPostMortemIDs adds the "approved_post_mortems" edge to the PostMortem entity by IDs.
+func (_u *UserUpdateOne) AddApprovedPostMortemIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.AddApprovedPostMortemIDs(ids...)
+	return _u
+}
+
+// AddApprovedPostMortems adds the "approved_post_mortems" edges to the PostMortem entity.
+func (_u *UserUpdateOne) AddApprovedPostMortems(v ...*PostMortem) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddApprovedPostMortemIDs(ids...)
+}
+
+// AddTriageRuleIDs adds the "triage_rules" edge to the TriageRule entity by IDs.
+func (_u *UserUpdateOne) AddTriageRuleIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.AddTriageRuleIDs(ids...)
+	return _u
+}
+
+// AddTriageRules adds the "triage_rules" edges to the TriageRule entity.
+func (_u *UserUpdateOne) AddTriageRules(v ...*TriageRule) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddTriageRuleIDs(ids...)
+}
+
+// AddKnowledgeNoteIDs adds the "knowledge_notes" edge to the KnowledgeNote entity by IDs.
+func (_u *UserUpdateOne) AddKnowledgeNoteIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.AddKnowledgeNoteIDs(ids...)
+	return _u
+}
+
+// AddKnowledgeNotes adds the "knowledge_notes" edges to the KnowledgeNote entity.
+func (_u *UserUpdateOne) AddKnowledgeNotes(v ...*KnowledgeNote) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddKnowledgeNoteIDs(ids...)
+}
+
+// AddScheduleOverrideIDs adds the "schedule_overrides" edge to the ScheduleOverride entity by IDs.
+func (_u *UserUpdateOne) AddScheduleOverrideIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.AddScheduleOverrideIDs(ids...)
+	return _u
+}
+
+// AddScheduleOverrides adds the "schedule_overrides" edges to the ScheduleOverride entity.
+func (_u *UserUpdateOne) AddScheduleOverrides(v ...*ScheduleOverride) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddScheduleOverrideIDs(ids...)
+}
+
+// AddOutgoingHandoffIDs adds the "outgoing_handoffs" edge to the HandoffRecord entity by IDs.
+func (_u *UserUpdateOne) AddOutgoingHandoffIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.AddOutgoingHandoffIDs(ids...)
+	return _u
+}
+
+// AddOutgoingHandoffs adds the "outgoing_handoffs" edges to the HandoffRecord entity.
+func (_u *UserUpdateOne) AddOutgoingHandoffs(v ...*HandoffRecord) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddOutgoingHandoffIDs(ids...)
+}
+
+// AddIncomingHandoffIDs adds the "incoming_handoffs" edge to the HandoffRecord entity by IDs.
+func (_u *UserUpdateOne) AddIncomingHandoffIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.AddIncomingHandoffIDs(ids...)
+	return _u
+}
+
+// AddIncomingHandoffs adds the "incoming_handoffs" edges to the HandoffRecord entity.
+func (_u *UserUpdateOne) AddIncomingHandoffs(v ...*HandoffRecord) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddIncomingHandoffIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (_u *UserUpdateOne) Mutation() *UserMutation {
 	return _u.mutation
+}
+
+// ClearSessions clears all "sessions" edges to the Session entity.
+func (_u *UserUpdateOne) ClearSessions() *UserUpdateOne {
+	_u.mutation.ClearSessions()
+	return _u
+}
+
+// RemoveSessionIDs removes the "sessions" edge to Session entities by IDs.
+func (_u *UserUpdateOne) RemoveSessionIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.RemoveSessionIDs(ids...)
+	return _u
+}
+
+// RemoveSessions removes "sessions" edges to Session entities.
+func (_u *UserUpdateOne) RemoveSessions(v ...*Session) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveSessionIDs(ids...)
+}
+
+// ClearPasswordResetTokens clears all "password_reset_tokens" edges to the PasswordResetToken entity.
+func (_u *UserUpdateOne) ClearPasswordResetTokens() *UserUpdateOne {
+	_u.mutation.ClearPasswordResetTokens()
+	return _u
+}
+
+// RemovePasswordResetTokenIDs removes the "password_reset_tokens" edge to PasswordResetToken entities by IDs.
+func (_u *UserUpdateOne) RemovePasswordResetTokenIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.RemovePasswordResetTokenIDs(ids...)
+	return _u
+}
+
+// RemovePasswordResetTokens removes "password_reset_tokens" edges to PasswordResetToken entities.
+func (_u *UserUpdateOne) RemovePasswordResetTokens(v ...*PasswordResetToken) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemovePasswordResetTokenIDs(ids...)
+}
+
+// ClearPersonalAccessTokens clears all "personal_access_tokens" edges to the PersonalAccessToken entity.
+func (_u *UserUpdateOne) ClearPersonalAccessTokens() *UserUpdateOne {
+	_u.mutation.ClearPersonalAccessTokens()
+	return _u
+}
+
+// RemovePersonalAccessTokenIDs removes the "personal_access_tokens" edge to PersonalAccessToken entities by IDs.
+func (_u *UserUpdateOne) RemovePersonalAccessTokenIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.RemovePersonalAccessTokenIDs(ids...)
+	return _u
+}
+
+// RemovePersonalAccessTokens removes "personal_access_tokens" edges to PersonalAccessToken entities.
+func (_u *UserUpdateOne) RemovePersonalAccessTokens(v ...*PersonalAccessToken) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemovePersonalAccessTokenIDs(ids...)
+}
+
+// ClearOidcIdentities clears all "oidc_identities" edges to the OIDCIdentity entity.
+func (_u *UserUpdateOne) ClearOidcIdentities() *UserUpdateOne {
+	_u.mutation.ClearOidcIdentities()
+	return _u
+}
+
+// RemoveOidcIdentityIDs removes the "oidc_identities" edge to OIDCIdentity entities by IDs.
+func (_u *UserUpdateOne) RemoveOidcIdentityIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.RemoveOidcIdentityIDs(ids...)
+	return _u
+}
+
+// RemoveOidcIdentities removes "oidc_identities" edges to OIDCIdentity entities.
+func (_u *UserUpdateOne) RemoveOidcIdentities(v ...*OIDCIdentity) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveOidcIdentityIDs(ids...)
+}
+
+// ClearTeamMembers clears all "team_members" edges to the TeamMember entity.
+func (_u *UserUpdateOne) ClearTeamMembers() *UserUpdateOne {
+	_u.mutation.ClearTeamMembers()
+	return _u
+}
+
+// RemoveTeamMemberIDs removes the "team_members" edge to TeamMember entities by IDs.
+func (_u *UserUpdateOne) RemoveTeamMemberIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.RemoveTeamMemberIDs(ids...)
+	return _u
+}
+
+// RemoveTeamMembers removes "team_members" edges to TeamMember entities.
+func (_u *UserUpdateOne) RemoveTeamMembers(v ...*TeamMember) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveTeamMemberIDs(ids...)
 }
 
 // ClearIcsRoleAssignments clears all "ics_role_assignments" edges to the ICSRoleAssignment entity.
@@ -1069,6 +2631,216 @@ func (_u *UserUpdateOne) RemoveDocumentEdits(v ...*IncidentDocument) *UserUpdate
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveDocumentEditIDs(ids...)
+}
+
+// ClearCommanderIncidents clears all "commander_incidents" edges to the Incident entity.
+func (_u *UserUpdateOne) ClearCommanderIncidents() *UserUpdateOne {
+	_u.mutation.ClearCommanderIncidents()
+	return _u
+}
+
+// RemoveCommanderIncidentIDs removes the "commander_incidents" edge to Incident entities by IDs.
+func (_u *UserUpdateOne) RemoveCommanderIncidentIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.RemoveCommanderIncidentIDs(ids...)
+	return _u
+}
+
+// RemoveCommanderIncidents removes "commander_incidents" edges to Incident entities.
+func (_u *UserUpdateOne) RemoveCommanderIncidents(v ...*Incident) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveCommanderIncidentIDs(ids...)
+}
+
+// ClearCommunicatorIncidents clears all "communicator_incidents" edges to the Incident entity.
+func (_u *UserUpdateOne) ClearCommunicatorIncidents() *UserUpdateOne {
+	_u.mutation.ClearCommunicatorIncidents()
+	return _u
+}
+
+// RemoveCommunicatorIncidentIDs removes the "communicator_incidents" edge to Incident entities by IDs.
+func (_u *UserUpdateOne) RemoveCommunicatorIncidentIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.RemoveCommunicatorIncidentIDs(ids...)
+	return _u
+}
+
+// RemoveCommunicatorIncidents removes "communicator_incidents" edges to Incident entities.
+func (_u *UserUpdateOne) RemoveCommunicatorIncidents(v ...*Incident) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveCommunicatorIncidentIDs(ids...)
+}
+
+// ClearResponderIncidents clears all "responder_incidents" edges to the Incident entity.
+func (_u *UserUpdateOne) ClearResponderIncidents() *UserUpdateOne {
+	_u.mutation.ClearResponderIncidents()
+	return _u
+}
+
+// RemoveResponderIncidentIDs removes the "responder_incidents" edge to Incident entities by IDs.
+func (_u *UserUpdateOne) RemoveResponderIncidentIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.RemoveResponderIncidentIDs(ids...)
+	return _u
+}
+
+// RemoveResponderIncidents removes "responder_incidents" edges to Incident entities.
+func (_u *UserUpdateOne) RemoveResponderIncidents(v ...*Incident) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveResponderIncidentIDs(ids...)
+}
+
+// ClearTriageOverrides clears all "triage_overrides" edges to the TriageResult entity.
+func (_u *UserUpdateOne) ClearTriageOverrides() *UserUpdateOne {
+	_u.mutation.ClearTriageOverrides()
+	return _u
+}
+
+// RemoveTriageOverrideIDs removes the "triage_overrides" edge to TriageResult entities by IDs.
+func (_u *UserUpdateOne) RemoveTriageOverrideIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.RemoveTriageOverrideIDs(ids...)
+	return _u
+}
+
+// RemoveTriageOverrides removes "triage_overrides" edges to TriageResult entities.
+func (_u *UserUpdateOne) RemoveTriageOverrides(v ...*TriageResult) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveTriageOverrideIDs(ids...)
+}
+
+// ClearApprovedPostMortems clears all "approved_post_mortems" edges to the PostMortem entity.
+func (_u *UserUpdateOne) ClearApprovedPostMortems() *UserUpdateOne {
+	_u.mutation.ClearApprovedPostMortems()
+	return _u
+}
+
+// RemoveApprovedPostMortemIDs removes the "approved_post_mortems" edge to PostMortem entities by IDs.
+func (_u *UserUpdateOne) RemoveApprovedPostMortemIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.RemoveApprovedPostMortemIDs(ids...)
+	return _u
+}
+
+// RemoveApprovedPostMortems removes "approved_post_mortems" edges to PostMortem entities.
+func (_u *UserUpdateOne) RemoveApprovedPostMortems(v ...*PostMortem) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveApprovedPostMortemIDs(ids...)
+}
+
+// ClearTriageRules clears all "triage_rules" edges to the TriageRule entity.
+func (_u *UserUpdateOne) ClearTriageRules() *UserUpdateOne {
+	_u.mutation.ClearTriageRules()
+	return _u
+}
+
+// RemoveTriageRuleIDs removes the "triage_rules" edge to TriageRule entities by IDs.
+func (_u *UserUpdateOne) RemoveTriageRuleIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.RemoveTriageRuleIDs(ids...)
+	return _u
+}
+
+// RemoveTriageRules removes "triage_rules" edges to TriageRule entities.
+func (_u *UserUpdateOne) RemoveTriageRules(v ...*TriageRule) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveTriageRuleIDs(ids...)
+}
+
+// ClearKnowledgeNotes clears all "knowledge_notes" edges to the KnowledgeNote entity.
+func (_u *UserUpdateOne) ClearKnowledgeNotes() *UserUpdateOne {
+	_u.mutation.ClearKnowledgeNotes()
+	return _u
+}
+
+// RemoveKnowledgeNoteIDs removes the "knowledge_notes" edge to KnowledgeNote entities by IDs.
+func (_u *UserUpdateOne) RemoveKnowledgeNoteIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.RemoveKnowledgeNoteIDs(ids...)
+	return _u
+}
+
+// RemoveKnowledgeNotes removes "knowledge_notes" edges to KnowledgeNote entities.
+func (_u *UserUpdateOne) RemoveKnowledgeNotes(v ...*KnowledgeNote) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveKnowledgeNoteIDs(ids...)
+}
+
+// ClearScheduleOverrides clears all "schedule_overrides" edges to the ScheduleOverride entity.
+func (_u *UserUpdateOne) ClearScheduleOverrides() *UserUpdateOne {
+	_u.mutation.ClearScheduleOverrides()
+	return _u
+}
+
+// RemoveScheduleOverrideIDs removes the "schedule_overrides" edge to ScheduleOverride entities by IDs.
+func (_u *UserUpdateOne) RemoveScheduleOverrideIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.RemoveScheduleOverrideIDs(ids...)
+	return _u
+}
+
+// RemoveScheduleOverrides removes "schedule_overrides" edges to ScheduleOverride entities.
+func (_u *UserUpdateOne) RemoveScheduleOverrides(v ...*ScheduleOverride) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveScheduleOverrideIDs(ids...)
+}
+
+// ClearOutgoingHandoffs clears all "outgoing_handoffs" edges to the HandoffRecord entity.
+func (_u *UserUpdateOne) ClearOutgoingHandoffs() *UserUpdateOne {
+	_u.mutation.ClearOutgoingHandoffs()
+	return _u
+}
+
+// RemoveOutgoingHandoffIDs removes the "outgoing_handoffs" edge to HandoffRecord entities by IDs.
+func (_u *UserUpdateOne) RemoveOutgoingHandoffIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.RemoveOutgoingHandoffIDs(ids...)
+	return _u
+}
+
+// RemoveOutgoingHandoffs removes "outgoing_handoffs" edges to HandoffRecord entities.
+func (_u *UserUpdateOne) RemoveOutgoingHandoffs(v ...*HandoffRecord) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveOutgoingHandoffIDs(ids...)
+}
+
+// ClearIncomingHandoffs clears all "incoming_handoffs" edges to the HandoffRecord entity.
+func (_u *UserUpdateOne) ClearIncomingHandoffs() *UserUpdateOne {
+	_u.mutation.ClearIncomingHandoffs()
+	return _u
+}
+
+// RemoveIncomingHandoffIDs removes the "incoming_handoffs" edge to HandoffRecord entities by IDs.
+func (_u *UserUpdateOne) RemoveIncomingHandoffIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.RemoveIncomingHandoffIDs(ids...)
+	return _u
+}
+
+// RemoveIncomingHandoffs removes "incoming_handoffs" edges to HandoffRecord entities.
+func (_u *UserUpdateOne) RemoveIncomingHandoffs(v ...*HandoffRecord) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveIncomingHandoffIDs(ids...)
 }
 
 // Where appends a list predicates to the UserUpdate builder.
@@ -1132,6 +2904,11 @@ func (_u *UserUpdateOne) check() error {
 			return &ValidationError{Name: "password", err: fmt.Errorf(`ent: validator failed for field "User.password": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Role(); ok {
+		if err := user.RoleValidator(v); err != nil {
+			return &ValidationError{Name: "role", err: fmt.Errorf(`ent: validator failed for field "User.role": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.FailedLoginAttempts(); ok {
 		if err := user.FailedLoginAttemptsValidator(v); err != nil {
 			return &ValidationError{Name: "failed_login_attempts", err: fmt.Errorf(`ent: validator failed for field "User.failed_login_attempts": %w`, err)}
@@ -1176,7 +2953,7 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 		_spec.SetField(user.FieldPassword, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Role(); ok {
-		_spec.SetField(user.FieldRole, field.TypeString, value)
+		_spec.SetField(user.FieldRole, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.FullName(); ok {
 		_spec.SetField(user.FieldFullName, field.TypeString, value)
@@ -1258,6 +3035,231 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(user.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.SessionsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SessionsTable,
+			Columns: []string{user.SessionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedSessionsIDs(); len(nodes) > 0 && !_u.mutation.SessionsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SessionsTable,
+			Columns: []string{user.SessionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.SessionsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SessionsTable,
+			Columns: []string{user.SessionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(session.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.PasswordResetTokensCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PasswordResetTokensTable,
+			Columns: []string{user.PasswordResetTokensColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(passwordresettoken.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedPasswordResetTokensIDs(); len(nodes) > 0 && !_u.mutation.PasswordResetTokensCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PasswordResetTokensTable,
+			Columns: []string{user.PasswordResetTokensColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(passwordresettoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.PasswordResetTokensIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PasswordResetTokensTable,
+			Columns: []string{user.PasswordResetTokensColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(passwordresettoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.PersonalAccessTokensCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PersonalAccessTokensTable,
+			Columns: []string{user.PersonalAccessTokensColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(personalaccesstoken.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedPersonalAccessTokensIDs(); len(nodes) > 0 && !_u.mutation.PersonalAccessTokensCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PersonalAccessTokensTable,
+			Columns: []string{user.PersonalAccessTokensColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(personalaccesstoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.PersonalAccessTokensIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PersonalAccessTokensTable,
+			Columns: []string{user.PersonalAccessTokensColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(personalaccesstoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.OidcIdentitiesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.OidcIdentitiesTable,
+			Columns: []string{user.OidcIdentitiesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oidcidentity.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedOidcIdentitiesIDs(); len(nodes) > 0 && !_u.mutation.OidcIdentitiesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.OidcIdentitiesTable,
+			Columns: []string{user.OidcIdentitiesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oidcidentity.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OidcIdentitiesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.OidcIdentitiesTable,
+			Columns: []string{user.OidcIdentitiesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oidcidentity.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.TeamMembersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TeamMembersTable,
+			Columns: []string{user.TeamMembersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(teammember.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedTeamMembersIDs(); len(nodes) > 0 && !_u.mutation.TeamMembersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TeamMembersTable,
+			Columns: []string{user.TeamMembersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(teammember.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TeamMembersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TeamMembersTable,
+			Columns: []string{user.TeamMembersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(teammember.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _u.mutation.IcsRoleAssignmentsCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -1342,6 +3344,456 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(incidentdocument.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.CommanderIncidentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CommanderIncidentsTable,
+			Columns: []string{user.CommanderIncidentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedCommanderIncidentsIDs(); len(nodes) > 0 && !_u.mutation.CommanderIncidentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CommanderIncidentsTable,
+			Columns: []string{user.CommanderIncidentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CommanderIncidentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CommanderIncidentsTable,
+			Columns: []string{user.CommanderIncidentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.CommunicatorIncidentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CommunicatorIncidentsTable,
+			Columns: []string{user.CommunicatorIncidentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedCommunicatorIncidentsIDs(); len(nodes) > 0 && !_u.mutation.CommunicatorIncidentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CommunicatorIncidentsTable,
+			Columns: []string{user.CommunicatorIncidentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CommunicatorIncidentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CommunicatorIncidentsTable,
+			Columns: []string{user.CommunicatorIncidentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ResponderIncidentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ResponderIncidentsTable,
+			Columns: []string{user.ResponderIncidentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedResponderIncidentsIDs(); len(nodes) > 0 && !_u.mutation.ResponderIncidentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ResponderIncidentsTable,
+			Columns: []string{user.ResponderIncidentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ResponderIncidentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ResponderIncidentsTable,
+			Columns: []string{user.ResponderIncidentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.TriageOverridesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TriageOverridesTable,
+			Columns: []string{user.TriageOverridesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(triageresult.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedTriageOverridesIDs(); len(nodes) > 0 && !_u.mutation.TriageOverridesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TriageOverridesTable,
+			Columns: []string{user.TriageOverridesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(triageresult.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TriageOverridesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TriageOverridesTable,
+			Columns: []string{user.TriageOverridesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(triageresult.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ApprovedPostMortemsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ApprovedPostMortemsTable,
+			Columns: []string{user.ApprovedPostMortemsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(postmortem.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedApprovedPostMortemsIDs(); len(nodes) > 0 && !_u.mutation.ApprovedPostMortemsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ApprovedPostMortemsTable,
+			Columns: []string{user.ApprovedPostMortemsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(postmortem.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ApprovedPostMortemsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ApprovedPostMortemsTable,
+			Columns: []string{user.ApprovedPostMortemsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(postmortem.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.TriageRulesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TriageRulesTable,
+			Columns: []string{user.TriageRulesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(triagerule.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedTriageRulesIDs(); len(nodes) > 0 && !_u.mutation.TriageRulesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TriageRulesTable,
+			Columns: []string{user.TriageRulesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(triagerule.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TriageRulesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TriageRulesTable,
+			Columns: []string{user.TriageRulesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(triagerule.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.KnowledgeNotesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.KnowledgeNotesTable,
+			Columns: []string{user.KnowledgeNotesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(knowledgenote.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedKnowledgeNotesIDs(); len(nodes) > 0 && !_u.mutation.KnowledgeNotesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.KnowledgeNotesTable,
+			Columns: []string{user.KnowledgeNotesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(knowledgenote.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.KnowledgeNotesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.KnowledgeNotesTable,
+			Columns: []string{user.KnowledgeNotesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(knowledgenote.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ScheduleOverridesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ScheduleOverridesTable,
+			Columns: []string{user.ScheduleOverridesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(scheduleoverride.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedScheduleOverridesIDs(); len(nodes) > 0 && !_u.mutation.ScheduleOverridesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ScheduleOverridesTable,
+			Columns: []string{user.ScheduleOverridesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(scheduleoverride.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ScheduleOverridesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.ScheduleOverridesTable,
+			Columns: []string{user.ScheduleOverridesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(scheduleoverride.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.OutgoingHandoffsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.OutgoingHandoffsTable,
+			Columns: []string{user.OutgoingHandoffsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(handoffrecord.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedOutgoingHandoffsIDs(); len(nodes) > 0 && !_u.mutation.OutgoingHandoffsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.OutgoingHandoffsTable,
+			Columns: []string{user.OutgoingHandoffsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(handoffrecord.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OutgoingHandoffsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.OutgoingHandoffsTable,
+			Columns: []string{user.OutgoingHandoffsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(handoffrecord.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.IncomingHandoffsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.IncomingHandoffsTable,
+			Columns: []string{user.IncomingHandoffsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(handoffrecord.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedIncomingHandoffsIDs(); len(nodes) > 0 && !_u.mutation.IncomingHandoffsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.IncomingHandoffsTable,
+			Columns: []string{user.IncomingHandoffsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(handoffrecord.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.IncomingHandoffsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.IncomingHandoffsTable,
+			Columns: []string{user.IncomingHandoffsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(handoffrecord.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

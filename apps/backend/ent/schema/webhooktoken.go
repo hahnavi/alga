@@ -23,7 +23,7 @@ func (WebhookToken) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
 		field.String("name").NotEmpty(),
-		field.String("token_hash").Unique().NotEmpty(),
+		field.String("token_hash").Unique().NotEmpty().Sensitive(),
 		field.String("lookup_prefix").NotEmpty(),
 		field.Time("created_at").Default(timeNow),
 		field.Time("last_used_at").Optional().Nillable(),
@@ -38,6 +38,8 @@ func (WebhookToken) Edges() []ent.Edge {
 
 func (WebhookToken) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("lookup_prefix", "revoked"),
+		index.Fields("lookup_prefix").
+			Annotations(entsql.IndexWhere("revoked = false")),
+		index.Fields("expires_at"),
 	}
 }

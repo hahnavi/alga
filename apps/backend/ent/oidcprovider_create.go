@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"alga/ent/oidcidentity"
 	"alga/ent/oidcprovider"
 	"context"
 	"errors"
@@ -113,6 +114,21 @@ func (_c *OIDCProviderCreate) SetNillableID(v *uuid.UUID) *OIDCProviderCreate {
 		_c.SetID(*v)
 	}
 	return _c
+}
+
+// AddOidcIdentityIDs adds the "oidc_identities" edge to the OIDCIdentity entity by IDs.
+func (_c *OIDCProviderCreate) AddOidcIdentityIDs(ids ...uuid.UUID) *OIDCProviderCreate {
+	_c.mutation.AddOidcIdentityIDs(ids...)
+	return _c
+}
+
+// AddOidcIdentities adds the "oidc_identities" edges to the OIDCIdentity entity.
+func (_c *OIDCProviderCreate) AddOidcIdentities(v ...*OIDCIdentity) *OIDCProviderCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddOidcIdentityIDs(ids...)
 }
 
 // Mutation returns the OIDCProviderMutation object of the builder.
@@ -283,6 +299,22 @@ func (_c *OIDCProviderCreate) createSpec() (*OIDCProvider, *sqlgraph.CreateSpec)
 	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(oidcprovider.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if nodes := _c.mutation.OidcIdentitiesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   oidcprovider.OidcIdentitiesTable,
+			Columns: []string{oidcprovider.OidcIdentitiesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oidcidentity.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

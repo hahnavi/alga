@@ -146,26 +146,6 @@ func OutgoingUserIDNotIn(vs ...uuid.UUID) predicate.HandoffRecord {
 	return predicate.HandoffRecord(sql.FieldNotIn(FieldOutgoingUserID, vs...))
 }
 
-// OutgoingUserIDGT applies the GT predicate on the "outgoing_user_id" field.
-func OutgoingUserIDGT(v uuid.UUID) predicate.HandoffRecord {
-	return predicate.HandoffRecord(sql.FieldGT(FieldOutgoingUserID, v))
-}
-
-// OutgoingUserIDGTE applies the GTE predicate on the "outgoing_user_id" field.
-func OutgoingUserIDGTE(v uuid.UUID) predicate.HandoffRecord {
-	return predicate.HandoffRecord(sql.FieldGTE(FieldOutgoingUserID, v))
-}
-
-// OutgoingUserIDLT applies the LT predicate on the "outgoing_user_id" field.
-func OutgoingUserIDLT(v uuid.UUID) predicate.HandoffRecord {
-	return predicate.HandoffRecord(sql.FieldLT(FieldOutgoingUserID, v))
-}
-
-// OutgoingUserIDLTE applies the LTE predicate on the "outgoing_user_id" field.
-func OutgoingUserIDLTE(v uuid.UUID) predicate.HandoffRecord {
-	return predicate.HandoffRecord(sql.FieldLTE(FieldOutgoingUserID, v))
-}
-
 // OutgoingUserIDIsNil applies the IsNil predicate on the "outgoing_user_id" field.
 func OutgoingUserIDIsNil() predicate.HandoffRecord {
 	return predicate.HandoffRecord(sql.FieldIsNull(FieldOutgoingUserID))
@@ -194,26 +174,6 @@ func IncomingUserIDIn(vs ...uuid.UUID) predicate.HandoffRecord {
 // IncomingUserIDNotIn applies the NotIn predicate on the "incoming_user_id" field.
 func IncomingUserIDNotIn(vs ...uuid.UUID) predicate.HandoffRecord {
 	return predicate.HandoffRecord(sql.FieldNotIn(FieldIncomingUserID, vs...))
-}
-
-// IncomingUserIDGT applies the GT predicate on the "incoming_user_id" field.
-func IncomingUserIDGT(v uuid.UUID) predicate.HandoffRecord {
-	return predicate.HandoffRecord(sql.FieldGT(FieldIncomingUserID, v))
-}
-
-// IncomingUserIDGTE applies the GTE predicate on the "incoming_user_id" field.
-func IncomingUserIDGTE(v uuid.UUID) predicate.HandoffRecord {
-	return predicate.HandoffRecord(sql.FieldGTE(FieldIncomingUserID, v))
-}
-
-// IncomingUserIDLT applies the LT predicate on the "incoming_user_id" field.
-func IncomingUserIDLT(v uuid.UUID) predicate.HandoffRecord {
-	return predicate.HandoffRecord(sql.FieldLT(FieldIncomingUserID, v))
-}
-
-// IncomingUserIDLTE applies the LTE predicate on the "incoming_user_id" field.
-func IncomingUserIDLTE(v uuid.UUID) predicate.HandoffRecord {
-	return predicate.HandoffRecord(sql.FieldLTE(FieldIncomingUserID, v))
 }
 
 // IncomingUserIDIsNil applies the IsNil predicate on the "incoming_user_id" field.
@@ -656,6 +616,52 @@ func HasSchedule() predicate.HandoffRecord {
 func HasScheduleWith(preds ...predicate.OnCallSchedule) predicate.HandoffRecord {
 	return predicate.HandoffRecord(func(s *sql.Selector) {
 		step := newScheduleStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasOutgoingUser applies the HasEdge predicate on the "outgoing_user" edge.
+func HasOutgoingUser() predicate.HandoffRecord {
+	return predicate.HandoffRecord(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, OutgoingUserTable, OutgoingUserColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasOutgoingUserWith applies the HasEdge predicate on the "outgoing_user" edge with a given conditions (other predicates).
+func HasOutgoingUserWith(preds ...predicate.User) predicate.HandoffRecord {
+	return predicate.HandoffRecord(func(s *sql.Selector) {
+		step := newOutgoingUserStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasIncomingUser applies the HasEdge predicate on the "incoming_user" edge.
+func HasIncomingUser() predicate.HandoffRecord {
+	return predicate.HandoffRecord(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, IncomingUserTable, IncomingUserColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasIncomingUserWith applies the HasEdge predicate on the "incoming_user" edge with a given conditions (other predicates).
+func HasIncomingUserWith(preds ...predicate.User) predicate.HandoffRecord {
+	return predicate.HandoffRecord(func(s *sql.Selector) {
+		step := newIncomingUserStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

@@ -61,11 +61,6 @@ func Fingerprint(v string) predicate.Alert {
 	return predicate.Alert(sql.FieldEQ(FieldFingerprint, v))
 }
 
-// Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
-func Status(v string) predicate.Alert {
-	return predicate.Alert(sql.FieldEQ(FieldStatus, v))
-}
-
 // Acknowledged applies equality check predicate on the "acknowledged" field. It's identical to AcknowledgedEQ.
 func Acknowledged(v bool) predicate.Alert {
 	return predicate.Alert(sql.FieldEQ(FieldAcknowledged, v))
@@ -192,68 +187,23 @@ func FingerprintContainsFold(v string) predicate.Alert {
 }
 
 // StatusEQ applies the EQ predicate on the "status" field.
-func StatusEQ(v string) predicate.Alert {
+func StatusEQ(v Status) predicate.Alert {
 	return predicate.Alert(sql.FieldEQ(FieldStatus, v))
 }
 
 // StatusNEQ applies the NEQ predicate on the "status" field.
-func StatusNEQ(v string) predicate.Alert {
+func StatusNEQ(v Status) predicate.Alert {
 	return predicate.Alert(sql.FieldNEQ(FieldStatus, v))
 }
 
 // StatusIn applies the In predicate on the "status" field.
-func StatusIn(vs ...string) predicate.Alert {
+func StatusIn(vs ...Status) predicate.Alert {
 	return predicate.Alert(sql.FieldIn(FieldStatus, vs...))
 }
 
 // StatusNotIn applies the NotIn predicate on the "status" field.
-func StatusNotIn(vs ...string) predicate.Alert {
+func StatusNotIn(vs ...Status) predicate.Alert {
 	return predicate.Alert(sql.FieldNotIn(FieldStatus, vs...))
-}
-
-// StatusGT applies the GT predicate on the "status" field.
-func StatusGT(v string) predicate.Alert {
-	return predicate.Alert(sql.FieldGT(FieldStatus, v))
-}
-
-// StatusGTE applies the GTE predicate on the "status" field.
-func StatusGTE(v string) predicate.Alert {
-	return predicate.Alert(sql.FieldGTE(FieldStatus, v))
-}
-
-// StatusLT applies the LT predicate on the "status" field.
-func StatusLT(v string) predicate.Alert {
-	return predicate.Alert(sql.FieldLT(FieldStatus, v))
-}
-
-// StatusLTE applies the LTE predicate on the "status" field.
-func StatusLTE(v string) predicate.Alert {
-	return predicate.Alert(sql.FieldLTE(FieldStatus, v))
-}
-
-// StatusContains applies the Contains predicate on the "status" field.
-func StatusContains(v string) predicate.Alert {
-	return predicate.Alert(sql.FieldContains(FieldStatus, v))
-}
-
-// StatusHasPrefix applies the HasPrefix predicate on the "status" field.
-func StatusHasPrefix(v string) predicate.Alert {
-	return predicate.Alert(sql.FieldHasPrefix(FieldStatus, v))
-}
-
-// StatusHasSuffix applies the HasSuffix predicate on the "status" field.
-func StatusHasSuffix(v string) predicate.Alert {
-	return predicate.Alert(sql.FieldHasSuffix(FieldStatus, v))
-}
-
-// StatusEqualFold applies the EqualFold predicate on the "status" field.
-func StatusEqualFold(v string) predicate.Alert {
-	return predicate.Alert(sql.FieldEqualFold(FieldStatus, v))
-}
-
-// StatusContainsFold applies the ContainsFold predicate on the "status" field.
-func StatusContainsFold(v string) predicate.Alert {
-	return predicate.Alert(sql.FieldContainsFold(FieldStatus, v))
 }
 
 // AcknowledgedEQ applies the EQ predicate on the "acknowledged" field.
@@ -519,26 +469,6 @@ func TriageResultIDIn(vs ...uuid.UUID) predicate.Alert {
 // TriageResultIDNotIn applies the NotIn predicate on the "triage_result_id" field.
 func TriageResultIDNotIn(vs ...uuid.UUID) predicate.Alert {
 	return predicate.Alert(sql.FieldNotIn(FieldTriageResultID, vs...))
-}
-
-// TriageResultIDGT applies the GT predicate on the "triage_result_id" field.
-func TriageResultIDGT(v uuid.UUID) predicate.Alert {
-	return predicate.Alert(sql.FieldGT(FieldTriageResultID, v))
-}
-
-// TriageResultIDGTE applies the GTE predicate on the "triage_result_id" field.
-func TriageResultIDGTE(v uuid.UUID) predicate.Alert {
-	return predicate.Alert(sql.FieldGTE(FieldTriageResultID, v))
-}
-
-// TriageResultIDLT applies the LT predicate on the "triage_result_id" field.
-func TriageResultIDLT(v uuid.UUID) predicate.Alert {
-	return predicate.Alert(sql.FieldLT(FieldTriageResultID, v))
-}
-
-// TriageResultIDLTE applies the LTE predicate on the "triage_result_id" field.
-func TriageResultIDLTE(v uuid.UUID) predicate.Alert {
-	return predicate.Alert(sql.FieldLTE(FieldTriageResultID, v))
 }
 
 // TriageResultIDIsNil applies the IsNil predicate on the "triage_result_id" field.
@@ -925,6 +855,29 @@ func HasDeliveryTargets() predicate.Alert {
 func HasDeliveryTargetsWith(preds ...predicate.DeliveryTarget) predicate.Alert {
 	return predicate.Alert(func(s *sql.Selector) {
 		step := newDeliveryTargetsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasTriageResult applies the HasEdge predicate on the "triage_result" edge.
+func HasTriageResult() predicate.Alert {
+	return predicate.Alert(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, TriageResultTable, TriageResultColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasTriageResultWith applies the HasEdge predicate on the "triage_result" edge with a given conditions (other predicates).
+func HasTriageResultWith(preds ...predicate.TriageResult) predicate.Alert {
+	return predicate.Alert(func(s *sql.Selector) {
+		step := newTriageResultStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

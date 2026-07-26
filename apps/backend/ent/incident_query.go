@@ -6,6 +6,7 @@ import (
 	"alga/ent/alert"
 	"alga/ent/alertinvestigation"
 	"alga/ent/coordinationtask"
+	"alga/ent/escalationpolicy"
 	"alga/ent/icsroleassignment"
 	"alga/ent/incident"
 	"alga/ent/incidentcoordinationmessage"
@@ -14,6 +15,8 @@ import (
 	"alga/ent/incidenttimelineentry"
 	"alga/ent/postmortem"
 	"alga/ent/predicate"
+	"alga/ent/service"
+	"alga/ent/user"
 	"context"
 	"database/sql/driver"
 	"fmt"
@@ -42,7 +45,11 @@ type IncidentQuery struct {
 	withDocuments                   *IncidentDocumentQuery
 	withCoordinationMessages        *IncidentCoordinationMessageQuery
 	withCoordinationTasks           *CoordinationTaskQuery
-	withFKs                         bool
+	withCommander                   *UserQuery
+	withCommunicator                *UserQuery
+	withOnCallResponder             *UserQuery
+	withService                     *ServiceQuery
+	withEscalationPolicy            *EscalationPolicyQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -181,7 +188,7 @@ func (_q *IncidentQuery) QueryPostMortem() *PostMortemQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(incident.Table, incident.FieldID, selector),
 			sqlgraph.To(postmortem.Table, postmortem.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, false, incident.PostMortemTable, incident.PostMortemColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, incident.PostMortemTable, incident.PostMortemColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -270,6 +277,116 @@ func (_q *IncidentQuery) QueryCoordinationTasks() *CoordinationTaskQuery {
 			sqlgraph.From(incident.Table, incident.FieldID, selector),
 			sqlgraph.To(coordinationtask.Table, coordinationtask.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, incident.CoordinationTasksTable, incident.CoordinationTasksColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryCommander chains the current query on the "commander" edge.
+func (_q *IncidentQuery) QueryCommander() *UserQuery {
+	query := (&UserClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(incident.Table, incident.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, incident.CommanderTable, incident.CommanderColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryCommunicator chains the current query on the "communicator" edge.
+func (_q *IncidentQuery) QueryCommunicator() *UserQuery {
+	query := (&UserClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(incident.Table, incident.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, incident.CommunicatorTable, incident.CommunicatorColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryOnCallResponder chains the current query on the "on_call_responder" edge.
+func (_q *IncidentQuery) QueryOnCallResponder() *UserQuery {
+	query := (&UserClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(incident.Table, incident.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, incident.OnCallResponderTable, incident.OnCallResponderColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryService chains the current query on the "service" edge.
+func (_q *IncidentQuery) QueryService() *ServiceQuery {
+	query := (&ServiceClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(incident.Table, incident.FieldID, selector),
+			sqlgraph.To(service.Table, service.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, incident.ServiceTable, incident.ServiceColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryEscalationPolicy chains the current query on the "escalation_policy" edge.
+func (_q *IncidentQuery) QueryEscalationPolicy() *EscalationPolicyQuery {
+	query := (&EscalationPolicyClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(incident.Table, incident.FieldID, selector),
+			sqlgraph.To(escalationpolicy.Table, escalationpolicy.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, incident.EscalationPolicyTable, incident.EscalationPolicyColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -478,6 +595,11 @@ func (_q *IncidentQuery) Clone() *IncidentQuery {
 		withDocuments:                   _q.withDocuments.Clone(),
 		withCoordinationMessages:        _q.withCoordinationMessages.Clone(),
 		withCoordinationTasks:           _q.withCoordinationTasks.Clone(),
+		withCommander:                   _q.withCommander.Clone(),
+		withCommunicator:                _q.withCommunicator.Clone(),
+		withOnCallResponder:             _q.withOnCallResponder.Clone(),
+		withService:                     _q.withService.Clone(),
+		withEscalationPolicy:            _q.withEscalationPolicy.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -583,6 +705,61 @@ func (_q *IncidentQuery) WithCoordinationTasks(opts ...func(*CoordinationTaskQue
 	return _q
 }
 
+// WithCommander tells the query-builder to eager-load the nodes that are connected to
+// the "commander" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *IncidentQuery) WithCommander(opts ...func(*UserQuery)) *IncidentQuery {
+	query := (&UserClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withCommander = query
+	return _q
+}
+
+// WithCommunicator tells the query-builder to eager-load the nodes that are connected to
+// the "communicator" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *IncidentQuery) WithCommunicator(opts ...func(*UserQuery)) *IncidentQuery {
+	query := (&UserClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withCommunicator = query
+	return _q
+}
+
+// WithOnCallResponder tells the query-builder to eager-load the nodes that are connected to
+// the "on_call_responder" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *IncidentQuery) WithOnCallResponder(opts ...func(*UserQuery)) *IncidentQuery {
+	query := (&UserClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withOnCallResponder = query
+	return _q
+}
+
+// WithService tells the query-builder to eager-load the nodes that are connected to
+// the "service" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *IncidentQuery) WithService(opts ...func(*ServiceQuery)) *IncidentQuery {
+	query := (&ServiceClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withService = query
+	return _q
+}
+
+// WithEscalationPolicy tells the query-builder to eager-load the nodes that are connected to
+// the "escalation_policy" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *IncidentQuery) WithEscalationPolicy(opts ...func(*EscalationPolicyQuery)) *IncidentQuery {
+	query := (&EscalationPolicyClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withEscalationPolicy = query
+	return _q
+}
+
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
 //
@@ -660,9 +837,8 @@ func (_q *IncidentQuery) prepareQuery(ctx context.Context) error {
 func (_q *IncidentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Incident, error) {
 	var (
 		nodes       = []*Incident{}
-		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [9]bool{
+		loadedTypes = [14]bool{
 			_q.withAlerts != nil,
 			_q.withIncidentInvestigations != nil,
 			_q.withPromotedAlertInvestigations != nil,
@@ -672,14 +848,13 @@ func (_q *IncidentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Inc
 			_q.withDocuments != nil,
 			_q.withCoordinationMessages != nil,
 			_q.withCoordinationTasks != nil,
+			_q.withCommander != nil,
+			_q.withCommunicator != nil,
+			_q.withOnCallResponder != nil,
+			_q.withService != nil,
+			_q.withEscalationPolicy != nil,
 		}
 	)
-	if _q.withPostMortem != nil {
-		withFKs = true
-	}
-	if withFKs {
-		_spec.Node.Columns = append(_spec.Node.Columns, incident.ForeignKeys...)
-	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Incident).scanValues(nil, columns)
 	}
@@ -765,6 +940,36 @@ func (_q *IncidentQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Inc
 			func(n *Incident, e *CoordinationTask) {
 				n.Edges.CoordinationTasks = append(n.Edges.CoordinationTasks, e)
 			}); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withCommander; query != nil {
+		if err := _q.loadCommander(ctx, query, nodes, nil,
+			func(n *Incident, e *User) { n.Edges.Commander = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withCommunicator; query != nil {
+		if err := _q.loadCommunicator(ctx, query, nodes, nil,
+			func(n *Incident, e *User) { n.Edges.Communicator = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withOnCallResponder; query != nil {
+		if err := _q.loadOnCallResponder(ctx, query, nodes, nil,
+			func(n *Incident, e *User) { n.Edges.OnCallResponder = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withService; query != nil {
+		if err := _q.loadService(ctx, query, nodes, nil,
+			func(n *Incident, e *Service) { n.Edges.Service = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withEscalationPolicy; query != nil {
+		if err := _q.loadEscalationPolicy(ctx, query, nodes, nil,
+			func(n *Incident, e *EscalationPolicy) { n.Edges.EscalationPolicy = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -908,7 +1113,9 @@ func (_q *IncidentQuery) loadTimeline(ctx context.Context, query *IncidentTimeli
 			init(nodes[i])
 		}
 	}
-	query.withFKs = true
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(incidenttimelineentry.FieldIncidentID)
+	}
 	query.Where(predicate.IncidentTimelineEntry(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(incident.TimelineColumn), fks...))
 	}))
@@ -917,47 +1124,39 @@ func (_q *IncidentQuery) loadTimeline(ctx context.Context, query *IncidentTimeli
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.incident_timeline
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "incident_timeline" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
+		fk := n.IncidentID
+		node, ok := nodeids[fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "incident_timeline" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "incident_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
 func (_q *IncidentQuery) loadPostMortem(ctx context.Context, query *PostMortemQuery, nodes []*Incident, init func(*Incident), assign func(*Incident, *PostMortem)) error {
-	ids := make([]uuid.UUID, 0, len(nodes))
-	nodeids := make(map[uuid.UUID][]*Incident)
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Incident)
 	for i := range nodes {
-		if nodes[i].incident_post_mortem == nil {
-			continue
-		}
-		fk := *nodes[i].incident_post_mortem
-		if _, ok := nodeids[fk]; !ok {
-			ids = append(ids, fk)
-		}
-		nodeids[fk] = append(nodeids[fk], nodes[i])
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
 	}
-	if len(ids) == 0 {
-		return nil
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(postmortem.FieldIncidentID)
 	}
-	query.Where(postmortem.IDIn(ids...))
+	query.Where(predicate.PostMortem(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(incident.PostMortemColumn), fks...))
+	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		nodes, ok := nodeids[n.ID]
+		fk := n.IncidentID
+		node, ok := nodeids[fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "incident_post_mortem" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "incident_id" returned %v for node %v`, fk, n.ID)
 		}
-		for i := range nodes {
-			assign(nodes[i], n)
-		}
+		assign(node, n)
 	}
 	return nil
 }
@@ -971,7 +1170,9 @@ func (_q *IncidentQuery) loadIcsRoles(ctx context.Context, query *ICSRoleAssignm
 			init(nodes[i])
 		}
 	}
-	query.withFKs = true
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(icsroleassignment.FieldIncidentID)
+	}
 	query.Where(predicate.ICSRoleAssignment(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(incident.IcsRolesColumn), fks...))
 	}))
@@ -980,13 +1181,10 @@ func (_q *IncidentQuery) loadIcsRoles(ctx context.Context, query *ICSRoleAssignm
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.incident_ics_roles
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "incident_ics_roles" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
+		fk := n.IncidentID
+		node, ok := nodeids[fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "incident_ics_roles" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "incident_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}
@@ -1002,7 +1200,9 @@ func (_q *IncidentQuery) loadDocuments(ctx context.Context, query *IncidentDocum
 			init(nodes[i])
 		}
 	}
-	query.withFKs = true
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(incidentdocument.FieldIncidentID)
+	}
 	query.Where(predicate.IncidentDocument(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(incident.DocumentsColumn), fks...))
 	}))
@@ -1011,13 +1211,10 @@ func (_q *IncidentQuery) loadDocuments(ctx context.Context, query *IncidentDocum
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.incident_documents
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "incident_documents" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
+		fk := n.IncidentID
+		node, ok := nodeids[fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "incident_documents" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "incident_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}
@@ -1033,7 +1230,9 @@ func (_q *IncidentQuery) loadCoordinationMessages(ctx context.Context, query *In
 			init(nodes[i])
 		}
 	}
-	query.withFKs = true
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(incidentcoordinationmessage.FieldIncidentID)
+	}
 	query.Where(predicate.IncidentCoordinationMessage(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(incident.CoordinationMessagesColumn), fks...))
 	}))
@@ -1042,13 +1241,10 @@ func (_q *IncidentQuery) loadCoordinationMessages(ctx context.Context, query *In
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.incident_coordination_messages
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "incident_coordination_messages" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
+		fk := n.IncidentID
+		node, ok := nodeids[fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "incident_coordination_messages" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "incident_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}
@@ -1087,6 +1283,166 @@ func (_q *IncidentQuery) loadCoordinationTasks(ctx context.Context, query *Coord
 	}
 	return nil
 }
+func (_q *IncidentQuery) loadCommander(ctx context.Context, query *UserQuery, nodes []*Incident, init func(*Incident), assign func(*Incident, *User)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Incident)
+	for i := range nodes {
+		if nodes[i].CommanderID == nil {
+			continue
+		}
+		fk := *nodes[i].CommanderID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(user.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "commander_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *IncidentQuery) loadCommunicator(ctx context.Context, query *UserQuery, nodes []*Incident, init func(*Incident), assign func(*Incident, *User)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Incident)
+	for i := range nodes {
+		if nodes[i].CommunicatorID == nil {
+			continue
+		}
+		fk := *nodes[i].CommunicatorID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(user.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "communicator_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *IncidentQuery) loadOnCallResponder(ctx context.Context, query *UserQuery, nodes []*Incident, init func(*Incident), assign func(*Incident, *User)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Incident)
+	for i := range nodes {
+		if nodes[i].OnCallResponderID == nil {
+			continue
+		}
+		fk := *nodes[i].OnCallResponderID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(user.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "on_call_responder_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *IncidentQuery) loadService(ctx context.Context, query *ServiceQuery, nodes []*Incident, init func(*Incident), assign func(*Incident, *Service)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Incident)
+	for i := range nodes {
+		if nodes[i].ServiceID == nil {
+			continue
+		}
+		fk := *nodes[i].ServiceID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(service.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "service_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *IncidentQuery) loadEscalationPolicy(ctx context.Context, query *EscalationPolicyQuery, nodes []*Incident, init func(*Incident), assign func(*Incident, *EscalationPolicy)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Incident)
+	for i := range nodes {
+		if nodes[i].EscalationPolicyID == nil {
+			continue
+		}
+		fk := *nodes[i].EscalationPolicyID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(escalationpolicy.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "escalation_policy_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
 
 func (_q *IncidentQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
@@ -1112,6 +1468,21 @@ func (_q *IncidentQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != incident.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if _q.withCommander != nil {
+			_spec.Node.AddColumnOnce(incident.FieldCommanderID)
+		}
+		if _q.withCommunicator != nil {
+			_spec.Node.AddColumnOnce(incident.FieldCommunicatorID)
+		}
+		if _q.withOnCallResponder != nil {
+			_spec.Node.AddColumnOnce(incident.FieldOnCallResponderID)
+		}
+		if _q.withService != nil {
+			_spec.Node.AddColumnOnce(incident.FieldServiceID)
+		}
+		if _q.withEscalationPolicy != nil {
+			_spec.Node.AddColumnOnce(incident.FieldEscalationPolicyID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

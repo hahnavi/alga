@@ -49,6 +49,8 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// FieldIncidentID holds the string denoting the incident_id field in the database.
+	FieldIncidentID = "incident_id"
 	// EdgeIncident holds the string denoting the incident edge name in mutations.
 	EdgeIncident = "incident"
 	// EdgeReplies holds the string denoting the replies edge name in mutations.
@@ -63,7 +65,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "incident" package.
 	IncidentInverseTable = "incidents"
 	// IncidentColumn is the table column denoting the incident relation/edge.
-	IncidentColumn = "incident_coordination_messages"
+	IncidentColumn = "incident_id"
 	// RepliesTable is the table that holds the replies relation/edge.
 	RepliesTable = "incident_coordination_messages"
 	// RepliesColumn is the table column denoting the replies relation/edge.
@@ -94,23 +96,13 @@ var Columns = []string{
 	FieldMetadata,
 	FieldCreatedAt,
 	FieldUpdatedAt,
-}
-
-// ForeignKeys holds the SQL foreign-keys that are owned by the "incident_coordination_messages"
-// table and are not defined as standalone fields in the schema.
-var ForeignKeys = []string{
-	"incident_coordination_messages",
+	FieldIncidentID,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
-			return true
-		}
-	}
-	for i := range ForeignKeys {
-		if column == ForeignKeys[i] {
 			return true
 		}
 	}
@@ -238,6 +230,11 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByIncidentID orders the results by the incident_id field.
+func ByIncidentID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIncidentID, opts...).ToFunc()
 }
 
 // ByIncidentField orders the results by incident field.

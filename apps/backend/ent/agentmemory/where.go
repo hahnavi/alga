@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -58,11 +59,6 @@ func IDLTE(id uuid.UUID) predicate.AgentMemory {
 // Content applies equality check predicate on the "content" field. It's identical to ContentEQ.
 func Content(v string) predicate.AgentMemory {
 	return predicate.AgentMemory(sql.FieldEQ(FieldContent, v))
-}
-
-// MemoryType applies equality check predicate on the "memory_type" field. It's identical to MemoryTypeEQ.
-func MemoryType(v string) predicate.AgentMemory {
-	return predicate.AgentMemory(sql.FieldEQ(FieldMemoryType, v))
 }
 
 // Hash applies equality check predicate on the "hash" field. It's identical to HashEQ.
@@ -186,68 +182,23 @@ func ContentContainsFold(v string) predicate.AgentMemory {
 }
 
 // MemoryTypeEQ applies the EQ predicate on the "memory_type" field.
-func MemoryTypeEQ(v string) predicate.AgentMemory {
+func MemoryTypeEQ(v MemoryType) predicate.AgentMemory {
 	return predicate.AgentMemory(sql.FieldEQ(FieldMemoryType, v))
 }
 
 // MemoryTypeNEQ applies the NEQ predicate on the "memory_type" field.
-func MemoryTypeNEQ(v string) predicate.AgentMemory {
+func MemoryTypeNEQ(v MemoryType) predicate.AgentMemory {
 	return predicate.AgentMemory(sql.FieldNEQ(FieldMemoryType, v))
 }
 
 // MemoryTypeIn applies the In predicate on the "memory_type" field.
-func MemoryTypeIn(vs ...string) predicate.AgentMemory {
+func MemoryTypeIn(vs ...MemoryType) predicate.AgentMemory {
 	return predicate.AgentMemory(sql.FieldIn(FieldMemoryType, vs...))
 }
 
 // MemoryTypeNotIn applies the NotIn predicate on the "memory_type" field.
-func MemoryTypeNotIn(vs ...string) predicate.AgentMemory {
+func MemoryTypeNotIn(vs ...MemoryType) predicate.AgentMemory {
 	return predicate.AgentMemory(sql.FieldNotIn(FieldMemoryType, vs...))
-}
-
-// MemoryTypeGT applies the GT predicate on the "memory_type" field.
-func MemoryTypeGT(v string) predicate.AgentMemory {
-	return predicate.AgentMemory(sql.FieldGT(FieldMemoryType, v))
-}
-
-// MemoryTypeGTE applies the GTE predicate on the "memory_type" field.
-func MemoryTypeGTE(v string) predicate.AgentMemory {
-	return predicate.AgentMemory(sql.FieldGTE(FieldMemoryType, v))
-}
-
-// MemoryTypeLT applies the LT predicate on the "memory_type" field.
-func MemoryTypeLT(v string) predicate.AgentMemory {
-	return predicate.AgentMemory(sql.FieldLT(FieldMemoryType, v))
-}
-
-// MemoryTypeLTE applies the LTE predicate on the "memory_type" field.
-func MemoryTypeLTE(v string) predicate.AgentMemory {
-	return predicate.AgentMemory(sql.FieldLTE(FieldMemoryType, v))
-}
-
-// MemoryTypeContains applies the Contains predicate on the "memory_type" field.
-func MemoryTypeContains(v string) predicate.AgentMemory {
-	return predicate.AgentMemory(sql.FieldContains(FieldMemoryType, v))
-}
-
-// MemoryTypeHasPrefix applies the HasPrefix predicate on the "memory_type" field.
-func MemoryTypeHasPrefix(v string) predicate.AgentMemory {
-	return predicate.AgentMemory(sql.FieldHasPrefix(FieldMemoryType, v))
-}
-
-// MemoryTypeHasSuffix applies the HasSuffix predicate on the "memory_type" field.
-func MemoryTypeHasSuffix(v string) predicate.AgentMemory {
-	return predicate.AgentMemory(sql.FieldHasSuffix(FieldMemoryType, v))
-}
-
-// MemoryTypeEqualFold applies the EqualFold predicate on the "memory_type" field.
-func MemoryTypeEqualFold(v string) predicate.AgentMemory {
-	return predicate.AgentMemory(sql.FieldEqualFold(FieldMemoryType, v))
-}
-
-// MemoryTypeContainsFold applies the ContainsFold predicate on the "memory_type" field.
-func MemoryTypeContainsFold(v string) predicate.AgentMemory {
-	return predicate.AgentMemory(sql.FieldContainsFold(FieldMemoryType, v))
 }
 
 // HashEQ applies the EQ predicate on the "hash" field.
@@ -343,26 +294,6 @@ func AgentIDIn(vs ...uuid.UUID) predicate.AgentMemory {
 // AgentIDNotIn applies the NotIn predicate on the "agent_id" field.
 func AgentIDNotIn(vs ...uuid.UUID) predicate.AgentMemory {
 	return predicate.AgentMemory(sql.FieldNotIn(FieldAgentID, vs...))
-}
-
-// AgentIDGT applies the GT predicate on the "agent_id" field.
-func AgentIDGT(v uuid.UUID) predicate.AgentMemory {
-	return predicate.AgentMemory(sql.FieldGT(FieldAgentID, v))
-}
-
-// AgentIDGTE applies the GTE predicate on the "agent_id" field.
-func AgentIDGTE(v uuid.UUID) predicate.AgentMemory {
-	return predicate.AgentMemory(sql.FieldGTE(FieldAgentID, v))
-}
-
-// AgentIDLT applies the LT predicate on the "agent_id" field.
-func AgentIDLT(v uuid.UUID) predicate.AgentMemory {
-	return predicate.AgentMemory(sql.FieldLT(FieldAgentID, v))
-}
-
-// AgentIDLTE applies the LTE predicate on the "agent_id" field.
-func AgentIDLTE(v uuid.UUID) predicate.AgentMemory {
-	return predicate.AgentMemory(sql.FieldLTE(FieldAgentID, v))
 }
 
 // AgentIDIsNil applies the IsNil predicate on the "agent_id" field.
@@ -923,6 +854,29 @@ func UpdatedAtLT(v time.Time) predicate.AgentMemory {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.AgentMemory {
 	return predicate.AgentMemory(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// HasAgent applies the HasEdge predicate on the "agent" edge.
+func HasAgent() predicate.AgentMemory {
+	return predicate.AgentMemory(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, AgentTable, AgentColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAgentWith applies the HasEdge predicate on the "agent" edge with a given conditions (other predicates).
+func HasAgentWith(preds ...predicate.AgentToken) predicate.AgentMemory {
+	return predicate.AgentMemory(func(s *sql.Selector) {
+		step := newAgentStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

@@ -36,7 +36,11 @@ type AuditLog struct {
 	// Details holds the value of the "details" field.
 	Details map[string]interface{} `json:"details,omitempty"`
 	// RequestID holds the value of the "request_id" field.
-	RequestID    string `json:"request_id,omitempty"`
+	RequestID string `json:"request_id,omitempty"`
+	// EntityType holds the value of the "entity_type" field.
+	EntityType string `json:"entity_type,omitempty"`
+	// EntityID holds the value of the "entity_id" field.
+	EntityID     *uuid.UUID `json:"entity_id,omitempty"`
 	selectValues sql.SelectValues
 }
 
@@ -45,13 +49,13 @@ func (*AuditLog) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case auditlog.FieldUserID:
+		case auditlog.FieldUserID, auditlog.FieldEntityID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case auditlog.FieldDetails:
 			values[i] = new([]byte)
 		case auditlog.FieldSuccess:
 			values[i] = new(sql.NullBool)
-		case auditlog.FieldEvent, auditlog.FieldUsername, auditlog.FieldIP, auditlog.FieldUserAgent, auditlog.FieldRequestID:
+		case auditlog.FieldEvent, auditlog.FieldUsername, auditlog.FieldIP, auditlog.FieldUserAgent, auditlog.FieldRequestID, auditlog.FieldEntityType:
 			values[i] = new(sql.NullString)
 		case auditlog.FieldTimestamp:
 			values[i] = new(sql.NullTime)
@@ -135,6 +139,19 @@ func (_m *AuditLog) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.RequestID = value.String
 			}
+		case auditlog.FieldEntityType:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field entity_type", values[i])
+			} else if value.Valid {
+				_m.EntityType = value.String
+			}
+		case auditlog.FieldEntityID:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field entity_id", values[i])
+			} else if value.Valid {
+				_m.EntityID = new(uuid.UUID)
+				*_m.EntityID = *value.S.(*uuid.UUID)
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -199,6 +216,14 @@ func (_m *AuditLog) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("request_id=")
 	builder.WriteString(_m.RequestID)
+	builder.WriteString(", ")
+	builder.WriteString("entity_type=")
+	builder.WriteString(_m.EntityType)
+	builder.WriteString(", ")
+	if v := _m.EntityID; v != nil {
+		builder.WriteString("entity_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteByte(')')
 	return builder.String()
 }

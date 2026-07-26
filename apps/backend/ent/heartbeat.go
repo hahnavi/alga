@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/heartbeat"
+	"alga/ent/team"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -32,9 +33,9 @@ type Heartbeat struct {
 	// OwnerTeamID holds the value of the "owner_team_id" field.
 	OwnerTeamID *uuid.UUID `json:"owner_team_id,omitempty"`
 	// Status holds the value of the "status" field.
-	Status string `json:"status,omitempty"`
+	Status heartbeat.Status `json:"status,omitempty"`
 	// Severity holds the value of the "severity" field.
-	Severity string `json:"severity,omitempty"`
+	Severity heartbeat.Severity `json:"severity,omitempty"`
 	// Labels holds the value of the "labels" field.
 	Labels map[string]string `json:"labels,omitempty"`
 	// PingTokenHash holds the value of the "ping_token_hash" field.
@@ -52,8 +53,31 @@ type Heartbeat struct {
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt    time.Time `json:"updated_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the HeartbeatQuery when eager-loading is set.
+	Edges        HeartbeatEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// HeartbeatEdges holds the relations/edges for other nodes in the graph.
+type HeartbeatEdges struct {
+	// OwnerTeam holds the value of the owner_team edge.
+	OwnerTeam *Team `json:"owner_team,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// OwnerTeamOrErr returns the OwnerTeam value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e HeartbeatEdges) OwnerTeamOrErr() (*Team, error) {
+	if e.OwnerTeam != nil {
+		return e.OwnerTeam, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: team.Label}
+	}
+	return nil, &NotLoadedError{edge: "owner_team"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -137,13 +161,13 @@ func (_m *Heartbeat) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
-				_m.Status = value.String
+				_m.Status = heartbeat.Status(value.String)
 			}
 		case heartbeat.FieldSeverity:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field severity", values[i])
 			} else if value.Valid {
-				_m.Severity = value.String
+				_m.Severity = heartbeat.Severity(value.String)
 			}
 		case heartbeat.FieldLabels:
 			if value, ok := values[i].(*[]byte); !ok {
@@ -217,6 +241,11 @@ func (_m *Heartbeat) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
 }
 
+// QueryOwnerTeam queries the "owner_team" edge of the Heartbeat entity.
+func (_m *Heartbeat) QueryOwnerTeam() *TeamQuery {
+	return NewHeartbeatClient(_m.config).QueryOwnerTeam(_m)
+}
+
 // Update returns a builder for updating this Heartbeat.
 // Note that you need to call Heartbeat.Unwrap() before calling this method if this Heartbeat
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -261,10 +290,10 @@ func (_m *Heartbeat) String() string {
 	}
 	builder.WriteString(", ")
 	builder.WriteString("status=")
-	builder.WriteString(_m.Status)
+	builder.WriteString(fmt.Sprintf("%v", _m.Status))
 	builder.WriteString(", ")
 	builder.WriteString("severity=")
-	builder.WriteString(_m.Severity)
+	builder.WriteString(fmt.Sprintf("%v", _m.Severity))
 	builder.WriteString(", ")
 	builder.WriteString("labels=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Labels))

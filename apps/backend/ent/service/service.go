@@ -3,9 +3,11 @@
 package service
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -36,8 +38,62 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// EdgeDependencies holds the string denoting the dependencies edge name in mutations.
+	EdgeDependencies = "dependencies"
+	// EdgeDependedOnBy holds the string denoting the depended_on_by edge name in mutations.
+	EdgeDependedOnBy = "depended_on_by"
+	// EdgeStatusPageComponents holds the string denoting the status_page_components edge name in mutations.
+	EdgeStatusPageComponents = "status_page_components"
+	// EdgeIncidents holds the string denoting the incidents edge name in mutations.
+	EdgeIncidents = "incidents"
+	// EdgeOwnerTeam holds the string denoting the owner_team edge name in mutations.
+	EdgeOwnerTeam = "owner_team"
+	// EdgeEscalationPolicy holds the string denoting the escalation_policy edge name in mutations.
+	EdgeEscalationPolicy = "escalation_policy"
 	// Table holds the table name of the service in the database.
 	Table = "services"
+	// DependenciesTable is the table that holds the dependencies relation/edge.
+	DependenciesTable = "service_dependencies"
+	// DependenciesInverseTable is the table name for the ServiceDependency entity.
+	// It exists in this package in order to avoid circular dependency with the "servicedependency" package.
+	DependenciesInverseTable = "service_dependencies"
+	// DependenciesColumn is the table column denoting the dependencies relation/edge.
+	DependenciesColumn = "service_id"
+	// DependedOnByTable is the table that holds the depended_on_by relation/edge.
+	DependedOnByTable = "service_dependencies"
+	// DependedOnByInverseTable is the table name for the ServiceDependency entity.
+	// It exists in this package in order to avoid circular dependency with the "servicedependency" package.
+	DependedOnByInverseTable = "service_dependencies"
+	// DependedOnByColumn is the table column denoting the depended_on_by relation/edge.
+	DependedOnByColumn = "dependent_on_service_id"
+	// StatusPageComponentsTable is the table that holds the status_page_components relation/edge.
+	StatusPageComponentsTable = "status_page_components"
+	// StatusPageComponentsInverseTable is the table name for the StatusPageComponent entity.
+	// It exists in this package in order to avoid circular dependency with the "statuspagecomponent" package.
+	StatusPageComponentsInverseTable = "status_page_components"
+	// StatusPageComponentsColumn is the table column denoting the status_page_components relation/edge.
+	StatusPageComponentsColumn = "service_id"
+	// IncidentsTable is the table that holds the incidents relation/edge.
+	IncidentsTable = "incidents"
+	// IncidentsInverseTable is the table name for the Incident entity.
+	// It exists in this package in order to avoid circular dependency with the "incident" package.
+	IncidentsInverseTable = "incidents"
+	// IncidentsColumn is the table column denoting the incidents relation/edge.
+	IncidentsColumn = "service_id"
+	// OwnerTeamTable is the table that holds the owner_team relation/edge.
+	OwnerTeamTable = "services"
+	// OwnerTeamInverseTable is the table name for the Team entity.
+	// It exists in this package in order to avoid circular dependency with the "team" package.
+	OwnerTeamInverseTable = "teams"
+	// OwnerTeamColumn is the table column denoting the owner_team relation/edge.
+	OwnerTeamColumn = "owner_team_id"
+	// EscalationPolicyTable is the table that holds the escalation_policy relation/edge.
+	EscalationPolicyTable = "services"
+	// EscalationPolicyInverseTable is the table name for the EscalationPolicy entity.
+	// It exists in this package in order to avoid circular dependency with the "escalationpolicy" package.
+	EscalationPolicyInverseTable = "escalation_policies"
+	// EscalationPolicyColumn is the table column denoting the escalation_policy relation/edge.
+	EscalationPolicyColumn = "escalation_policy_id"
 )
 
 // Columns holds all SQL columns for service fields.
@@ -77,10 +133,12 @@ var (
 	DefaultLabelMatchers []map[string]interface{}
 	// DefaultSLAResponseMinutes holds the default value on creation for the "sla_response_minutes" field.
 	DefaultSLAResponseMinutes int
+	// SLAResponseMinutesValidator is a validator for the "sla_response_minutes" field. It is called by the builders before save.
+	SLAResponseMinutesValidator func(int) error
 	// DefaultSLAResolveMinutes holds the default value on creation for the "sla_resolve_minutes" field.
 	DefaultSLAResolveMinutes int
-	// DefaultStatus holds the default value on creation for the "status" field.
-	DefaultStatus string
+	// SLAResolveMinutesValidator is a validator for the "sla_resolve_minutes" field. It is called by the builders before save.
+	SLAResolveMinutesValidator func(int) error
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
@@ -90,6 +148,35 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// Status defines the type for the "status" enum field.
+type Status string
+
+// StatusOperational is the default value of the Status enum.
+const DefaultStatus = StatusOperational
+
+// Status values.
+const (
+	StatusOperational   Status = "operational"
+	StatusDegraded      Status = "degraded"
+	StatusPartialOutage Status = "partial_outage"
+	StatusMajorOutage   Status = "major_outage"
+	StatusMaintenance   Status = "maintenance"
+)
+
+func (s Status) String() string {
+	return string(s)
+}
+
+// StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
+func StatusValidator(s Status) error {
+	switch s {
+	case StatusOperational, StatusDegraded, StatusPartialOutage, StatusMajorOutage, StatusMaintenance:
+		return nil
+	default:
+		return fmt.Errorf("service: invalid enum value for status field: %q", s)
+	}
+}
 
 // OrderOption defines the ordering options for the Service queries.
 type OrderOption func(*sql.Selector)
@@ -147,4 +234,116 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByDependenciesCount orders the results by dependencies count.
+func ByDependenciesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newDependenciesStep(), opts...)
+	}
+}
+
+// ByDependencies orders the results by dependencies terms.
+func ByDependencies(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newDependenciesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByDependedOnByCount orders the results by depended_on_by count.
+func ByDependedOnByCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newDependedOnByStep(), opts...)
+	}
+}
+
+// ByDependedOnBy orders the results by depended_on_by terms.
+func ByDependedOnBy(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newDependedOnByStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByStatusPageComponentsCount orders the results by status_page_components count.
+func ByStatusPageComponentsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newStatusPageComponentsStep(), opts...)
+	}
+}
+
+// ByStatusPageComponents orders the results by status_page_components terms.
+func ByStatusPageComponents(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newStatusPageComponentsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByIncidentsCount orders the results by incidents count.
+func ByIncidentsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newIncidentsStep(), opts...)
+	}
+}
+
+// ByIncidents orders the results by incidents terms.
+func ByIncidents(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newIncidentsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByOwnerTeamField orders the results by owner_team field.
+func ByOwnerTeamField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newOwnerTeamStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByEscalationPolicyField orders the results by escalation_policy field.
+func ByEscalationPolicyField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newEscalationPolicyStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newDependenciesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(DependenciesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, DependenciesTable, DependenciesColumn),
+	)
+}
+func newDependedOnByStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(DependedOnByInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, DependedOnByTable, DependedOnByColumn),
+	)
+}
+func newStatusPageComponentsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(StatusPageComponentsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, StatusPageComponentsTable, StatusPageComponentsColumn),
+	)
+}
+func newIncidentsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(IncidentsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, IncidentsTable, IncidentsColumn),
+	)
+}
+func newOwnerTeamStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(OwnerTeamInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, OwnerTeamTable, OwnerTeamColumn),
+	)
+}
+func newEscalationPolicyStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(EscalationPolicyInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, EscalationPolicyTable, EscalationPolicyColumn),
+	)
 }

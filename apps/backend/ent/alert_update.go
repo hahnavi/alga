@@ -9,6 +9,7 @@ import (
 	"alga/ent/deliverytarget"
 	"alga/ent/incident"
 	"alga/ent/predicate"
+	"alga/ent/triageresult"
 	"context"
 	"errors"
 	"fmt"
@@ -48,13 +49,13 @@ func (_u *AlertUpdate) SetNillableFingerprint(v *string) *AlertUpdate {
 }
 
 // SetStatus sets the "status" field.
-func (_u *AlertUpdate) SetStatus(v string) *AlertUpdate {
+func (_u *AlertUpdate) SetStatus(v alert.Status) *AlertUpdate {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *AlertUpdate) SetNillableStatus(v *string) *AlertUpdate {
+func (_u *AlertUpdate) SetNillableStatus(v *alert.Status) *AlertUpdate {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -366,6 +367,11 @@ func (_u *AlertUpdate) AddDeliveryTargets(v ...*DeliveryTarget) *AlertUpdate {
 	return _u.AddDeliveryTargetIDs(ids...)
 }
 
+// SetTriageResult sets the "triage_result" edge to the TriageResult entity.
+func (_u *AlertUpdate) SetTriageResult(v *TriageResult) *AlertUpdate {
+	return _u.SetTriageResultID(v.ID)
+}
+
 // Mutation returns the AlertMutation object of the builder.
 func (_u *AlertUpdate) Mutation() *AlertMutation {
 	return _u.mutation
@@ -455,6 +461,12 @@ func (_u *AlertUpdate) RemoveDeliveryTargets(v ...*DeliveryTarget) *AlertUpdate 
 	return _u.RemoveDeliveryTargetIDs(ids...)
 }
 
+// ClearTriageResult clears the "triage_result" edge to the TriageResult entity.
+func (_u *AlertUpdate) ClearTriageResult() *AlertUpdate {
+	_u.mutation.ClearTriageResult()
+	return _u
+}
+
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (_u *AlertUpdate) Save(ctx context.Context) (int, error) {
 	_u.defaults()
@@ -498,6 +510,11 @@ func (_u *AlertUpdate) check() error {
 			return &ValidationError{Name: "fingerprint", err: fmt.Errorf(`ent: validator failed for field "Alert.fingerprint": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := alert.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Alert.status": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.AlertNumber(); ok {
 		if err := alert.AlertNumberValidator(v); err != nil {
 			return &ValidationError{Name: "alert_number", err: fmt.Errorf(`ent: validator failed for field "Alert.alert_number": %w`, err)}
@@ -522,7 +539,7 @@ func (_u *AlertUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		_spec.SetField(alert.FieldFingerprint, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(alert.FieldStatus, field.TypeString, value)
+		_spec.SetField(alert.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Acknowledged(); ok {
 		_spec.SetField(alert.FieldAcknowledged, field.TypeBool, value)
@@ -565,12 +582,6 @@ func (_u *AlertUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.AlertNumberCleared() {
 		_spec.ClearField(alert.FieldAlertNumber, field.TypeInt64)
-	}
-	if value, ok := _u.mutation.TriageResultID(); ok {
-		_spec.SetField(alert.FieldTriageResultID, field.TypeUUID, value)
-	}
-	if _u.mutation.TriageResultIDCleared() {
-		_spec.ClearField(alert.FieldTriageResultID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.Enrichment(); ok {
 		_spec.SetField(alert.FieldEnrichment, field.TypeJSON, value)
@@ -782,6 +793,35 @@ func (_u *AlertUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.TriageResultCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   alert.TriageResultTable,
+			Columns: []string{alert.TriageResultColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(triageresult.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TriageResultIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   alert.TriageResultTable,
+			Columns: []string{alert.TriageResultColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(triageresult.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{alert.Label}
@@ -817,13 +857,13 @@ func (_u *AlertUpdateOne) SetNillableFingerprint(v *string) *AlertUpdateOne {
 }
 
 // SetStatus sets the "status" field.
-func (_u *AlertUpdateOne) SetStatus(v string) *AlertUpdateOne {
+func (_u *AlertUpdateOne) SetStatus(v alert.Status) *AlertUpdateOne {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *AlertUpdateOne) SetNillableStatus(v *string) *AlertUpdateOne {
+func (_u *AlertUpdateOne) SetNillableStatus(v *alert.Status) *AlertUpdateOne {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -1135,6 +1175,11 @@ func (_u *AlertUpdateOne) AddDeliveryTargets(v ...*DeliveryTarget) *AlertUpdateO
 	return _u.AddDeliveryTargetIDs(ids...)
 }
 
+// SetTriageResult sets the "triage_result" edge to the TriageResult entity.
+func (_u *AlertUpdateOne) SetTriageResult(v *TriageResult) *AlertUpdateOne {
+	return _u.SetTriageResultID(v.ID)
+}
+
 // Mutation returns the AlertMutation object of the builder.
 func (_u *AlertUpdateOne) Mutation() *AlertMutation {
 	return _u.mutation
@@ -1224,6 +1269,12 @@ func (_u *AlertUpdateOne) RemoveDeliveryTargets(v ...*DeliveryTarget) *AlertUpda
 	return _u.RemoveDeliveryTargetIDs(ids...)
 }
 
+// ClearTriageResult clears the "triage_result" edge to the TriageResult entity.
+func (_u *AlertUpdateOne) ClearTriageResult() *AlertUpdateOne {
+	_u.mutation.ClearTriageResult()
+	return _u
+}
+
 // Where appends a list predicates to the AlertUpdate builder.
 func (_u *AlertUpdateOne) Where(ps ...predicate.Alert) *AlertUpdateOne {
 	_u.mutation.Where(ps...)
@@ -1280,6 +1331,11 @@ func (_u *AlertUpdateOne) check() error {
 			return &ValidationError{Name: "fingerprint", err: fmt.Errorf(`ent: validator failed for field "Alert.fingerprint": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := alert.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Alert.status": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.AlertNumber(); ok {
 		if err := alert.AlertNumberValidator(v); err != nil {
 			return &ValidationError{Name: "alert_number", err: fmt.Errorf(`ent: validator failed for field "Alert.alert_number": %w`, err)}
@@ -1321,7 +1377,7 @@ func (_u *AlertUpdateOne) sqlSave(ctx context.Context) (_node *Alert, err error)
 		_spec.SetField(alert.FieldFingerprint, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(alert.FieldStatus, field.TypeString, value)
+		_spec.SetField(alert.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Acknowledged(); ok {
 		_spec.SetField(alert.FieldAcknowledged, field.TypeBool, value)
@@ -1364,12 +1420,6 @@ func (_u *AlertUpdateOne) sqlSave(ctx context.Context) (_node *Alert, err error)
 	}
 	if _u.mutation.AlertNumberCleared() {
 		_spec.ClearField(alert.FieldAlertNumber, field.TypeInt64)
-	}
-	if value, ok := _u.mutation.TriageResultID(); ok {
-		_spec.SetField(alert.FieldTriageResultID, field.TypeUUID, value)
-	}
-	if _u.mutation.TriageResultIDCleared() {
-		_spec.ClearField(alert.FieldTriageResultID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.Enrichment(); ok {
 		_spec.SetField(alert.FieldEnrichment, field.TypeJSON, value)
@@ -1574,6 +1624,35 @@ func (_u *AlertUpdateOne) sqlSave(ctx context.Context) (_node *Alert, err error)
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(deliverytarget.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.TriageResultCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   alert.TriageResultTable,
+			Columns: []string{alert.TriageResultColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(triageresult.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TriageResultIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   alert.TriageResultTable,
+			Columns: []string{alert.TriageResultColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(triageresult.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

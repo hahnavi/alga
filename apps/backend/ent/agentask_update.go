@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/agentask"
+	"alga/ent/agenttoken"
 	"alga/ent/predicate"
 	"context"
 	"errors"
@@ -58,13 +59,13 @@ func (_u *AgentAskUpdate) SetNillableFromAgentName(v *string) *AgentAskUpdate {
 }
 
 // SetFromAgentType sets the "from_agent_type" field.
-func (_u *AgentAskUpdate) SetFromAgentType(v string) *AgentAskUpdate {
+func (_u *AgentAskUpdate) SetFromAgentType(v agentask.FromAgentType) *AgentAskUpdate {
 	_u.mutation.SetFromAgentType(v)
 	return _u
 }
 
 // SetNillableFromAgentType sets the "from_agent_type" field if the given value is not nil.
-func (_u *AgentAskUpdate) SetNillableFromAgentType(v *string) *AgentAskUpdate {
+func (_u *AgentAskUpdate) SetNillableFromAgentType(v *agentask.FromAgentType) *AgentAskUpdate {
 	if v != nil {
 		_u.SetFromAgentType(*v)
 	}
@@ -112,13 +113,13 @@ func (_u *AgentAskUpdate) ClearToAgentID() *AgentAskUpdate {
 }
 
 // SetToAgentType sets the "to_agent_type" field.
-func (_u *AgentAskUpdate) SetToAgentType(v string) *AgentAskUpdate {
+func (_u *AgentAskUpdate) SetToAgentType(v agentask.ToAgentType) *AgentAskUpdate {
 	_u.mutation.SetToAgentType(v)
 	return _u
 }
 
 // SetNillableToAgentType sets the "to_agent_type" field if the given value is not nil.
-func (_u *AgentAskUpdate) SetNillableToAgentType(v *string) *AgentAskUpdate {
+func (_u *AgentAskUpdate) SetNillableToAgentType(v *agentask.ToAgentType) *AgentAskUpdate {
 	if v != nil {
 		_u.SetToAgentType(*v)
 	}
@@ -206,13 +207,13 @@ func (_u *AgentAskUpdate) ClearRepliedByAgentName() *AgentAskUpdate {
 }
 
 // SetStatus sets the "status" field.
-func (_u *AgentAskUpdate) SetStatus(v string) *AgentAskUpdate {
+func (_u *AgentAskUpdate) SetStatus(v agentask.Status) *AgentAskUpdate {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *AgentAskUpdate) SetNillableStatus(v *string) *AgentAskUpdate {
+func (_u *AgentAskUpdate) SetNillableStatus(v *agentask.Status) *AgentAskUpdate {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -267,9 +268,42 @@ func (_u *AgentAskUpdate) ClearAnsweredAt() *AgentAskUpdate {
 	return _u
 }
 
+// SetFromAgent sets the "from_agent" edge to the AgentToken entity.
+func (_u *AgentAskUpdate) SetFromAgent(v *AgentToken) *AgentAskUpdate {
+	return _u.SetFromAgentID(v.ID)
+}
+
+// SetToAgent sets the "to_agent" edge to the AgentToken entity.
+func (_u *AgentAskUpdate) SetToAgent(v *AgentToken) *AgentAskUpdate {
+	return _u.SetToAgentID(v.ID)
+}
+
+// SetRepliedByAgent sets the "replied_by_agent" edge to the AgentToken entity.
+func (_u *AgentAskUpdate) SetRepliedByAgent(v *AgentToken) *AgentAskUpdate {
+	return _u.SetRepliedByAgentID(v.ID)
+}
+
 // Mutation returns the AgentAskMutation object of the builder.
 func (_u *AgentAskUpdate) Mutation() *AgentAskMutation {
 	return _u.mutation
+}
+
+// ClearFromAgent clears the "from_agent" edge to the AgentToken entity.
+func (_u *AgentAskUpdate) ClearFromAgent() *AgentAskUpdate {
+	_u.mutation.ClearFromAgent()
+	return _u
+}
+
+// ClearToAgent clears the "to_agent" edge to the AgentToken entity.
+func (_u *AgentAskUpdate) ClearToAgent() *AgentAskUpdate {
+	_u.mutation.ClearToAgent()
+	return _u
+}
+
+// ClearRepliedByAgent clears the "replied_by_agent" edge to the AgentToken entity.
+func (_u *AgentAskUpdate) ClearRepliedByAgent() *AgentAskUpdate {
+	_u.mutation.ClearRepliedByAgent()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -306,10 +340,28 @@ func (_u *AgentAskUpdate) check() error {
 			return &ValidationError{Name: "from_agent_name", err: fmt.Errorf(`ent: validator failed for field "AgentAsk.from_agent_name": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.FromAgentType(); ok {
+		if err := agentask.FromAgentTypeValidator(v); err != nil {
+			return &ValidationError{Name: "from_agent_type", err: fmt.Errorf(`ent: validator failed for field "AgentAsk.from_agent_type": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.ToAgentType(); ok {
+		if err := agentask.ToAgentTypeValidator(v); err != nil {
+			return &ValidationError{Name: "to_agent_type", err: fmt.Errorf(`ent: validator failed for field "AgentAsk.to_agent_type": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Question(); ok {
 		if err := agentask.QuestionValidator(v); err != nil {
 			return &ValidationError{Name: "question", err: fmt.Errorf(`ent: validator failed for field "AgentAsk.question": %w`, err)}
 		}
+	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := agentask.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "AgentAsk.status": %w`, err)}
+		}
+	}
+	if _u.mutation.FromAgentCleared() && len(_u.mutation.FromAgentIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "AgentAsk.from_agent"`)
 	}
 	return nil
 }
@@ -326,14 +378,11 @@ func (_u *AgentAskUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			}
 		}
 	}
-	if value, ok := _u.mutation.FromAgentID(); ok {
-		_spec.SetField(agentask.FieldFromAgentID, field.TypeUUID, value)
-	}
 	if value, ok := _u.mutation.FromAgentName(); ok {
 		_spec.SetField(agentask.FieldFromAgentName, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.FromAgentType(); ok {
-		_spec.SetField(agentask.FieldFromAgentType, field.TypeString, value)
+		_spec.SetField(agentask.FieldFromAgentType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.InvestigationID(); ok {
 		_spec.SetField(agentask.FieldInvestigationID, field.TypeString, value)
@@ -341,17 +390,11 @@ func (_u *AgentAskUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.InvestigationIDCleared() {
 		_spec.ClearField(agentask.FieldInvestigationID, field.TypeString)
 	}
-	if value, ok := _u.mutation.ToAgentID(); ok {
-		_spec.SetField(agentask.FieldToAgentID, field.TypeUUID, value)
-	}
-	if _u.mutation.ToAgentIDCleared() {
-		_spec.ClearField(agentask.FieldToAgentID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.ToAgentType(); ok {
-		_spec.SetField(agentask.FieldToAgentType, field.TypeString, value)
+		_spec.SetField(agentask.FieldToAgentType, field.TypeEnum, value)
 	}
 	if _u.mutation.ToAgentTypeCleared() {
-		_spec.ClearField(agentask.FieldToAgentType, field.TypeString)
+		_spec.ClearField(agentask.FieldToAgentType, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.Question(); ok {
 		_spec.SetField(agentask.FieldQuestion, field.TypeString, value)
@@ -362,12 +405,6 @@ func (_u *AgentAskUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.ReplyCleared() {
 		_spec.ClearField(agentask.FieldReply, field.TypeString)
 	}
-	if value, ok := _u.mutation.RepliedByAgentID(); ok {
-		_spec.SetField(agentask.FieldRepliedByAgentID, field.TypeUUID, value)
-	}
-	if _u.mutation.RepliedByAgentIDCleared() {
-		_spec.ClearField(agentask.FieldRepliedByAgentID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.RepliedByAgentName(); ok {
 		_spec.SetField(agentask.FieldRepliedByAgentName, field.TypeString, value)
 	}
@@ -375,7 +412,7 @@ func (_u *AgentAskUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		_spec.ClearField(agentask.FieldRepliedByAgentName, field.TypeString)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(agentask.FieldStatus, field.TypeString, value)
+		_spec.SetField(agentask.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.ExpiresAt(); ok {
 		_spec.SetField(agentask.FieldExpiresAt, field.TypeTime, value)
@@ -388,6 +425,93 @@ func (_u *AgentAskUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.AnsweredAtCleared() {
 		_spec.ClearField(agentask.FieldAnsweredAt, field.TypeTime)
+	}
+	if _u.mutation.FromAgentCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   agentask.FromAgentTable,
+			Columns: []string{agentask.FromAgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agenttoken.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.FromAgentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   agentask.FromAgentTable,
+			Columns: []string{agentask.FromAgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agenttoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ToAgentCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   agentask.ToAgentTable,
+			Columns: []string{agentask.ToAgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agenttoken.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ToAgentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   agentask.ToAgentTable,
+			Columns: []string{agentask.ToAgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agenttoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.RepliedByAgentCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   agentask.RepliedByAgentTable,
+			Columns: []string{agentask.RepliedByAgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agenttoken.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RepliedByAgentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   agentask.RepliedByAgentTable,
+			Columns: []string{agentask.RepliedByAgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agenttoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -438,13 +562,13 @@ func (_u *AgentAskUpdateOne) SetNillableFromAgentName(v *string) *AgentAskUpdate
 }
 
 // SetFromAgentType sets the "from_agent_type" field.
-func (_u *AgentAskUpdateOne) SetFromAgentType(v string) *AgentAskUpdateOne {
+func (_u *AgentAskUpdateOne) SetFromAgentType(v agentask.FromAgentType) *AgentAskUpdateOne {
 	_u.mutation.SetFromAgentType(v)
 	return _u
 }
 
 // SetNillableFromAgentType sets the "from_agent_type" field if the given value is not nil.
-func (_u *AgentAskUpdateOne) SetNillableFromAgentType(v *string) *AgentAskUpdateOne {
+func (_u *AgentAskUpdateOne) SetNillableFromAgentType(v *agentask.FromAgentType) *AgentAskUpdateOne {
 	if v != nil {
 		_u.SetFromAgentType(*v)
 	}
@@ -492,13 +616,13 @@ func (_u *AgentAskUpdateOne) ClearToAgentID() *AgentAskUpdateOne {
 }
 
 // SetToAgentType sets the "to_agent_type" field.
-func (_u *AgentAskUpdateOne) SetToAgentType(v string) *AgentAskUpdateOne {
+func (_u *AgentAskUpdateOne) SetToAgentType(v agentask.ToAgentType) *AgentAskUpdateOne {
 	_u.mutation.SetToAgentType(v)
 	return _u
 }
 
 // SetNillableToAgentType sets the "to_agent_type" field if the given value is not nil.
-func (_u *AgentAskUpdateOne) SetNillableToAgentType(v *string) *AgentAskUpdateOne {
+func (_u *AgentAskUpdateOne) SetNillableToAgentType(v *agentask.ToAgentType) *AgentAskUpdateOne {
 	if v != nil {
 		_u.SetToAgentType(*v)
 	}
@@ -586,13 +710,13 @@ func (_u *AgentAskUpdateOne) ClearRepliedByAgentName() *AgentAskUpdateOne {
 }
 
 // SetStatus sets the "status" field.
-func (_u *AgentAskUpdateOne) SetStatus(v string) *AgentAskUpdateOne {
+func (_u *AgentAskUpdateOne) SetStatus(v agentask.Status) *AgentAskUpdateOne {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *AgentAskUpdateOne) SetNillableStatus(v *string) *AgentAskUpdateOne {
+func (_u *AgentAskUpdateOne) SetNillableStatus(v *agentask.Status) *AgentAskUpdateOne {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -647,9 +771,42 @@ func (_u *AgentAskUpdateOne) ClearAnsweredAt() *AgentAskUpdateOne {
 	return _u
 }
 
+// SetFromAgent sets the "from_agent" edge to the AgentToken entity.
+func (_u *AgentAskUpdateOne) SetFromAgent(v *AgentToken) *AgentAskUpdateOne {
+	return _u.SetFromAgentID(v.ID)
+}
+
+// SetToAgent sets the "to_agent" edge to the AgentToken entity.
+func (_u *AgentAskUpdateOne) SetToAgent(v *AgentToken) *AgentAskUpdateOne {
+	return _u.SetToAgentID(v.ID)
+}
+
+// SetRepliedByAgent sets the "replied_by_agent" edge to the AgentToken entity.
+func (_u *AgentAskUpdateOne) SetRepliedByAgent(v *AgentToken) *AgentAskUpdateOne {
+	return _u.SetRepliedByAgentID(v.ID)
+}
+
 // Mutation returns the AgentAskMutation object of the builder.
 func (_u *AgentAskUpdateOne) Mutation() *AgentAskMutation {
 	return _u.mutation
+}
+
+// ClearFromAgent clears the "from_agent" edge to the AgentToken entity.
+func (_u *AgentAskUpdateOne) ClearFromAgent() *AgentAskUpdateOne {
+	_u.mutation.ClearFromAgent()
+	return _u
+}
+
+// ClearToAgent clears the "to_agent" edge to the AgentToken entity.
+func (_u *AgentAskUpdateOne) ClearToAgent() *AgentAskUpdateOne {
+	_u.mutation.ClearToAgent()
+	return _u
+}
+
+// ClearRepliedByAgent clears the "replied_by_agent" edge to the AgentToken entity.
+func (_u *AgentAskUpdateOne) ClearRepliedByAgent() *AgentAskUpdateOne {
+	_u.mutation.ClearRepliedByAgent()
+	return _u
 }
 
 // Where appends a list predicates to the AgentAskUpdate builder.
@@ -699,10 +856,28 @@ func (_u *AgentAskUpdateOne) check() error {
 			return &ValidationError{Name: "from_agent_name", err: fmt.Errorf(`ent: validator failed for field "AgentAsk.from_agent_name": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.FromAgentType(); ok {
+		if err := agentask.FromAgentTypeValidator(v); err != nil {
+			return &ValidationError{Name: "from_agent_type", err: fmt.Errorf(`ent: validator failed for field "AgentAsk.from_agent_type": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.ToAgentType(); ok {
+		if err := agentask.ToAgentTypeValidator(v); err != nil {
+			return &ValidationError{Name: "to_agent_type", err: fmt.Errorf(`ent: validator failed for field "AgentAsk.to_agent_type": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Question(); ok {
 		if err := agentask.QuestionValidator(v); err != nil {
 			return &ValidationError{Name: "question", err: fmt.Errorf(`ent: validator failed for field "AgentAsk.question": %w`, err)}
 		}
+	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := agentask.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "AgentAsk.status": %w`, err)}
+		}
+	}
+	if _u.mutation.FromAgentCleared() && len(_u.mutation.FromAgentIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "AgentAsk.from_agent"`)
 	}
 	return nil
 }
@@ -736,14 +911,11 @@ func (_u *AgentAskUpdateOne) sqlSave(ctx context.Context) (_node *AgentAsk, err 
 			}
 		}
 	}
-	if value, ok := _u.mutation.FromAgentID(); ok {
-		_spec.SetField(agentask.FieldFromAgentID, field.TypeUUID, value)
-	}
 	if value, ok := _u.mutation.FromAgentName(); ok {
 		_spec.SetField(agentask.FieldFromAgentName, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.FromAgentType(); ok {
-		_spec.SetField(agentask.FieldFromAgentType, field.TypeString, value)
+		_spec.SetField(agentask.FieldFromAgentType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.InvestigationID(); ok {
 		_spec.SetField(agentask.FieldInvestigationID, field.TypeString, value)
@@ -751,17 +923,11 @@ func (_u *AgentAskUpdateOne) sqlSave(ctx context.Context) (_node *AgentAsk, err 
 	if _u.mutation.InvestigationIDCleared() {
 		_spec.ClearField(agentask.FieldInvestigationID, field.TypeString)
 	}
-	if value, ok := _u.mutation.ToAgentID(); ok {
-		_spec.SetField(agentask.FieldToAgentID, field.TypeUUID, value)
-	}
-	if _u.mutation.ToAgentIDCleared() {
-		_spec.ClearField(agentask.FieldToAgentID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.ToAgentType(); ok {
-		_spec.SetField(agentask.FieldToAgentType, field.TypeString, value)
+		_spec.SetField(agentask.FieldToAgentType, field.TypeEnum, value)
 	}
 	if _u.mutation.ToAgentTypeCleared() {
-		_spec.ClearField(agentask.FieldToAgentType, field.TypeString)
+		_spec.ClearField(agentask.FieldToAgentType, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.Question(); ok {
 		_spec.SetField(agentask.FieldQuestion, field.TypeString, value)
@@ -772,12 +938,6 @@ func (_u *AgentAskUpdateOne) sqlSave(ctx context.Context) (_node *AgentAsk, err 
 	if _u.mutation.ReplyCleared() {
 		_spec.ClearField(agentask.FieldReply, field.TypeString)
 	}
-	if value, ok := _u.mutation.RepliedByAgentID(); ok {
-		_spec.SetField(agentask.FieldRepliedByAgentID, field.TypeUUID, value)
-	}
-	if _u.mutation.RepliedByAgentIDCleared() {
-		_spec.ClearField(agentask.FieldRepliedByAgentID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.RepliedByAgentName(); ok {
 		_spec.SetField(agentask.FieldRepliedByAgentName, field.TypeString, value)
 	}
@@ -785,7 +945,7 @@ func (_u *AgentAskUpdateOne) sqlSave(ctx context.Context) (_node *AgentAsk, err 
 		_spec.ClearField(agentask.FieldRepliedByAgentName, field.TypeString)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(agentask.FieldStatus, field.TypeString, value)
+		_spec.SetField(agentask.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.ExpiresAt(); ok {
 		_spec.SetField(agentask.FieldExpiresAt, field.TypeTime, value)
@@ -798,6 +958,93 @@ func (_u *AgentAskUpdateOne) sqlSave(ctx context.Context) (_node *AgentAsk, err 
 	}
 	if _u.mutation.AnsweredAtCleared() {
 		_spec.ClearField(agentask.FieldAnsweredAt, field.TypeTime)
+	}
+	if _u.mutation.FromAgentCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   agentask.FromAgentTable,
+			Columns: []string{agentask.FromAgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agenttoken.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.FromAgentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   agentask.FromAgentTable,
+			Columns: []string{agentask.FromAgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agenttoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ToAgentCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   agentask.ToAgentTable,
+			Columns: []string{agentask.ToAgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agenttoken.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ToAgentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   agentask.ToAgentTable,
+			Columns: []string{agentask.ToAgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agenttoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.RepliedByAgentCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   agentask.RepliedByAgentTable,
+			Columns: []string{agentask.RepliedByAgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agenttoken.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RepliedByAgentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   agentask.RepliedByAgentTable,
+			Columns: []string{agentask.RepliedByAgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agenttoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &AgentAsk{config: _u.config}
 	_spec.Assign = _node.assignValues

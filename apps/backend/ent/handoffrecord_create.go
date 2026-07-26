@@ -5,6 +5,7 @@ package ent
 import (
 	"alga/ent/handoffrecord"
 	"alga/ent/oncallschedule"
+	"alga/ent/user"
 	"context"
 	"errors"
 	"fmt"
@@ -179,6 +180,16 @@ func (_c *HandoffRecordCreate) SetSchedule(v *OnCallSchedule) *HandoffRecordCrea
 	return _c.SetScheduleID(v.ID)
 }
 
+// SetOutgoingUser sets the "outgoing_user" edge to the User entity.
+func (_c *HandoffRecordCreate) SetOutgoingUser(v *User) *HandoffRecordCreate {
+	return _c.SetOutgoingUserID(v.ID)
+}
+
+// SetIncomingUser sets the "incoming_user" edge to the User entity.
+func (_c *HandoffRecordCreate) SetIncomingUser(v *User) *HandoffRecordCreate {
+	return _c.SetIncomingUserID(v.ID)
+}
+
 // Mutation returns the HandoffRecordMutation object of the builder.
 func (_c *HandoffRecordCreate) Mutation() *HandoffRecordMutation {
 	return _c.mutation
@@ -292,14 +303,6 @@ func (_c *HandoffRecordCreate) createSpec() (*HandoffRecord, *sqlgraph.CreateSpe
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := _c.mutation.OutgoingUserID(); ok {
-		_spec.SetField(handoffrecord.FieldOutgoingUserID, field.TypeUUID, value)
-		_node.OutgoingUserID = &value
-	}
-	if value, ok := _c.mutation.IncomingUserID(); ok {
-		_spec.SetField(handoffrecord.FieldIncomingUserID, field.TypeUUID, value)
-		_node.IncomingUserID = &value
-	}
 	if value, ok := _c.mutation.HandoffAt(); ok {
 		_spec.SetField(handoffrecord.FieldHandoffAt, field.TypeTime, value)
 		_node.HandoffAt = value
@@ -347,6 +350,40 @@ func (_c *HandoffRecordCreate) createSpec() (*HandoffRecord, *sqlgraph.CreateSpe
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.ScheduleID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.OutgoingUserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   handoffrecord.OutgoingUserTable,
+			Columns: []string{handoffrecord.OutgoingUserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.OutgoingUserID = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.IncomingUserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   handoffrecord.IncomingUserTable,
+			Columns: []string{handoffrecord.IncomingUserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.IncomingUserID = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

@@ -211,17 +211,17 @@ func (s *pgDashboardStore) getAlertStats(ctx context.Context) (*DashboardAlertSt
 		return nil, fmt.Errorf("count total: %w", err)
 	}
 
-	firing, err := s.client.Alert.Query().Where(alert.Status("firing"), alert.DeletedAtIsNil()).Count(ctx)
+	firing, err := s.client.Alert.Query().Where(alert.StatusEQ(alert.StatusFiring), alert.DeletedAtIsNil()).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("count firing: %w", err)
 	}
 
-	resolved, err := s.client.Alert.Query().Where(alert.Status("resolved"), alert.DeletedAtIsNil()).Count(ctx)
+	resolved, err := s.client.Alert.Query().Where(alert.StatusEQ(alert.StatusResolved), alert.DeletedAtIsNil()).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("count resolved: %w", err)
 	}
 
-	unacknowledged, err := s.client.Alert.Query().Where(alert.Status("firing"), alert.Acknowledged(false), alert.DeletedAtIsNil()).Count(ctx)
+	unacknowledged, err := s.client.Alert.Query().Where(alert.StatusEQ(alert.StatusFiring), alert.Acknowledged(false), alert.DeletedAtIsNil()).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("count unacknowledged: %w", err)
 	}
@@ -282,7 +282,7 @@ func (s *pgDashboardStore) getAlertTrend(ctx context.Context) ([]DailyAlertCount
 	}
 
 	resolvedAlerts, err := s.client.Alert.Query().
-		Where(alert.Status("resolved"), alert.UpdatedAtGTE(cutoff), alert.DeletedAtIsNil()).
+		Where(alert.StatusEQ(alert.StatusResolved), alert.UpdatedAtGTE(cutoff), alert.DeletedAtIsNil()).
 		All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query resolved alerts for trend: %w", err)
@@ -325,27 +325,27 @@ func (s *pgDashboardStore) getInvestigationStats(ctx context.Context) (*Dashboar
 		return nil, fmt.Errorf("count total: %w", err)
 	}
 
-	pending, err := s.client.AlertInvestigation.Query().Where(alertinvestigation.Status("pending")).Count(ctx)
+	pending, err := s.client.AlertInvestigation.Query().Where(alertinvestigation.StatusEQ(alertinvestigation.StatusPending)).Count(ctx)
 	if err != nil {
 		logger.WarnCtx(ctx, "failed to count pending investigations", "component", "store", "error", err)
 	}
-	investigating, err := s.client.AlertInvestigation.Query().Where(alertinvestigation.Status("investigating")).Count(ctx)
+	investigating, err := s.client.AlertInvestigation.Query().Where(alertinvestigation.StatusEQ(alertinvestigation.StatusInvestigating)).Count(ctx)
 	if err != nil {
 		logger.WarnCtx(ctx, "failed to count investigating investigations", "component", "store", "error", err)
 	}
-	complete, err := s.client.AlertInvestigation.Query().Where(alertinvestigation.Status("complete")).Count(ctx)
+	complete, err := s.client.AlertInvestigation.Query().Where(alertinvestigation.StatusEQ(alertinvestigation.StatusComplete)).Count(ctx)
 	if err != nil {
 		logger.WarnCtx(ctx, "failed to count complete investigations", "component", "store", "error", err)
 	}
-	failedCount, err := s.client.AlertInvestigation.Query().Where(alertinvestigation.Status("failed")).Count(ctx)
+	failedCount, err := s.client.AlertInvestigation.Query().Where(alertinvestigation.StatusEQ(alertinvestigation.StatusFailed)).Count(ctx)
 	if err != nil {
 		logger.WarnCtx(ctx, "failed to count failed investigations", "component", "store", "error", err)
 	}
-	cancelled, err := s.client.AlertInvestigation.Query().Where(alertinvestigation.Status("cancelled")).Count(ctx)
+	cancelled, err := s.client.AlertInvestigation.Query().Where(alertinvestigation.StatusEQ(alertinvestigation.StatusCancelled)).Count(ctx)
 	if err != nil {
 		logger.WarnCtx(ctx, "failed to count cancelled investigations", "component", "store", "error", err)
 	}
-	timedOut, err := s.client.AlertInvestigation.Query().Where(alertinvestigation.Status("timed_out")).Count(ctx)
+	timedOut, err := s.client.AlertInvestigation.Query().Where(alertinvestigation.StatusEQ(alertinvestigation.StatusTimedOut)).Count(ctx)
 	if err != nil {
 		logger.WarnCtx(ctx, "failed to count timed out investigations", "component", "store", "error", err)
 	}
@@ -375,19 +375,19 @@ func (s *pgDashboardStore) getIncidentStats(ctx context.Context) (*DashboardInci
 	}
 
 	active, err := s.client.Incident.Query().
-		Where(entincident.StatusIn("detected", "triaging", "active"), entincident.DeletedAtIsNil()).
+		Where(entincident.StatusIn(entincident.StatusDetected, entincident.StatusTriaging, entincident.StatusActive), entincident.DeletedAtIsNil()).
 		Count(ctx)
 	if err != nil {
 		logger.WarnCtx(ctx, "failed to count active incidents", "component", "store", "error", err)
 	}
 	mitigated, err := s.client.Incident.Query().
-		Where(entincident.Status("mitigated"), entincident.DeletedAtIsNil()).
+		Where(entincident.StatusEQ(entincident.StatusMitigated), entincident.DeletedAtIsNil()).
 		Count(ctx)
 	if err != nil {
 		logger.WarnCtx(ctx, "failed to count mitigated incidents", "component", "store", "error", err)
 	}
 	resolved, err := s.client.Incident.Query().
-		Where(entincident.StatusIn("resolved", "closed"), entincident.DeletedAtIsNil()).
+		Where(entincident.StatusIn(entincident.StatusResolved, entincident.StatusClosed), entincident.DeletedAtIsNil()).
 		Count(ctx)
 	if err != nil {
 		logger.WarnCtx(ctx, "failed to count resolved incidents", "component", "store", "error", err)
@@ -400,8 +400,8 @@ func (s *pgDashboardStore) getIncidentStats(ctx context.Context) (*DashboardInci
 	bySeverity := make(map[string]int64)
 	byPriority := make(map[string]int64)
 	for _, inc := range allIncs {
-		bySeverity[inc.Severity]++
-		p := inc.Priority
+		bySeverity[string(inc.Severity)]++
+		p := string(inc.Priority)
 		if p == "" {
 			p = "P5"
 		}
@@ -420,7 +420,7 @@ func (s *pgDashboardStore) getIncidentStats(ctx context.Context) (*DashboardInci
 
 func (s *pgDashboardStore) getActiveIncidents(ctx context.Context) ([]ActiveIncidentItem, error) {
 	incs, err := s.client.Incident.Query().
-		Where(entincident.StatusIn("active", "mitigated"), entincident.DeletedAtIsNil()).
+		Where(entincident.StatusIn(entincident.StatusActive, entincident.StatusMitigated), entincident.DeletedAtIsNil()).
 		Order(ent.Desc(entincident.FieldCreatedAt)).
 		Limit(10).
 		All(ctx)
@@ -436,8 +436,8 @@ func (s *pgDashboardStore) getActiveIncidents(ctx context.Context) ([]ActiveInci
 		item := ActiveIncidentItem{
 			IncidentNumber: inc.IncidentNumber,
 			Title:          inc.Title,
-			Severity:       inc.Severity,
-			Status:         inc.Status,
+			Severity:       string(inc.Severity),
+			Status:         string(inc.Status),
 			CreatedAt:      inc.CreatedAt.Format(time.RFC3339),
 		}
 
@@ -488,7 +488,7 @@ func (s *pgDashboardStore) getServiceStats(ctx context.Context) (*DashboardServi
 
 	byStatus := make(map[string]int64)
 	for _, svc := range services {
-		byStatus[svc.Status]++
+		byStatus[string(svc.Status)]++
 	}
 
 	return &DashboardServiceStats{
@@ -570,15 +570,15 @@ func (s *pgDashboardStore) GetTopAlerts(ctx context.Context, since time.Time, li
 		k := key{name: name, sev: sev}
 		if existing, ok := counts[k]; ok {
 			existing.Count++
-			if a.Status == "firing" {
-				existing.Status = "firing"
+			if a.Status == alert.StatusFiring {
+				existing.Status = string(alert.StatusFiring)
 			}
 		} else {
 			item := &TopAlertItem{
 				AlertName: name,
 				Count:     1,
 				Severity:  sev,
-				Status:    a.Status,
+				Status:    string(a.Status),
 				Labels:    a.Labels,
 			}
 			counts[k] = item
@@ -612,7 +612,7 @@ func (s *pgDashboardStore) GetRecentInvestigations(ctx context.Context, since ti
 
 func (s *pgDashboardStore) GetActiveInvestigations(ctx context.Context, limit int) ([]RecentInvestigationItem, error) {
 	invs, err := s.client.AlertInvestigation.Query().
-		Where(alertinvestigation.StatusIn("pending", "investigating", "assigned", "paused")).
+		Where(alertinvestigation.StatusIn(alertinvestigation.StatusPending, alertinvestigation.StatusInvestigating, alertinvestigation.StatusAssigned, alertinvestigation.StatusPaused)).
 		Order(ent.Desc(alertinvestigation.FieldUpdatedAt)).
 		Limit(limit).
 		All(ctx)
@@ -638,7 +638,7 @@ func (s *pgDashboardStore) buildRecentInvestigationItems(ctx context.Context, in
 		}
 		items = append(items, RecentInvestigationItem{
 			InvestigationID: inv.AlertInvestigationID,
-			Status:          inv.Status,
+			Status:          string(inv.Status),
 			AlertName:       alertName,
 			AgentName:       inv.AgentName,
 			CorrelationKey:  inv.CorrelationKey,
@@ -658,14 +658,14 @@ func (s *pgDashboardStore) GetAlertDataForSummary(ctx context.Context, since tim
 	}
 
 	resolved, err := s.client.Alert.Query().
-		Where(alert.Status("resolved"), alert.UpdatedAtGTE(since), alert.DeletedAtIsNil()).
+		Where(alert.StatusEQ(alert.StatusResolved), alert.UpdatedAtGTE(since), alert.DeletedAtIsNil()).
 		Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("count resolved: %w", err)
 	}
 
 	firing, err := s.client.Alert.Query().
-		Where(alert.Status("firing"), alert.DeletedAtIsNil()).Count(ctx)
+		Where(alert.StatusEQ(alert.StatusFiring), alert.DeletedAtIsNil()).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("count firing: %w", err)
 	}

@@ -5,7 +5,9 @@ package ent
 import (
 	"alga/ent/credentialprovider"
 	"alga/ent/predicate"
+	"alga/ent/sharedsecret"
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -19,10 +21,11 @@ import (
 // CredentialProviderQuery is the builder for querying CredentialProvider entities.
 type CredentialProviderQuery struct {
 	config
-	ctx        *QueryContext
-	order      []credentialprovider.OrderOption
-	inters     []Interceptor
-	predicates []predicate.CredentialProvider
+	ctx               *QueryContext
+	order             []credentialprovider.OrderOption
+	inters            []Interceptor
+	predicates        []predicate.CredentialProvider
+	withSharedSecrets *SharedSecretQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -57,6 +60,28 @@ func (_q *CredentialProviderQuery) Unique(unique bool) *CredentialProviderQuery 
 func (_q *CredentialProviderQuery) Order(o ...credentialprovider.OrderOption) *CredentialProviderQuery {
 	_q.order = append(_q.order, o...)
 	return _q
+}
+
+// QuerySharedSecrets chains the current query on the "shared_secrets" edge.
+func (_q *CredentialProviderQuery) QuerySharedSecrets() *SharedSecretQuery {
+	query := (&SharedSecretClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(credentialprovider.Table, credentialprovider.FieldID, selector),
+			sqlgraph.To(sharedsecret.Table, sharedsecret.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, credentialprovider.SharedSecretsTable, credentialprovider.SharedSecretsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first CredentialProvider entity from the query.
@@ -246,15 +271,27 @@ func (_q *CredentialProviderQuery) Clone() *CredentialProviderQuery {
 		return nil
 	}
 	return &CredentialProviderQuery{
-		config:     _q.config,
-		ctx:        _q.ctx.Clone(),
-		order:      append([]credentialprovider.OrderOption{}, _q.order...),
-		inters:     append([]Interceptor{}, _q.inters...),
-		predicates: append([]predicate.CredentialProvider{}, _q.predicates...),
+		config:            _q.config,
+		ctx:               _q.ctx.Clone(),
+		order:             append([]credentialprovider.OrderOption{}, _q.order...),
+		inters:            append([]Interceptor{}, _q.inters...),
+		predicates:        append([]predicate.CredentialProvider{}, _q.predicates...),
+		withSharedSecrets: _q.withSharedSecrets.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
+}
+
+// WithSharedSecrets tells the query-builder to eager-load the nodes that are connected to
+// the "shared_secrets" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *CredentialProviderQuery) WithSharedSecrets(opts ...func(*SharedSecretQuery)) *CredentialProviderQuery {
+	query := (&SharedSecretClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withSharedSecrets = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -333,8 +370,11 @@ func (_q *CredentialProviderQuery) prepareQuery(ctx context.Context) error {
 
 func (_q *CredentialProviderQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*CredentialProvider, error) {
 	var (
-		nodes = []*CredentialProvider{}
-		_spec = _q.querySpec()
+		nodes       = []*CredentialProvider{}
+		_spec       = _q.querySpec()
+		loadedTypes = [1]bool{
+			_q.withSharedSecrets != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*CredentialProvider).scanValues(nil, columns)
@@ -342,6 +382,7 @@ func (_q *CredentialProviderQuery) sqlAll(ctx context.Context, hooks ...queryHoo
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &CredentialProvider{config: _q.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -353,7 +394,45 @@ func (_q *CredentialProviderQuery) sqlAll(ctx context.Context, hooks ...queryHoo
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := _q.withSharedSecrets; query != nil {
+		if err := _q.loadSharedSecrets(ctx, query, nodes,
+			func(n *CredentialProvider) { n.Edges.SharedSecrets = []*SharedSecret{} },
+			func(n *CredentialProvider, e *SharedSecret) { n.Edges.SharedSecrets = append(n.Edges.SharedSecrets, e) }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (_q *CredentialProviderQuery) loadSharedSecrets(ctx context.Context, query *SharedSecretQuery, nodes []*CredentialProvider, init func(*CredentialProvider), assign func(*CredentialProvider, *SharedSecret)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*CredentialProvider)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(sharedsecret.FieldProviderID)
+	}
+	query.Where(predicate.SharedSecret(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(credentialprovider.SharedSecretsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ProviderID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "provider_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
 }
 
 func (_q *CredentialProviderQuery) sqlCount(ctx context.Context) (int, error) {

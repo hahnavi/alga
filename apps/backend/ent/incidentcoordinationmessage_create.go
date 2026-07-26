@@ -244,6 +244,12 @@ func (_c *IncidentCoordinationMessageCreate) SetNillableUpdatedAt(v *time.Time) 
 	return _c
 }
 
+// SetIncidentID sets the "incident_id" field.
+func (_c *IncidentCoordinationMessageCreate) SetIncidentID(v uuid.UUID) *IncidentCoordinationMessageCreate {
+	_c.mutation.SetIncidentID(v)
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *IncidentCoordinationMessageCreate) SetID(v uuid.UUID) *IncidentCoordinationMessageCreate {
 	_c.mutation.SetID(v)
@@ -255,12 +261,6 @@ func (_c *IncidentCoordinationMessageCreate) SetNillableID(v *uuid.UUID) *Incide
 	if v != nil {
 		_c.SetID(*v)
 	}
-	return _c
-}
-
-// SetIncidentID sets the "incident" edge to the Incident entity by ID.
-func (_c *IncidentCoordinationMessageCreate) SetIncidentID(id uuid.UUID) *IncidentCoordinationMessageCreate {
-	_c.mutation.SetIncidentID(id)
 	return _c
 }
 
@@ -413,6 +413,9 @@ func (_c *IncidentCoordinationMessageCreate) check() error {
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "IncidentCoordinationMessage.updated_at"`)}
 	}
+	if _, ok := _c.mutation.IncidentID(); !ok {
+		return &ValidationError{Name: "incident_id", err: errors.New(`ent: missing required field "IncidentCoordinationMessage.incident_id"`)}
+	}
 	if len(_c.mutation.IncidentIDs()) == 0 {
 		return &ValidationError{Name: "incident", err: errors.New(`ent: missing required edge "IncidentCoordinationMessage.incident"`)}
 	}
@@ -529,7 +532,7 @@ func (_c *IncidentCoordinationMessageCreate) createSpec() (*IncidentCoordination
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.incident_coordination_messages = &nodes[0]
+		_node.IncidentID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.RepliesIDs(); len(nodes) > 0 {

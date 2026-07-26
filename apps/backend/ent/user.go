@@ -24,7 +24,7 @@ type User struct {
 	// Password holds the value of the "password" field.
 	Password string `json:"-"`
 	// Role holds the value of the "role" field.
-	Role string `json:"role,omitempty"`
+	Role user.Role `json:"role,omitempty"`
 	// FullName holds the value of the "full_name" field.
 	FullName string `json:"full_name,omitempty"`
 	// Phone holds the value of the "phone" field.
@@ -63,19 +63,94 @@ type User struct {
 
 // UserEdges holds the relations/edges for other nodes in the graph.
 type UserEdges struct {
+	// Sessions holds the value of the sessions edge.
+	Sessions []*Session `json:"sessions,omitempty"`
+	// PasswordResetTokens holds the value of the password_reset_tokens edge.
+	PasswordResetTokens []*PasswordResetToken `json:"password_reset_tokens,omitempty"`
+	// PersonalAccessTokens holds the value of the personal_access_tokens edge.
+	PersonalAccessTokens []*PersonalAccessToken `json:"personal_access_tokens,omitempty"`
+	// OidcIdentities holds the value of the oidc_identities edge.
+	OidcIdentities []*OIDCIdentity `json:"oidc_identities,omitempty"`
+	// TeamMembers holds the value of the team_members edge.
+	TeamMembers []*TeamMember `json:"team_members,omitempty"`
 	// IcsRoleAssignments holds the value of the ics_role_assignments edge.
 	IcsRoleAssignments []*ICSRoleAssignment `json:"ics_role_assignments,omitempty"`
 	// DocumentEdits holds the value of the document_edits edge.
 	DocumentEdits []*IncidentDocument `json:"document_edits,omitempty"`
+	// CommanderIncidents holds the value of the commander_incidents edge.
+	CommanderIncidents []*Incident `json:"commander_incidents,omitempty"`
+	// CommunicatorIncidents holds the value of the communicator_incidents edge.
+	CommunicatorIncidents []*Incident `json:"communicator_incidents,omitempty"`
+	// ResponderIncidents holds the value of the responder_incidents edge.
+	ResponderIncidents []*Incident `json:"responder_incidents,omitempty"`
+	// TriageOverrides holds the value of the triage_overrides edge.
+	TriageOverrides []*TriageResult `json:"triage_overrides,omitempty"`
+	// ApprovedPostMortems holds the value of the approved_post_mortems edge.
+	ApprovedPostMortems []*PostMortem `json:"approved_post_mortems,omitempty"`
+	// TriageRules holds the value of the triage_rules edge.
+	TriageRules []*TriageRule `json:"triage_rules,omitempty"`
+	// KnowledgeNotes holds the value of the knowledge_notes edge.
+	KnowledgeNotes []*KnowledgeNote `json:"knowledge_notes,omitempty"`
+	// ScheduleOverrides holds the value of the schedule_overrides edge.
+	ScheduleOverrides []*ScheduleOverride `json:"schedule_overrides,omitempty"`
+	// OutgoingHandoffs holds the value of the outgoing_handoffs edge.
+	OutgoingHandoffs []*HandoffRecord `json:"outgoing_handoffs,omitempty"`
+	// IncomingHandoffs holds the value of the incoming_handoffs edge.
+	IncomingHandoffs []*HandoffRecord `json:"incoming_handoffs,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [17]bool
+}
+
+// SessionsOrErr returns the Sessions value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) SessionsOrErr() ([]*Session, error) {
+	if e.loadedTypes[0] {
+		return e.Sessions, nil
+	}
+	return nil, &NotLoadedError{edge: "sessions"}
+}
+
+// PasswordResetTokensOrErr returns the PasswordResetTokens value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) PasswordResetTokensOrErr() ([]*PasswordResetToken, error) {
+	if e.loadedTypes[1] {
+		return e.PasswordResetTokens, nil
+	}
+	return nil, &NotLoadedError{edge: "password_reset_tokens"}
+}
+
+// PersonalAccessTokensOrErr returns the PersonalAccessTokens value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) PersonalAccessTokensOrErr() ([]*PersonalAccessToken, error) {
+	if e.loadedTypes[2] {
+		return e.PersonalAccessTokens, nil
+	}
+	return nil, &NotLoadedError{edge: "personal_access_tokens"}
+}
+
+// OidcIdentitiesOrErr returns the OidcIdentities value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) OidcIdentitiesOrErr() ([]*OIDCIdentity, error) {
+	if e.loadedTypes[3] {
+		return e.OidcIdentities, nil
+	}
+	return nil, &NotLoadedError{edge: "oidc_identities"}
+}
+
+// TeamMembersOrErr returns the TeamMembers value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) TeamMembersOrErr() ([]*TeamMember, error) {
+	if e.loadedTypes[4] {
+		return e.TeamMembers, nil
+	}
+	return nil, &NotLoadedError{edge: "team_members"}
 }
 
 // IcsRoleAssignmentsOrErr returns the IcsRoleAssignments value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) IcsRoleAssignmentsOrErr() ([]*ICSRoleAssignment, error) {
-	if e.loadedTypes[0] {
+	if e.loadedTypes[5] {
 		return e.IcsRoleAssignments, nil
 	}
 	return nil, &NotLoadedError{edge: "ics_role_assignments"}
@@ -84,10 +159,100 @@ func (e UserEdges) IcsRoleAssignmentsOrErr() ([]*ICSRoleAssignment, error) {
 // DocumentEditsOrErr returns the DocumentEdits value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) DocumentEditsOrErr() ([]*IncidentDocument, error) {
-	if e.loadedTypes[1] {
+	if e.loadedTypes[6] {
 		return e.DocumentEdits, nil
 	}
 	return nil, &NotLoadedError{edge: "document_edits"}
+}
+
+// CommanderIncidentsOrErr returns the CommanderIncidents value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) CommanderIncidentsOrErr() ([]*Incident, error) {
+	if e.loadedTypes[7] {
+		return e.CommanderIncidents, nil
+	}
+	return nil, &NotLoadedError{edge: "commander_incidents"}
+}
+
+// CommunicatorIncidentsOrErr returns the CommunicatorIncidents value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) CommunicatorIncidentsOrErr() ([]*Incident, error) {
+	if e.loadedTypes[8] {
+		return e.CommunicatorIncidents, nil
+	}
+	return nil, &NotLoadedError{edge: "communicator_incidents"}
+}
+
+// ResponderIncidentsOrErr returns the ResponderIncidents value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) ResponderIncidentsOrErr() ([]*Incident, error) {
+	if e.loadedTypes[9] {
+		return e.ResponderIncidents, nil
+	}
+	return nil, &NotLoadedError{edge: "responder_incidents"}
+}
+
+// TriageOverridesOrErr returns the TriageOverrides value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) TriageOverridesOrErr() ([]*TriageResult, error) {
+	if e.loadedTypes[10] {
+		return e.TriageOverrides, nil
+	}
+	return nil, &NotLoadedError{edge: "triage_overrides"}
+}
+
+// ApprovedPostMortemsOrErr returns the ApprovedPostMortems value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) ApprovedPostMortemsOrErr() ([]*PostMortem, error) {
+	if e.loadedTypes[11] {
+		return e.ApprovedPostMortems, nil
+	}
+	return nil, &NotLoadedError{edge: "approved_post_mortems"}
+}
+
+// TriageRulesOrErr returns the TriageRules value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) TriageRulesOrErr() ([]*TriageRule, error) {
+	if e.loadedTypes[12] {
+		return e.TriageRules, nil
+	}
+	return nil, &NotLoadedError{edge: "triage_rules"}
+}
+
+// KnowledgeNotesOrErr returns the KnowledgeNotes value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) KnowledgeNotesOrErr() ([]*KnowledgeNote, error) {
+	if e.loadedTypes[13] {
+		return e.KnowledgeNotes, nil
+	}
+	return nil, &NotLoadedError{edge: "knowledge_notes"}
+}
+
+// ScheduleOverridesOrErr returns the ScheduleOverrides value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) ScheduleOverridesOrErr() ([]*ScheduleOverride, error) {
+	if e.loadedTypes[14] {
+		return e.ScheduleOverrides, nil
+	}
+	return nil, &NotLoadedError{edge: "schedule_overrides"}
+}
+
+// OutgoingHandoffsOrErr returns the OutgoingHandoffs value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) OutgoingHandoffsOrErr() ([]*HandoffRecord, error) {
+	if e.loadedTypes[15] {
+		return e.OutgoingHandoffs, nil
+	}
+	return nil, &NotLoadedError{edge: "outgoing_handoffs"}
+}
+
+// IncomingHandoffsOrErr returns the IncomingHandoffs value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) IncomingHandoffsOrErr() ([]*HandoffRecord, error) {
+	if e.loadedTypes[16] {
+		return e.IncomingHandoffs, nil
+	}
+	return nil, &NotLoadedError{edge: "incoming_handoffs"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -144,7 +309,7 @@ func (_m *User) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field role", values[i])
 			} else if value.Valid {
-				_m.Role = value.String
+				_m.Role = user.Role(value.String)
 			}
 		case user.FieldFullName:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -254,6 +419,31 @@ func (_m *User) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
 }
 
+// QuerySessions queries the "sessions" edge of the User entity.
+func (_m *User) QuerySessions() *SessionQuery {
+	return NewUserClient(_m.config).QuerySessions(_m)
+}
+
+// QueryPasswordResetTokens queries the "password_reset_tokens" edge of the User entity.
+func (_m *User) QueryPasswordResetTokens() *PasswordResetTokenQuery {
+	return NewUserClient(_m.config).QueryPasswordResetTokens(_m)
+}
+
+// QueryPersonalAccessTokens queries the "personal_access_tokens" edge of the User entity.
+func (_m *User) QueryPersonalAccessTokens() *PersonalAccessTokenQuery {
+	return NewUserClient(_m.config).QueryPersonalAccessTokens(_m)
+}
+
+// QueryOidcIdentities queries the "oidc_identities" edge of the User entity.
+func (_m *User) QueryOidcIdentities() *OIDCIdentityQuery {
+	return NewUserClient(_m.config).QueryOidcIdentities(_m)
+}
+
+// QueryTeamMembers queries the "team_members" edge of the User entity.
+func (_m *User) QueryTeamMembers() *TeamMemberQuery {
+	return NewUserClient(_m.config).QueryTeamMembers(_m)
+}
+
 // QueryIcsRoleAssignments queries the "ics_role_assignments" edge of the User entity.
 func (_m *User) QueryIcsRoleAssignments() *ICSRoleAssignmentQuery {
 	return NewUserClient(_m.config).QueryIcsRoleAssignments(_m)
@@ -262,6 +452,56 @@ func (_m *User) QueryIcsRoleAssignments() *ICSRoleAssignmentQuery {
 // QueryDocumentEdits queries the "document_edits" edge of the User entity.
 func (_m *User) QueryDocumentEdits() *IncidentDocumentQuery {
 	return NewUserClient(_m.config).QueryDocumentEdits(_m)
+}
+
+// QueryCommanderIncidents queries the "commander_incidents" edge of the User entity.
+func (_m *User) QueryCommanderIncidents() *IncidentQuery {
+	return NewUserClient(_m.config).QueryCommanderIncidents(_m)
+}
+
+// QueryCommunicatorIncidents queries the "communicator_incidents" edge of the User entity.
+func (_m *User) QueryCommunicatorIncidents() *IncidentQuery {
+	return NewUserClient(_m.config).QueryCommunicatorIncidents(_m)
+}
+
+// QueryResponderIncidents queries the "responder_incidents" edge of the User entity.
+func (_m *User) QueryResponderIncidents() *IncidentQuery {
+	return NewUserClient(_m.config).QueryResponderIncidents(_m)
+}
+
+// QueryTriageOverrides queries the "triage_overrides" edge of the User entity.
+func (_m *User) QueryTriageOverrides() *TriageResultQuery {
+	return NewUserClient(_m.config).QueryTriageOverrides(_m)
+}
+
+// QueryApprovedPostMortems queries the "approved_post_mortems" edge of the User entity.
+func (_m *User) QueryApprovedPostMortems() *PostMortemQuery {
+	return NewUserClient(_m.config).QueryApprovedPostMortems(_m)
+}
+
+// QueryTriageRules queries the "triage_rules" edge of the User entity.
+func (_m *User) QueryTriageRules() *TriageRuleQuery {
+	return NewUserClient(_m.config).QueryTriageRules(_m)
+}
+
+// QueryKnowledgeNotes queries the "knowledge_notes" edge of the User entity.
+func (_m *User) QueryKnowledgeNotes() *KnowledgeNoteQuery {
+	return NewUserClient(_m.config).QueryKnowledgeNotes(_m)
+}
+
+// QueryScheduleOverrides queries the "schedule_overrides" edge of the User entity.
+func (_m *User) QueryScheduleOverrides() *ScheduleOverrideQuery {
+	return NewUserClient(_m.config).QueryScheduleOverrides(_m)
+}
+
+// QueryOutgoingHandoffs queries the "outgoing_handoffs" edge of the User entity.
+func (_m *User) QueryOutgoingHandoffs() *HandoffRecordQuery {
+	return NewUserClient(_m.config).QueryOutgoingHandoffs(_m)
+}
+
+// QueryIncomingHandoffs queries the "incoming_handoffs" edge of the User entity.
+func (_m *User) QueryIncomingHandoffs() *HandoffRecordQuery {
+	return NewUserClient(_m.config).QueryIncomingHandoffs(_m)
 }
 
 // Update returns a builder for updating this User.
@@ -293,7 +533,7 @@ func (_m *User) String() string {
 	builder.WriteString("password=<sensitive>")
 	builder.WriteString(", ")
 	builder.WriteString("role=")
-	builder.WriteString(_m.Role)
+	builder.WriteString(fmt.Sprintf("%v", _m.Role))
 	builder.WriteString(", ")
 	builder.WriteString("full_name=")
 	builder.WriteString(_m.FullName)

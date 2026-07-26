@@ -5,8 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
-
 	"alga/ent/session"
 )
 
@@ -20,7 +18,7 @@ func TestSessionStoreAbsoluteLifetimeRejected(t *testing.T) {
 	const maxLifetime = 30 * time.Minute
 	s := newPGSessionStore(client, idleExpiry, maxLifetime)
 
-	userID := uuid.New()
+	userID := mustCreateUser(t, client)
 	sess, err := s.CreateSession(userID, "127.0.0.1", "test")
 	if err != nil {
 		t.Fatalf("create session: %v", err)
@@ -68,7 +66,7 @@ func TestSessionStoreRefreshRotatesSessionID(t *testing.T) {
 	client := newTestEntClient(t)
 	s := newPGSessionStore(client, time.Hour, 0) // no absolute cap for this test
 
-	userID := uuid.New()
+	userID := mustCreateUser(t, client)
 	sess, err := s.CreateSession(userID, "127.0.0.1", "test")
 	if err != nil {
 		t.Fatalf("create session: %v", err)
@@ -116,7 +114,7 @@ func TestSessionStoreRefreshRespectsAbsoluteLifetime(t *testing.T) {
 	const maxLifetime = 30 * time.Minute
 	s := newPGSessionStore(client, idleExpiry, maxLifetime)
 
-	userID := uuid.New()
+	userID := mustCreateUser(t, client)
 	sess, err := s.CreateSession(userID, "127.0.0.1", "test")
 	if err != nil {
 		t.Fatalf("create session: %v", err)
@@ -150,13 +148,13 @@ func TestSessionStoreDeleteExpiredReapsAgedAndIdle(t *testing.T) {
 	ctx := context.Background()
 
 	// Live session: should survive.
-	live, err := s.CreateSession(uuid.New(), "127.0.0.1", "test")
+	live, err := s.CreateSession(mustCreateUser(t, client), "127.0.0.1", "test")
 	if err != nil {
 		t.Fatalf("create live: %v", err)
 	}
 
 	// Idle-expired session: expires_at in the past.
-	idle, err := s.CreateSession(uuid.New(), "127.0.0.1", "test")
+	idle, err := s.CreateSession(mustCreateUser(t, client), "127.0.0.1", "test")
 	if err != nil {
 		t.Fatalf("create idle: %v", err)
 	}
@@ -164,7 +162,7 @@ func TestSessionStoreDeleteExpiredReapsAgedAndIdle(t *testing.T) {
 		SetExpiresAt(time.Now().Add(-time.Minute)).Save(ctx)
 
 	// Absolute-max-expired session: expires_at future, created_at very old.
-	aged, err := s.CreateSession(uuid.New(), "127.0.0.1", "test")
+	aged, err := s.CreateSession(mustCreateUser(t, client), "127.0.0.1", "test")
 	if err != nil {
 		t.Fatalf("create aged: %v", err)
 	}

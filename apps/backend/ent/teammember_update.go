@@ -4,7 +4,9 @@ package ent
 
 import (
 	"alga/ent/predicate"
+	"alga/ent/team"
 	"alga/ent/teammember"
+	"alga/ent/user"
 	"context"
 	"errors"
 	"fmt"
@@ -58,13 +60,13 @@ func (_u *TeamMemberUpdate) SetNillableUserID(v *uuid.UUID) *TeamMemberUpdate {
 }
 
 // SetRole sets the "role" field.
-func (_u *TeamMemberUpdate) SetRole(v string) *TeamMemberUpdate {
+func (_u *TeamMemberUpdate) SetRole(v teammember.Role) *TeamMemberUpdate {
 	_u.mutation.SetRole(v)
 	return _u
 }
 
 // SetNillableRole sets the "role" field if the given value is not nil.
-func (_u *TeamMemberUpdate) SetNillableRole(v *string) *TeamMemberUpdate {
+func (_u *TeamMemberUpdate) SetNillableRole(v *teammember.Role) *TeamMemberUpdate {
 	if v != nil {
 		_u.SetRole(*v)
 	}
@@ -85,9 +87,31 @@ func (_u *TeamMemberUpdate) SetNillableCreatedAt(v *time.Time) *TeamMemberUpdate
 	return _u
 }
 
+// SetTeam sets the "team" edge to the Team entity.
+func (_u *TeamMemberUpdate) SetTeam(v *Team) *TeamMemberUpdate {
+	return _u.SetTeamID(v.ID)
+}
+
+// SetUser sets the "user" edge to the User entity.
+func (_u *TeamMemberUpdate) SetUser(v *User) *TeamMemberUpdate {
+	return _u.SetUserID(v.ID)
+}
+
 // Mutation returns the TeamMemberMutation object of the builder.
 func (_u *TeamMemberUpdate) Mutation() *TeamMemberMutation {
 	return _u.mutation
+}
+
+// ClearTeam clears the "team" edge to the Team entity.
+func (_u *TeamMemberUpdate) ClearTeam() *TeamMemberUpdate {
+	_u.mutation.ClearTeam()
+	return _u
+}
+
+// ClearUser clears the "user" edge to the User entity.
+func (_u *TeamMemberUpdate) ClearUser() *TeamMemberUpdate {
+	_u.mutation.ClearUser()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -117,7 +141,26 @@ func (_u *TeamMemberUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (_u *TeamMemberUpdate) check() error {
+	if v, ok := _u.mutation.Role(); ok {
+		if err := teammember.RoleValidator(v); err != nil {
+			return &ValidationError{Name: "role", err: fmt.Errorf(`ent: validator failed for field "TeamMember.role": %w`, err)}
+		}
+	}
+	if _u.mutation.TeamCleared() && len(_u.mutation.TeamIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "TeamMember.team"`)
+	}
+	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "TeamMember.user"`)
+	}
+	return nil
+}
+
 func (_u *TeamMemberUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(teammember.Table, teammember.Columns, sqlgraph.NewFieldSpec(teammember.FieldID, field.TypeUUID))
 	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
@@ -126,17 +169,69 @@ func (_u *TeamMemberUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 			}
 		}
 	}
-	if value, ok := _u.mutation.TeamID(); ok {
-		_spec.SetField(teammember.FieldTeamID, field.TypeUUID, value)
-	}
-	if value, ok := _u.mutation.UserID(); ok {
-		_spec.SetField(teammember.FieldUserID, field.TypeUUID, value)
-	}
 	if value, ok := _u.mutation.Role(); ok {
-		_spec.SetField(teammember.FieldRole, field.TypeString, value)
+		_spec.SetField(teammember.FieldRole, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.CreatedAt(); ok {
 		_spec.SetField(teammember.FieldCreatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.TeamCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   teammember.TeamTable,
+			Columns: []string{teammember.TeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TeamIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   teammember.TeamTable,
+			Columns: []string{teammember.TeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.UserCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   teammember.UserTable,
+			Columns: []string{teammember.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.UserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   teammember.UserTable,
+			Columns: []string{teammember.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -187,13 +282,13 @@ func (_u *TeamMemberUpdateOne) SetNillableUserID(v *uuid.UUID) *TeamMemberUpdate
 }
 
 // SetRole sets the "role" field.
-func (_u *TeamMemberUpdateOne) SetRole(v string) *TeamMemberUpdateOne {
+func (_u *TeamMemberUpdateOne) SetRole(v teammember.Role) *TeamMemberUpdateOne {
 	_u.mutation.SetRole(v)
 	return _u
 }
 
 // SetNillableRole sets the "role" field if the given value is not nil.
-func (_u *TeamMemberUpdateOne) SetNillableRole(v *string) *TeamMemberUpdateOne {
+func (_u *TeamMemberUpdateOne) SetNillableRole(v *teammember.Role) *TeamMemberUpdateOne {
 	if v != nil {
 		_u.SetRole(*v)
 	}
@@ -214,9 +309,31 @@ func (_u *TeamMemberUpdateOne) SetNillableCreatedAt(v *time.Time) *TeamMemberUpd
 	return _u
 }
 
+// SetTeam sets the "team" edge to the Team entity.
+func (_u *TeamMemberUpdateOne) SetTeam(v *Team) *TeamMemberUpdateOne {
+	return _u.SetTeamID(v.ID)
+}
+
+// SetUser sets the "user" edge to the User entity.
+func (_u *TeamMemberUpdateOne) SetUser(v *User) *TeamMemberUpdateOne {
+	return _u.SetUserID(v.ID)
+}
+
 // Mutation returns the TeamMemberMutation object of the builder.
 func (_u *TeamMemberUpdateOne) Mutation() *TeamMemberMutation {
 	return _u.mutation
+}
+
+// ClearTeam clears the "team" edge to the Team entity.
+func (_u *TeamMemberUpdateOne) ClearTeam() *TeamMemberUpdateOne {
+	_u.mutation.ClearTeam()
+	return _u
+}
+
+// ClearUser clears the "user" edge to the User entity.
+func (_u *TeamMemberUpdateOne) ClearUser() *TeamMemberUpdateOne {
+	_u.mutation.ClearUser()
+	return _u
 }
 
 // Where appends a list predicates to the TeamMemberUpdate builder.
@@ -259,7 +376,26 @@ func (_u *TeamMemberUpdateOne) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (_u *TeamMemberUpdateOne) check() error {
+	if v, ok := _u.mutation.Role(); ok {
+		if err := teammember.RoleValidator(v); err != nil {
+			return &ValidationError{Name: "role", err: fmt.Errorf(`ent: validator failed for field "TeamMember.role": %w`, err)}
+		}
+	}
+	if _u.mutation.TeamCleared() && len(_u.mutation.TeamIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "TeamMember.team"`)
+	}
+	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "TeamMember.user"`)
+	}
+	return nil
+}
+
 func (_u *TeamMemberUpdateOne) sqlSave(ctx context.Context) (_node *TeamMember, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(teammember.Table, teammember.Columns, sqlgraph.NewFieldSpec(teammember.FieldID, field.TypeUUID))
 	id, ok := _u.mutation.ID()
 	if !ok {
@@ -285,17 +421,69 @@ func (_u *TeamMemberUpdateOne) sqlSave(ctx context.Context) (_node *TeamMember, 
 			}
 		}
 	}
-	if value, ok := _u.mutation.TeamID(); ok {
-		_spec.SetField(teammember.FieldTeamID, field.TypeUUID, value)
-	}
-	if value, ok := _u.mutation.UserID(); ok {
-		_spec.SetField(teammember.FieldUserID, field.TypeUUID, value)
-	}
 	if value, ok := _u.mutation.Role(); ok {
-		_spec.SetField(teammember.FieldRole, field.TypeString, value)
+		_spec.SetField(teammember.FieldRole, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.CreatedAt(); ok {
 		_spec.SetField(teammember.FieldCreatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.TeamCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   teammember.TeamTable,
+			Columns: []string{teammember.TeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TeamIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   teammember.TeamTable,
+			Columns: []string{teammember.TeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.UserCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   teammember.UserTable,
+			Columns: []string{teammember.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.UserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   teammember.UserTable,
+			Columns: []string{teammember.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &TeamMember{config: _u.config}
 	_spec.Assign = _node.assignValues

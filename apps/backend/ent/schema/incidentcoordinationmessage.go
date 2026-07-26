@@ -38,12 +38,13 @@ func (IncidentCoordinationMessage) Fields() []ent.Field {
 		field.JSON("metadata", map[string]any{}).Default(map[string]any{}),
 		field.Time("created_at").Default(timeNow),
 		field.Time("updated_at").Default(timeNow).UpdateDefault(timeNow),
+		field.UUID("incident_id", uuid.UUID{}),
 	}
 }
 
 func (IncidentCoordinationMessage) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.From("incident", Incident.Type).Ref("coordination_messages").Unique().Required(),
+		edge.From("incident", Incident.Type).Ref("coordination_messages").Unique().Required().Field("incident_id"),
 		edge.To("replies", IncidentCoordinationMessage.Type),
 		edge.From("parent_message", IncidentCoordinationMessage.Type).
 			Ref("replies").
@@ -59,5 +60,6 @@ func (IncidentCoordinationMessage) Indexes() []ent.Index {
 		index.Fields("slack_channel_id", "slack_message_ts"),
 		index.Fields("parent_message_id"),
 		index.Fields("linked_coordination_task_id"),
+		index.Fields("incident_id", "created_at"),
 	}
 }

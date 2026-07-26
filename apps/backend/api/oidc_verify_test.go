@@ -493,10 +493,15 @@ type capturingAuditStore struct {
 }
 
 func (c *capturingAuditStore) Log(event store.AuditEvent, userID *uuid.UUID, username, ip, userAgent string, success bool, details map[string]any) {
+	c.LogEntity(event, userID, username, ip, userAgent, success, details, "", nil)
+}
+
+func (c *capturingAuditStore) LogEntity(event store.AuditEvent, userID *uuid.UUID, username, ip, userAgent string, success bool, details map[string]any, entityType string, entityID *uuid.UUID) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.events = append(c.events, store.AuditRecord{
 		Event: event, UserID: userID, Username: username, Success: success,
+		EntityType: entityType, EntityID: entityID,
 	})
 }
 

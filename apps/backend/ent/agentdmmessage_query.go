@@ -25,7 +25,6 @@ type AgentDMMessageQuery struct {
 	inters         []Interceptor
 	predicates     []predicate.AgentDMMessage
 	withAgentToken *AgentTokenQuery
-	withFKs        bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -371,18 +370,11 @@ func (_q *AgentDMMessageQuery) prepareQuery(ctx context.Context) error {
 func (_q *AgentDMMessageQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*AgentDMMessage, error) {
 	var (
 		nodes       = []*AgentDMMessage{}
-		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
 		loadedTypes = [1]bool{
 			_q.withAgentToken != nil,
 		}
 	)
-	if _q.withAgentToken != nil {
-		withFKs = true
-	}
-	if withFKs {
-		_spec.Node.Columns = append(_spec.Node.Columns, agentdmmessage.ForeignKeys...)
-	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*AgentDMMessage).scanValues(nil, columns)
 	}
@@ -414,10 +406,7 @@ func (_q *AgentDMMessageQuery) loadAgentToken(ctx context.Context, query *AgentT
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*AgentDMMessage)
 	for i := range nodes {
-		if nodes[i].agent_token_dm_messages == nil {
-			continue
-		}
-		fk := *nodes[i].agent_token_dm_messages
+		fk := nodes[i].AgentTokenID
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -434,7 +423,7 @@ func (_q *AgentDMMessageQuery) loadAgentToken(ctx context.Context, query *AgentT
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "agent_token_dm_messages" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "agent_token_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -467,6 +456,9 @@ func (_q *AgentDMMessageQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != agentdmmessage.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if _q.withAgentToken != nil {
+			_spec.Node.AddColumnOnce(agentdmmessage.FieldAgentTokenID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -65,11 +66,6 @@ func Description(v string) predicate.ActionItem {
 	return predicate.ActionItem(sql.FieldEQ(FieldDescription, v))
 }
 
-// Type applies equality check predicate on the "type" field. It's identical to TypeEQ.
-func Type(v string) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldEQ(FieldType, v))
-}
-
 // AssigneeName applies equality check predicate on the "assignee_name" field. It's identical to AssigneeNameEQ.
 func AssigneeName(v string) predicate.ActionItem {
 	return predicate.ActionItem(sql.FieldEQ(FieldAssigneeName, v))
@@ -78,16 +74,6 @@ func AssigneeName(v string) predicate.ActionItem {
 // AssigneeID applies equality check predicate on the "assignee_id" field. It's identical to AssigneeIDEQ.
 func AssigneeID(v uuid.UUID) predicate.ActionItem {
 	return predicate.ActionItem(sql.FieldEQ(FieldAssigneeID, v))
-}
-
-// Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
-func Status(v string) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldEQ(FieldStatus, v))
-}
-
-// Priority applies equality check predicate on the "priority" field. It's identical to PriorityEQ.
-func Priority(v string) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldEQ(FieldPriority, v))
 }
 
 // DueDate applies equality check predicate on the "due_date" field. It's identical to DueDateEQ.
@@ -123,26 +109,6 @@ func PostMortemIDIn(vs ...uuid.UUID) predicate.ActionItem {
 // PostMortemIDNotIn applies the NotIn predicate on the "post_mortem_id" field.
 func PostMortemIDNotIn(vs ...uuid.UUID) predicate.ActionItem {
 	return predicate.ActionItem(sql.FieldNotIn(FieldPostMortemID, vs...))
-}
-
-// PostMortemIDGT applies the GT predicate on the "post_mortem_id" field.
-func PostMortemIDGT(v uuid.UUID) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldGT(FieldPostMortemID, v))
-}
-
-// PostMortemIDGTE applies the GTE predicate on the "post_mortem_id" field.
-func PostMortemIDGTE(v uuid.UUID) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldGTE(FieldPostMortemID, v))
-}
-
-// PostMortemIDLT applies the LT predicate on the "post_mortem_id" field.
-func PostMortemIDLT(v uuid.UUID) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldLT(FieldPostMortemID, v))
-}
-
-// PostMortemIDLTE applies the LTE predicate on the "post_mortem_id" field.
-func PostMortemIDLTE(v uuid.UUID) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldLTE(FieldPostMortemID, v))
 }
 
 // DescriptionEQ applies the EQ predicate on the "description" field.
@@ -211,68 +177,23 @@ func DescriptionContainsFold(v string) predicate.ActionItem {
 }
 
 // TypeEQ applies the EQ predicate on the "type" field.
-func TypeEQ(v string) predicate.ActionItem {
+func TypeEQ(v Type) predicate.ActionItem {
 	return predicate.ActionItem(sql.FieldEQ(FieldType, v))
 }
 
 // TypeNEQ applies the NEQ predicate on the "type" field.
-func TypeNEQ(v string) predicate.ActionItem {
+func TypeNEQ(v Type) predicate.ActionItem {
 	return predicate.ActionItem(sql.FieldNEQ(FieldType, v))
 }
 
 // TypeIn applies the In predicate on the "type" field.
-func TypeIn(vs ...string) predicate.ActionItem {
+func TypeIn(vs ...Type) predicate.ActionItem {
 	return predicate.ActionItem(sql.FieldIn(FieldType, vs...))
 }
 
 // TypeNotIn applies the NotIn predicate on the "type" field.
-func TypeNotIn(vs ...string) predicate.ActionItem {
+func TypeNotIn(vs ...Type) predicate.ActionItem {
 	return predicate.ActionItem(sql.FieldNotIn(FieldType, vs...))
-}
-
-// TypeGT applies the GT predicate on the "type" field.
-func TypeGT(v string) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldGT(FieldType, v))
-}
-
-// TypeGTE applies the GTE predicate on the "type" field.
-func TypeGTE(v string) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldGTE(FieldType, v))
-}
-
-// TypeLT applies the LT predicate on the "type" field.
-func TypeLT(v string) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldLT(FieldType, v))
-}
-
-// TypeLTE applies the LTE predicate on the "type" field.
-func TypeLTE(v string) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldLTE(FieldType, v))
-}
-
-// TypeContains applies the Contains predicate on the "type" field.
-func TypeContains(v string) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldContains(FieldType, v))
-}
-
-// TypeHasPrefix applies the HasPrefix predicate on the "type" field.
-func TypeHasPrefix(v string) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldHasPrefix(FieldType, v))
-}
-
-// TypeHasSuffix applies the HasSuffix predicate on the "type" field.
-func TypeHasSuffix(v string) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldHasSuffix(FieldType, v))
-}
-
-// TypeEqualFold applies the EqualFold predicate on the "type" field.
-func TypeEqualFold(v string) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldEqualFold(FieldType, v))
-}
-
-// TypeContainsFold applies the ContainsFold predicate on the "type" field.
-func TypeContainsFold(v string) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldContainsFold(FieldType, v))
 }
 
 // AssigneeNameEQ applies the EQ predicate on the "assignee_name" field.
@@ -401,133 +322,43 @@ func AssigneeIDNotNil() predicate.ActionItem {
 }
 
 // StatusEQ applies the EQ predicate on the "status" field.
-func StatusEQ(v string) predicate.ActionItem {
+func StatusEQ(v Status) predicate.ActionItem {
 	return predicate.ActionItem(sql.FieldEQ(FieldStatus, v))
 }
 
 // StatusNEQ applies the NEQ predicate on the "status" field.
-func StatusNEQ(v string) predicate.ActionItem {
+func StatusNEQ(v Status) predicate.ActionItem {
 	return predicate.ActionItem(sql.FieldNEQ(FieldStatus, v))
 }
 
 // StatusIn applies the In predicate on the "status" field.
-func StatusIn(vs ...string) predicate.ActionItem {
+func StatusIn(vs ...Status) predicate.ActionItem {
 	return predicate.ActionItem(sql.FieldIn(FieldStatus, vs...))
 }
 
 // StatusNotIn applies the NotIn predicate on the "status" field.
-func StatusNotIn(vs ...string) predicate.ActionItem {
+func StatusNotIn(vs ...Status) predicate.ActionItem {
 	return predicate.ActionItem(sql.FieldNotIn(FieldStatus, vs...))
 }
 
-// StatusGT applies the GT predicate on the "status" field.
-func StatusGT(v string) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldGT(FieldStatus, v))
-}
-
-// StatusGTE applies the GTE predicate on the "status" field.
-func StatusGTE(v string) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldGTE(FieldStatus, v))
-}
-
-// StatusLT applies the LT predicate on the "status" field.
-func StatusLT(v string) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldLT(FieldStatus, v))
-}
-
-// StatusLTE applies the LTE predicate on the "status" field.
-func StatusLTE(v string) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldLTE(FieldStatus, v))
-}
-
-// StatusContains applies the Contains predicate on the "status" field.
-func StatusContains(v string) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldContains(FieldStatus, v))
-}
-
-// StatusHasPrefix applies the HasPrefix predicate on the "status" field.
-func StatusHasPrefix(v string) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldHasPrefix(FieldStatus, v))
-}
-
-// StatusHasSuffix applies the HasSuffix predicate on the "status" field.
-func StatusHasSuffix(v string) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldHasSuffix(FieldStatus, v))
-}
-
-// StatusEqualFold applies the EqualFold predicate on the "status" field.
-func StatusEqualFold(v string) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldEqualFold(FieldStatus, v))
-}
-
-// StatusContainsFold applies the ContainsFold predicate on the "status" field.
-func StatusContainsFold(v string) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldContainsFold(FieldStatus, v))
-}
-
 // PriorityEQ applies the EQ predicate on the "priority" field.
-func PriorityEQ(v string) predicate.ActionItem {
+func PriorityEQ(v Priority) predicate.ActionItem {
 	return predicate.ActionItem(sql.FieldEQ(FieldPriority, v))
 }
 
 // PriorityNEQ applies the NEQ predicate on the "priority" field.
-func PriorityNEQ(v string) predicate.ActionItem {
+func PriorityNEQ(v Priority) predicate.ActionItem {
 	return predicate.ActionItem(sql.FieldNEQ(FieldPriority, v))
 }
 
 // PriorityIn applies the In predicate on the "priority" field.
-func PriorityIn(vs ...string) predicate.ActionItem {
+func PriorityIn(vs ...Priority) predicate.ActionItem {
 	return predicate.ActionItem(sql.FieldIn(FieldPriority, vs...))
 }
 
 // PriorityNotIn applies the NotIn predicate on the "priority" field.
-func PriorityNotIn(vs ...string) predicate.ActionItem {
+func PriorityNotIn(vs ...Priority) predicate.ActionItem {
 	return predicate.ActionItem(sql.FieldNotIn(FieldPriority, vs...))
-}
-
-// PriorityGT applies the GT predicate on the "priority" field.
-func PriorityGT(v string) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldGT(FieldPriority, v))
-}
-
-// PriorityGTE applies the GTE predicate on the "priority" field.
-func PriorityGTE(v string) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldGTE(FieldPriority, v))
-}
-
-// PriorityLT applies the LT predicate on the "priority" field.
-func PriorityLT(v string) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldLT(FieldPriority, v))
-}
-
-// PriorityLTE applies the LTE predicate on the "priority" field.
-func PriorityLTE(v string) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldLTE(FieldPriority, v))
-}
-
-// PriorityContains applies the Contains predicate on the "priority" field.
-func PriorityContains(v string) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldContains(FieldPriority, v))
-}
-
-// PriorityHasPrefix applies the HasPrefix predicate on the "priority" field.
-func PriorityHasPrefix(v string) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldHasPrefix(FieldPriority, v))
-}
-
-// PriorityHasSuffix applies the HasSuffix predicate on the "priority" field.
-func PriorityHasSuffix(v string) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldHasSuffix(FieldPriority, v))
-}
-
-// PriorityEqualFold applies the EqualFold predicate on the "priority" field.
-func PriorityEqualFold(v string) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldEqualFold(FieldPriority, v))
-}
-
-// PriorityContainsFold applies the ContainsFold predicate on the "priority" field.
-func PriorityContainsFold(v string) predicate.ActionItem {
-	return predicate.ActionItem(sql.FieldContainsFold(FieldPriority, v))
 }
 
 // DueDateEQ applies the EQ predicate on the "due_date" field.
@@ -658,6 +489,29 @@ func UpdatedAtLT(v time.Time) predicate.ActionItem {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.ActionItem {
 	return predicate.ActionItem(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// HasPostMortem applies the HasEdge predicate on the "post_mortem" edge.
+func HasPostMortem() predicate.ActionItem {
+	return predicate.ActionItem(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, PostMortemTable, PostMortemColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasPostMortemWith applies the HasEdge predicate on the "post_mortem" edge with a given conditions (other predicates).
+func HasPostMortemWith(preds ...predicate.PostMortem) predicate.ActionItem {
+	return predicate.ActionItem(func(s *sql.Selector) {
+		step := newPostMortemStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

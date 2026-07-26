@@ -3,6 +3,8 @@
 package ent
 
 import (
+	"alga/ent/service"
+	"alga/ent/statuspage"
 	"alga/ent/statuspagecomponent"
 	"context"
 	"errors"
@@ -76,13 +78,13 @@ func (_c *StatusPageComponentCreate) SetNillableDisplayOrder(v *int) *StatusPage
 }
 
 // SetStatus sets the "status" field.
-func (_c *StatusPageComponentCreate) SetStatus(v string) *StatusPageComponentCreate {
+func (_c *StatusPageComponentCreate) SetStatus(v statuspagecomponent.Status) *StatusPageComponentCreate {
 	_c.mutation.SetStatus(v)
 	return _c
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_c *StatusPageComponentCreate) SetNillableStatus(v *string) *StatusPageComponentCreate {
+func (_c *StatusPageComponentCreate) SetNillableStatus(v *statuspagecomponent.Status) *StatusPageComponentCreate {
 	if v != nil {
 		_c.SetStatus(*v)
 	}
@@ -129,6 +131,16 @@ func (_c *StatusPageComponentCreate) SetNillableID(v *uuid.UUID) *StatusPageComp
 		_c.SetID(*v)
 	}
 	return _c
+}
+
+// SetStatusPage sets the "status_page" edge to the StatusPage entity.
+func (_c *StatusPageComponentCreate) SetStatusPage(v *StatusPage) *StatusPageComponentCreate {
+	return _c.SetStatusPageID(v.ID)
+}
+
+// SetService sets the "service" edge to the Service entity.
+func (_c *StatusPageComponentCreate) SetService(v *Service) *StatusPageComponentCreate {
+	return _c.SetServiceID(v.ID)
 }
 
 // Mutation returns the StatusPageComponentMutation object of the builder.
@@ -211,14 +223,27 @@ func (_c *StatusPageComponentCreate) check() error {
 	if _, ok := _c.mutation.DisplayOrder(); !ok {
 		return &ValidationError{Name: "display_order", err: errors.New(`ent: missing required field "StatusPageComponent.display_order"`)}
 	}
+	if v, ok := _c.mutation.DisplayOrder(); ok {
+		if err := statuspagecomponent.DisplayOrderValidator(v); err != nil {
+			return &ValidationError{Name: "display_order", err: fmt.Errorf(`ent: validator failed for field "StatusPageComponent.display_order": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "StatusPageComponent.status"`)}
+	}
+	if v, ok := _c.mutation.Status(); ok {
+		if err := statuspagecomponent.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "StatusPageComponent.status": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "StatusPageComponent.created_at"`)}
 	}
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "StatusPageComponent.updated_at"`)}
+	}
+	if len(_c.mutation.StatusPageIDs()) == 0 {
+		return &ValidationError{Name: "status_page", err: errors.New(`ent: missing required edge "StatusPageComponent.status_page"`)}
 	}
 	return nil
 }
@@ -255,10 +280,6 @@ func (_c *StatusPageComponentCreate) createSpec() (*StatusPageComponent, *sqlgra
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := _c.mutation.StatusPageID(); ok {
-		_spec.SetField(statuspagecomponent.FieldStatusPageID, field.TypeUUID, value)
-		_node.StatusPageID = value
-	}
 	if value, ok := _c.mutation.Name(); ok {
 		_spec.SetField(statuspagecomponent.FieldName, field.TypeString, value)
 		_node.Name = value
@@ -267,16 +288,12 @@ func (_c *StatusPageComponentCreate) createSpec() (*StatusPageComponent, *sqlgra
 		_spec.SetField(statuspagecomponent.FieldDescription, field.TypeString, value)
 		_node.Description = value
 	}
-	if value, ok := _c.mutation.ServiceID(); ok {
-		_spec.SetField(statuspagecomponent.FieldServiceID, field.TypeUUID, value)
-		_node.ServiceID = &value
-	}
 	if value, ok := _c.mutation.DisplayOrder(); ok {
 		_spec.SetField(statuspagecomponent.FieldDisplayOrder, field.TypeInt, value)
 		_node.DisplayOrder = value
 	}
 	if value, ok := _c.mutation.Status(); ok {
-		_spec.SetField(statuspagecomponent.FieldStatus, field.TypeString, value)
+		_spec.SetField(statuspagecomponent.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
@@ -286,6 +303,40 @@ func (_c *StatusPageComponentCreate) createSpec() (*StatusPageComponent, *sqlgra
 	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(statuspagecomponent.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if nodes := _c.mutation.StatusPageIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   statuspagecomponent.StatusPageTable,
+			Columns: []string{statuspagecomponent.StatusPageColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(statuspage.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.StatusPageID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ServiceIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   statuspagecomponent.ServiceTable,
+			Columns: []string{statuspagecomponent.ServiceColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.ServiceID = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

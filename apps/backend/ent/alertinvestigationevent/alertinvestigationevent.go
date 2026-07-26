@@ -3,6 +3,7 @@
 package alertinvestigationevent
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -15,8 +16,8 @@ const (
 	Label = "alert_investigation_event"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
-	// FieldAlertInvestigationUUID holds the string denoting the alert_investigation_uuid field in the database.
-	FieldAlertInvestigationUUID = "alert_investigation_uuid"
+	// FieldAlertInvestigationID holds the string denoting the alert_investigation_id field in the database.
+	FieldAlertInvestigationID = "alert_investigation_id"
 	// FieldEventType holds the string denoting the event_type field in the database.
 	FieldEventType = "event_type"
 	// FieldReason holds the string denoting the reason field in the database.
@@ -47,13 +48,13 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "alertinvestigation" package.
 	AlertInvestigationInverseTable = "alert_investigations"
 	// AlertInvestigationColumn is the table column denoting the alert_investigation relation/edge.
-	AlertInvestigationColumn = "alert_investigation_uuid"
+	AlertInvestigationColumn = "alert_investigation_id"
 )
 
 // Columns holds all SQL columns for alertinvestigationevent fields.
 var Columns = []string{
 	FieldID,
-	FieldAlertInvestigationUUID,
+	FieldAlertInvestigationID,
 	FieldEventType,
 	FieldReason,
 	FieldActorType,
@@ -77,8 +78,6 @@ func ValidColumn(column string) bool {
 }
 
 var (
-	// EventTypeValidator is a validator for the "event_type" field. It is called by the builders before save.
-	EventTypeValidator func(string) error
 	// DefaultReason holds the default value on creation for the "reason" field.
 	DefaultReason string
 	// DefaultActorType holds the default value on creation for the "actor_type" field.
@@ -99,6 +98,35 @@ var (
 	DefaultID func() uuid.UUID
 )
 
+// EventType defines the type for the "event_type" enum field.
+type EventType string
+
+// EventType values.
+const (
+	EventTypeAssigned                EventType = "assigned"
+	EventTypeStarted                 EventType = "started"
+	EventTypeRequeued                EventType = "requeued"
+	EventTypeAgentOfflineBeforeStart EventType = "agent_offline_before_start"
+	EventTypeAgentOfflineDuringWork  EventType = "agent_offline_during_work"
+	EventTypeDispatchFailed          EventType = "dispatch_failed"
+	EventTypeAutoCompleted           EventType = "auto_completed"
+	EventTypeCompleted               EventType = "completed"
+)
+
+func (et EventType) String() string {
+	return string(et)
+}
+
+// EventTypeValidator is a validator for the "event_type" field enum values. It is called by the builders before save.
+func EventTypeValidator(et EventType) error {
+	switch et {
+	case EventTypeAssigned, EventTypeStarted, EventTypeRequeued, EventTypeAgentOfflineBeforeStart, EventTypeAgentOfflineDuringWork, EventTypeDispatchFailed, EventTypeAutoCompleted, EventTypeCompleted:
+		return nil
+	default:
+		return fmt.Errorf("alertinvestigationevent: invalid enum value for event_type field: %q", et)
+	}
+}
+
 // OrderOption defines the ordering options for the AlertInvestigationEvent queries.
 type OrderOption func(*sql.Selector)
 
@@ -107,9 +135,9 @@ func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
 }
 
-// ByAlertInvestigationUUID orders the results by the alert_investigation_uuid field.
-func ByAlertInvestigationUUID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldAlertInvestigationUUID, opts...).ToFunc()
+// ByAlertInvestigationID orders the results by the alert_investigation_id field.
+func ByAlertInvestigationID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAlertInvestigationID, opts...).ToFunc()
 }
 
 // ByEventType orders the results by the event_type field.

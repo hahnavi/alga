@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -27,8 +28,26 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// EdgeServices holds the string denoting the services edge name in mutations.
+	EdgeServices = "services"
+	// EdgeIncidents holds the string denoting the incidents edge name in mutations.
+	EdgeIncidents = "incidents"
 	// Table holds the table name of the escalationpolicy in the database.
 	Table = "escalation_policies"
+	// ServicesTable is the table that holds the services relation/edge.
+	ServicesTable = "services"
+	// ServicesInverseTable is the table name for the Service entity.
+	// It exists in this package in order to avoid circular dependency with the "service" package.
+	ServicesInverseTable = "services"
+	// ServicesColumn is the table column denoting the services relation/edge.
+	ServicesColumn = "escalation_policy_id"
+	// IncidentsTable is the table that holds the incidents relation/edge.
+	IncidentsTable = "incidents"
+	// IncidentsInverseTable is the table name for the Incident entity.
+	// It exists in this package in order to avoid circular dependency with the "incident" package.
+	IncidentsInverseTable = "incidents"
+	// IncidentsColumn is the table column denoting the incidents relation/edge.
+	IncidentsColumn = "escalation_policy_id"
 )
 
 // Columns holds all SQL columns for escalationpolicy fields.
@@ -59,6 +78,8 @@ var (
 	DefaultDescription string
 	// DefaultRepeatCount holds the default value on creation for the "repeat_count" field.
 	DefaultRepeatCount int
+	// RepeatCountValidator is a validator for the "repeat_count" field. It is called by the builders before save.
+	RepeatCountValidator func(int) error
 	// DefaultLevels holds the default value on creation for the "levels" field.
 	DefaultLevels []schema.EscalationLevelRecord
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
@@ -102,4 +123,46 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByServicesCount orders the results by services count.
+func ByServicesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newServicesStep(), opts...)
+	}
+}
+
+// ByServices orders the results by services terms.
+func ByServices(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newServicesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByIncidentsCount orders the results by incidents count.
+func ByIncidentsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newIncidentsStep(), opts...)
+	}
+}
+
+// ByIncidents orders the results by incidents terms.
+func ByIncidents(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newIncidentsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+func newServicesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ServicesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ServicesTable, ServicesColumn),
+	)
+}
+func newIncidentsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(IncidentsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, IncidentsTable, IncidentsColumn),
+	)
 }

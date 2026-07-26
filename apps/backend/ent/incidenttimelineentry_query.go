@@ -25,7 +25,6 @@ type IncidentTimelineEntryQuery struct {
 	inters       []Interceptor
 	predicates   []predicate.IncidentTimelineEntry
 	withIncident *IncidentQuery
-	withFKs      bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -371,18 +370,11 @@ func (_q *IncidentTimelineEntryQuery) prepareQuery(ctx context.Context) error {
 func (_q *IncidentTimelineEntryQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*IncidentTimelineEntry, error) {
 	var (
 		nodes       = []*IncidentTimelineEntry{}
-		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
 		loadedTypes = [1]bool{
 			_q.withIncident != nil,
 		}
 	)
-	if _q.withIncident != nil {
-		withFKs = true
-	}
-	if withFKs {
-		_spec.Node.Columns = append(_spec.Node.Columns, incidenttimelineentry.ForeignKeys...)
-	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*IncidentTimelineEntry).scanValues(nil, columns)
 	}
@@ -414,10 +406,7 @@ func (_q *IncidentTimelineEntryQuery) loadIncident(ctx context.Context, query *I
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*IncidentTimelineEntry)
 	for i := range nodes {
-		if nodes[i].incident_timeline == nil {
-			continue
-		}
-		fk := *nodes[i].incident_timeline
+		fk := nodes[i].IncidentID
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -434,7 +423,7 @@ func (_q *IncidentTimelineEntryQuery) loadIncident(ctx context.Context, query *I
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "incident_timeline" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "incident_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -467,6 +456,9 @@ func (_q *IncidentTimelineEntryQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != incidenttimelineentry.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if _q.withIncident != nil {
+			_spec.Node.AddColumnOnce(incidenttimelineentry.FieldIncidentID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

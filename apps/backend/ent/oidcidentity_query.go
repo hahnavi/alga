@@ -4,7 +4,9 @@ package ent
 
 import (
 	"alga/ent/oidcidentity"
+	"alga/ent/oidcprovider"
 	"alga/ent/predicate"
+	"alga/ent/user"
 	"context"
 	"fmt"
 	"math"
@@ -19,10 +21,12 @@ import (
 // OIDCIdentityQuery is the builder for querying OIDCIdentity entities.
 type OIDCIdentityQuery struct {
 	config
-	ctx        *QueryContext
-	order      []oidcidentity.OrderOption
-	inters     []Interceptor
-	predicates []predicate.OIDCIdentity
+	ctx          *QueryContext
+	order        []oidcidentity.OrderOption
+	inters       []Interceptor
+	predicates   []predicate.OIDCIdentity
+	withUser     *UserQuery
+	withProvider *OIDCProviderQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -57,6 +61,50 @@ func (_q *OIDCIdentityQuery) Unique(unique bool) *OIDCIdentityQuery {
 func (_q *OIDCIdentityQuery) Order(o ...oidcidentity.OrderOption) *OIDCIdentityQuery {
 	_q.order = append(_q.order, o...)
 	return _q
+}
+
+// QueryUser chains the current query on the "user" edge.
+func (_q *OIDCIdentityQuery) QueryUser() *UserQuery {
+	query := (&UserClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(oidcidentity.Table, oidcidentity.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, oidcidentity.UserTable, oidcidentity.UserColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryProvider chains the current query on the "provider" edge.
+func (_q *OIDCIdentityQuery) QueryProvider() *OIDCProviderQuery {
+	query := (&OIDCProviderClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(oidcidentity.Table, oidcidentity.FieldID, selector),
+			sqlgraph.To(oidcprovider.Table, oidcprovider.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, oidcidentity.ProviderTable, oidcidentity.ProviderColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first OIDCIdentity entity from the query.
@@ -246,15 +294,39 @@ func (_q *OIDCIdentityQuery) Clone() *OIDCIdentityQuery {
 		return nil
 	}
 	return &OIDCIdentityQuery{
-		config:     _q.config,
-		ctx:        _q.ctx.Clone(),
-		order:      append([]oidcidentity.OrderOption{}, _q.order...),
-		inters:     append([]Interceptor{}, _q.inters...),
-		predicates: append([]predicate.OIDCIdentity{}, _q.predicates...),
+		config:       _q.config,
+		ctx:          _q.ctx.Clone(),
+		order:        append([]oidcidentity.OrderOption{}, _q.order...),
+		inters:       append([]Interceptor{}, _q.inters...),
+		predicates:   append([]predicate.OIDCIdentity{}, _q.predicates...),
+		withUser:     _q.withUser.Clone(),
+		withProvider: _q.withProvider.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
+}
+
+// WithUser tells the query-builder to eager-load the nodes that are connected to
+// the "user" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *OIDCIdentityQuery) WithUser(opts ...func(*UserQuery)) *OIDCIdentityQuery {
+	query := (&UserClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withUser = query
+	return _q
+}
+
+// WithProvider tells the query-builder to eager-load the nodes that are connected to
+// the "provider" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *OIDCIdentityQuery) WithProvider(opts ...func(*OIDCProviderQuery)) *OIDCIdentityQuery {
+	query := (&OIDCProviderClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withProvider = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -333,8 +405,12 @@ func (_q *OIDCIdentityQuery) prepareQuery(ctx context.Context) error {
 
 func (_q *OIDCIdentityQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*OIDCIdentity, error) {
 	var (
-		nodes = []*OIDCIdentity{}
-		_spec = _q.querySpec()
+		nodes       = []*OIDCIdentity{}
+		_spec       = _q.querySpec()
+		loadedTypes = [2]bool{
+			_q.withUser != nil,
+			_q.withProvider != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*OIDCIdentity).scanValues(nil, columns)
@@ -342,6 +418,7 @@ func (_q *OIDCIdentityQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &OIDCIdentity{config: _q.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -353,7 +430,78 @@ func (_q *OIDCIdentityQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := _q.withUser; query != nil {
+		if err := _q.loadUser(ctx, query, nodes, nil,
+			func(n *OIDCIdentity, e *User) { n.Edges.User = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withProvider; query != nil {
+		if err := _q.loadProvider(ctx, query, nodes, nil,
+			func(n *OIDCIdentity, e *OIDCProvider) { n.Edges.Provider = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (_q *OIDCIdentityQuery) loadUser(ctx context.Context, query *UserQuery, nodes []*OIDCIdentity, init func(*OIDCIdentity), assign func(*OIDCIdentity, *User)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*OIDCIdentity)
+	for i := range nodes {
+		fk := nodes[i].UserID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(user.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "user_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *OIDCIdentityQuery) loadProvider(ctx context.Context, query *OIDCProviderQuery, nodes []*OIDCIdentity, init func(*OIDCIdentity), assign func(*OIDCIdentity, *OIDCProvider)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*OIDCIdentity)
+	for i := range nodes {
+		fk := nodes[i].ProviderID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(oidcprovider.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "provider_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
 }
 
 func (_q *OIDCIdentityQuery) sqlCount(ctx context.Context) (int, error) {
@@ -380,6 +528,12 @@ func (_q *OIDCIdentityQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != oidcidentity.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if _q.withUser != nil {
+			_spec.Node.AddColumnOnce(oidcidentity.FieldUserID)
+		}
+		if _q.withProvider != nil {
+			_spec.Node.AddColumnOnce(oidcidentity.FieldProviderID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

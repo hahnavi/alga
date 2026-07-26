@@ -138,9 +138,17 @@ func (_u *AlertEventUpdate) ClearSource() *AlertEventUpdate {
 	return _u
 }
 
-// SetAlertID sets the "alert" edge to the Alert entity by ID.
-func (_u *AlertEventUpdate) SetAlertID(id uuid.UUID) *AlertEventUpdate {
-	_u.mutation.SetAlertID(id)
+// SetAlertID sets the "alert_id" field.
+func (_u *AlertEventUpdate) SetAlertID(v uuid.UUID) *AlertEventUpdate {
+	_u.mutation.SetAlertID(v)
+	return _u
+}
+
+// SetNillableAlertID sets the "alert_id" field if the given value is not nil.
+func (_u *AlertEventUpdate) SetNillableAlertID(v *uuid.UUID) *AlertEventUpdate {
+	if v != nil {
+		_u.SetAlertID(*v)
+	}
 	return _u
 }
 
@@ -399,9 +407,17 @@ func (_u *AlertEventUpdateOne) ClearSource() *AlertEventUpdateOne {
 	return _u
 }
 
-// SetAlertID sets the "alert" edge to the Alert entity by ID.
-func (_u *AlertEventUpdateOne) SetAlertID(id uuid.UUID) *AlertEventUpdateOne {
-	_u.mutation.SetAlertID(id)
+// SetAlertID sets the "alert_id" field.
+func (_u *AlertEventUpdateOne) SetAlertID(v uuid.UUID) *AlertEventUpdateOne {
+	_u.mutation.SetAlertID(v)
+	return _u
+}
+
+// SetNillableAlertID sets the "alert_id" field if the given value is not nil.
+func (_u *AlertEventUpdateOne) SetNillableAlertID(v *uuid.UUID) *AlertEventUpdateOne {
+	if v != nil {
+		_u.SetAlertID(*v)
+	}
 	return _u
 }
 

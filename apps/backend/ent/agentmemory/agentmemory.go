@@ -3,9 +3,11 @@
 package agentmemory
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -48,8 +50,17 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// EdgeAgent holds the string denoting the agent edge name in mutations.
+	EdgeAgent = "agent"
 	// Table holds the table name of the agentmemory in the database.
 	Table = "agent_memories"
+	// AgentTable is the table that holds the agent relation/edge.
+	AgentTable = "agent_memories"
+	// AgentInverseTable is the table name for the AgentToken entity.
+	// It exists in this package in order to avoid circular dependency with the "agenttoken" package.
+	AgentInverseTable = "agent_tokens"
+	// AgentColumn is the table column denoting the agent relation/edge.
+	AgentColumn = "agent_id"
 )
 
 // Columns holds all SQL columns for agentmemory fields.
@@ -87,8 +98,6 @@ func ValidColumn(column string) bool {
 var (
 	// ContentValidator is a validator for the "content" field. It is called by the builders before save.
 	ContentValidator func(string) error
-	// DefaultMemoryType holds the default value on creation for the "memory_type" field.
-	DefaultMemoryType string
 	// HashValidator is a validator for the "hash" field. It is called by the builders before save.
 	HashValidator func(string) error
 	// DefaultAgentName holds the default value on creation for the "agent_name" field.
@@ -99,8 +108,12 @@ var (
 	DefaultInvestigationID string
 	// DefaultCorrelationKey holds the default value on creation for the "correlation_key" field.
 	DefaultCorrelationKey string
+	// ConfidenceValidator is a validator for the "confidence" field. It is called by the builders before save.
+	ConfidenceValidator func(float64) error
 	// DefaultAccessCount holds the default value on creation for the "access_count" field.
 	DefaultAccessCount int
+	// AccessCountValidator is a validator for the "access_count" field. It is called by the builders before save.
+	AccessCountValidator func(int) error
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
@@ -110,6 +123,33 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// MemoryType defines the type for the "memory_type" enum field.
+type MemoryType string
+
+// MemoryTypeFact is the default value of the MemoryType enum.
+const DefaultMemoryType = MemoryTypeFact
+
+// MemoryType values.
+const (
+	MemoryTypeFact      MemoryType = "fact"
+	MemoryTypePattern   MemoryType = "pattern"
+	MemoryTypeProcedure MemoryType = "procedure"
+)
+
+func (mt MemoryType) String() string {
+	return string(mt)
+}
+
+// MemoryTypeValidator is a validator for the "memory_type" field enum values. It is called by the builders before save.
+func MemoryTypeValidator(mt MemoryType) error {
+	switch mt {
+	case MemoryTypeFact, MemoryTypePattern, MemoryTypeProcedure:
+		return nil
+	default:
+		return fmt.Errorf("agentmemory: invalid enum value for memory_type field: %q", mt)
+	}
+}
 
 // OrderOption defines the ordering options for the AgentMemory queries.
 type OrderOption func(*sql.Selector)
@@ -182,4 +222,18 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByAgentField orders the results by agent field.
+func ByAgentField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAgentStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newAgentStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AgentInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, AgentTable, AgentColumn),
+	)
 }

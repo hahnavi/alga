@@ -23,7 +23,7 @@ func (AlertInvestigationUpdateEntry) Annotations() []schema.Annotation {
 func (AlertInvestigationUpdateEntry) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
-		field.UUID("alert_investigation_uuid", uuid.UUID{}),
+		field.UUID("alert_investigation_id", uuid.UUID{}),
 		field.String("type").NotEmpty(),
 		field.String("message").NotEmpty(),
 		field.String("source").NotEmpty(),
@@ -44,7 +44,7 @@ func (AlertInvestigationUpdateEntry) Edges() []ent.Edge {
 		edge.From("alert_investigation", AlertInvestigation.Type).
 			Ref("updates").
 			Unique().
-			Field("alert_investigation_uuid").
+			Field("alert_investigation_id").
 			Required(),
 	}
 }
@@ -52,6 +52,6 @@ func (AlertInvestigationUpdateEntry) Edges() []ent.Edge {
 func (AlertInvestigationUpdateEntry) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("created_at"),
-		index.Fields("alert_investigation_uuid"),
+		index.Fields("alert_investigation_id"),
 	}
 }

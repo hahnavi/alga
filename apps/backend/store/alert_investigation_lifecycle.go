@@ -36,12 +36,12 @@ func (s *pgAlertInvestigationStore) CompleteAlertInvestigation(ctx context.Conte
 	now := time.Now().UTC()
 	inv, err := tx.Client().AlertInvestigation.UpdateOneID(invUUID).
 		Where(alertinvestigation.StatusIn(
-			AlertInvestigationStatusPending,
-			AlertInvestigationStatusAssigned,
-			AlertInvestigationStatusInvestigating,
-			AlertInvestigationStatusPaused,
+			alertinvestigation.Status(AlertInvestigationStatusPending),
+			alertinvestigation.Status(AlertInvestigationStatusAssigned),
+			alertinvestigation.Status(AlertInvestigationStatusInvestigating),
+			alertinvestigation.Status(AlertInvestigationStatusPaused),
 		)).
-		SetStatus(AlertInvestigationStatusComplete).
+		SetStatus(alertinvestigation.Status(AlertInvestigationStatusComplete)).
 		SetCompletedAt(now).
 		SetCompletedReason(completion.Reason).
 		SetCompletedByType(completion.ActorType).
@@ -51,8 +51,8 @@ func (s *pgAlertInvestigationStore) CompleteAlertInvestigation(ctx context.Conte
 		Save(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			if existing, lookupErr := tx.Client().AlertInvestigation.Get(ctx, invUUID); lookupErr == nil && existing != nil && IsTerminalInvestigationStatus(existing.Status) {
-				logger.InfoCtx(ctx, "alert investigation already terminal, treating completion as idempotent", "alert_investigation_id", id, "status", existing.Status)
+			if existing, lookupErr := tx.Client().AlertInvestigation.Get(ctx, invUUID); lookupErr == nil && existing != nil && IsTerminalInvestigationStatus(string(existing.Status)) {
+				logger.InfoCtx(ctx, "alert investigation already terminal, treating completion as idempotent", "alert_investigation_id", id, "status", string(existing.Status))
 				return nil
 			}
 		}
@@ -97,11 +97,11 @@ func (s *pgAlertInvestigationStore) RequeueAlertInvestigation(ctx context.Contex
 	now := time.Now().UTC()
 	inv, err := tx.Client().AlertInvestigation.UpdateOneID(invUUID).
 		Where(alertinvestigation.StatusIn(
-			AlertInvestigationStatusAssigned,
-			AlertInvestigationStatusInvestigating,
-			AlertInvestigationStatusPaused,
+			alertinvestigation.Status(AlertInvestigationStatusAssigned),
+			alertinvestigation.Status(AlertInvestigationStatusInvestigating),
+			alertinvestigation.Status(AlertInvestigationStatusPaused),
 		)).
-		SetStatus(AlertInvestigationStatusPending).
+		SetStatus(alertinvestigation.Status(AlertInvestigationStatusPending)).
 		ClearStartedAt().
 		SetUpdatedAt(now).
 		Save(ctx)
@@ -161,7 +161,7 @@ func (s *pgAlertInvestigationStore) MarkAlertInvestigationPromoted(ctx context.C
 
 	now := time.Now().UTC()
 	updated, err := tx.Client().AlertInvestigation.UpdateOneID(inv.ID).
-		SetStatus(AlertInvestigationStatusPromoted).
+		SetStatus(alertinvestigation.Status(AlertInvestigationStatusPromoted)).
 		SetPromotedIncidentID(incidentUUID).
 		SetPromotedIncidentInvestigationID(incidentInvestigationUUID).
 		SetUpdatedAt(now).
@@ -194,7 +194,7 @@ func (s *pgAlertInvestigationStore) UpdateAlertInvestigationStatus(ctx context.C
 
 	n, err := s.client.AlertInvestigation.Update().
 		Where(alertinvestigation.AlertInvestigationID(id)).
-		SetStatus(status).
+		SetStatus(alertinvestigation.Status(status)).
 		SetUpdatedAt(time.Now().UTC()).
 		Save(ctx)
 	if err != nil {
@@ -215,9 +215,14 @@ func (s *pgAlertInvestigationStore) TransitionAlertInvestigationStatus(ctx conte
 		return fmt.Errorf("invalid alert investigation id: %w", err)
 	}
 
+	entStatuses := make([]alertinvestigation.Status, len(fromStatuses))
+	for i, s := range fromStatuses {
+		entStatuses[i] = alertinvestigation.Status(s)
+	}
+
 	b := s.client.AlertInvestigation.UpdateOneID(invUUID).
-		Where(alertinvestigation.StatusIn(fromStatuses...)).
-		SetStatus(toStatus).
+		Where(alertinvestigation.StatusIn(entStatuses...)).
+		SetStatus(alertinvestigation.Status(toStatus)).
 		SetUpdatedAt(time.Now().UTC())
 
 	switch toStatus {
@@ -304,8 +309,8 @@ func (s *pgAlertInvestigationStore) ClaimPendingAlertInvestigation(ctx context.C
 
 	now := time.Now().UTC()
 	n, err := s.client.AlertInvestigation.UpdateOneID(invUUID).
-		Where(alertinvestigation.StatusEQ(AlertInvestigationStatusPending)).
-		SetStatus(AlertInvestigationStatusAssigned).
+		Where(alertinvestigation.StatusEQ(alertinvestigation.Status(AlertInvestigationStatusPending))).
+		SetStatus(alertinvestigation.Status(AlertInvestigationStatusAssigned)).
 		SetAgentID(agentID).
 		SetAgentName(agentName).
 		SetAgentType(agentType).
@@ -324,7 +329,7 @@ func (s *pgAlertInvestigationStore) ListPendingAlertInvestigations(ctx context.C
 	defer cancel()
 
 	invs, err := s.client.AlertInvestigation.Query().
-		Where(alertinvestigation.StatusEQ(AlertInvestigationStatusPending)).
+		Where(alertinvestigation.StatusEQ(alertinvestigation.Status(AlertInvestigationStatusPending))).
 		Order(ent.Asc(alertinvestigation.FieldCreatedAt)).
 		Limit(int(limit)).
 		All(ctx)
@@ -364,19 +369,19 @@ func (s *pgAlertInvestigationStore) DeleteAlertInvestigation(ctx context.Context
 	}
 
 	if _, err := tx.Client().AlertInvestigationAlert.Delete().
-		Where(alertinvestigationalert.AlertInvestigationUUID(inv.ID)).
+		Where(alertinvestigationalert.AlertInvestigationID(inv.ID)).
 		Exec(ctx); err != nil {
 		return fmt.Errorf("failed to delete alert investigation alerts: %w", err)
 	}
 
 	if _, err := tx.Client().AlertInvestigationUpdateEntry.Delete().
-		Where(alertinvestigationupdateentry.AlertInvestigationUUID(inv.ID)).
+		Where(alertinvestigationupdateentry.AlertInvestigationID(inv.ID)).
 		Exec(ctx); err != nil {
 		return fmt.Errorf("failed to delete alert investigation updates: %w", err)
 	}
 
 	if _, err := tx.Client().AlertInvestigationEvent.Delete().
-		Where(alertinvestigationevent.AlertInvestigationUUID(inv.ID)).
+		Where(alertinvestigationevent.AlertInvestigationID(inv.ID)).
 		Exec(ctx); err != nil {
 		return fmt.Errorf("failed to delete alert investigation events: %w", err)
 	}
@@ -401,7 +406,7 @@ func (s *pgAlertInvestigationStore) SetAlertInvestigationAssignee(ctx context.Co
 	}
 
 	u := s.client.AlertInvestigation.UpdateOneID(invUUID).
-		SetAssigneeType(assigneeType).
+		SetAssigneeType(alertinvestigation.AssigneeType(assigneeType)).
 		SetUpdatedAt(time.Now().UTC())
 
 	if assigneeID != nil {

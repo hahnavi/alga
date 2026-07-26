@@ -91,7 +91,7 @@ func TestMain(m *testing.M) {
 	pgClient = cli
 	defer cli.Close()
 
-	stores, err := NewStores(cli, 24*time.Hour)
+	stores, err := NewStores(cli, 24*time.Hour, 24*time.Hour)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to create stores: %v\n", err)
 		os.Exit(1)
@@ -303,7 +303,11 @@ func TestUserStore(t *testing.T) {
 }
 
 func TestSessionStore(t *testing.T) {
-	userID := uuid.New()
+	user, err := userStore.CreateUser("session-test-"+uuid.NewString()+"@example.com", "P@ssw0rd!", "viewer")
+	if err != nil {
+		t.Fatalf("create test user: %v", err)
+	}
+	userID := user.ID
 	var sessionID string
 	var refreshToken string
 
@@ -814,10 +818,14 @@ func TestAlertInvestigationStore(t *testing.T) {
 
 func TestKnowledgeStore(t *testing.T) {
 	ctx := context.Background()
+	author, err := userStore.CreateUser("knowledge-test-"+uuid.NewString()+"@example.com", "P@ssw0rd!", "viewer")
+	if err != nil {
+		t.Fatalf("create test user: %v", err)
+	}
+	authorID := author.ID
 	var noteID uuid.UUID
 
 	t.Run("Create_and_Get", func(t *testing.T) {
-		authorID := uuid.New()
 		note, err := knowledgeStore.Create(ctx, &KnowledgeNote{
 			Kind:         KnowledgeKindRunbook,
 			Title:        "Restart API Server",
@@ -878,8 +886,16 @@ func TestKnowledgeStore(t *testing.T) {
 
 func TestAgentAskStore(t *testing.T) {
 	ctx := context.Background()
-	fromAgent := uuid.New()
-	toAgent := uuid.New()
+	fromToken, err := agentTokenStore.CreateToken("ask-from-agent", nil, "hermes", nil)
+	if err != nil {
+		t.Fatalf("create from-agent token: %v", err)
+	}
+	toToken, err := agentTokenStore.CreateToken("ask-to-agent", nil, "hermes", nil)
+	if err != nil {
+		t.Fatalf("create to-agent token: %v", err)
+	}
+	fromAgent := fromToken.ID
+	toAgent := toToken.ID
 	var askID uuid.UUID
 
 	t.Run("Create_and_Get", func(t *testing.T) {

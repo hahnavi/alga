@@ -4,6 +4,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -22,13 +23,13 @@ func (KnowledgeNote) Annotations() []schema.Annotation {
 func (KnowledgeNote) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
-		field.String("kind").NotEmpty(),
+		field.Enum("kind").Values("runbook", "known_issue", "service_owner", "fact"),
 		field.String("title").NotEmpty(),
 		field.String("body_markdown").NotEmpty(),
 		field.JSON("tags", []string{}).Optional(),
 		field.JSON("selectors", []RouteCondition{}).Optional(),
 		field.UUID("author_id", uuid.UUID{}).Optional().Nillable(),
-		field.String("author_type").Default("user"),
+		field.Enum("author_type").Values("user", "agent").Default("user"),
 		field.String("author_name").Optional().Default(""),
 		field.String("source_investigation_id").Optional().Default(""),
 		field.Float("confidence").Optional().Nillable(),
@@ -39,12 +40,15 @@ func (KnowledgeNote) Fields() []ent.Field {
 }
 
 func (KnowledgeNote) Edges() []ent.Edge {
-	return nil
+	return []ent.Edge{
+		edge.From("author", User.Type).Ref("knowledge_notes").Field("author_id").Unique(),
+	}
 }
 
 func (KnowledgeNote) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("kind", "updated_at"),
 		index.Fields("expires_at"),
+		index.Fields("author_id"),
 	}
 }

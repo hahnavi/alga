@@ -72,15 +72,23 @@ func pgTriageRuleToRecord(r *ent.TriageRule) *TriageRuleRecord {
 	if r.CreatedBy != uuid.Nil {
 		createdBy = &r.CreatedBy
 	}
+	severity := ""
+	if r.Severity != nil {
+		severity = string(*r.Severity)
+	}
+	ruleCategory := ""
+	if r.Category != nil {
+		ruleCategory = string(*r.Category)
+	}
 	return &TriageRuleRecord{
 		ID:          r.ID,
 		Name:        r.Name,
 		Description: r.Description,
 		Conditions:  conditions,
-		MatchMode:   r.MatchMode,
-		Decision:    r.Decision,
-		Severity:    r.Severity,
-		Category:    r.Category,
+		MatchMode:   string(r.MatchMode),
+		Decision:    string(r.Decision),
+		Severity:    severity,
+		Category:    ruleCategory,
 		Enrichment:  enrichment,
 		Priority:    r.Priority,
 		Enabled:     r.Enabled,
@@ -103,6 +111,9 @@ func (s *pgTriageRuleStore) Create(ctx context.Context, record *TriageRuleRecord
 	if record.Decision == "" {
 		return nil, errors.New("decision is required")
 	}
+	if record.MatchMode == "" {
+		record.MatchMode = "all"
+	}
 	if record.Conditions == nil {
 		record.Conditions = []map[string]any{}
 	}
@@ -114,10 +125,10 @@ func (s *pgTriageRuleStore) Create(ctx context.Context, record *TriageRuleRecord
 		SetName(record.Name).
 		SetDescription(record.Description).
 		SetConditions(record.Conditions).
-		SetMatchMode(record.MatchMode).
-		SetDecision(record.Decision).
-		SetSeverity(record.Severity).
-		SetCategory(record.Category).
+		SetMatchMode(triagerule.MatchMode(record.MatchMode)).
+		SetDecision(triagerule.Decision(record.Decision)).
+		SetSeverity(triagerule.Severity(record.Severity)).
+		SetCategory(triagerule.Category(record.Category)).
 		SetEnrichment(record.Enrichment).
 		SetPriority(record.Priority).
 		SetEnabled(record.Enabled).
@@ -157,16 +168,16 @@ func (s *pgTriageRuleStore) Update(ctx context.Context, id string, patch *Triage
 		b.SetConditions(patch.Conditions)
 	}
 	if patch.MatchMode != "" {
-		b.SetMatchMode(patch.MatchMode)
+		b.SetMatchMode(triagerule.MatchMode(patch.MatchMode))
 	}
 	if patch.Decision != "" {
-		b.SetDecision(patch.Decision)
+		b.SetDecision(triagerule.Decision(patch.Decision))
 	}
 	if patch.Severity != "" {
-		b.SetSeverity(patch.Severity)
+		b.SetSeverity(triagerule.Severity(patch.Severity))
 	}
 	if patch.Category != "" {
-		b.SetCategory(patch.Category)
+		b.SetCategory(triagerule.Category(patch.Category))
 	}
 	if patch.Enrichment != nil {
 		b.SetEnrichment(patch.Enrichment)
@@ -246,7 +257,7 @@ func (s *pgTriageRuleStore) List(ctx context.Context, q TriageRuleQuery) ([]Tria
 			text := strings.TrimSpace(strings.ToLower(q.Search))
 			if !strings.Contains(strings.ToLower(r.Name), text) &&
 				!strings.Contains(strings.ToLower(r.Description), text) &&
-				!strings.Contains(strings.ToLower(r.Decision), text) {
+				!strings.Contains(strings.ToLower(string(r.Decision)), text) {
 				continue
 			}
 		}

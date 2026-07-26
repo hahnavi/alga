@@ -271,6 +271,11 @@ func (_c *OutboxCreate) check() error {
 	if _, ok := _c.mutation.RetryCount(); !ok {
 		return &ValidationError{Name: "retry_count", err: errors.New(`ent: missing required field "Outbox.retry_count"`)}
 	}
+	if v, ok := _c.mutation.RetryCount(); ok {
+		if err := outbox.RetryCountValidator(v); err != nil {
+			return &ValidationError{Name: "retry_count", err: fmt.Errorf(`ent: validator failed for field "Outbox.retry_count": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Outbox.created_at"`)}
 	}

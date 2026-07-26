@@ -3,7 +3,10 @@
 package ent
 
 import (
+	"alga/ent/alert"
+	"alga/ent/alertinvestigation"
 	"alga/ent/triageresult"
+	"alga/ent/user"
 	"context"
 	"errors"
 	"fmt"
@@ -60,13 +63,13 @@ func (_c *TriageResultCreate) SetAlertLabels(v map[string]string) *TriageResultC
 }
 
 // SetSeverityInput sets the "severity_input" field.
-func (_c *TriageResultCreate) SetSeverityInput(v string) *TriageResultCreate {
+func (_c *TriageResultCreate) SetSeverityInput(v triageresult.SeverityInput) *TriageResultCreate {
 	_c.mutation.SetSeverityInput(v)
 	return _c
 }
 
 // SetNillableSeverityInput sets the "severity_input" field if the given value is not nil.
-func (_c *TriageResultCreate) SetNillableSeverityInput(v *string) *TriageResultCreate {
+func (_c *TriageResultCreate) SetNillableSeverityInput(v *triageresult.SeverityInput) *TriageResultCreate {
 	if v != nil {
 		_c.SetSeverityInput(*v)
 	}
@@ -74,7 +77,7 @@ func (_c *TriageResultCreate) SetNillableSeverityInput(v *string) *TriageResultC
 }
 
 // SetDecision sets the "decision" field.
-func (_c *TriageResultCreate) SetDecision(v string) *TriageResultCreate {
+func (_c *TriageResultCreate) SetDecision(v triageresult.Decision) *TriageResultCreate {
 	_c.mutation.SetDecision(v)
 	return _c
 }
@@ -94,13 +97,13 @@ func (_c *TriageResultCreate) SetNillableConfidence(v *float64) *TriageResultCre
 }
 
 // SetSeverityClassified sets the "severity_classified" field.
-func (_c *TriageResultCreate) SetSeverityClassified(v string) *TriageResultCreate {
+func (_c *TriageResultCreate) SetSeverityClassified(v triageresult.SeverityClassified) *TriageResultCreate {
 	_c.mutation.SetSeverityClassified(v)
 	return _c
 }
 
 // SetNillableSeverityClassified sets the "severity_classified" field if the given value is not nil.
-func (_c *TriageResultCreate) SetNillableSeverityClassified(v *string) *TriageResultCreate {
+func (_c *TriageResultCreate) SetNillableSeverityClassified(v *triageresult.SeverityClassified) *TriageResultCreate {
 	if v != nil {
 		_c.SetSeverityClassified(*v)
 	}
@@ -108,13 +111,13 @@ func (_c *TriageResultCreate) SetNillableSeverityClassified(v *string) *TriageRe
 }
 
 // SetCategory sets the "category" field.
-func (_c *TriageResultCreate) SetCategory(v string) *TriageResultCreate {
+func (_c *TriageResultCreate) SetCategory(v triageresult.Category) *TriageResultCreate {
 	_c.mutation.SetCategory(v)
 	return _c
 }
 
 // SetNillableCategory sets the "category" field if the given value is not nil.
-func (_c *TriageResultCreate) SetNillableCategory(v *string) *TriageResultCreate {
+func (_c *TriageResultCreate) SetNillableCategory(v *triageresult.Category) *TriageResultCreate {
 	if v != nil {
 		_c.SetCategory(*v)
 	}
@@ -154,13 +157,13 @@ func (_c *TriageResultCreate) SetContextUsed(v map[string]interface{}) *TriageRe
 }
 
 // SetOutcome sets the "outcome" field.
-func (_c *TriageResultCreate) SetOutcome(v string) *TriageResultCreate {
+func (_c *TriageResultCreate) SetOutcome(v triageresult.Outcome) *TriageResultCreate {
 	_c.mutation.SetOutcome(v)
 	return _c
 }
 
 // SetNillableOutcome sets the "outcome" field if the given value is not nil.
-func (_c *TriageResultCreate) SetNillableOutcome(v *string) *TriageResultCreate {
+func (_c *TriageResultCreate) SetNillableOutcome(v *triageresult.Outcome) *TriageResultCreate {
 	if v != nil {
 		_c.SetOutcome(*v)
 	}
@@ -168,13 +171,13 @@ func (_c *TriageResultCreate) SetNillableOutcome(v *string) *TriageResultCreate 
 }
 
 // SetOverriddenTo sets the "overridden_to" field.
-func (_c *TriageResultCreate) SetOverriddenTo(v string) *TriageResultCreate {
+func (_c *TriageResultCreate) SetOverriddenTo(v triageresult.OverriddenTo) *TriageResultCreate {
 	_c.mutation.SetOverriddenTo(v)
 	return _c
 }
 
 // SetNillableOverriddenTo sets the "overridden_to" field if the given value is not nil.
-func (_c *TriageResultCreate) SetNillableOverriddenTo(v *string) *TriageResultCreate {
+func (_c *TriageResultCreate) SetNillableOverriddenTo(v *triageresult.OverriddenTo) *TriageResultCreate {
 	if v != nil {
 		_c.SetOverriddenTo(*v)
 	}
@@ -293,6 +296,55 @@ func (_c *TriageResultCreate) SetNillableID(v *uuid.UUID) *TriageResultCreate {
 	return _c
 }
 
+// AddAlertIDs adds the "alerts" edge to the Alert entity by IDs.
+func (_c *TriageResultCreate) AddAlertIDs(ids ...uuid.UUID) *TriageResultCreate {
+	_c.mutation.AddAlertIDs(ids...)
+	return _c
+}
+
+// AddAlerts adds the "alerts" edges to the Alert entity.
+func (_c *TriageResultCreate) AddAlerts(v ...*Alert) *TriageResultCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddAlertIDs(ids...)
+}
+
+// AddAlertInvestigationIDs adds the "alert_investigations" edge to the AlertInvestigation entity by IDs.
+func (_c *TriageResultCreate) AddAlertInvestigationIDs(ids ...uuid.UUID) *TriageResultCreate {
+	_c.mutation.AddAlertInvestigationIDs(ids...)
+	return _c
+}
+
+// AddAlertInvestigations adds the "alert_investigations" edges to the AlertInvestigation entity.
+func (_c *TriageResultCreate) AddAlertInvestigations(v ...*AlertInvestigation) *TriageResultCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddAlertInvestigationIDs(ids...)
+}
+
+// SetOverriddenByUserID sets the "overridden_by_user" edge to the User entity by ID.
+func (_c *TriageResultCreate) SetOverriddenByUserID(id uuid.UUID) *TriageResultCreate {
+	_c.mutation.SetOverriddenByUserID(id)
+	return _c
+}
+
+// SetNillableOverriddenByUserID sets the "overridden_by_user" edge to the User entity by ID if the given value is not nil.
+func (_c *TriageResultCreate) SetNillableOverriddenByUserID(id *uuid.UUID) *TriageResultCreate {
+	if id != nil {
+		_c = _c.SetOverriddenByUserID(*id)
+	}
+	return _c
+}
+
+// SetOverriddenByUser sets the "overridden_by_user" edge to the User entity.
+func (_c *TriageResultCreate) SetOverriddenByUser(v *User) *TriageResultCreate {
+	return _c.SetOverriddenByUserID(v.ID)
+}
+
 // Mutation returns the TriageResultMutation object of the builder.
 func (_c *TriageResultCreate) Mutation() *TriageResultMutation {
 	return _c.mutation
@@ -332,21 +384,9 @@ func (_c *TriageResultCreate) defaults() {
 		v := triageresult.DefaultAlertCount
 		_c.mutation.SetAlertCount(v)
 	}
-	if _, ok := _c.mutation.SeverityInput(); !ok {
-		v := triageresult.DefaultSeverityInput
-		_c.mutation.SetSeverityInput(v)
-	}
 	if _, ok := _c.mutation.Confidence(); !ok {
 		v := triageresult.DefaultConfidence
 		_c.mutation.SetConfidence(v)
-	}
-	if _, ok := _c.mutation.SeverityClassified(); !ok {
-		v := triageresult.DefaultSeverityClassified
-		_c.mutation.SetSeverityClassified(v)
-	}
-	if _, ok := _c.mutation.Category(); !ok {
-		v := triageresult.DefaultCategory
-		_c.mutation.SetCategory(v)
 	}
 	if _, ok := _c.mutation.Reasoning(); !ok {
 		v := triageresult.DefaultReasoning
@@ -355,10 +395,6 @@ func (_c *TriageResultCreate) defaults() {
 	if _, ok := _c.mutation.Outcome(); !ok {
 		v := triageresult.DefaultOutcome
 		_c.mutation.SetOutcome(v)
-	}
-	if _, ok := _c.mutation.OverriddenTo(); !ok {
-		v := triageresult.DefaultOverriddenTo
-		_c.mutation.SetOverriddenTo(v)
 	}
 	if _, ok := _c.mutation.ModelUsed(); !ok {
 		v := triageresult.DefaultModelUsed
@@ -407,6 +443,11 @@ func (_c *TriageResultCreate) check() error {
 	if _, ok := _c.mutation.AlertCount(); !ok {
 		return &ValidationError{Name: "alert_count", err: errors.New(`ent: missing required field "TriageResult.alert_count"`)}
 	}
+	if v, ok := _c.mutation.SeverityInput(); ok {
+		if err := triageresult.SeverityInputValidator(v); err != nil {
+			return &ValidationError{Name: "severity_input", err: fmt.Errorf(`ent: validator failed for field "TriageResult.severity_input": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Decision(); !ok {
 		return &ValidationError{Name: "decision", err: errors.New(`ent: missing required field "TriageResult.decision"`)}
 	}
@@ -418,11 +459,36 @@ func (_c *TriageResultCreate) check() error {
 	if _, ok := _c.mutation.Confidence(); !ok {
 		return &ValidationError{Name: "confidence", err: errors.New(`ent: missing required field "TriageResult.confidence"`)}
 	}
+	if v, ok := _c.mutation.SeverityClassified(); ok {
+		if err := triageresult.SeverityClassifiedValidator(v); err != nil {
+			return &ValidationError{Name: "severity_classified", err: fmt.Errorf(`ent: validator failed for field "TriageResult.severity_classified": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.Category(); ok {
+		if err := triageresult.CategoryValidator(v); err != nil {
+			return &ValidationError{Name: "category", err: fmt.Errorf(`ent: validator failed for field "TriageResult.category": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Outcome(); !ok {
 		return &ValidationError{Name: "outcome", err: errors.New(`ent: missing required field "TriageResult.outcome"`)}
 	}
+	if v, ok := _c.mutation.Outcome(); ok {
+		if err := triageresult.OutcomeValidator(v); err != nil {
+			return &ValidationError{Name: "outcome", err: fmt.Errorf(`ent: validator failed for field "TriageResult.outcome": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.OverriddenTo(); ok {
+		if err := triageresult.OverriddenToValidator(v); err != nil {
+			return &ValidationError{Name: "overridden_to", err: fmt.Errorf(`ent: validator failed for field "TriageResult.overridden_to": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.TriageDurationMs(); !ok {
 		return &ValidationError{Name: "triage_duration_ms", err: errors.New(`ent: missing required field "TriageResult.triage_duration_ms"`)}
+	}
+	if v, ok := _c.mutation.TriageDurationMs(); ok {
+		if err := triageresult.TriageDurationMsValidator(v); err != nil {
+			return &ValidationError{Name: "triage_duration_ms", err: fmt.Errorf(`ent: validator failed for field "TriageResult.triage_duration_ms": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "TriageResult.created_at"`)}
@@ -486,11 +552,11 @@ func (_c *TriageResultCreate) createSpec() (*TriageResult, *sqlgraph.CreateSpec)
 		_node.AlertLabels = value
 	}
 	if value, ok := _c.mutation.SeverityInput(); ok {
-		_spec.SetField(triageresult.FieldSeverityInput, field.TypeString, value)
-		_node.SeverityInput = value
+		_spec.SetField(triageresult.FieldSeverityInput, field.TypeEnum, value)
+		_node.SeverityInput = &value
 	}
 	if value, ok := _c.mutation.Decision(); ok {
-		_spec.SetField(triageresult.FieldDecision, field.TypeString, value)
+		_spec.SetField(triageresult.FieldDecision, field.TypeEnum, value)
 		_node.Decision = value
 	}
 	if value, ok := _c.mutation.Confidence(); ok {
@@ -498,12 +564,12 @@ func (_c *TriageResultCreate) createSpec() (*TriageResult, *sqlgraph.CreateSpec)
 		_node.Confidence = value
 	}
 	if value, ok := _c.mutation.SeverityClassified(); ok {
-		_spec.SetField(triageresult.FieldSeverityClassified, field.TypeString, value)
-		_node.SeverityClassified = value
+		_spec.SetField(triageresult.FieldSeverityClassified, field.TypeEnum, value)
+		_node.SeverityClassified = &value
 	}
 	if value, ok := _c.mutation.Category(); ok {
-		_spec.SetField(triageresult.FieldCategory, field.TypeString, value)
-		_node.Category = value
+		_spec.SetField(triageresult.FieldCategory, field.TypeEnum, value)
+		_node.Category = &value
 	}
 	if value, ok := _c.mutation.Reasoning(); ok {
 		_spec.SetField(triageresult.FieldReasoning, field.TypeString, value)
@@ -522,16 +588,12 @@ func (_c *TriageResultCreate) createSpec() (*TriageResult, *sqlgraph.CreateSpec)
 		_node.ContextUsed = value
 	}
 	if value, ok := _c.mutation.Outcome(); ok {
-		_spec.SetField(triageresult.FieldOutcome, field.TypeString, value)
+		_spec.SetField(triageresult.FieldOutcome, field.TypeEnum, value)
 		_node.Outcome = value
 	}
 	if value, ok := _c.mutation.OverriddenTo(); ok {
-		_spec.SetField(triageresult.FieldOverriddenTo, field.TypeString, value)
-		_node.OverriddenTo = value
-	}
-	if value, ok := _c.mutation.OverriddenBy(); ok {
-		_spec.SetField(triageresult.FieldOverriddenBy, field.TypeUUID, value)
-		_node.OverriddenBy = value
+		_spec.SetField(triageresult.FieldOverriddenTo, field.TypeEnum, value)
+		_node.OverriddenTo = &value
 	}
 	if value, ok := _c.mutation.OverriddenAt(); ok {
 		_spec.SetField(triageresult.FieldOverriddenAt, field.TypeTime, value)
@@ -556,6 +618,55 @@ func (_c *TriageResultCreate) createSpec() (*TriageResult, *sqlgraph.CreateSpec)
 	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(triageresult.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if nodes := _c.mutation.AlertsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   triageresult.AlertsTable,
+			Columns: []string{triageresult.AlertsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(alert.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.AlertInvestigationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   triageresult.AlertInvestigationsTable,
+			Columns: []string{triageresult.AlertInvestigationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(alertinvestigation.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.OverriddenByUserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   triageresult.OverriddenByUserTable,
+			Columns: []string{triageresult.OverriddenByUserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.OverriddenBy = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

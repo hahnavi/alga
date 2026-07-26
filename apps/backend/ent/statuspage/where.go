@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -68,11 +69,6 @@ func Slug(v string) predicate.StatusPage {
 // Description applies equality check predicate on the "description" field. It's identical to DescriptionEQ.
 func Description(v string) predicate.StatusPage {
 	return predicate.StatusPage(sql.FieldEQ(FieldDescription, v))
-}
-
-// Visibility applies equality check predicate on the "visibility" field. It's identical to VisibilityEQ.
-func Visibility(v string) predicate.StatusPage {
-	return predicate.StatusPage(sql.FieldEQ(FieldVisibility, v))
 }
 
 // Enabled applies equality check predicate on the "enabled" field. It's identical to EnabledEQ.
@@ -291,68 +287,23 @@ func DescriptionContainsFold(v string) predicate.StatusPage {
 }
 
 // VisibilityEQ applies the EQ predicate on the "visibility" field.
-func VisibilityEQ(v string) predicate.StatusPage {
+func VisibilityEQ(v Visibility) predicate.StatusPage {
 	return predicate.StatusPage(sql.FieldEQ(FieldVisibility, v))
 }
 
 // VisibilityNEQ applies the NEQ predicate on the "visibility" field.
-func VisibilityNEQ(v string) predicate.StatusPage {
+func VisibilityNEQ(v Visibility) predicate.StatusPage {
 	return predicate.StatusPage(sql.FieldNEQ(FieldVisibility, v))
 }
 
 // VisibilityIn applies the In predicate on the "visibility" field.
-func VisibilityIn(vs ...string) predicate.StatusPage {
+func VisibilityIn(vs ...Visibility) predicate.StatusPage {
 	return predicate.StatusPage(sql.FieldIn(FieldVisibility, vs...))
 }
 
 // VisibilityNotIn applies the NotIn predicate on the "visibility" field.
-func VisibilityNotIn(vs ...string) predicate.StatusPage {
+func VisibilityNotIn(vs ...Visibility) predicate.StatusPage {
 	return predicate.StatusPage(sql.FieldNotIn(FieldVisibility, vs...))
-}
-
-// VisibilityGT applies the GT predicate on the "visibility" field.
-func VisibilityGT(v string) predicate.StatusPage {
-	return predicate.StatusPage(sql.FieldGT(FieldVisibility, v))
-}
-
-// VisibilityGTE applies the GTE predicate on the "visibility" field.
-func VisibilityGTE(v string) predicate.StatusPage {
-	return predicate.StatusPage(sql.FieldGTE(FieldVisibility, v))
-}
-
-// VisibilityLT applies the LT predicate on the "visibility" field.
-func VisibilityLT(v string) predicate.StatusPage {
-	return predicate.StatusPage(sql.FieldLT(FieldVisibility, v))
-}
-
-// VisibilityLTE applies the LTE predicate on the "visibility" field.
-func VisibilityLTE(v string) predicate.StatusPage {
-	return predicate.StatusPage(sql.FieldLTE(FieldVisibility, v))
-}
-
-// VisibilityContains applies the Contains predicate on the "visibility" field.
-func VisibilityContains(v string) predicate.StatusPage {
-	return predicate.StatusPage(sql.FieldContains(FieldVisibility, v))
-}
-
-// VisibilityHasPrefix applies the HasPrefix predicate on the "visibility" field.
-func VisibilityHasPrefix(v string) predicate.StatusPage {
-	return predicate.StatusPage(sql.FieldHasPrefix(FieldVisibility, v))
-}
-
-// VisibilityHasSuffix applies the HasSuffix predicate on the "visibility" field.
-func VisibilityHasSuffix(v string) predicate.StatusPage {
-	return predicate.StatusPage(sql.FieldHasSuffix(FieldVisibility, v))
-}
-
-// VisibilityEqualFold applies the EqualFold predicate on the "visibility" field.
-func VisibilityEqualFold(v string) predicate.StatusPage {
-	return predicate.StatusPage(sql.FieldEqualFold(FieldVisibility, v))
-}
-
-// VisibilityContainsFold applies the ContainsFold predicate on the "visibility" field.
-func VisibilityContainsFold(v string) predicate.StatusPage {
-	return predicate.StatusPage(sql.FieldContainsFold(FieldVisibility, v))
 }
 
 // EnabledEQ applies the EQ predicate on the "enabled" field.
@@ -383,26 +334,6 @@ func OwnerTeamIDIn(vs ...uuid.UUID) predicate.StatusPage {
 // OwnerTeamIDNotIn applies the NotIn predicate on the "owner_team_id" field.
 func OwnerTeamIDNotIn(vs ...uuid.UUID) predicate.StatusPage {
 	return predicate.StatusPage(sql.FieldNotIn(FieldOwnerTeamID, vs...))
-}
-
-// OwnerTeamIDGT applies the GT predicate on the "owner_team_id" field.
-func OwnerTeamIDGT(v uuid.UUID) predicate.StatusPage {
-	return predicate.StatusPage(sql.FieldGT(FieldOwnerTeamID, v))
-}
-
-// OwnerTeamIDGTE applies the GTE predicate on the "owner_team_id" field.
-func OwnerTeamIDGTE(v uuid.UUID) predicate.StatusPage {
-	return predicate.StatusPage(sql.FieldGTE(FieldOwnerTeamID, v))
-}
-
-// OwnerTeamIDLT applies the LT predicate on the "owner_team_id" field.
-func OwnerTeamIDLT(v uuid.UUID) predicate.StatusPage {
-	return predicate.StatusPage(sql.FieldLT(FieldOwnerTeamID, v))
-}
-
-// OwnerTeamIDLTE applies the LTE predicate on the "owner_team_id" field.
-func OwnerTeamIDLTE(v uuid.UUID) predicate.StatusPage {
-	return predicate.StatusPage(sql.FieldLTE(FieldOwnerTeamID, v))
 }
 
 // OwnerTeamIDIsNil applies the IsNil predicate on the "owner_team_id" field.
@@ -493,6 +424,52 @@ func UpdatedAtLT(v time.Time) predicate.StatusPage {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.StatusPage {
 	return predicate.StatusPage(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// HasComponents applies the HasEdge predicate on the "components" edge.
+func HasComponents() predicate.StatusPage {
+	return predicate.StatusPage(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ComponentsTable, ComponentsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasComponentsWith applies the HasEdge predicate on the "components" edge with a given conditions (other predicates).
+func HasComponentsWith(preds ...predicate.StatusPageComponent) predicate.StatusPage {
+	return predicate.StatusPage(func(s *sql.Selector) {
+		step := newComponentsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasOwnerTeam applies the HasEdge predicate on the "owner_team" edge.
+func HasOwnerTeam() predicate.StatusPage {
+	return predicate.StatusPage(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, OwnerTeamTable, OwnerTeamColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasOwnerTeamWith applies the HasEdge predicate on the "owner_team" edge with a given conditions (other predicates).
+func HasOwnerTeamWith(preds ...predicate.Team) predicate.StatusPage {
+	return predicate.StatusPage(func(s *sql.Selector) {
+		step := newOwnerTeamStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

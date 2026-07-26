@@ -66,11 +66,6 @@ func Password(v string) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldPassword, v))
 }
 
-// Role applies equality check predicate on the "role" field. It's identical to RoleEQ.
-func Role(v string) predicate.User {
-	return predicate.User(sql.FieldEQ(FieldRole, v))
-}
-
 // FullName applies equality check predicate on the "full_name" field. It's identical to FullNameEQ.
 func FullName(v string) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldFullName, v))
@@ -272,68 +267,23 @@ func PasswordContainsFold(v string) predicate.User {
 }
 
 // RoleEQ applies the EQ predicate on the "role" field.
-func RoleEQ(v string) predicate.User {
+func RoleEQ(v Role) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldRole, v))
 }
 
 // RoleNEQ applies the NEQ predicate on the "role" field.
-func RoleNEQ(v string) predicate.User {
+func RoleNEQ(v Role) predicate.User {
 	return predicate.User(sql.FieldNEQ(FieldRole, v))
 }
 
 // RoleIn applies the In predicate on the "role" field.
-func RoleIn(vs ...string) predicate.User {
+func RoleIn(vs ...Role) predicate.User {
 	return predicate.User(sql.FieldIn(FieldRole, vs...))
 }
 
 // RoleNotIn applies the NotIn predicate on the "role" field.
-func RoleNotIn(vs ...string) predicate.User {
+func RoleNotIn(vs ...Role) predicate.User {
 	return predicate.User(sql.FieldNotIn(FieldRole, vs...))
-}
-
-// RoleGT applies the GT predicate on the "role" field.
-func RoleGT(v string) predicate.User {
-	return predicate.User(sql.FieldGT(FieldRole, v))
-}
-
-// RoleGTE applies the GTE predicate on the "role" field.
-func RoleGTE(v string) predicate.User {
-	return predicate.User(sql.FieldGTE(FieldRole, v))
-}
-
-// RoleLT applies the LT predicate on the "role" field.
-func RoleLT(v string) predicate.User {
-	return predicate.User(sql.FieldLT(FieldRole, v))
-}
-
-// RoleLTE applies the LTE predicate on the "role" field.
-func RoleLTE(v string) predicate.User {
-	return predicate.User(sql.FieldLTE(FieldRole, v))
-}
-
-// RoleContains applies the Contains predicate on the "role" field.
-func RoleContains(v string) predicate.User {
-	return predicate.User(sql.FieldContains(FieldRole, v))
-}
-
-// RoleHasPrefix applies the HasPrefix predicate on the "role" field.
-func RoleHasPrefix(v string) predicate.User {
-	return predicate.User(sql.FieldHasPrefix(FieldRole, v))
-}
-
-// RoleHasSuffix applies the HasSuffix predicate on the "role" field.
-func RoleHasSuffix(v string) predicate.User {
-	return predicate.User(sql.FieldHasSuffix(FieldRole, v))
-}
-
-// RoleEqualFold applies the EqualFold predicate on the "role" field.
-func RoleEqualFold(v string) predicate.User {
-	return predicate.User(sql.FieldEqualFold(FieldRole, v))
-}
-
-// RoleContainsFold applies the ContainsFold predicate on the "role" field.
-func RoleContainsFold(v string) predicate.User {
-	return predicate.User(sql.FieldContainsFold(FieldRole, v))
 }
 
 // FullNameEQ applies the EQ predicate on the "full_name" field.
@@ -1151,6 +1101,121 @@ func UpdatedAtLTE(v time.Time) predicate.User {
 	return predicate.User(sql.FieldLTE(FieldUpdatedAt, v))
 }
 
+// HasSessions applies the HasEdge predicate on the "sessions" edge.
+func HasSessions() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, SessionsTable, SessionsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasSessionsWith applies the HasEdge predicate on the "sessions" edge with a given conditions (other predicates).
+func HasSessionsWith(preds ...predicate.Session) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newSessionsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasPasswordResetTokens applies the HasEdge predicate on the "password_reset_tokens" edge.
+func HasPasswordResetTokens() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, PasswordResetTokensTable, PasswordResetTokensColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasPasswordResetTokensWith applies the HasEdge predicate on the "password_reset_tokens" edge with a given conditions (other predicates).
+func HasPasswordResetTokensWith(preds ...predicate.PasswordResetToken) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newPasswordResetTokensStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasPersonalAccessTokens applies the HasEdge predicate on the "personal_access_tokens" edge.
+func HasPersonalAccessTokens() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, PersonalAccessTokensTable, PersonalAccessTokensColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasPersonalAccessTokensWith applies the HasEdge predicate on the "personal_access_tokens" edge with a given conditions (other predicates).
+func HasPersonalAccessTokensWith(preds ...predicate.PersonalAccessToken) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newPersonalAccessTokensStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasOidcIdentities applies the HasEdge predicate on the "oidc_identities" edge.
+func HasOidcIdentities() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, OidcIdentitiesTable, OidcIdentitiesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasOidcIdentitiesWith applies the HasEdge predicate on the "oidc_identities" edge with a given conditions (other predicates).
+func HasOidcIdentitiesWith(preds ...predicate.OIDCIdentity) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newOidcIdentitiesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasTeamMembers applies the HasEdge predicate on the "team_members" edge.
+func HasTeamMembers() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, TeamMembersTable, TeamMembersColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasTeamMembersWith applies the HasEdge predicate on the "team_members" edge with a given conditions (other predicates).
+func HasTeamMembersWith(preds ...predicate.TeamMember) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newTeamMembersStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasIcsRoleAssignments applies the HasEdge predicate on the "ics_role_assignments" edge.
 func HasIcsRoleAssignments() predicate.User {
 	return predicate.User(func(s *sql.Selector) {
@@ -1189,6 +1254,236 @@ func HasDocumentEdits() predicate.User {
 func HasDocumentEditsWith(preds ...predicate.IncidentDocument) predicate.User {
 	return predicate.User(func(s *sql.Selector) {
 		step := newDocumentEditsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasCommanderIncidents applies the HasEdge predicate on the "commander_incidents" edge.
+func HasCommanderIncidents() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, CommanderIncidentsTable, CommanderIncidentsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCommanderIncidentsWith applies the HasEdge predicate on the "commander_incidents" edge with a given conditions (other predicates).
+func HasCommanderIncidentsWith(preds ...predicate.Incident) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newCommanderIncidentsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasCommunicatorIncidents applies the HasEdge predicate on the "communicator_incidents" edge.
+func HasCommunicatorIncidents() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, CommunicatorIncidentsTable, CommunicatorIncidentsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCommunicatorIncidentsWith applies the HasEdge predicate on the "communicator_incidents" edge with a given conditions (other predicates).
+func HasCommunicatorIncidentsWith(preds ...predicate.Incident) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newCommunicatorIncidentsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasResponderIncidents applies the HasEdge predicate on the "responder_incidents" edge.
+func HasResponderIncidents() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ResponderIncidentsTable, ResponderIncidentsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasResponderIncidentsWith applies the HasEdge predicate on the "responder_incidents" edge with a given conditions (other predicates).
+func HasResponderIncidentsWith(preds ...predicate.Incident) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newResponderIncidentsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasTriageOverrides applies the HasEdge predicate on the "triage_overrides" edge.
+func HasTriageOverrides() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, TriageOverridesTable, TriageOverridesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasTriageOverridesWith applies the HasEdge predicate on the "triage_overrides" edge with a given conditions (other predicates).
+func HasTriageOverridesWith(preds ...predicate.TriageResult) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newTriageOverridesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasApprovedPostMortems applies the HasEdge predicate on the "approved_post_mortems" edge.
+func HasApprovedPostMortems() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ApprovedPostMortemsTable, ApprovedPostMortemsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasApprovedPostMortemsWith applies the HasEdge predicate on the "approved_post_mortems" edge with a given conditions (other predicates).
+func HasApprovedPostMortemsWith(preds ...predicate.PostMortem) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newApprovedPostMortemsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasTriageRules applies the HasEdge predicate on the "triage_rules" edge.
+func HasTriageRules() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, TriageRulesTable, TriageRulesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasTriageRulesWith applies the HasEdge predicate on the "triage_rules" edge with a given conditions (other predicates).
+func HasTriageRulesWith(preds ...predicate.TriageRule) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newTriageRulesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasKnowledgeNotes applies the HasEdge predicate on the "knowledge_notes" edge.
+func HasKnowledgeNotes() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, KnowledgeNotesTable, KnowledgeNotesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasKnowledgeNotesWith applies the HasEdge predicate on the "knowledge_notes" edge with a given conditions (other predicates).
+func HasKnowledgeNotesWith(preds ...predicate.KnowledgeNote) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newKnowledgeNotesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasScheduleOverrides applies the HasEdge predicate on the "schedule_overrides" edge.
+func HasScheduleOverrides() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ScheduleOverridesTable, ScheduleOverridesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasScheduleOverridesWith applies the HasEdge predicate on the "schedule_overrides" edge with a given conditions (other predicates).
+func HasScheduleOverridesWith(preds ...predicate.ScheduleOverride) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newScheduleOverridesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasOutgoingHandoffs applies the HasEdge predicate on the "outgoing_handoffs" edge.
+func HasOutgoingHandoffs() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, OutgoingHandoffsTable, OutgoingHandoffsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasOutgoingHandoffsWith applies the HasEdge predicate on the "outgoing_handoffs" edge with a given conditions (other predicates).
+func HasOutgoingHandoffsWith(preds ...predicate.HandoffRecord) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newOutgoingHandoffsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasIncomingHandoffs applies the HasEdge predicate on the "incoming_handoffs" edge.
+func HasIncomingHandoffs() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, IncomingHandoffsTable, IncomingHandoffsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasIncomingHandoffsWith applies the HasEdge predicate on the "incoming_handoffs" edge with a given conditions (other predicates).
+func HasIncomingHandoffsWith(preds ...predicate.HandoffRecord) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newIncomingHandoffsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

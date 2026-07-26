@@ -23,9 +23,9 @@ type AgentToken struct {
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty"`
 	// AgentType holds the value of the "agent_type" field.
-	AgentType string `json:"agent_type,omitempty"`
+	AgentType agenttoken.AgentType `json:"agent_type,omitempty"`
 	// TokenHash holds the value of the "token_hash" field.
-	TokenHash string `json:"token_hash,omitempty"`
+	TokenHash string `json:"-"`
 	// LookupPrefix holds the value of the "lookup_prefix" field.
 	LookupPrefix string `json:"lookup_prefix,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -58,9 +58,17 @@ type AgentTokenEdges struct {
 	DmMessages []*AgentDMMessage `json:"dm_messages,omitempty"`
 	// IcsRoles holds the value of the ics_roles edge.
 	IcsRoles []*ICSRoleAssignment `json:"ics_roles,omitempty"`
+	// Memories holds the value of the memories edge.
+	Memories []*AgentMemory `json:"memories,omitempty"`
+	// SentAsks holds the value of the sent_asks edge.
+	SentAsks []*AgentAsk `json:"sent_asks,omitempty"`
+	// ReceivedAsks holds the value of the received_asks edge.
+	ReceivedAsks []*AgentAsk `json:"received_asks,omitempty"`
+	// RepliedAsks holds the value of the replied_asks edge.
+	RepliedAsks []*AgentAsk `json:"replied_asks,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [6]bool
 }
 
 // DmMessagesOrErr returns the DmMessages value or an error if the edge
@@ -79,6 +87,42 @@ func (e AgentTokenEdges) IcsRolesOrErr() ([]*ICSRoleAssignment, error) {
 		return e.IcsRoles, nil
 	}
 	return nil, &NotLoadedError{edge: "ics_roles"}
+}
+
+// MemoriesOrErr returns the Memories value or an error if the edge
+// was not loaded in eager-loading.
+func (e AgentTokenEdges) MemoriesOrErr() ([]*AgentMemory, error) {
+	if e.loadedTypes[2] {
+		return e.Memories, nil
+	}
+	return nil, &NotLoadedError{edge: "memories"}
+}
+
+// SentAsksOrErr returns the SentAsks value or an error if the edge
+// was not loaded in eager-loading.
+func (e AgentTokenEdges) SentAsksOrErr() ([]*AgentAsk, error) {
+	if e.loadedTypes[3] {
+		return e.SentAsks, nil
+	}
+	return nil, &NotLoadedError{edge: "sent_asks"}
+}
+
+// ReceivedAsksOrErr returns the ReceivedAsks value or an error if the edge
+// was not loaded in eager-loading.
+func (e AgentTokenEdges) ReceivedAsksOrErr() ([]*AgentAsk, error) {
+	if e.loadedTypes[4] {
+		return e.ReceivedAsks, nil
+	}
+	return nil, &NotLoadedError{edge: "received_asks"}
+}
+
+// RepliedAsksOrErr returns the RepliedAsks value or an error if the edge
+// was not loaded in eager-loading.
+func (e AgentTokenEdges) RepliedAsksOrErr() ([]*AgentAsk, error) {
+	if e.loadedTypes[5] {
+		return e.RepliedAsks, nil
+	}
+	return nil, &NotLoadedError{edge: "replied_asks"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -127,7 +171,7 @@ func (_m *AgentToken) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field agent_type", values[i])
 			} else if value.Valid {
-				_m.AgentType = value.String
+				_m.AgentType = agenttoken.AgentType(value.String)
 			}
 		case agenttoken.FieldTokenHash:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -224,6 +268,26 @@ func (_m *AgentToken) QueryIcsRoles() *ICSRoleAssignmentQuery {
 	return NewAgentTokenClient(_m.config).QueryIcsRoles(_m)
 }
 
+// QueryMemories queries the "memories" edge of the AgentToken entity.
+func (_m *AgentToken) QueryMemories() *AgentMemoryQuery {
+	return NewAgentTokenClient(_m.config).QueryMemories(_m)
+}
+
+// QuerySentAsks queries the "sent_asks" edge of the AgentToken entity.
+func (_m *AgentToken) QuerySentAsks() *AgentAskQuery {
+	return NewAgentTokenClient(_m.config).QuerySentAsks(_m)
+}
+
+// QueryReceivedAsks queries the "received_asks" edge of the AgentToken entity.
+func (_m *AgentToken) QueryReceivedAsks() *AgentAskQuery {
+	return NewAgentTokenClient(_m.config).QueryReceivedAsks(_m)
+}
+
+// QueryRepliedAsks queries the "replied_asks" edge of the AgentToken entity.
+func (_m *AgentToken) QueryRepliedAsks() *AgentAskQuery {
+	return NewAgentTokenClient(_m.config).QueryRepliedAsks(_m)
+}
+
 // Update returns a builder for updating this AgentToken.
 // Note that you need to call AgentToken.Unwrap() before calling this method if this AgentToken
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -251,10 +315,9 @@ func (_m *AgentToken) String() string {
 	builder.WriteString(_m.Name)
 	builder.WriteString(", ")
 	builder.WriteString("agent_type=")
-	builder.WriteString(_m.AgentType)
+	builder.WriteString(fmt.Sprintf("%v", _m.AgentType))
 	builder.WriteString(", ")
-	builder.WriteString("token_hash=")
-	builder.WriteString(_m.TokenHash)
+	builder.WriteString("token_hash=<sensitive>")
 	builder.WriteString(", ")
 	builder.WriteString("lookup_prefix=")
 	builder.WriteString(_m.LookupPrefix)

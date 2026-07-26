@@ -60,11 +60,6 @@ func UserID(v string) predicate.Notification {
 	return predicate.Notification(sql.FieldEQ(FieldUserID, v))
 }
 
-// Type applies equality check predicate on the "type" field. It's identical to TypeEQ.
-func Type(v string) predicate.Notification {
-	return predicate.Notification(sql.FieldEQ(FieldType, v))
-}
-
 // Title applies equality check predicate on the "title" field. It's identical to TitleEQ.
 func Title(v string) predicate.Notification {
 	return predicate.Notification(sql.FieldEQ(FieldTitle, v))
@@ -78,11 +73,6 @@ func Message(v string) predicate.Notification {
 // Read applies equality check predicate on the "read" field. It's identical to ReadEQ.
 func Read(v bool) predicate.Notification {
 	return predicate.Notification(sql.FieldEQ(FieldRead, v))
-}
-
-// ResourceType applies equality check predicate on the "resource_type" field. It's identical to ResourceTypeEQ.
-func ResourceType(v string) predicate.Notification {
-	return predicate.Notification(sql.FieldEQ(FieldResourceType, v))
 }
 
 // ResourceID applies equality check predicate on the "resource_id" field. It's identical to ResourceIDEQ.
@@ -171,68 +161,23 @@ func UserIDContainsFold(v string) predicate.Notification {
 }
 
 // TypeEQ applies the EQ predicate on the "type" field.
-func TypeEQ(v string) predicate.Notification {
+func TypeEQ(v Type) predicate.Notification {
 	return predicate.Notification(sql.FieldEQ(FieldType, v))
 }
 
 // TypeNEQ applies the NEQ predicate on the "type" field.
-func TypeNEQ(v string) predicate.Notification {
+func TypeNEQ(v Type) predicate.Notification {
 	return predicate.Notification(sql.FieldNEQ(FieldType, v))
 }
 
 // TypeIn applies the In predicate on the "type" field.
-func TypeIn(vs ...string) predicate.Notification {
+func TypeIn(vs ...Type) predicate.Notification {
 	return predicate.Notification(sql.FieldIn(FieldType, vs...))
 }
 
 // TypeNotIn applies the NotIn predicate on the "type" field.
-func TypeNotIn(vs ...string) predicate.Notification {
+func TypeNotIn(vs ...Type) predicate.Notification {
 	return predicate.Notification(sql.FieldNotIn(FieldType, vs...))
-}
-
-// TypeGT applies the GT predicate on the "type" field.
-func TypeGT(v string) predicate.Notification {
-	return predicate.Notification(sql.FieldGT(FieldType, v))
-}
-
-// TypeGTE applies the GTE predicate on the "type" field.
-func TypeGTE(v string) predicate.Notification {
-	return predicate.Notification(sql.FieldGTE(FieldType, v))
-}
-
-// TypeLT applies the LT predicate on the "type" field.
-func TypeLT(v string) predicate.Notification {
-	return predicate.Notification(sql.FieldLT(FieldType, v))
-}
-
-// TypeLTE applies the LTE predicate on the "type" field.
-func TypeLTE(v string) predicate.Notification {
-	return predicate.Notification(sql.FieldLTE(FieldType, v))
-}
-
-// TypeContains applies the Contains predicate on the "type" field.
-func TypeContains(v string) predicate.Notification {
-	return predicate.Notification(sql.FieldContains(FieldType, v))
-}
-
-// TypeHasPrefix applies the HasPrefix predicate on the "type" field.
-func TypeHasPrefix(v string) predicate.Notification {
-	return predicate.Notification(sql.FieldHasPrefix(FieldType, v))
-}
-
-// TypeHasSuffix applies the HasSuffix predicate on the "type" field.
-func TypeHasSuffix(v string) predicate.Notification {
-	return predicate.Notification(sql.FieldHasSuffix(FieldType, v))
-}
-
-// TypeEqualFold applies the EqualFold predicate on the "type" field.
-func TypeEqualFold(v string) predicate.Notification {
-	return predicate.Notification(sql.FieldEqualFold(FieldType, v))
-}
-
-// TypeContainsFold applies the ContainsFold predicate on the "type" field.
-func TypeContainsFold(v string) predicate.Notification {
-	return predicate.Notification(sql.FieldContainsFold(FieldType, v))
 }
 
 // TitleEQ applies the EQ predicate on the "title" field.
@@ -376,58 +321,23 @@ func ReadNEQ(v bool) predicate.Notification {
 }
 
 // ResourceTypeEQ applies the EQ predicate on the "resource_type" field.
-func ResourceTypeEQ(v string) predicate.Notification {
+func ResourceTypeEQ(v ResourceType) predicate.Notification {
 	return predicate.Notification(sql.FieldEQ(FieldResourceType, v))
 }
 
 // ResourceTypeNEQ applies the NEQ predicate on the "resource_type" field.
-func ResourceTypeNEQ(v string) predicate.Notification {
+func ResourceTypeNEQ(v ResourceType) predicate.Notification {
 	return predicate.Notification(sql.FieldNEQ(FieldResourceType, v))
 }
 
 // ResourceTypeIn applies the In predicate on the "resource_type" field.
-func ResourceTypeIn(vs ...string) predicate.Notification {
+func ResourceTypeIn(vs ...ResourceType) predicate.Notification {
 	return predicate.Notification(sql.FieldIn(FieldResourceType, vs...))
 }
 
 // ResourceTypeNotIn applies the NotIn predicate on the "resource_type" field.
-func ResourceTypeNotIn(vs ...string) predicate.Notification {
+func ResourceTypeNotIn(vs ...ResourceType) predicate.Notification {
 	return predicate.Notification(sql.FieldNotIn(FieldResourceType, vs...))
-}
-
-// ResourceTypeGT applies the GT predicate on the "resource_type" field.
-func ResourceTypeGT(v string) predicate.Notification {
-	return predicate.Notification(sql.FieldGT(FieldResourceType, v))
-}
-
-// ResourceTypeGTE applies the GTE predicate on the "resource_type" field.
-func ResourceTypeGTE(v string) predicate.Notification {
-	return predicate.Notification(sql.FieldGTE(FieldResourceType, v))
-}
-
-// ResourceTypeLT applies the LT predicate on the "resource_type" field.
-func ResourceTypeLT(v string) predicate.Notification {
-	return predicate.Notification(sql.FieldLT(FieldResourceType, v))
-}
-
-// ResourceTypeLTE applies the LTE predicate on the "resource_type" field.
-func ResourceTypeLTE(v string) predicate.Notification {
-	return predicate.Notification(sql.FieldLTE(FieldResourceType, v))
-}
-
-// ResourceTypeContains applies the Contains predicate on the "resource_type" field.
-func ResourceTypeContains(v string) predicate.Notification {
-	return predicate.Notification(sql.FieldContains(FieldResourceType, v))
-}
-
-// ResourceTypeHasPrefix applies the HasPrefix predicate on the "resource_type" field.
-func ResourceTypeHasPrefix(v string) predicate.Notification {
-	return predicate.Notification(sql.FieldHasPrefix(FieldResourceType, v))
-}
-
-// ResourceTypeHasSuffix applies the HasSuffix predicate on the "resource_type" field.
-func ResourceTypeHasSuffix(v string) predicate.Notification {
-	return predicate.Notification(sql.FieldHasSuffix(FieldResourceType, v))
 }
 
 // ResourceTypeIsNil applies the IsNil predicate on the "resource_type" field.
@@ -438,16 +348,6 @@ func ResourceTypeIsNil() predicate.Notification {
 // ResourceTypeNotNil applies the NotNil predicate on the "resource_type" field.
 func ResourceTypeNotNil() predicate.Notification {
 	return predicate.Notification(sql.FieldNotNull(FieldResourceType))
-}
-
-// ResourceTypeEqualFold applies the EqualFold predicate on the "resource_type" field.
-func ResourceTypeEqualFold(v string) predicate.Notification {
-	return predicate.Notification(sql.FieldEqualFold(FieldResourceType, v))
-}
-
-// ResourceTypeContainsFold applies the ContainsFold predicate on the "resource_type" field.
-func ResourceTypeContainsFold(v string) predicate.Notification {
-	return predicate.Notification(sql.FieldContainsFold(FieldResourceType, v))
 }
 
 // ResourceIDEQ applies the EQ predicate on the "resource_id" field.

@@ -124,7 +124,7 @@ func (s *pgAgentMemoryStore) Create(ctx context.Context, mem *AgentMemoryRecord)
 
 	b := s.client.AgentMemory.Create().
 		SetContent(mem.Content).
-		SetMemoryType(mem.MemoryType).
+		SetMemoryType(agentmemory.MemoryType(mem.MemoryType)).
 		SetHash(mem.Hash).
 		SetAgentName(mem.AgentName).
 		SetAgentType(mem.AgentType).
@@ -368,7 +368,7 @@ func (s *pgAgentMemoryStore) FindByInvestigation(ctx context.Context, investigat
 
 func applyMemoryFilters(query *ent.AgentMemoryQuery, f MemoryFilters) *ent.AgentMemoryQuery {
 	if f.MemoryType != nil {
-		query = query.Where(agentmemory.MemoryType(*f.MemoryType))
+		query = query.Where(agentmemory.MemoryTypeEQ(agentmemory.MemoryType(*f.MemoryType)))
 	}
 	if f.AgentID != nil {
 		query = query.Where(agentmemory.AgentID(*f.AgentID))
@@ -526,7 +526,7 @@ func pgMemoryToRecord(m *ent.AgentMemory) *AgentMemoryRecord {
 	return &AgentMemoryRecord{
 		ID:              m.ID,
 		Content:         m.Content,
-		MemoryType:      m.MemoryType,
+		MemoryType:      string(m.MemoryType),
 		Hash:            m.Hash,
 		Embedding:       embedding,
 		AgentID:         m.AgentID,

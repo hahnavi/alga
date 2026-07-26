@@ -4,7 +4,9 @@ package ent
 
 import (
 	"alga/ent/escalationpolicy"
+	"alga/ent/incident"
 	"alga/ent/schema"
+	"alga/ent/service"
 	"context"
 	"errors"
 	"fmt"
@@ -104,6 +106,36 @@ func (_c *EscalationPolicyCreate) SetNillableID(v *uuid.UUID) *EscalationPolicyC
 	return _c
 }
 
+// AddServiceIDs adds the "services" edge to the Service entity by IDs.
+func (_c *EscalationPolicyCreate) AddServiceIDs(ids ...uuid.UUID) *EscalationPolicyCreate {
+	_c.mutation.AddServiceIDs(ids...)
+	return _c
+}
+
+// AddServices adds the "services" edges to the Service entity.
+func (_c *EscalationPolicyCreate) AddServices(v ...*Service) *EscalationPolicyCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddServiceIDs(ids...)
+}
+
+// AddIncidentIDs adds the "incidents" edge to the Incident entity by IDs.
+func (_c *EscalationPolicyCreate) AddIncidentIDs(ids ...uuid.UUID) *EscalationPolicyCreate {
+	_c.mutation.AddIncidentIDs(ids...)
+	return _c
+}
+
+// AddIncidents adds the "incidents" edges to the Incident entity.
+func (_c *EscalationPolicyCreate) AddIncidents(v ...*Incident) *EscalationPolicyCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddIncidentIDs(ids...)
+}
+
 // Mutation returns the EscalationPolicyMutation object of the builder.
 func (_c *EscalationPolicyCreate) Mutation() *EscalationPolicyMutation {
 	return _c.mutation
@@ -181,6 +213,11 @@ func (_c *EscalationPolicyCreate) check() error {
 	if _, ok := _c.mutation.RepeatCount(); !ok {
 		return &ValidationError{Name: "repeat_count", err: errors.New(`ent: missing required field "EscalationPolicy.repeat_count"`)}
 	}
+	if v, ok := _c.mutation.RepeatCount(); ok {
+		if err := escalationpolicy.RepeatCountValidator(v); err != nil {
+			return &ValidationError{Name: "repeat_count", err: fmt.Errorf(`ent: validator failed for field "EscalationPolicy.repeat_count": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Levels(); !ok {
 		return &ValidationError{Name: "levels", err: errors.New(`ent: missing required field "EscalationPolicy.levels"`)}
 	}
@@ -248,6 +285,38 @@ func (_c *EscalationPolicyCreate) createSpec() (*EscalationPolicy, *sqlgraph.Cre
 	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(escalationpolicy.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if nodes := _c.mutation.ServicesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   escalationpolicy.ServicesTable,
+			Columns: []string{escalationpolicy.ServicesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.IncidentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   escalationpolicy.IncidentsTable,
+			Columns: []string{escalationpolicy.IncidentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

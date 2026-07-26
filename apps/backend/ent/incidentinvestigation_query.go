@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/alertinvestigation"
+	"alga/ent/coordinationtask"
 	"alga/ent/incident"
 	"alga/ent/incidentinvestigation"
 	"alga/ent/incidentinvestigationupdateentry"
@@ -33,6 +34,7 @@ type IncidentInvestigationQuery struct {
 	withIncident                    *IncidentQuery
 	withSourceAlertInvestigation    *AlertInvestigationQuery
 	withParentInvestigation         *IncidentInvestigationQuery
+	withLinkedCoordinationTasks     *CoordinationTaskQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -194,6 +196,28 @@ func (_q *IncidentInvestigationQuery) QueryParentInvestigation() *IncidentInvest
 			sqlgraph.From(incidentinvestigation.Table, incidentinvestigation.FieldID, selector),
 			sqlgraph.To(incidentinvestigation.Table, incidentinvestigation.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, incidentinvestigation.ParentInvestigationTable, incidentinvestigation.ParentInvestigationColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryLinkedCoordinationTasks chains the current query on the "linked_coordination_tasks" edge.
+func (_q *IncidentInvestigationQuery) QueryLinkedCoordinationTasks() *CoordinationTaskQuery {
+	query := (&CoordinationTaskClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(incidentinvestigation.Table, incidentinvestigation.FieldID, selector),
+			sqlgraph.To(coordinationtask.Table, coordinationtask.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, incidentinvestigation.LinkedCoordinationTasksTable, incidentinvestigation.LinkedCoordinationTasksColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -399,6 +423,7 @@ func (_q *IncidentInvestigationQuery) Clone() *IncidentInvestigationQuery {
 		withIncident:                    _q.withIncident.Clone(),
 		withSourceAlertInvestigation:    _q.withSourceAlertInvestigation.Clone(),
 		withParentInvestigation:         _q.withParentInvestigation.Clone(),
+		withLinkedCoordinationTasks:     _q.withLinkedCoordinationTasks.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -468,6 +493,17 @@ func (_q *IncidentInvestigationQuery) WithParentInvestigation(opts ...func(*Inci
 		opt(query)
 	}
 	_q.withParentInvestigation = query
+	return _q
+}
+
+// WithLinkedCoordinationTasks tells the query-builder to eager-load the nodes that are connected to
+// the "linked_coordination_tasks" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *IncidentInvestigationQuery) WithLinkedCoordinationTasks(opts ...func(*CoordinationTaskQuery)) *IncidentInvestigationQuery {
+	query := (&CoordinationTaskClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withLinkedCoordinationTasks = query
 	return _q
 }
 
@@ -549,13 +585,14 @@ func (_q *IncidentInvestigationQuery) sqlAll(ctx context.Context, hooks ...query
 	var (
 		nodes       = []*IncidentInvestigation{}
 		_spec       = _q.querySpec()
-		loadedTypes = [6]bool{
+		loadedTypes = [7]bool{
 			_q.withUpdates != nil,
 			_q.withPromotedAlertInvestigations != nil,
 			_q.withChildInvestigations != nil,
 			_q.withIncident != nil,
 			_q.withSourceAlertInvestigation != nil,
 			_q.withParentInvestigation != nil,
+			_q.withLinkedCoordinationTasks != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -621,6 +658,15 @@ func (_q *IncidentInvestigationQuery) sqlAll(ctx context.Context, hooks ...query
 			return nil, err
 		}
 	}
+	if query := _q.withLinkedCoordinationTasks; query != nil {
+		if err := _q.loadLinkedCoordinationTasks(ctx, query, nodes,
+			func(n *IncidentInvestigation) { n.Edges.LinkedCoordinationTasks = []*CoordinationTask{} },
+			func(n *IncidentInvestigation, e *CoordinationTask) {
+				n.Edges.LinkedCoordinationTasks = append(n.Edges.LinkedCoordinationTasks, e)
+			}); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
 }
 
@@ -635,7 +681,7 @@ func (_q *IncidentInvestigationQuery) loadUpdates(ctx context.Context, query *In
 		}
 	}
 	if len(query.ctx.Fields) > 0 {
-		query.ctx.AppendFieldOnce(incidentinvestigationupdateentry.FieldIncidentInvestigationUUID)
+		query.ctx.AppendFieldOnce(incidentinvestigationupdateentry.FieldIncidentInvestigationID)
 	}
 	query.Where(predicate.IncidentInvestigationUpdateEntry(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(incidentinvestigation.UpdatesColumn), fks...))
@@ -645,10 +691,10 @@ func (_q *IncidentInvestigationQuery) loadUpdates(ctx context.Context, query *In
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.IncidentInvestigationUUID
+		fk := n.IncidentInvestigationID
 		node, ok := nodeids[fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "incident_investigation_uuid" returned %v for node %v`, fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "incident_investigation_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}
@@ -813,6 +859,39 @@ func (_q *IncidentInvestigationQuery) loadParentInvestigation(ctx context.Contex
 		for i := range nodes {
 			assign(nodes[i], n)
 		}
+	}
+	return nil
+}
+func (_q *IncidentInvestigationQuery) loadLinkedCoordinationTasks(ctx context.Context, query *CoordinationTaskQuery, nodes []*IncidentInvestigation, init func(*IncidentInvestigation), assign func(*IncidentInvestigation, *CoordinationTask)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*IncidentInvestigation)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(coordinationtask.FieldLinkedInvestigationID)
+	}
+	query.Where(predicate.CoordinationTask(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(incidentinvestigation.LinkedCoordinationTasksColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.LinkedInvestigationID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "linked_investigation_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "linked_investigation_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
 	}
 	return nil
 }

@@ -3,6 +3,7 @@
 package alert
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -59,6 +60,8 @@ const (
 	EdgeEvents = "events"
 	// EdgeDeliveryTargets holds the string denoting the delivery_targets edge name in mutations.
 	EdgeDeliveryTargets = "delivery_targets"
+	// EdgeTriageResult holds the string denoting the triage_result edge name in mutations.
+	EdgeTriageResult = "triage_result"
 	// Table holds the table name of the alert in the database.
 	Table = "alerts"
 	// IncidentsTable is the table that holds the incidents relation/edge. The primary key declared below.
@@ -79,14 +82,21 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "alertevent" package.
 	EventsInverseTable = "alert_events"
 	// EventsColumn is the table column denoting the events relation/edge.
-	EventsColumn = "alert_events"
+	EventsColumn = "alert_id"
 	// DeliveryTargetsTable is the table that holds the delivery_targets relation/edge.
 	DeliveryTargetsTable = "delivery_targets"
 	// DeliveryTargetsInverseTable is the table name for the DeliveryTarget entity.
 	// It exists in this package in order to avoid circular dependency with the "deliverytarget" package.
 	DeliveryTargetsInverseTable = "delivery_targets"
 	// DeliveryTargetsColumn is the table column denoting the delivery_targets relation/edge.
-	DeliveryTargetsColumn = "alert_delivery_targets"
+	DeliveryTargetsColumn = "alert_id"
+	// TriageResultTable is the table that holds the triage_result relation/edge.
+	TriageResultTable = "alerts"
+	// TriageResultInverseTable is the table name for the TriageResult entity.
+	// It exists in this package in order to avoid circular dependency with the "triageresult" package.
+	TriageResultInverseTable = "triage_results"
+	// TriageResultColumn is the table column denoting the triage_result relation/edge.
+	TriageResultColumn = "triage_result_id"
 )
 
 // Columns holds all SQL columns for alert fields.
@@ -131,8 +141,6 @@ func ValidColumn(column string) bool {
 var (
 	// FingerprintValidator is a validator for the "fingerprint" field. It is called by the builders before save.
 	FingerprintValidator func(string) error
-	// DefaultStatus holds the default value on creation for the "status" field.
-	DefaultStatus string
 	// DefaultAcknowledged holds the default value on creation for the "acknowledged" field.
 	DefaultAcknowledged bool
 	// DefaultSilenced holds the default value on creation for the "silenced" field.
@@ -160,6 +168,32 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// Status defines the type for the "status" enum field.
+type Status string
+
+// StatusFiring is the default value of the Status enum.
+const DefaultStatus = StatusFiring
+
+// Status values.
+const (
+	StatusFiring   Status = "firing"
+	StatusResolved Status = "resolved"
+)
+
+func (s Status) String() string {
+	return string(s)
+}
+
+// StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
+func StatusValidator(s Status) error {
+	switch s {
+	case StatusFiring, StatusResolved:
+		return nil
+	default:
+		return fmt.Errorf("alert: invalid enum value for status field: %q", s)
+	}
+}
 
 // OrderOption defines the ordering options for the Alert queries.
 type OrderOption func(*sql.Selector)
@@ -294,6 +328,13 @@ func ByDeliveryTargets(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newDeliveryTargetsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByTriageResultField orders the results by triage_result field.
+func ByTriageResultField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newTriageResultStep(), sql.OrderByField(field, opts...))
+	}
+}
 func newIncidentsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -320,5 +361,12 @@ func newDeliveryTargetsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(DeliveryTargetsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, DeliveryTargetsTable, DeliveryTargetsColumn),
+	)
+}
+func newTriageResultStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(TriageResultInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, TriageResultTable, TriageResultColumn),
 	)
 }

@@ -22,7 +22,7 @@ type DeliveryTargetCreate struct {
 }
 
 // SetProvider sets the "provider" field.
-func (_c *DeliveryTargetCreate) SetProvider(v string) *DeliveryTargetCreate {
+func (_c *DeliveryTargetCreate) SetProvider(v deliverytarget.Provider) *DeliveryTargetCreate {
 	_c.mutation.SetProvider(v)
 	return _c
 }
@@ -61,6 +61,12 @@ func (_c *DeliveryTargetCreate) SetNillablePostID(v *string) *DeliveryTargetCrea
 	return _c
 }
 
+// SetAlertID sets the "alert_id" field.
+func (_c *DeliveryTargetCreate) SetAlertID(v uuid.UUID) *DeliveryTargetCreate {
+	_c.mutation.SetAlertID(v)
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *DeliveryTargetCreate) SetID(v uuid.UUID) *DeliveryTargetCreate {
 	_c.mutation.SetID(v)
@@ -72,12 +78,6 @@ func (_c *DeliveryTargetCreate) SetNillableID(v *uuid.UUID) *DeliveryTargetCreat
 	if v != nil {
 		_c.SetID(*v)
 	}
-	return _c
-}
-
-// SetAlertID sets the "alert" edge to the Alert entity by ID.
-func (_c *DeliveryTargetCreate) SetAlertID(id uuid.UUID) *DeliveryTargetCreate {
-	_c.mutation.SetAlertID(id)
 	return _c
 }
 
@@ -153,6 +153,9 @@ func (_c *DeliveryTargetCreate) check() error {
 			return &ValidationError{Name: "channel", err: fmt.Errorf(`ent: validator failed for field "DeliveryTarget.channel": %w`, err)}
 		}
 	}
+	if _, ok := _c.mutation.AlertID(); !ok {
+		return &ValidationError{Name: "alert_id", err: errors.New(`ent: missing required field "DeliveryTarget.alert_id"`)}
+	}
 	if len(_c.mutation.AlertIDs()) == 0 {
 		return &ValidationError{Name: "alert", err: errors.New(`ent: missing required edge "DeliveryTarget.alert"`)}
 	}
@@ -192,7 +195,7 @@ func (_c *DeliveryTargetCreate) createSpec() (*DeliveryTarget, *sqlgraph.CreateS
 		_spec.ID.Value = &id
 	}
 	if value, ok := _c.mutation.Provider(); ok {
-		_spec.SetField(deliverytarget.FieldProvider, field.TypeString, value)
+		_spec.SetField(deliverytarget.FieldProvider, field.TypeEnum, value)
 		_node.Provider = value
 	}
 	if value, ok := _c.mutation.Channel(); ok {
@@ -221,7 +224,7 @@ func (_c *DeliveryTargetCreate) createSpec() (*DeliveryTarget, *sqlgraph.CreateS
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.alert_delivery_targets = &nodes[0]
+		_node.AlertID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

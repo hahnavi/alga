@@ -3,9 +3,11 @@
 package servicedependency
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -22,8 +24,26 @@ const (
 	FieldDependencyType = "dependency_type"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
+	// EdgeService holds the string denoting the service edge name in mutations.
+	EdgeService = "service"
+	// EdgeDependentOnService holds the string denoting the dependent_on_service edge name in mutations.
+	EdgeDependentOnService = "dependent_on_service"
 	// Table holds the table name of the servicedependency in the database.
 	Table = "service_dependencies"
+	// ServiceTable is the table that holds the service relation/edge.
+	ServiceTable = "service_dependencies"
+	// ServiceInverseTable is the table name for the Service entity.
+	// It exists in this package in order to avoid circular dependency with the "service" package.
+	ServiceInverseTable = "services"
+	// ServiceColumn is the table column denoting the service relation/edge.
+	ServiceColumn = "service_id"
+	// DependentOnServiceTable is the table that holds the dependent_on_service relation/edge.
+	DependentOnServiceTable = "service_dependencies"
+	// DependentOnServiceInverseTable is the table name for the Service entity.
+	// It exists in this package in order to avoid circular dependency with the "service" package.
+	DependentOnServiceInverseTable = "services"
+	// DependentOnServiceColumn is the table column denoting the dependent_on_service relation/edge.
+	DependentOnServiceColumn = "dependent_on_service_id"
 )
 
 // Columns holds all SQL columns for servicedependency fields.
@@ -46,13 +66,38 @@ func ValidColumn(column string) bool {
 }
 
 var (
-	// DefaultDependencyType holds the default value on creation for the "dependency_type" field.
-	DefaultDependencyType string
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// DependencyType defines the type for the "dependency_type" enum field.
+type DependencyType string
+
+// DependencyTypeDependsOn is the default value of the DependencyType enum.
+const DefaultDependencyType = DependencyTypeDependsOn
+
+// DependencyType values.
+const (
+	DependencyTypeDependsOn DependencyType = "depends_on"
+	DependencyTypeHard      DependencyType = "hard"
+	DependencyTypeSoft      DependencyType = "soft"
+)
+
+func (dt DependencyType) String() string {
+	return string(dt)
+}
+
+// DependencyTypeValidator is a validator for the "dependency_type" field enum values. It is called by the builders before save.
+func DependencyTypeValidator(dt DependencyType) error {
+	switch dt {
+	case DependencyTypeDependsOn, DependencyTypeHard, DependencyTypeSoft:
+		return nil
+	default:
+		return fmt.Errorf("servicedependency: invalid enum value for dependency_type field: %q", dt)
+	}
+}
 
 // OrderOption defines the ordering options for the ServiceDependency queries.
 type OrderOption func(*sql.Selector)
@@ -80,4 +125,32 @@ func ByDependencyType(opts ...sql.OrderTermOption) OrderOption {
 // ByCreatedAt orders the results by the created_at field.
 func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
+}
+
+// ByServiceField orders the results by service field.
+func ByServiceField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newServiceStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByDependentOnServiceField orders the results by dependent_on_service field.
+func ByDependentOnServiceField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newDependentOnServiceStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newServiceStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ServiceInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, ServiceTable, ServiceColumn),
+	)
+}
+func newDependentOnServiceStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(DependentOnServiceInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, DependentOnServiceTable, DependentOnServiceColumn),
+	)
 }

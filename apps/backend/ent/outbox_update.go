@@ -242,6 +242,11 @@ func (_u *OutboxUpdate) check() error {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Outbox.status": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.RetryCount(); ok {
+		if err := outbox.RetryCountValidator(v); err != nil {
+			return &ValidationError{Name: "retry_count", err: fmt.Errorf(`ent: validator failed for field "Outbox.retry_count": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -544,6 +549,11 @@ func (_u *OutboxUpdateOne) check() error {
 	if v, ok := _u.mutation.Status(); ok {
 		if err := outbox.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Outbox.status": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.RetryCount(); ok {
+		if err := outbox.RetryCountValidator(v); err != nil {
+			return &ValidationError{Name: "retry_count", err: fmt.Errorf(`ent: validator failed for field "Outbox.retry_count": %w`, err)}
 		}
 	}
 	return nil

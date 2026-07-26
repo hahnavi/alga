@@ -186,6 +186,11 @@ func (_c *PlaybookStepCreate) check() error {
 	if _, ok := _c.mutation.StepNumber(); !ok {
 		return &ValidationError{Name: "step_number", err: errors.New(`ent: missing required field "PlaybookStep.step_number"`)}
 	}
+	if v, ok := _c.mutation.StepNumber(); ok {
+		if err := playbookstep.StepNumberValidator(v); err != nil {
+			return &ValidationError{Name: "step_number", err: fmt.Errorf(`ent: validator failed for field "PlaybookStep.step_number": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Title(); !ok {
 		return &ValidationError{Name: "title", err: errors.New(`ent: missing required field "PlaybookStep.title"`)}
 	}

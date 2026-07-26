@@ -3,6 +3,7 @@
 package integration
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -171,8 +172,6 @@ var (
 	DefaultTelnyxTtsLanguage string
 	// DefaultTelnyxTtsAPIKeyRef holds the default value on creation for the "telnyx_tts_api_key_ref" field.
 	DefaultTelnyxTtsAPIKeyRef string
-	// DefaultVoiceProvider holds the default value on creation for the "voice_provider" field.
-	DefaultVoiceProvider string
 	// DefaultHermesPlatformURL holds the default value on creation for the "hermes_platform_url" field.
 	DefaultHermesPlatformURL string
 	// DefaultHermesPlatformToken holds the default value on creation for the "hermes_platform_token" field.
@@ -184,6 +183,32 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// VoiceProvider defines the type for the "voice_provider" enum field.
+type VoiceProvider string
+
+// VoiceProviderTwilio is the default value of the VoiceProvider enum.
+const DefaultVoiceProvider = VoiceProviderTwilio
+
+// VoiceProvider values.
+const (
+	VoiceProviderTwilio VoiceProvider = "twilio"
+	VoiceProviderTelnyx VoiceProvider = "telnyx"
+)
+
+func (vp VoiceProvider) String() string {
+	return string(vp)
+}
+
+// VoiceProviderValidator is a validator for the "voice_provider" field enum values. It is called by the builders before save.
+func VoiceProviderValidator(vp VoiceProvider) error {
+	switch vp {
+	case VoiceProviderTwilio, VoiceProviderTelnyx:
+		return nil
+	default:
+		return fmt.Errorf("integration: invalid enum value for voice_provider field: %q", vp)
+	}
+}
 
 // OrderOption defines the ordering options for the Integration queries.
 type OrderOption func(*sql.Selector)

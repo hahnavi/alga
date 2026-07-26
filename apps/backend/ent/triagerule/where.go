@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -63,26 +64,6 @@ func Name(v string) predicate.TriageRule {
 // Description applies equality check predicate on the "description" field. It's identical to DescriptionEQ.
 func Description(v string) predicate.TriageRule {
 	return predicate.TriageRule(sql.FieldEQ(FieldDescription, v))
-}
-
-// MatchMode applies equality check predicate on the "match_mode" field. It's identical to MatchModeEQ.
-func MatchMode(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldEQ(FieldMatchMode, v))
-}
-
-// Decision applies equality check predicate on the "decision" field. It's identical to DecisionEQ.
-func Decision(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldEQ(FieldDecision, v))
-}
-
-// Severity applies equality check predicate on the "severity" field. It's identical to SeverityEQ.
-func Severity(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldEQ(FieldSeverity, v))
-}
-
-// Category applies equality check predicate on the "category" field. It's identical to CategoryEQ.
-func Category(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldEQ(FieldCategory, v))
 }
 
 // Priority applies equality check predicate on the "priority" field. It's identical to PriorityEQ.
@@ -261,188 +242,63 @@ func ConditionsNotNil() predicate.TriageRule {
 }
 
 // MatchModeEQ applies the EQ predicate on the "match_mode" field.
-func MatchModeEQ(v string) predicate.TriageRule {
+func MatchModeEQ(v MatchMode) predicate.TriageRule {
 	return predicate.TriageRule(sql.FieldEQ(FieldMatchMode, v))
 }
 
 // MatchModeNEQ applies the NEQ predicate on the "match_mode" field.
-func MatchModeNEQ(v string) predicate.TriageRule {
+func MatchModeNEQ(v MatchMode) predicate.TriageRule {
 	return predicate.TriageRule(sql.FieldNEQ(FieldMatchMode, v))
 }
 
 // MatchModeIn applies the In predicate on the "match_mode" field.
-func MatchModeIn(vs ...string) predicate.TriageRule {
+func MatchModeIn(vs ...MatchMode) predicate.TriageRule {
 	return predicate.TriageRule(sql.FieldIn(FieldMatchMode, vs...))
 }
 
 // MatchModeNotIn applies the NotIn predicate on the "match_mode" field.
-func MatchModeNotIn(vs ...string) predicate.TriageRule {
+func MatchModeNotIn(vs ...MatchMode) predicate.TriageRule {
 	return predicate.TriageRule(sql.FieldNotIn(FieldMatchMode, vs...))
 }
 
-// MatchModeGT applies the GT predicate on the "match_mode" field.
-func MatchModeGT(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldGT(FieldMatchMode, v))
-}
-
-// MatchModeGTE applies the GTE predicate on the "match_mode" field.
-func MatchModeGTE(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldGTE(FieldMatchMode, v))
-}
-
-// MatchModeLT applies the LT predicate on the "match_mode" field.
-func MatchModeLT(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldLT(FieldMatchMode, v))
-}
-
-// MatchModeLTE applies the LTE predicate on the "match_mode" field.
-func MatchModeLTE(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldLTE(FieldMatchMode, v))
-}
-
-// MatchModeContains applies the Contains predicate on the "match_mode" field.
-func MatchModeContains(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldContains(FieldMatchMode, v))
-}
-
-// MatchModeHasPrefix applies the HasPrefix predicate on the "match_mode" field.
-func MatchModeHasPrefix(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldHasPrefix(FieldMatchMode, v))
-}
-
-// MatchModeHasSuffix applies the HasSuffix predicate on the "match_mode" field.
-func MatchModeHasSuffix(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldHasSuffix(FieldMatchMode, v))
-}
-
-// MatchModeEqualFold applies the EqualFold predicate on the "match_mode" field.
-func MatchModeEqualFold(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldEqualFold(FieldMatchMode, v))
-}
-
-// MatchModeContainsFold applies the ContainsFold predicate on the "match_mode" field.
-func MatchModeContainsFold(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldContainsFold(FieldMatchMode, v))
-}
-
 // DecisionEQ applies the EQ predicate on the "decision" field.
-func DecisionEQ(v string) predicate.TriageRule {
+func DecisionEQ(v Decision) predicate.TriageRule {
 	return predicate.TriageRule(sql.FieldEQ(FieldDecision, v))
 }
 
 // DecisionNEQ applies the NEQ predicate on the "decision" field.
-func DecisionNEQ(v string) predicate.TriageRule {
+func DecisionNEQ(v Decision) predicate.TriageRule {
 	return predicate.TriageRule(sql.FieldNEQ(FieldDecision, v))
 }
 
 // DecisionIn applies the In predicate on the "decision" field.
-func DecisionIn(vs ...string) predicate.TriageRule {
+func DecisionIn(vs ...Decision) predicate.TriageRule {
 	return predicate.TriageRule(sql.FieldIn(FieldDecision, vs...))
 }
 
 // DecisionNotIn applies the NotIn predicate on the "decision" field.
-func DecisionNotIn(vs ...string) predicate.TriageRule {
+func DecisionNotIn(vs ...Decision) predicate.TriageRule {
 	return predicate.TriageRule(sql.FieldNotIn(FieldDecision, vs...))
 }
 
-// DecisionGT applies the GT predicate on the "decision" field.
-func DecisionGT(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldGT(FieldDecision, v))
-}
-
-// DecisionGTE applies the GTE predicate on the "decision" field.
-func DecisionGTE(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldGTE(FieldDecision, v))
-}
-
-// DecisionLT applies the LT predicate on the "decision" field.
-func DecisionLT(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldLT(FieldDecision, v))
-}
-
-// DecisionLTE applies the LTE predicate on the "decision" field.
-func DecisionLTE(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldLTE(FieldDecision, v))
-}
-
-// DecisionContains applies the Contains predicate on the "decision" field.
-func DecisionContains(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldContains(FieldDecision, v))
-}
-
-// DecisionHasPrefix applies the HasPrefix predicate on the "decision" field.
-func DecisionHasPrefix(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldHasPrefix(FieldDecision, v))
-}
-
-// DecisionHasSuffix applies the HasSuffix predicate on the "decision" field.
-func DecisionHasSuffix(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldHasSuffix(FieldDecision, v))
-}
-
-// DecisionEqualFold applies the EqualFold predicate on the "decision" field.
-func DecisionEqualFold(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldEqualFold(FieldDecision, v))
-}
-
-// DecisionContainsFold applies the ContainsFold predicate on the "decision" field.
-func DecisionContainsFold(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldContainsFold(FieldDecision, v))
-}
-
 // SeverityEQ applies the EQ predicate on the "severity" field.
-func SeverityEQ(v string) predicate.TriageRule {
+func SeverityEQ(v Severity) predicate.TriageRule {
 	return predicate.TriageRule(sql.FieldEQ(FieldSeverity, v))
 }
 
 // SeverityNEQ applies the NEQ predicate on the "severity" field.
-func SeverityNEQ(v string) predicate.TriageRule {
+func SeverityNEQ(v Severity) predicate.TriageRule {
 	return predicate.TriageRule(sql.FieldNEQ(FieldSeverity, v))
 }
 
 // SeverityIn applies the In predicate on the "severity" field.
-func SeverityIn(vs ...string) predicate.TriageRule {
+func SeverityIn(vs ...Severity) predicate.TriageRule {
 	return predicate.TriageRule(sql.FieldIn(FieldSeverity, vs...))
 }
 
 // SeverityNotIn applies the NotIn predicate on the "severity" field.
-func SeverityNotIn(vs ...string) predicate.TriageRule {
+func SeverityNotIn(vs ...Severity) predicate.TriageRule {
 	return predicate.TriageRule(sql.FieldNotIn(FieldSeverity, vs...))
-}
-
-// SeverityGT applies the GT predicate on the "severity" field.
-func SeverityGT(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldGT(FieldSeverity, v))
-}
-
-// SeverityGTE applies the GTE predicate on the "severity" field.
-func SeverityGTE(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldGTE(FieldSeverity, v))
-}
-
-// SeverityLT applies the LT predicate on the "severity" field.
-func SeverityLT(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldLT(FieldSeverity, v))
-}
-
-// SeverityLTE applies the LTE predicate on the "severity" field.
-func SeverityLTE(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldLTE(FieldSeverity, v))
-}
-
-// SeverityContains applies the Contains predicate on the "severity" field.
-func SeverityContains(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldContains(FieldSeverity, v))
-}
-
-// SeverityHasPrefix applies the HasPrefix predicate on the "severity" field.
-func SeverityHasPrefix(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldHasPrefix(FieldSeverity, v))
-}
-
-// SeverityHasSuffix applies the HasSuffix predicate on the "severity" field.
-func SeverityHasSuffix(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldHasSuffix(FieldSeverity, v))
 }
 
 // SeverityIsNil applies the IsNil predicate on the "severity" field.
@@ -455,69 +311,24 @@ func SeverityNotNil() predicate.TriageRule {
 	return predicate.TriageRule(sql.FieldNotNull(FieldSeverity))
 }
 
-// SeverityEqualFold applies the EqualFold predicate on the "severity" field.
-func SeverityEqualFold(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldEqualFold(FieldSeverity, v))
-}
-
-// SeverityContainsFold applies the ContainsFold predicate on the "severity" field.
-func SeverityContainsFold(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldContainsFold(FieldSeverity, v))
-}
-
 // CategoryEQ applies the EQ predicate on the "category" field.
-func CategoryEQ(v string) predicate.TriageRule {
+func CategoryEQ(v Category) predicate.TriageRule {
 	return predicate.TriageRule(sql.FieldEQ(FieldCategory, v))
 }
 
 // CategoryNEQ applies the NEQ predicate on the "category" field.
-func CategoryNEQ(v string) predicate.TriageRule {
+func CategoryNEQ(v Category) predicate.TriageRule {
 	return predicate.TriageRule(sql.FieldNEQ(FieldCategory, v))
 }
 
 // CategoryIn applies the In predicate on the "category" field.
-func CategoryIn(vs ...string) predicate.TriageRule {
+func CategoryIn(vs ...Category) predicate.TriageRule {
 	return predicate.TriageRule(sql.FieldIn(FieldCategory, vs...))
 }
 
 // CategoryNotIn applies the NotIn predicate on the "category" field.
-func CategoryNotIn(vs ...string) predicate.TriageRule {
+func CategoryNotIn(vs ...Category) predicate.TriageRule {
 	return predicate.TriageRule(sql.FieldNotIn(FieldCategory, vs...))
-}
-
-// CategoryGT applies the GT predicate on the "category" field.
-func CategoryGT(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldGT(FieldCategory, v))
-}
-
-// CategoryGTE applies the GTE predicate on the "category" field.
-func CategoryGTE(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldGTE(FieldCategory, v))
-}
-
-// CategoryLT applies the LT predicate on the "category" field.
-func CategoryLT(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldLT(FieldCategory, v))
-}
-
-// CategoryLTE applies the LTE predicate on the "category" field.
-func CategoryLTE(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldLTE(FieldCategory, v))
-}
-
-// CategoryContains applies the Contains predicate on the "category" field.
-func CategoryContains(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldContains(FieldCategory, v))
-}
-
-// CategoryHasPrefix applies the HasPrefix predicate on the "category" field.
-func CategoryHasPrefix(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldHasPrefix(FieldCategory, v))
-}
-
-// CategoryHasSuffix applies the HasSuffix predicate on the "category" field.
-func CategoryHasSuffix(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldHasSuffix(FieldCategory, v))
 }
 
 // CategoryIsNil applies the IsNil predicate on the "category" field.
@@ -528,16 +339,6 @@ func CategoryIsNil() predicate.TriageRule {
 // CategoryNotNil applies the NotNil predicate on the "category" field.
 func CategoryNotNil() predicate.TriageRule {
 	return predicate.TriageRule(sql.FieldNotNull(FieldCategory))
-}
-
-// CategoryEqualFold applies the EqualFold predicate on the "category" field.
-func CategoryEqualFold(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldEqualFold(FieldCategory, v))
-}
-
-// CategoryContainsFold applies the ContainsFold predicate on the "category" field.
-func CategoryContainsFold(v string) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldContainsFold(FieldCategory, v))
 }
 
 // EnrichmentIsNil applies the IsNil predicate on the "enrichment" field.
@@ -618,26 +419,6 @@ func CreatedByIn(vs ...uuid.UUID) predicate.TriageRule {
 // CreatedByNotIn applies the NotIn predicate on the "created_by" field.
 func CreatedByNotIn(vs ...uuid.UUID) predicate.TriageRule {
 	return predicate.TriageRule(sql.FieldNotIn(FieldCreatedBy, vs...))
-}
-
-// CreatedByGT applies the GT predicate on the "created_by" field.
-func CreatedByGT(v uuid.UUID) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldGT(FieldCreatedBy, v))
-}
-
-// CreatedByGTE applies the GTE predicate on the "created_by" field.
-func CreatedByGTE(v uuid.UUID) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldGTE(FieldCreatedBy, v))
-}
-
-// CreatedByLT applies the LT predicate on the "created_by" field.
-func CreatedByLT(v uuid.UUID) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldLT(FieldCreatedBy, v))
-}
-
-// CreatedByLTE applies the LTE predicate on the "created_by" field.
-func CreatedByLTE(v uuid.UUID) predicate.TriageRule {
-	return predicate.TriageRule(sql.FieldLTE(FieldCreatedBy, v))
 }
 
 // CreatedByIsNil applies the IsNil predicate on the "created_by" field.
@@ -728,6 +509,29 @@ func UpdatedAtLT(v time.Time) predicate.TriageRule {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.TriageRule {
 	return predicate.TriageRule(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// HasCreatedByUser applies the HasEdge predicate on the "created_by_user" edge.
+func HasCreatedByUser() predicate.TriageRule {
+	return predicate.TriageRule(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, CreatedByUserTable, CreatedByUserColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCreatedByUserWith applies the HasEdge predicate on the "created_by_user" edge with a given conditions (other predicates).
+func HasCreatedByUserWith(preds ...predicate.User) predicate.TriageRule {
+	return predicate.TriageRule(func(s *sql.Selector) {
+		step := newCreatedByUserStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

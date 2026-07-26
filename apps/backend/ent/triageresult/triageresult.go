@@ -3,9 +3,11 @@
 package triageresult
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -60,8 +62,35 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// EdgeAlerts holds the string denoting the alerts edge name in mutations.
+	EdgeAlerts = "alerts"
+	// EdgeAlertInvestigations holds the string denoting the alert_investigations edge name in mutations.
+	EdgeAlertInvestigations = "alert_investigations"
+	// EdgeOverriddenByUser holds the string denoting the overridden_by_user edge name in mutations.
+	EdgeOverriddenByUser = "overridden_by_user"
 	// Table holds the table name of the triageresult in the database.
 	Table = "triage_results"
+	// AlertsTable is the table that holds the alerts relation/edge.
+	AlertsTable = "alerts"
+	// AlertsInverseTable is the table name for the Alert entity.
+	// It exists in this package in order to avoid circular dependency with the "alert" package.
+	AlertsInverseTable = "alerts"
+	// AlertsColumn is the table column denoting the alerts relation/edge.
+	AlertsColumn = "triage_result_id"
+	// AlertInvestigationsTable is the table that holds the alert_investigations relation/edge.
+	AlertInvestigationsTable = "alert_investigations"
+	// AlertInvestigationsInverseTable is the table name for the AlertInvestigation entity.
+	// It exists in this package in order to avoid circular dependency with the "alertinvestigation" package.
+	AlertInvestigationsInverseTable = "alert_investigations"
+	// AlertInvestigationsColumn is the table column denoting the alert_investigations relation/edge.
+	AlertInvestigationsColumn = "triage_result_id"
+	// OverriddenByUserTable is the table that holds the overridden_by_user relation/edge.
+	OverriddenByUserTable = "triage_results"
+	// OverriddenByUserInverseTable is the table name for the User entity.
+	// It exists in this package in order to avoid circular dependency with the "user" package.
+	OverriddenByUserInverseTable = "users"
+	// OverriddenByUserColumn is the table column denoting the overridden_by_user relation/edge.
+	OverriddenByUserColumn = "overridden_by"
 )
 
 // Columns holds all SQL columns for triageresult fields.
@@ -109,26 +138,16 @@ var (
 	CorrelationKeyValidator func(string) error
 	// DefaultAlertCount holds the default value on creation for the "alert_count" field.
 	DefaultAlertCount int
-	// DefaultSeverityInput holds the default value on creation for the "severity_input" field.
-	DefaultSeverityInput string
-	// DecisionValidator is a validator for the "decision" field. It is called by the builders before save.
-	DecisionValidator func(string) error
 	// DefaultConfidence holds the default value on creation for the "confidence" field.
 	DefaultConfidence float64
-	// DefaultSeverityClassified holds the default value on creation for the "severity_classified" field.
-	DefaultSeverityClassified string
-	// DefaultCategory holds the default value on creation for the "category" field.
-	DefaultCategory string
 	// DefaultReasoning holds the default value on creation for the "reasoning" field.
 	DefaultReasoning string
-	// DefaultOutcome holds the default value on creation for the "outcome" field.
-	DefaultOutcome string
-	// DefaultOverriddenTo holds the default value on creation for the "overridden_to" field.
-	DefaultOverriddenTo string
 	// DefaultModelUsed holds the default value on creation for the "model_used" field.
 	DefaultModelUsed string
 	// DefaultTriageDurationMs holds the default value on creation for the "triage_duration_ms" field.
 	DefaultTriageDurationMs int64
+	// TriageDurationMsValidator is a validator for the "triage_duration_ms" field. It is called by the builders before save.
+	TriageDurationMsValidator func(int64) error
 	// DefaultTraceID holds the default value on creation for the "trace_id" field.
 	DefaultTraceID string
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
@@ -140,6 +159,163 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// SeverityInput defines the type for the "severity_input" enum field.
+type SeverityInput string
+
+// SeverityInput values.
+const (
+	SeverityInputCritical SeverityInput = "critical"
+	SeverityInputHigh     SeverityInput = "high"
+	SeverityInputWarning  SeverityInput = "warning"
+	SeverityInputInfo     SeverityInput = "info"
+	SeverityInputLow      SeverityInput = "low"
+)
+
+func (si SeverityInput) String() string {
+	return string(si)
+}
+
+// SeverityInputValidator is a validator for the "severity_input" field enum values. It is called by the builders before save.
+func SeverityInputValidator(si SeverityInput) error {
+	switch si {
+	case SeverityInputCritical, SeverityInputHigh, SeverityInputWarning, SeverityInputInfo, SeverityInputLow:
+		return nil
+	default:
+		return fmt.Errorf("triageresult: invalid enum value for severity_input field: %q", si)
+	}
+}
+
+// Decision defines the type for the "decision" enum field.
+type Decision string
+
+// Decision values.
+const (
+	DecisionInvestigate Decision = "investigate"
+	DecisionAutoResolve Decision = "auto_resolve"
+	DecisionSuppress    Decision = "suppress"
+	DecisionEscalate    Decision = "escalate"
+	DecisionEnrichOnly  Decision = "enrich_only"
+)
+
+func (d Decision) String() string {
+	return string(d)
+}
+
+// DecisionValidator is a validator for the "decision" field enum values. It is called by the builders before save.
+func DecisionValidator(d Decision) error {
+	switch d {
+	case DecisionInvestigate, DecisionAutoResolve, DecisionSuppress, DecisionEscalate, DecisionEnrichOnly:
+		return nil
+	default:
+		return fmt.Errorf("triageresult: invalid enum value for decision field: %q", d)
+	}
+}
+
+// SeverityClassified defines the type for the "severity_classified" enum field.
+type SeverityClassified string
+
+// SeverityClassified values.
+const (
+	SeverityClassifiedCritical SeverityClassified = "critical"
+	SeverityClassifiedHigh     SeverityClassified = "high"
+	SeverityClassifiedWarning  SeverityClassified = "warning"
+	SeverityClassifiedInfo     SeverityClassified = "info"
+	SeverityClassifiedLow      SeverityClassified = "low"
+)
+
+func (sc SeverityClassified) String() string {
+	return string(sc)
+}
+
+// SeverityClassifiedValidator is a validator for the "severity_classified" field enum values. It is called by the builders before save.
+func SeverityClassifiedValidator(sc SeverityClassified) error {
+	switch sc {
+	case SeverityClassifiedCritical, SeverityClassifiedHigh, SeverityClassifiedWarning, SeverityClassifiedInfo, SeverityClassifiedLow:
+		return nil
+	default:
+		return fmt.Errorf("triageresult: invalid enum value for severity_classified field: %q", sc)
+	}
+}
+
+// Category defines the type for the "category" enum field.
+type Category string
+
+// Category values.
+const (
+	CategoryInfrastructure Category = "infrastructure"
+	CategoryApplication    Category = "application"
+	CategoryNetwork        Category = "network"
+	CategorySecurity       Category = "security"
+	CategoryOther          Category = "other"
+)
+
+func (c Category) String() string {
+	return string(c)
+}
+
+// CategoryValidator is a validator for the "category" field enum values. It is called by the builders before save.
+func CategoryValidator(c Category) error {
+	switch c {
+	case CategoryInfrastructure, CategoryApplication, CategoryNetwork, CategorySecurity, CategoryOther:
+		return nil
+	default:
+		return fmt.Errorf("triageresult: invalid enum value for category field: %q", c)
+	}
+}
+
+// Outcome defines the type for the "outcome" enum field.
+type Outcome string
+
+// OutcomePending is the default value of the Outcome enum.
+const DefaultOutcome = OutcomePending
+
+// Outcome values.
+const (
+	OutcomePending    Outcome = "pending"
+	OutcomeConfirmed  Outcome = "confirmed"
+	OutcomeOverridden Outcome = "overridden"
+)
+
+func (o Outcome) String() string {
+	return string(o)
+}
+
+// OutcomeValidator is a validator for the "outcome" field enum values. It is called by the builders before save.
+func OutcomeValidator(o Outcome) error {
+	switch o {
+	case OutcomePending, OutcomeConfirmed, OutcomeOverridden:
+		return nil
+	default:
+		return fmt.Errorf("triageresult: invalid enum value for outcome field: %q", o)
+	}
+}
+
+// OverriddenTo defines the type for the "overridden_to" enum field.
+type OverriddenTo string
+
+// OverriddenTo values.
+const (
+	OverriddenToInvestigate OverriddenTo = "investigate"
+	OverriddenToAutoResolve OverriddenTo = "auto_resolve"
+	OverriddenToSuppress    OverriddenTo = "suppress"
+	OverriddenToEscalate    OverriddenTo = "escalate"
+	OverriddenToEnrichOnly  OverriddenTo = "enrich_only"
+)
+
+func (ot OverriddenTo) String() string {
+	return string(ot)
+}
+
+// OverriddenToValidator is a validator for the "overridden_to" field enum values. It is called by the builders before save.
+func OverriddenToValidator(ot OverriddenTo) error {
+	switch ot {
+	case OverriddenToInvestigate, OverriddenToAutoResolve, OverriddenToSuppress, OverriddenToEscalate, OverriddenToEnrichOnly:
+		return nil
+	default:
+		return fmt.Errorf("triageresult: invalid enum value for overridden_to field: %q", ot)
+	}
+}
 
 // OrderOption defines the ordering options for the TriageResult queries.
 type OrderOption func(*sql.Selector)
@@ -237,4 +413,60 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByAlertsCount orders the results by alerts count.
+func ByAlertsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAlertsStep(), opts...)
+	}
+}
+
+// ByAlerts orders the results by alerts terms.
+func ByAlerts(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAlertsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByAlertInvestigationsCount orders the results by alert_investigations count.
+func ByAlertInvestigationsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAlertInvestigationsStep(), opts...)
+	}
+}
+
+// ByAlertInvestigations orders the results by alert_investigations terms.
+func ByAlertInvestigations(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAlertInvestigationsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByOverriddenByUserField orders the results by overridden_by_user field.
+func ByOverriddenByUserField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newOverriddenByUserStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newAlertsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AlertsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, AlertsTable, AlertsColumn),
+	)
+}
+func newAlertInvestigationsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AlertInvestigationsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, AlertInvestigationsTable, AlertInvestigationsColumn),
+	)
+}
+func newOverriddenByUserStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(OverriddenByUserInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, OverriddenByUserTable, OverriddenByUserColumn),
+	)
 }

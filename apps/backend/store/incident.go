@@ -137,6 +137,18 @@ func (s *pgIncidentStore) CreateIncident(ctx context.Context, record *IncidentRe
 	if record.Status == "" {
 		record.Status = "detected"
 	}
+	if record.Severity == "" {
+		record.Severity = "warning"
+	}
+	if record.ImpactLevel == "" {
+		record.ImpactLevel = "medium"
+	}
+	if record.Priority == "" {
+		record.Priority = "P4"
+	}
+	if record.IncidentType == "" {
+		record.IncidentType = "real"
+	}
 	if record.CreatedAt.IsZero() {
 		record.CreatedAt = now
 	}
@@ -156,11 +168,11 @@ func (s *pgIncidentStore) CreateIncident(ctx context.Context, record *IncidentRe
 		SetIncidentNumber(record.IncidentNumber).
 		SetTitle(record.Title).
 		SetDescription(record.Description).
-		SetStatus(record.Status).
-		SetSeverity(record.Severity).
-		SetImpactLevel(record.ImpactLevel).
-		SetPriority(record.Priority).
-		SetIncidentType(record.IncidentType).
+		SetStatus(entincident.Status(record.Status)).
+		SetSeverity(entincident.Severity(record.Severity)).
+		SetImpactLevel(entincident.ImpactLevel(record.ImpactLevel)).
+		SetPriority(entincident.Priority(record.Priority)).
+		SetIncidentType(entincident.IncidentType(record.IncidentType)).
 		SetConferenceURL(record.ConferenceURL).
 		SetStatusPageIncidentID(record.StatusPageIncidentID).
 		SetCreatedAt(record.CreatedAt).
@@ -285,10 +297,10 @@ func (s *pgIncidentStore) UpdateIncident(ctx context.Context, incidentNumber int
 		SetTitle(record.Title).
 		SetDescription(record.Description).
 		SetSummary(record.Summary).
-		SetSeverity(record.Severity).
-		SetImpactLevel(record.ImpactLevel).
-		SetPriority(record.Priority).
-		SetIncidentType(record.IncidentType).
+		SetSeverity(entincident.Severity(record.Severity)).
+		SetImpactLevel(entincident.ImpactLevel(record.ImpactLevel)).
+		SetPriority(entincident.Priority(record.Priority)).
+		SetIncidentType(entincident.IncidentType(record.IncidentType)).
 		SetConferenceURL(record.ConferenceURL).
 		SetStatusPageIncidentID(record.StatusPageIncidentID).
 		SetUpdatedAt(time.Now().UTC())
@@ -304,7 +316,7 @@ func (s *pgIncidentStore) UpdateIncident(ctx context.Context, incidentNumber int
 	b.SetSlackChannelArchived(record.SlackChannelArchived)
 
 	if record.Status != "" {
-		b.SetStatus(record.Status)
+		b.SetStatus(entincident.Status(record.Status))
 	}
 	if record.CommanderID != nil {
 		b.SetCommanderID(*record.CommanderID)
@@ -443,13 +455,13 @@ func (s *pgIncidentStore) ExpungeSoftDeletedIncidentsChildren(ctx context.Contex
 func (s *pgIncidentStore) buildIncidentPredicates(filter IncidentListFilter) []predicate.Incident {
 	preds := []predicate.Incident{entincident.DeletedAtIsNil()}
 	if filter.Status != "" {
-		preds = append(preds, entincident.StatusEQ(filter.Status))
+		preds = append(preds, entincident.StatusEQ(entincident.Status(filter.Status)))
 	}
 	if filter.Severity != "" {
-		preds = append(preds, entincident.SeverityEQ(filter.Severity))
+		preds = append(preds, entincident.SeverityEQ(entincident.Severity(filter.Severity)))
 	}
 	if filter.Priority != "" {
-		preds = append(preds, entincident.PriorityEQ(filter.Priority))
+		preds = append(preds, entincident.PriorityEQ(entincident.Priority(filter.Priority)))
 	}
 	if filter.ServiceID != "" {
 		if sid, err := uuid.Parse(filter.ServiceID); err == nil {
@@ -566,7 +578,7 @@ func (s *pgIncidentStore) UpdateIncidentStatus(ctx context.Context, incidentNumb
 	now := time.Now().UTC()
 	b := s.client.Incident.Update().
 		Where(entincident.IncidentNumber(incidentNumber), entincident.DeletedAtIsNil()).
-		SetStatus(status).
+		SetStatus(entincident.Status(status)).
 		SetUpdatedAt(now)
 
 	applyStatusTimestamps(b, status, now)
@@ -609,13 +621,17 @@ func (s *pgIncidentStore) TransitionIncidentStatus(ctx context.Context, incident
 	defer cancel()
 
 	now := time.Now().UTC()
+	fromEnt := make([]entincident.Status, len(fromStatuses))
+	for i, s := range fromStatuses {
+		fromEnt[i] = entincident.Status(s)
+	}
 	b := s.client.Incident.Update().
 		Where(
 			entincident.IncidentNumber(incidentNumber),
-			entincident.StatusIn(fromStatuses...),
+			entincident.StatusIn(fromEnt...),
 			entincident.DeletedAtIsNil(),
 		).
-		SetStatus(toStatus).
+		SetStatus(entincident.Status(toStatus)).
 		SetUpdatedAt(now)
 
 	applyStatusTimestamps(b, toStatus, now)
@@ -715,7 +731,7 @@ func (s *pgIncidentStore) GetIncidentMetrics(ctx context.Context, startDate, end
 			AcknowledgedAt:    inc.SLAAcknowledgedAt,
 			MitigatedAt:       inc.MitigatedAt,
 			ResolvedAt:        inc.ResolvedAt,
-			Severity:          inc.Severity,
+			Severity:          string(inc.Severity),
 			SLATargetRespond:  inc.SLATargetRespondAt,
 			SLATargetResolve:  inc.SLATargetResolveAt,
 			SLAAcknowledgedAt: inc.SLAAcknowledgedAt,
@@ -736,7 +752,7 @@ func (s *pgIncidentStore) ListSLAEligibleIncidents(ctx context.Context) ([]Incid
 
 	incs, err := s.client.Incident.Query().
 		Where(
-			entincident.StatusIn("detected", "triaging", "active", "mitigated"),
+			entincident.StatusIn(entincident.StatusDetected, entincident.StatusTriaging, entincident.StatusActive, entincident.StatusMitigated),
 			entincident.Or(
 				entincident.SLATargetRespondAtNotNil(),
 				entincident.SLATargetResolveAtNotNil(),
@@ -756,9 +772,13 @@ func (s *pgIncidentStore) ListSLAEligibleIncidents(ctx context.Context) ([]Incid
 }
 
 func (s *pgIncidentStore) CountActiveByService(ctx context.Context) (map[string]int64, error) {
+	terminalStatuses := make([]entincident.Status, len(IncidentTerminalStatuses))
+	for i, st := range IncidentTerminalStatuses {
+		terminalStatuses[i] = entincident.Status(st)
+	}
 	incs, err := s.client.Incident.Query().
 		Where(
-			entincident.StatusNotIn(IncidentTerminalStatuses...),
+			entincident.StatusNotIn(terminalStatuses...),
 			entincident.ServiceIDNotNil(),
 			entincident.DeletedAtIsNil(),
 		).
@@ -781,9 +801,13 @@ func (s *pgIncidentStore) CountActiveByServiceID(ctx context.Context, serviceID 
 	if err != nil {
 		return 0, fmt.Errorf("invalid service ID: %w", err)
 	}
+	terminalStatuses := make([]entincident.Status, len(IncidentTerminalStatuses))
+	for i, st := range IncidentTerminalStatuses {
+		terminalStatuses[i] = entincident.Status(st)
+	}
 	return s.client.Incident.Query().
 		Where(
-			entincident.StatusNotIn(IncidentTerminalStatuses...),
+			entincident.StatusNotIn(terminalStatuses...),
 			entincident.ServiceID(svcUUID),
 			entincident.DeletedAtIsNil(),
 		).
@@ -807,7 +831,7 @@ func (s *pgIncidentStore) CountActiveByPriority(ctx context.Context, serviceID s
 	var results []groupResult
 	err = s.client.Incident.Query().
 		Where(
-			entincident.StatusNotIn("resolved", "closed", "cancelled"),
+			entincident.StatusNotIn(entincident.StatusResolved, entincident.StatusClosed, entincident.StatusCancelled),
 			entincident.ServiceID(svcUUID),
 			entincident.DeletedAtIsNil(),
 		).
@@ -835,7 +859,7 @@ func (s *pgIncidentStore) ListActiveSummarizableIncidents(ctx context.Context) (
 
 	rows, err := s.client.Incident.Query().
 		Where(
-			entincident.StatusIn("detected", "triaging", "active", "mitigated"),
+			entincident.StatusIn(entincident.StatusDetected, entincident.StatusTriaging, entincident.StatusActive, entincident.StatusMitigated),
 			entincident.SlackChannelIDNEQ(""),
 			entincident.DeletedAtIsNil(),
 		).
@@ -857,7 +881,7 @@ func (s *pgIncidentStore) ListActiveIncidents(ctx context.Context) ([]IncidentRe
 
 	rows, err := s.client.Incident.Query().
 		Where(
-			entincident.StatusNotIn("resolved", "closed", "cancelled"),
+			entincident.StatusNotIn(entincident.StatusResolved, entincident.StatusClosed, entincident.StatusCancelled),
 			entincident.DeletedAtIsNil(),
 		).
 		Order(ent.Asc(entincident.FieldCreatedAt)).
@@ -889,16 +913,16 @@ func (s *pgIncidentStore) toIncidentRecord(inc *ent.Incident) *IncidentRecord {
 		Title:                    inc.Title,
 		Description:              inc.Description,
 		Summary:                  inc.Summary,
-		Status:                   inc.Status,
-		Severity:                 inc.Severity,
-		ImpactLevel:              inc.ImpactLevel,
-		Priority:                 inc.Priority,
-		IncidentType:             inc.IncidentType,
+		Status:                   string(inc.Status),
+		Severity:                 string(inc.Severity),
+		ImpactLevel:              string(inc.ImpactLevel),
+		Priority:                 string(inc.Priority),
+		IncidentType:             string(inc.IncidentType),
 		CommanderID:              inc.CommanderID,
 		CommunicatorID:           inc.CommunicatorID,
 		OnCallResponderID:        inc.OnCallResponderID,
-		CommanderAssigneeType:    inc.CommanderAssigneeType,
-		CommunicatorAssigneeType: inc.CommunicatorAssigneeType,
+		CommanderAssigneeType:    string(inc.CommanderAssigneeType),
+		CommunicatorAssigneeType: string(inc.CommunicatorAssigneeType),
 		ServiceID:                inc.ServiceID,
 		EscalationPolicyID:       inc.EscalationPolicyID,
 		ConferenceURL:            inc.ConferenceURL,

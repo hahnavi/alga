@@ -5,6 +5,9 @@ package ent
 import (
 	"alga/ent/oncallschedule"
 	"alga/ent/predicate"
+	"alga/ent/schedulelayer"
+	"alga/ent/scheduleoverride"
+	"alga/ent/team"
 	"context"
 	"errors"
 	"fmt"
@@ -69,9 +72,92 @@ func (_u *OnCallScheduleUpdate) SetUpdatedAt(v time.Time) *OnCallScheduleUpdate 
 	return _u
 }
 
+// SetTeam sets the "team" edge to the Team entity.
+func (_u *OnCallScheduleUpdate) SetTeam(v *Team) *OnCallScheduleUpdate {
+	return _u.SetTeamID(v.ID)
+}
+
+// AddLayerIDs adds the "layers" edge to the ScheduleLayer entity by IDs.
+func (_u *OnCallScheduleUpdate) AddLayerIDs(ids ...uuid.UUID) *OnCallScheduleUpdate {
+	_u.mutation.AddLayerIDs(ids...)
+	return _u
+}
+
+// AddLayers adds the "layers" edges to the ScheduleLayer entity.
+func (_u *OnCallScheduleUpdate) AddLayers(v ...*ScheduleLayer) *OnCallScheduleUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddLayerIDs(ids...)
+}
+
+// AddOverrideIDs adds the "overrides" edge to the ScheduleOverride entity by IDs.
+func (_u *OnCallScheduleUpdate) AddOverrideIDs(ids ...uuid.UUID) *OnCallScheduleUpdate {
+	_u.mutation.AddOverrideIDs(ids...)
+	return _u
+}
+
+// AddOverrides adds the "overrides" edges to the ScheduleOverride entity.
+func (_u *OnCallScheduleUpdate) AddOverrides(v ...*ScheduleOverride) *OnCallScheduleUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddOverrideIDs(ids...)
+}
+
 // Mutation returns the OnCallScheduleMutation object of the builder.
 func (_u *OnCallScheduleUpdate) Mutation() *OnCallScheduleMutation {
 	return _u.mutation
+}
+
+// ClearTeam clears the "team" edge to the Team entity.
+func (_u *OnCallScheduleUpdate) ClearTeam() *OnCallScheduleUpdate {
+	_u.mutation.ClearTeam()
+	return _u
+}
+
+// ClearLayers clears all "layers" edges to the ScheduleLayer entity.
+func (_u *OnCallScheduleUpdate) ClearLayers() *OnCallScheduleUpdate {
+	_u.mutation.ClearLayers()
+	return _u
+}
+
+// RemoveLayerIDs removes the "layers" edge to ScheduleLayer entities by IDs.
+func (_u *OnCallScheduleUpdate) RemoveLayerIDs(ids ...uuid.UUID) *OnCallScheduleUpdate {
+	_u.mutation.RemoveLayerIDs(ids...)
+	return _u
+}
+
+// RemoveLayers removes "layers" edges to ScheduleLayer entities.
+func (_u *OnCallScheduleUpdate) RemoveLayers(v ...*ScheduleLayer) *OnCallScheduleUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveLayerIDs(ids...)
+}
+
+// ClearOverrides clears all "overrides" edges to the ScheduleOverride entity.
+func (_u *OnCallScheduleUpdate) ClearOverrides() *OnCallScheduleUpdate {
+	_u.mutation.ClearOverrides()
+	return _u
+}
+
+// RemoveOverrideIDs removes the "overrides" edge to ScheduleOverride entities by IDs.
+func (_u *OnCallScheduleUpdate) RemoveOverrideIDs(ids ...uuid.UUID) *OnCallScheduleUpdate {
+	_u.mutation.RemoveOverrideIDs(ids...)
+	return _u
+}
+
+// RemoveOverrides removes "overrides" edges to ScheduleOverride entities.
+func (_u *OnCallScheduleUpdate) RemoveOverrides(v ...*ScheduleOverride) *OnCallScheduleUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveOverrideIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -119,17 +205,130 @@ func (_u *OnCallScheduleUpdate) sqlSave(ctx context.Context) (_node int, err err
 			}
 		}
 	}
-	if value, ok := _u.mutation.TeamID(); ok {
-		_spec.SetField(oncallschedule.FieldTeamID, field.TypeUUID, value)
-	}
-	if _u.mutation.TeamIDCleared() {
-		_spec.ClearField(oncallschedule.FieldTeamID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.CreatedAt(); ok {
 		_spec.SetField(oncallschedule.FieldCreatedAt, field.TypeTime, value)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(oncallschedule.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.TeamCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   oncallschedule.TeamTable,
+			Columns: []string{oncallschedule.TeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TeamIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   oncallschedule.TeamTable,
+			Columns: []string{oncallschedule.TeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.LayersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   oncallschedule.LayersTable,
+			Columns: []string{oncallschedule.LayersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(schedulelayer.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedLayersIDs(); len(nodes) > 0 && !_u.mutation.LayersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   oncallschedule.LayersTable,
+			Columns: []string{oncallschedule.LayersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(schedulelayer.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.LayersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   oncallschedule.LayersTable,
+			Columns: []string{oncallschedule.LayersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(schedulelayer.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.OverridesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   oncallschedule.OverridesTable,
+			Columns: []string{oncallschedule.OverridesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(scheduleoverride.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedOverridesIDs(); len(nodes) > 0 && !_u.mutation.OverridesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   oncallschedule.OverridesTable,
+			Columns: []string{oncallschedule.OverridesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(scheduleoverride.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OverridesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   oncallschedule.OverridesTable,
+			Columns: []string{oncallschedule.OverridesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(scheduleoverride.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -191,9 +390,92 @@ func (_u *OnCallScheduleUpdateOne) SetUpdatedAt(v time.Time) *OnCallScheduleUpda
 	return _u
 }
 
+// SetTeam sets the "team" edge to the Team entity.
+func (_u *OnCallScheduleUpdateOne) SetTeam(v *Team) *OnCallScheduleUpdateOne {
+	return _u.SetTeamID(v.ID)
+}
+
+// AddLayerIDs adds the "layers" edge to the ScheduleLayer entity by IDs.
+func (_u *OnCallScheduleUpdateOne) AddLayerIDs(ids ...uuid.UUID) *OnCallScheduleUpdateOne {
+	_u.mutation.AddLayerIDs(ids...)
+	return _u
+}
+
+// AddLayers adds the "layers" edges to the ScheduleLayer entity.
+func (_u *OnCallScheduleUpdateOne) AddLayers(v ...*ScheduleLayer) *OnCallScheduleUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddLayerIDs(ids...)
+}
+
+// AddOverrideIDs adds the "overrides" edge to the ScheduleOverride entity by IDs.
+func (_u *OnCallScheduleUpdateOne) AddOverrideIDs(ids ...uuid.UUID) *OnCallScheduleUpdateOne {
+	_u.mutation.AddOverrideIDs(ids...)
+	return _u
+}
+
+// AddOverrides adds the "overrides" edges to the ScheduleOverride entity.
+func (_u *OnCallScheduleUpdateOne) AddOverrides(v ...*ScheduleOverride) *OnCallScheduleUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddOverrideIDs(ids...)
+}
+
 // Mutation returns the OnCallScheduleMutation object of the builder.
 func (_u *OnCallScheduleUpdateOne) Mutation() *OnCallScheduleMutation {
 	return _u.mutation
+}
+
+// ClearTeam clears the "team" edge to the Team entity.
+func (_u *OnCallScheduleUpdateOne) ClearTeam() *OnCallScheduleUpdateOne {
+	_u.mutation.ClearTeam()
+	return _u
+}
+
+// ClearLayers clears all "layers" edges to the ScheduleLayer entity.
+func (_u *OnCallScheduleUpdateOne) ClearLayers() *OnCallScheduleUpdateOne {
+	_u.mutation.ClearLayers()
+	return _u
+}
+
+// RemoveLayerIDs removes the "layers" edge to ScheduleLayer entities by IDs.
+func (_u *OnCallScheduleUpdateOne) RemoveLayerIDs(ids ...uuid.UUID) *OnCallScheduleUpdateOne {
+	_u.mutation.RemoveLayerIDs(ids...)
+	return _u
+}
+
+// RemoveLayers removes "layers" edges to ScheduleLayer entities.
+func (_u *OnCallScheduleUpdateOne) RemoveLayers(v ...*ScheduleLayer) *OnCallScheduleUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveLayerIDs(ids...)
+}
+
+// ClearOverrides clears all "overrides" edges to the ScheduleOverride entity.
+func (_u *OnCallScheduleUpdateOne) ClearOverrides() *OnCallScheduleUpdateOne {
+	_u.mutation.ClearOverrides()
+	return _u
+}
+
+// RemoveOverrideIDs removes the "overrides" edge to ScheduleOverride entities by IDs.
+func (_u *OnCallScheduleUpdateOne) RemoveOverrideIDs(ids ...uuid.UUID) *OnCallScheduleUpdateOne {
+	_u.mutation.RemoveOverrideIDs(ids...)
+	return _u
+}
+
+// RemoveOverrides removes "overrides" edges to ScheduleOverride entities.
+func (_u *OnCallScheduleUpdateOne) RemoveOverrides(v ...*ScheduleOverride) *OnCallScheduleUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveOverrideIDs(ids...)
 }
 
 // Where appends a list predicates to the OnCallScheduleUpdate builder.
@@ -271,17 +553,130 @@ func (_u *OnCallScheduleUpdateOne) sqlSave(ctx context.Context) (_node *OnCallSc
 			}
 		}
 	}
-	if value, ok := _u.mutation.TeamID(); ok {
-		_spec.SetField(oncallschedule.FieldTeamID, field.TypeUUID, value)
-	}
-	if _u.mutation.TeamIDCleared() {
-		_spec.ClearField(oncallschedule.FieldTeamID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.CreatedAt(); ok {
 		_spec.SetField(oncallschedule.FieldCreatedAt, field.TypeTime, value)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(oncallschedule.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.TeamCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   oncallschedule.TeamTable,
+			Columns: []string{oncallschedule.TeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TeamIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   oncallschedule.TeamTable,
+			Columns: []string{oncallschedule.TeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.LayersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   oncallschedule.LayersTable,
+			Columns: []string{oncallschedule.LayersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(schedulelayer.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedLayersIDs(); len(nodes) > 0 && !_u.mutation.LayersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   oncallschedule.LayersTable,
+			Columns: []string{oncallschedule.LayersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(schedulelayer.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.LayersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   oncallschedule.LayersTable,
+			Columns: []string{oncallschedule.LayersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(schedulelayer.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.OverridesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   oncallschedule.OverridesTable,
+			Columns: []string{oncallschedule.OverridesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(scheduleoverride.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedOverridesIDs(); len(nodes) > 0 && !_u.mutation.OverridesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   oncallschedule.OverridesTable,
+			Columns: []string{oncallschedule.OverridesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(scheduleoverride.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OverridesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   oncallschedule.OverridesTable,
+			Columns: []string{oncallschedule.OverridesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(scheduleoverride.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &OnCallSchedule{config: _u.config}
 	_spec.Assign = _node.assignValues

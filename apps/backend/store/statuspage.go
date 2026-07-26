@@ -97,7 +97,7 @@ func (s *pgStatusPageStore) CreatePage(ctx context.Context, record *StatusPageRe
 		SetName(record.Name).
 		SetSlug(record.Slug).
 		SetDescription(record.Description).
-		SetVisibility(record.Visibility).
+		SetVisibility(statuspage.Visibility(record.Visibility)).
 		SetEnabled(record.Enabled).
 		SetNillableOwnerTeamID(record.OwnerTeamID).
 		SetCreatedAt(now).
@@ -124,7 +124,7 @@ func (s *pgStatusPageStore) UpdatePage(ctx context.Context, id uuid.UUID, patch 
 		b.SetDescription(patch.Description)
 	}
 	if patch.Visibility != "" {
-		b.SetVisibility(patch.Visibility)
+		b.SetVisibility(statuspage.Visibility(patch.Visibility))
 	}
 	if patch.OwnerTeamID != nil {
 		b.SetOwnerTeamID(*patch.OwnerTeamID)
@@ -245,7 +245,7 @@ func (s *pgStatusPageStore) CreateComponent(ctx context.Context, record *StatusP
 		SetName(record.Name).
 		SetDescription(record.Description).
 		SetDisplayOrder(record.DisplayOrder).
-		SetStatus(record.Status).
+		SetStatus(statuspagecomponent.Status(record.Status)).
 		SetCreatedAt(now).
 		SetUpdatedAt(now)
 	if record.ServiceID != nil {
@@ -271,7 +271,7 @@ func (s *pgStatusPageStore) UpdateComponent(ctx context.Context, id uuid.UUID, p
 		b.SetDescription(patch.Description)
 	}
 	if patch.Status != "" {
-		b.SetStatus(patch.Status)
+		b.SetStatus(statuspagecomponent.Status(patch.Status))
 	}
 	if patch.DisplayOrderSet {
 		b.SetDisplayOrder(patch.DisplayOrder)
@@ -315,7 +315,7 @@ func pgStatusPageToRecord(p *ent.StatusPage) *StatusPageRecord {
 		Name:        p.Name,
 		Slug:        p.Slug,
 		Description: p.Description,
-		Visibility:  p.Visibility,
+		Visibility:  string(p.Visibility),
 		Enabled:     p.Enabled,
 		OwnerTeamID: p.OwnerTeamID,
 		CreatedAt:   p.CreatedAt,
@@ -331,7 +331,7 @@ func pgStatusPageComponentToRecord(c *ent.StatusPageComponent) *StatusPageCompon
 		Description:  c.Description,
 		ServiceID:    c.ServiceID,
 		DisplayOrder: c.DisplayOrder,
-		Status:       c.Status,
+		Status:       string(c.Status),
 		CreatedAt:    c.CreatedAt,
 		UpdatedAt:    c.UpdatedAt,
 	}

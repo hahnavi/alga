@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -438,6 +439,29 @@ func UpdatedAtLT(v time.Time) predicate.OIDCProvider {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.OIDCProvider {
 	return predicate.OIDCProvider(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// HasOidcIdentities applies the HasEdge predicate on the "oidc_identities" edge.
+func HasOidcIdentities() predicate.OIDCProvider {
+	return predicate.OIDCProvider(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, OidcIdentitiesTable, OidcIdentitiesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasOidcIdentitiesWith applies the HasEdge predicate on the "oidc_identities" edge with a given conditions (other predicates).
+func HasOidcIdentitiesWith(preds ...predicate.OIDCIdentity) predicate.OIDCProvider {
+	return predicate.OIDCProvider(func(s *sql.Selector) {
+		step := newOidcIdentitiesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

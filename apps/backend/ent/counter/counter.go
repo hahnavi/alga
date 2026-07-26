@@ -36,6 +36,8 @@ func ValidColumn(column string) bool {
 var (
 	// DefaultSeq holds the default value on creation for the "seq" field.
 	DefaultSeq int64
+	// SeqValidator is a validator for the "seq" field. It is called by the builders before save.
+	SeqValidator func(int64) error
 	// IDValidator is a validator for the "id" field. It is called by the builders before save.
 	IDValidator func(string) error
 )

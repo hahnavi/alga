@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -65,11 +66,6 @@ func FromAgentName(v string) predicate.AgentAsk {
 	return predicate.AgentAsk(sql.FieldEQ(FieldFromAgentName, v))
 }
 
-// FromAgentType applies equality check predicate on the "from_agent_type" field. It's identical to FromAgentTypeEQ.
-func FromAgentType(v string) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldEQ(FieldFromAgentType, v))
-}
-
 // InvestigationID applies equality check predicate on the "investigation_id" field. It's identical to InvestigationIDEQ.
 func InvestigationID(v string) predicate.AgentAsk {
 	return predicate.AgentAsk(sql.FieldEQ(FieldInvestigationID, v))
@@ -78,11 +74,6 @@ func InvestigationID(v string) predicate.AgentAsk {
 // ToAgentID applies equality check predicate on the "to_agent_id" field. It's identical to ToAgentIDEQ.
 func ToAgentID(v uuid.UUID) predicate.AgentAsk {
 	return predicate.AgentAsk(sql.FieldEQ(FieldToAgentID, v))
-}
-
-// ToAgentType applies equality check predicate on the "to_agent_type" field. It's identical to ToAgentTypeEQ.
-func ToAgentType(v string) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldEQ(FieldToAgentType, v))
 }
 
 // Question applies equality check predicate on the "question" field. It's identical to QuestionEQ.
@@ -103,11 +94,6 @@ func RepliedByAgentID(v uuid.UUID) predicate.AgentAsk {
 // RepliedByAgentName applies equality check predicate on the "replied_by_agent_name" field. It's identical to RepliedByAgentNameEQ.
 func RepliedByAgentName(v string) predicate.AgentAsk {
 	return predicate.AgentAsk(sql.FieldEQ(FieldRepliedByAgentName, v))
-}
-
-// Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
-func Status(v string) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldEQ(FieldStatus, v))
 }
 
 // ExpiresAt applies equality check predicate on the "expires_at" field. It's identical to ExpiresAtEQ.
@@ -143,26 +129,6 @@ func FromAgentIDIn(vs ...uuid.UUID) predicate.AgentAsk {
 // FromAgentIDNotIn applies the NotIn predicate on the "from_agent_id" field.
 func FromAgentIDNotIn(vs ...uuid.UUID) predicate.AgentAsk {
 	return predicate.AgentAsk(sql.FieldNotIn(FieldFromAgentID, vs...))
-}
-
-// FromAgentIDGT applies the GT predicate on the "from_agent_id" field.
-func FromAgentIDGT(v uuid.UUID) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldGT(FieldFromAgentID, v))
-}
-
-// FromAgentIDGTE applies the GTE predicate on the "from_agent_id" field.
-func FromAgentIDGTE(v uuid.UUID) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldGTE(FieldFromAgentID, v))
-}
-
-// FromAgentIDLT applies the LT predicate on the "from_agent_id" field.
-func FromAgentIDLT(v uuid.UUID) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldLT(FieldFromAgentID, v))
-}
-
-// FromAgentIDLTE applies the LTE predicate on the "from_agent_id" field.
-func FromAgentIDLTE(v uuid.UUID) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldLTE(FieldFromAgentID, v))
 }
 
 // FromAgentNameEQ applies the EQ predicate on the "from_agent_name" field.
@@ -231,68 +197,23 @@ func FromAgentNameContainsFold(v string) predicate.AgentAsk {
 }
 
 // FromAgentTypeEQ applies the EQ predicate on the "from_agent_type" field.
-func FromAgentTypeEQ(v string) predicate.AgentAsk {
+func FromAgentTypeEQ(v FromAgentType) predicate.AgentAsk {
 	return predicate.AgentAsk(sql.FieldEQ(FieldFromAgentType, v))
 }
 
 // FromAgentTypeNEQ applies the NEQ predicate on the "from_agent_type" field.
-func FromAgentTypeNEQ(v string) predicate.AgentAsk {
+func FromAgentTypeNEQ(v FromAgentType) predicate.AgentAsk {
 	return predicate.AgentAsk(sql.FieldNEQ(FieldFromAgentType, v))
 }
 
 // FromAgentTypeIn applies the In predicate on the "from_agent_type" field.
-func FromAgentTypeIn(vs ...string) predicate.AgentAsk {
+func FromAgentTypeIn(vs ...FromAgentType) predicate.AgentAsk {
 	return predicate.AgentAsk(sql.FieldIn(FieldFromAgentType, vs...))
 }
 
 // FromAgentTypeNotIn applies the NotIn predicate on the "from_agent_type" field.
-func FromAgentTypeNotIn(vs ...string) predicate.AgentAsk {
+func FromAgentTypeNotIn(vs ...FromAgentType) predicate.AgentAsk {
 	return predicate.AgentAsk(sql.FieldNotIn(FieldFromAgentType, vs...))
-}
-
-// FromAgentTypeGT applies the GT predicate on the "from_agent_type" field.
-func FromAgentTypeGT(v string) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldGT(FieldFromAgentType, v))
-}
-
-// FromAgentTypeGTE applies the GTE predicate on the "from_agent_type" field.
-func FromAgentTypeGTE(v string) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldGTE(FieldFromAgentType, v))
-}
-
-// FromAgentTypeLT applies the LT predicate on the "from_agent_type" field.
-func FromAgentTypeLT(v string) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldLT(FieldFromAgentType, v))
-}
-
-// FromAgentTypeLTE applies the LTE predicate on the "from_agent_type" field.
-func FromAgentTypeLTE(v string) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldLTE(FieldFromAgentType, v))
-}
-
-// FromAgentTypeContains applies the Contains predicate on the "from_agent_type" field.
-func FromAgentTypeContains(v string) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldContains(FieldFromAgentType, v))
-}
-
-// FromAgentTypeHasPrefix applies the HasPrefix predicate on the "from_agent_type" field.
-func FromAgentTypeHasPrefix(v string) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldHasPrefix(FieldFromAgentType, v))
-}
-
-// FromAgentTypeHasSuffix applies the HasSuffix predicate on the "from_agent_type" field.
-func FromAgentTypeHasSuffix(v string) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldHasSuffix(FieldFromAgentType, v))
-}
-
-// FromAgentTypeEqualFold applies the EqualFold predicate on the "from_agent_type" field.
-func FromAgentTypeEqualFold(v string) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldEqualFold(FieldFromAgentType, v))
-}
-
-// FromAgentTypeContainsFold applies the ContainsFold predicate on the "from_agent_type" field.
-func FromAgentTypeContainsFold(v string) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldContainsFold(FieldFromAgentType, v))
 }
 
 // InvestigationIDEQ applies the EQ predicate on the "investigation_id" field.
@@ -390,26 +311,6 @@ func ToAgentIDNotIn(vs ...uuid.UUID) predicate.AgentAsk {
 	return predicate.AgentAsk(sql.FieldNotIn(FieldToAgentID, vs...))
 }
 
-// ToAgentIDGT applies the GT predicate on the "to_agent_id" field.
-func ToAgentIDGT(v uuid.UUID) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldGT(FieldToAgentID, v))
-}
-
-// ToAgentIDGTE applies the GTE predicate on the "to_agent_id" field.
-func ToAgentIDGTE(v uuid.UUID) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldGTE(FieldToAgentID, v))
-}
-
-// ToAgentIDLT applies the LT predicate on the "to_agent_id" field.
-func ToAgentIDLT(v uuid.UUID) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldLT(FieldToAgentID, v))
-}
-
-// ToAgentIDLTE applies the LTE predicate on the "to_agent_id" field.
-func ToAgentIDLTE(v uuid.UUID) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldLTE(FieldToAgentID, v))
-}
-
 // ToAgentIDIsNil applies the IsNil predicate on the "to_agent_id" field.
 func ToAgentIDIsNil() predicate.AgentAsk {
 	return predicate.AgentAsk(sql.FieldIsNull(FieldToAgentID))
@@ -421,58 +322,23 @@ func ToAgentIDNotNil() predicate.AgentAsk {
 }
 
 // ToAgentTypeEQ applies the EQ predicate on the "to_agent_type" field.
-func ToAgentTypeEQ(v string) predicate.AgentAsk {
+func ToAgentTypeEQ(v ToAgentType) predicate.AgentAsk {
 	return predicate.AgentAsk(sql.FieldEQ(FieldToAgentType, v))
 }
 
 // ToAgentTypeNEQ applies the NEQ predicate on the "to_agent_type" field.
-func ToAgentTypeNEQ(v string) predicate.AgentAsk {
+func ToAgentTypeNEQ(v ToAgentType) predicate.AgentAsk {
 	return predicate.AgentAsk(sql.FieldNEQ(FieldToAgentType, v))
 }
 
 // ToAgentTypeIn applies the In predicate on the "to_agent_type" field.
-func ToAgentTypeIn(vs ...string) predicate.AgentAsk {
+func ToAgentTypeIn(vs ...ToAgentType) predicate.AgentAsk {
 	return predicate.AgentAsk(sql.FieldIn(FieldToAgentType, vs...))
 }
 
 // ToAgentTypeNotIn applies the NotIn predicate on the "to_agent_type" field.
-func ToAgentTypeNotIn(vs ...string) predicate.AgentAsk {
+func ToAgentTypeNotIn(vs ...ToAgentType) predicate.AgentAsk {
 	return predicate.AgentAsk(sql.FieldNotIn(FieldToAgentType, vs...))
-}
-
-// ToAgentTypeGT applies the GT predicate on the "to_agent_type" field.
-func ToAgentTypeGT(v string) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldGT(FieldToAgentType, v))
-}
-
-// ToAgentTypeGTE applies the GTE predicate on the "to_agent_type" field.
-func ToAgentTypeGTE(v string) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldGTE(FieldToAgentType, v))
-}
-
-// ToAgentTypeLT applies the LT predicate on the "to_agent_type" field.
-func ToAgentTypeLT(v string) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldLT(FieldToAgentType, v))
-}
-
-// ToAgentTypeLTE applies the LTE predicate on the "to_agent_type" field.
-func ToAgentTypeLTE(v string) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldLTE(FieldToAgentType, v))
-}
-
-// ToAgentTypeContains applies the Contains predicate on the "to_agent_type" field.
-func ToAgentTypeContains(v string) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldContains(FieldToAgentType, v))
-}
-
-// ToAgentTypeHasPrefix applies the HasPrefix predicate on the "to_agent_type" field.
-func ToAgentTypeHasPrefix(v string) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldHasPrefix(FieldToAgentType, v))
-}
-
-// ToAgentTypeHasSuffix applies the HasSuffix predicate on the "to_agent_type" field.
-func ToAgentTypeHasSuffix(v string) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldHasSuffix(FieldToAgentType, v))
 }
 
 // ToAgentTypeIsNil applies the IsNil predicate on the "to_agent_type" field.
@@ -483,16 +349,6 @@ func ToAgentTypeIsNil() predicate.AgentAsk {
 // ToAgentTypeNotNil applies the NotNil predicate on the "to_agent_type" field.
 func ToAgentTypeNotNil() predicate.AgentAsk {
 	return predicate.AgentAsk(sql.FieldNotNull(FieldToAgentType))
-}
-
-// ToAgentTypeEqualFold applies the EqualFold predicate on the "to_agent_type" field.
-func ToAgentTypeEqualFold(v string) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldEqualFold(FieldToAgentType, v))
-}
-
-// ToAgentTypeContainsFold applies the ContainsFold predicate on the "to_agent_type" field.
-func ToAgentTypeContainsFold(v string) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldContainsFold(FieldToAgentType, v))
 }
 
 // QuestionEQ applies the EQ predicate on the "question" field.
@@ -655,26 +511,6 @@ func RepliedByAgentIDNotIn(vs ...uuid.UUID) predicate.AgentAsk {
 	return predicate.AgentAsk(sql.FieldNotIn(FieldRepliedByAgentID, vs...))
 }
 
-// RepliedByAgentIDGT applies the GT predicate on the "replied_by_agent_id" field.
-func RepliedByAgentIDGT(v uuid.UUID) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldGT(FieldRepliedByAgentID, v))
-}
-
-// RepliedByAgentIDGTE applies the GTE predicate on the "replied_by_agent_id" field.
-func RepliedByAgentIDGTE(v uuid.UUID) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldGTE(FieldRepliedByAgentID, v))
-}
-
-// RepliedByAgentIDLT applies the LT predicate on the "replied_by_agent_id" field.
-func RepliedByAgentIDLT(v uuid.UUID) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldLT(FieldRepliedByAgentID, v))
-}
-
-// RepliedByAgentIDLTE applies the LTE predicate on the "replied_by_agent_id" field.
-func RepliedByAgentIDLTE(v uuid.UUID) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldLTE(FieldRepliedByAgentID, v))
-}
-
 // RepliedByAgentIDIsNil applies the IsNil predicate on the "replied_by_agent_id" field.
 func RepliedByAgentIDIsNil() predicate.AgentAsk {
 	return predicate.AgentAsk(sql.FieldIsNull(FieldRepliedByAgentID))
@@ -761,68 +597,23 @@ func RepliedByAgentNameContainsFold(v string) predicate.AgentAsk {
 }
 
 // StatusEQ applies the EQ predicate on the "status" field.
-func StatusEQ(v string) predicate.AgentAsk {
+func StatusEQ(v Status) predicate.AgentAsk {
 	return predicate.AgentAsk(sql.FieldEQ(FieldStatus, v))
 }
 
 // StatusNEQ applies the NEQ predicate on the "status" field.
-func StatusNEQ(v string) predicate.AgentAsk {
+func StatusNEQ(v Status) predicate.AgentAsk {
 	return predicate.AgentAsk(sql.FieldNEQ(FieldStatus, v))
 }
 
 // StatusIn applies the In predicate on the "status" field.
-func StatusIn(vs ...string) predicate.AgentAsk {
+func StatusIn(vs ...Status) predicate.AgentAsk {
 	return predicate.AgentAsk(sql.FieldIn(FieldStatus, vs...))
 }
 
 // StatusNotIn applies the NotIn predicate on the "status" field.
-func StatusNotIn(vs ...string) predicate.AgentAsk {
+func StatusNotIn(vs ...Status) predicate.AgentAsk {
 	return predicate.AgentAsk(sql.FieldNotIn(FieldStatus, vs...))
-}
-
-// StatusGT applies the GT predicate on the "status" field.
-func StatusGT(v string) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldGT(FieldStatus, v))
-}
-
-// StatusGTE applies the GTE predicate on the "status" field.
-func StatusGTE(v string) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldGTE(FieldStatus, v))
-}
-
-// StatusLT applies the LT predicate on the "status" field.
-func StatusLT(v string) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldLT(FieldStatus, v))
-}
-
-// StatusLTE applies the LTE predicate on the "status" field.
-func StatusLTE(v string) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldLTE(FieldStatus, v))
-}
-
-// StatusContains applies the Contains predicate on the "status" field.
-func StatusContains(v string) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldContains(FieldStatus, v))
-}
-
-// StatusHasPrefix applies the HasPrefix predicate on the "status" field.
-func StatusHasPrefix(v string) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldHasPrefix(FieldStatus, v))
-}
-
-// StatusHasSuffix applies the HasSuffix predicate on the "status" field.
-func StatusHasSuffix(v string) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldHasSuffix(FieldStatus, v))
-}
-
-// StatusEqualFold applies the EqualFold predicate on the "status" field.
-func StatusEqualFold(v string) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldEqualFold(FieldStatus, v))
-}
-
-// StatusContainsFold applies the ContainsFold predicate on the "status" field.
-func StatusContainsFold(v string) predicate.AgentAsk {
-	return predicate.AgentAsk(sql.FieldContainsFold(FieldStatus, v))
 }
 
 // ExpiresAtEQ applies the EQ predicate on the "expires_at" field.
@@ -953,6 +744,75 @@ func AnsweredAtIsNil() predicate.AgentAsk {
 // AnsweredAtNotNil applies the NotNil predicate on the "answered_at" field.
 func AnsweredAtNotNil() predicate.AgentAsk {
 	return predicate.AgentAsk(sql.FieldNotNull(FieldAnsweredAt))
+}
+
+// HasFromAgent applies the HasEdge predicate on the "from_agent" edge.
+func HasFromAgent() predicate.AgentAsk {
+	return predicate.AgentAsk(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, FromAgentTable, FromAgentColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasFromAgentWith applies the HasEdge predicate on the "from_agent" edge with a given conditions (other predicates).
+func HasFromAgentWith(preds ...predicate.AgentToken) predicate.AgentAsk {
+	return predicate.AgentAsk(func(s *sql.Selector) {
+		step := newFromAgentStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasToAgent applies the HasEdge predicate on the "to_agent" edge.
+func HasToAgent() predicate.AgentAsk {
+	return predicate.AgentAsk(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, ToAgentTable, ToAgentColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasToAgentWith applies the HasEdge predicate on the "to_agent" edge with a given conditions (other predicates).
+func HasToAgentWith(preds ...predicate.AgentToken) predicate.AgentAsk {
+	return predicate.AgentAsk(func(s *sql.Selector) {
+		step := newToAgentStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasRepliedByAgent applies the HasEdge predicate on the "replied_by_agent" edge.
+func HasRepliedByAgent() predicate.AgentAsk {
+	return predicate.AgentAsk(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, RepliedByAgentTable, RepliedByAgentColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasRepliedByAgentWith applies the HasEdge predicate on the "replied_by_agent" edge with a given conditions (other predicates).
+func HasRepliedByAgentWith(preds ...predicate.AgentToken) predicate.AgentAsk {
+	return predicate.AgentAsk(func(s *sql.Selector) {
+		step := newRepliedByAgentStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

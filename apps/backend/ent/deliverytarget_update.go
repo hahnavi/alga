@@ -30,13 +30,13 @@ func (_u *DeliveryTargetUpdate) Where(ps ...predicate.DeliveryTarget) *DeliveryT
 }
 
 // SetProvider sets the "provider" field.
-func (_u *DeliveryTargetUpdate) SetProvider(v string) *DeliveryTargetUpdate {
+func (_u *DeliveryTargetUpdate) SetProvider(v deliverytarget.Provider) *DeliveryTargetUpdate {
 	_u.mutation.SetProvider(v)
 	return _u
 }
 
 // SetNillableProvider sets the "provider" field if the given value is not nil.
-func (_u *DeliveryTargetUpdate) SetNillableProvider(v *string) *DeliveryTargetUpdate {
+func (_u *DeliveryTargetUpdate) SetNillableProvider(v *deliverytarget.Provider) *DeliveryTargetUpdate {
 	if v != nil {
 		_u.SetProvider(*v)
 	}
@@ -97,9 +97,17 @@ func (_u *DeliveryTargetUpdate) ClearPostID() *DeliveryTargetUpdate {
 	return _u
 }
 
-// SetAlertID sets the "alert" edge to the Alert entity by ID.
-func (_u *DeliveryTargetUpdate) SetAlertID(id uuid.UUID) *DeliveryTargetUpdate {
-	_u.mutation.SetAlertID(id)
+// SetAlertID sets the "alert_id" field.
+func (_u *DeliveryTargetUpdate) SetAlertID(v uuid.UUID) *DeliveryTargetUpdate {
+	_u.mutation.SetAlertID(v)
+	return _u
+}
+
+// SetNillableAlertID sets the "alert_id" field if the given value is not nil.
+func (_u *DeliveryTargetUpdate) SetNillableAlertID(v *uuid.UUID) *DeliveryTargetUpdate {
+	if v != nil {
+		_u.SetAlertID(*v)
+	}
 	return _u
 }
 
@@ -177,7 +185,7 @@ func (_u *DeliveryTargetUpdate) sqlSave(ctx context.Context) (_node int, err err
 		}
 	}
 	if value, ok := _u.mutation.Provider(); ok {
-		_spec.SetField(deliverytarget.FieldProvider, field.TypeString, value)
+		_spec.SetField(deliverytarget.FieldProvider, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Channel(); ok {
 		_spec.SetField(deliverytarget.FieldChannel, field.TypeString, value)
@@ -244,13 +252,13 @@ type DeliveryTargetUpdateOne struct {
 }
 
 // SetProvider sets the "provider" field.
-func (_u *DeliveryTargetUpdateOne) SetProvider(v string) *DeliveryTargetUpdateOne {
+func (_u *DeliveryTargetUpdateOne) SetProvider(v deliverytarget.Provider) *DeliveryTargetUpdateOne {
 	_u.mutation.SetProvider(v)
 	return _u
 }
 
 // SetNillableProvider sets the "provider" field if the given value is not nil.
-func (_u *DeliveryTargetUpdateOne) SetNillableProvider(v *string) *DeliveryTargetUpdateOne {
+func (_u *DeliveryTargetUpdateOne) SetNillableProvider(v *deliverytarget.Provider) *DeliveryTargetUpdateOne {
 	if v != nil {
 		_u.SetProvider(*v)
 	}
@@ -311,9 +319,17 @@ func (_u *DeliveryTargetUpdateOne) ClearPostID() *DeliveryTargetUpdateOne {
 	return _u
 }
 
-// SetAlertID sets the "alert" edge to the Alert entity by ID.
-func (_u *DeliveryTargetUpdateOne) SetAlertID(id uuid.UUID) *DeliveryTargetUpdateOne {
-	_u.mutation.SetAlertID(id)
+// SetAlertID sets the "alert_id" field.
+func (_u *DeliveryTargetUpdateOne) SetAlertID(v uuid.UUID) *DeliveryTargetUpdateOne {
+	_u.mutation.SetAlertID(v)
+	return _u
+}
+
+// SetNillableAlertID sets the "alert_id" field if the given value is not nil.
+func (_u *DeliveryTargetUpdateOne) SetNillableAlertID(v *uuid.UUID) *DeliveryTargetUpdateOne {
+	if v != nil {
+		_u.SetAlertID(*v)
+	}
 	return _u
 }
 
@@ -421,7 +437,7 @@ func (_u *DeliveryTargetUpdateOne) sqlSave(ctx context.Context) (_node *Delivery
 		}
 	}
 	if value, ok := _u.mutation.Provider(); ok {
-		_spec.SetField(deliverytarget.FieldProvider, field.TypeString, value)
+		_spec.SetField(deliverytarget.FieldProvider, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Channel(); ok {
 		_spec.SetField(deliverytarget.FieldChannel, field.TypeString, value)

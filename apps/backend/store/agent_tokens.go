@@ -108,7 +108,7 @@ func (s *pgAgentTokenStore) CreateToken(name string, expiresAt *time.Time, agent
 
 	b := s.client.AgentToken.Create().
 		SetName(name).
-		SetAgentType(at).
+		SetAgentType(agenttoken.AgentType(at)).
 		SetTokenHash(tokenHash).
 		SetLookupPrefix(prefix).
 		SetCreatedAt(time.Now().UTC()).
@@ -154,7 +154,7 @@ func (s *pgAgentTokenStore) ListTokens() ([]AgentTokenRecord, error) {
 		records = append(records, AgentTokenRecord{
 			ID:           t.ID,
 			Name:         t.Name,
-			AgentType:    NormalizeAgentType(t.AgentType),
+			AgentType:    NormalizeAgentType(string(t.AgentType)),
 			TokenHash:    t.TokenHash,
 			LookupPrefix: t.LookupPrefix,
 			Token:        maskSuffix(t.TokenHash),
@@ -224,7 +224,7 @@ func (s *pgAgentTokenStore) RegenerateToken(id uuid.UUID) (*AgentTokenRecord, er
 	return &AgentTokenRecord{
 		ID:           rec.ID,
 		Name:         rec.Name,
-		AgentType:    NormalizeAgentType(rec.AgentType),
+		AgentType:    NormalizeAgentType(string(rec.AgentType)),
 		TokenHash:    tokenHash,
 		LookupPrefix: prefix,
 		Token:        tokenStr,
@@ -263,7 +263,7 @@ func (s *pgAgentTokenStore) ValidateToken(token string) (*AgentTokenRecord, erro
 		return &AgentTokenRecord{
 			ID:           t.ID,
 			Name:         t.Name,
-			AgentType:    NormalizeAgentType(t.AgentType),
+			AgentType:    NormalizeAgentType(string(t.AgentType)),
 			TokenHash:    t.TokenHash,
 			LookupPrefix: t.LookupPrefix,
 			CreatedAt:    t.CreatedAt,
@@ -309,7 +309,7 @@ func (s *pgAgentTokenStore) GetActiveAgentTokenByID(id uuid.UUID) (*AgentTokenRe
 	return &AgentTokenRecord{
 		ID:           rec.ID,
 		Name:         rec.Name,
-		AgentType:    NormalizeAgentType(rec.AgentType),
+		AgentType:    NormalizeAgentType(string(rec.AgentType)),
 		TokenHash:    rec.TokenHash,
 		LookupPrefix: rec.LookupPrefix,
 		Token:        maskSuffix(rec.TokenHash),
@@ -389,7 +389,7 @@ func (s *pgAgentTokenStore) ListActiveAgents() ([]AgentTokenRecord, error) {
 		records = append(records, AgentTokenRecord{
 			ID:             t.ID,
 			Name:           t.Name,
-			AgentType:      NormalizeAgentType(t.AgentType),
+			AgentType:      NormalizeAgentType(string(t.AgentType)),
 			CreatedAt:      t.CreatedAt,
 			Enabled:        t.Enabled,
 			Scope:          scope,

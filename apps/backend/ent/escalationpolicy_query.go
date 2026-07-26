@@ -4,8 +4,11 @@ package ent
 
 import (
 	"alga/ent/escalationpolicy"
+	"alga/ent/incident"
 	"alga/ent/predicate"
+	"alga/ent/service"
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -19,10 +22,12 @@ import (
 // EscalationPolicyQuery is the builder for querying EscalationPolicy entities.
 type EscalationPolicyQuery struct {
 	config
-	ctx        *QueryContext
-	order      []escalationpolicy.OrderOption
-	inters     []Interceptor
-	predicates []predicate.EscalationPolicy
+	ctx           *QueryContext
+	order         []escalationpolicy.OrderOption
+	inters        []Interceptor
+	predicates    []predicate.EscalationPolicy
+	withServices  *ServiceQuery
+	withIncidents *IncidentQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -57,6 +62,50 @@ func (_q *EscalationPolicyQuery) Unique(unique bool) *EscalationPolicyQuery {
 func (_q *EscalationPolicyQuery) Order(o ...escalationpolicy.OrderOption) *EscalationPolicyQuery {
 	_q.order = append(_q.order, o...)
 	return _q
+}
+
+// QueryServices chains the current query on the "services" edge.
+func (_q *EscalationPolicyQuery) QueryServices() *ServiceQuery {
+	query := (&ServiceClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(escalationpolicy.Table, escalationpolicy.FieldID, selector),
+			sqlgraph.To(service.Table, service.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, escalationpolicy.ServicesTable, escalationpolicy.ServicesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryIncidents chains the current query on the "incidents" edge.
+func (_q *EscalationPolicyQuery) QueryIncidents() *IncidentQuery {
+	query := (&IncidentClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(escalationpolicy.Table, escalationpolicy.FieldID, selector),
+			sqlgraph.To(incident.Table, incident.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, escalationpolicy.IncidentsTable, escalationpolicy.IncidentsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first EscalationPolicy entity from the query.
@@ -246,15 +295,39 @@ func (_q *EscalationPolicyQuery) Clone() *EscalationPolicyQuery {
 		return nil
 	}
 	return &EscalationPolicyQuery{
-		config:     _q.config,
-		ctx:        _q.ctx.Clone(),
-		order:      append([]escalationpolicy.OrderOption{}, _q.order...),
-		inters:     append([]Interceptor{}, _q.inters...),
-		predicates: append([]predicate.EscalationPolicy{}, _q.predicates...),
+		config:        _q.config,
+		ctx:           _q.ctx.Clone(),
+		order:         append([]escalationpolicy.OrderOption{}, _q.order...),
+		inters:        append([]Interceptor{}, _q.inters...),
+		predicates:    append([]predicate.EscalationPolicy{}, _q.predicates...),
+		withServices:  _q.withServices.Clone(),
+		withIncidents: _q.withIncidents.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
+}
+
+// WithServices tells the query-builder to eager-load the nodes that are connected to
+// the "services" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *EscalationPolicyQuery) WithServices(opts ...func(*ServiceQuery)) *EscalationPolicyQuery {
+	query := (&ServiceClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withServices = query
+	return _q
+}
+
+// WithIncidents tells the query-builder to eager-load the nodes that are connected to
+// the "incidents" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *EscalationPolicyQuery) WithIncidents(opts ...func(*IncidentQuery)) *EscalationPolicyQuery {
+	query := (&IncidentClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withIncidents = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -333,8 +406,12 @@ func (_q *EscalationPolicyQuery) prepareQuery(ctx context.Context) error {
 
 func (_q *EscalationPolicyQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*EscalationPolicy, error) {
 	var (
-		nodes = []*EscalationPolicy{}
-		_spec = _q.querySpec()
+		nodes       = []*EscalationPolicy{}
+		_spec       = _q.querySpec()
+		loadedTypes = [2]bool{
+			_q.withServices != nil,
+			_q.withIncidents != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*EscalationPolicy).scanValues(nil, columns)
@@ -342,6 +419,7 @@ func (_q *EscalationPolicyQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &EscalationPolicy{config: _q.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -353,7 +431,88 @@ func (_q *EscalationPolicyQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := _q.withServices; query != nil {
+		if err := _q.loadServices(ctx, query, nodes,
+			func(n *EscalationPolicy) { n.Edges.Services = []*Service{} },
+			func(n *EscalationPolicy, e *Service) { n.Edges.Services = append(n.Edges.Services, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withIncidents; query != nil {
+		if err := _q.loadIncidents(ctx, query, nodes,
+			func(n *EscalationPolicy) { n.Edges.Incidents = []*Incident{} },
+			func(n *EscalationPolicy, e *Incident) { n.Edges.Incidents = append(n.Edges.Incidents, e) }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (_q *EscalationPolicyQuery) loadServices(ctx context.Context, query *ServiceQuery, nodes []*EscalationPolicy, init func(*EscalationPolicy), assign func(*EscalationPolicy, *Service)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*EscalationPolicy)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(service.FieldEscalationPolicyID)
+	}
+	query.Where(predicate.Service(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(escalationpolicy.ServicesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.EscalationPolicyID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "escalation_policy_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "escalation_policy_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *EscalationPolicyQuery) loadIncidents(ctx context.Context, query *IncidentQuery, nodes []*EscalationPolicy, init func(*EscalationPolicy), assign func(*EscalationPolicy, *Incident)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*EscalationPolicy)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(incident.FieldEscalationPolicyID)
+	}
+	query.Where(predicate.Incident(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(escalationpolicy.IncidentsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.EscalationPolicyID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "escalation_policy_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "escalation_policy_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
 }
 
 func (_q *EscalationPolicyQuery) sqlCount(ctx context.Context) (int, error) {

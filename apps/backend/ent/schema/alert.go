@@ -24,7 +24,7 @@ func (Alert) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
 		field.String("fingerprint").NotEmpty(),
-		field.String("status").Default("firing"),
+		field.Enum("status").Values("firing", "resolved").Default("firing"),
 		field.Bool("acknowledged").Default(false),
 		field.Bool("silenced").Default(false),
 		field.JSON("labels", map[string]string{}).Default(map[string]string{}),
@@ -50,6 +50,7 @@ func (Alert) Edges() []ent.Edge {
 		edge.To("alert_investigation_alerts", AlertInvestigationAlert.Type),
 		edge.To("events", AlertEvent.Type),
 		edge.To("delivery_targets", DeliveryTarget.Type),
+		edge.From("triage_result", TriageResult.Type).Ref("alerts").Field("triage_result_id").Unique(),
 	}
 }
 
@@ -59,7 +60,11 @@ func (Alert) Indexes() []ent.Index {
 		index.Fields("fingerprint").
 			Unique().
 			Annotations(entsql.IndexWhere("status != 'resolved' AND deleted_at IS NULL")),
-		index.Fields("updated_at"),
-		index.Fields("status"),
+		index.Fields("updated_at").
+			Annotations(entsql.IndexWhere("deleted_at IS NULL")),
+		index.Fields("status", "created_at").
+			Annotations(entsql.IndexWhere("deleted_at IS NULL")),
+		index.Fields("triage_result_id").
+			Annotations(entsql.IndexWhere("deleted_at IS NULL")),
 	}
 }

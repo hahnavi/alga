@@ -4,6 +4,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -24,13 +25,16 @@ func (TeamMember) Fields() []ent.Field {
 		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
 		field.UUID("team_id", uuid.UUID{}),
 		field.UUID("user_id", uuid.UUID{}),
-		field.String("role").Default("member"),
+		field.Enum("role").Values("member", "lead").Default("member"),
 		field.Time("created_at").Default(timeNow),
 	}
 }
 
 func (TeamMember) Edges() []ent.Edge {
-	return nil
+	return []ent.Edge{
+		edge.From("team", Team.Type).Ref("team_members").Field("team_id").Unique().Required(),
+		edge.From("user", User.Type).Ref("team_members").Field("user_id").Unique().Required(),
+	}
 }
 
 func (TeamMember) Indexes() []ent.Index {

@@ -4,6 +4,8 @@ package ent
 
 import (
 	"alga/ent/oidcidentity"
+	"alga/ent/oidcprovider"
+	"alga/ent/user"
 	"fmt"
 	"strings"
 	"time"
@@ -31,8 +33,44 @@ type OIDCIdentity struct {
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt    time.Time `json:"updated_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the OIDCIdentityQuery when eager-loading is set.
+	Edges        OIDCIdentityEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// OIDCIdentityEdges holds the relations/edges for other nodes in the graph.
+type OIDCIdentityEdges struct {
+	// User holds the value of the user edge.
+	User *User `json:"user,omitempty"`
+	// Provider holds the value of the provider edge.
+	Provider *OIDCProvider `json:"provider,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [2]bool
+}
+
+// UserOrErr returns the User value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e OIDCIdentityEdges) UserOrErr() (*User, error) {
+	if e.User != nil {
+		return e.User, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: user.Label}
+	}
+	return nil, &NotLoadedError{edge: "user"}
+}
+
+// ProviderOrErr returns the Provider value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e OIDCIdentityEdges) ProviderOrErr() (*OIDCProvider, error) {
+	if e.Provider != nil {
+		return e.Provider, nil
+	} else if e.loadedTypes[1] {
+		return nil, &NotFoundError{label: oidcprovider.Label}
+	}
+	return nil, &NotLoadedError{edge: "provider"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -120,6 +158,16 @@ func (_m *OIDCIdentity) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *OIDCIdentity) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
+}
+
+// QueryUser queries the "user" edge of the OIDCIdentity entity.
+func (_m *OIDCIdentity) QueryUser() *UserQuery {
+	return NewOIDCIdentityClient(_m.config).QueryUser(_m)
+}
+
+// QueryProvider queries the "provider" edge of the OIDCIdentity entity.
+func (_m *OIDCIdentity) QueryProvider() *OIDCProviderQuery {
+	return NewOIDCIdentityClient(_m.config).QueryProvider(_m)
 }
 
 // Update returns a builder for updating this OIDCIdentity.

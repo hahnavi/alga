@@ -136,6 +136,11 @@ func UpdatedAt(v time.Time) predicate.IncidentCoordinationMessage {
 	return predicate.IncidentCoordinationMessage(sql.FieldEQ(FieldUpdatedAt, v))
 }
 
+// IncidentID applies equality check predicate on the "incident_id" field. It's identical to IncidentIDEQ.
+func IncidentID(v uuid.UUID) predicate.IncidentCoordinationMessage {
+	return predicate.IncidentCoordinationMessage(sql.FieldEQ(FieldIncidentID, v))
+}
+
 // KindEQ applies the EQ predicate on the "kind" field.
 func KindEQ(v string) predicate.IncidentCoordinationMessage {
 	return predicate.IncidentCoordinationMessage(sql.FieldEQ(FieldKind, v))
@@ -1064,6 +1069,26 @@ func UpdatedAtLT(v time.Time) predicate.IncidentCoordinationMessage {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.IncidentCoordinationMessage {
 	return predicate.IncidentCoordinationMessage(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// IncidentIDEQ applies the EQ predicate on the "incident_id" field.
+func IncidentIDEQ(v uuid.UUID) predicate.IncidentCoordinationMessage {
+	return predicate.IncidentCoordinationMessage(sql.FieldEQ(FieldIncidentID, v))
+}
+
+// IncidentIDNEQ applies the NEQ predicate on the "incident_id" field.
+func IncidentIDNEQ(v uuid.UUID) predicate.IncidentCoordinationMessage {
+	return predicate.IncidentCoordinationMessage(sql.FieldNEQ(FieldIncidentID, v))
+}
+
+// IncidentIDIn applies the In predicate on the "incident_id" field.
+func IncidentIDIn(vs ...uuid.UUID) predicate.IncidentCoordinationMessage {
+	return predicate.IncidentCoordinationMessage(sql.FieldIn(FieldIncidentID, vs...))
+}
+
+// IncidentIDNotIn applies the NotIn predicate on the "incident_id" field.
+func IncidentIDNotIn(vs ...uuid.UUID) predicate.IncidentCoordinationMessage {
+	return predicate.IncidentCoordinationMessage(sql.FieldNotIn(FieldIncidentID, vs...))
 }
 
 // HasIncident applies the HasEdge predicate on the "incident" edge.

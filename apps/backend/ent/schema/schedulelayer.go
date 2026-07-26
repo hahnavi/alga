@@ -4,6 +4,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -24,8 +25,8 @@ func (ScheduleLayer) Fields() []ent.Field {
 		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
 		field.UUID("schedule_id", uuid.UUID{}),
 		field.String("name").Default(""),
-		field.String("rotation_type").Default("weekly"),
-		field.Int("rotation_interval").Default(1),
+		field.Enum("rotation_type").Values("daily", "weekly", "custom").Default("weekly"),
+		field.Int("rotation_interval").Default(1).Positive(),
 		field.Time("start_date").Default(timeNow),
 		field.Time("end_date").Optional().Nillable(),
 		// timezone is the IANA timezone in which this layer's daily-active
@@ -40,7 +41,7 @@ func (ScheduleLayer) Fields() []ent.Field {
 		field.String("start_time").Default("00:00"),
 		field.String("end_time").Default(""),
 		field.JSON("days_of_week", []string{}).Default([]string{}),
-		field.Int("priority").Default(0),
+		field.Int("priority").Default(0).NonNegative(),
 		field.JSON("user_ids", []string{}).Default([]string{}),
 		field.Time("created_at").Default(timeNow),
 		field.Time("updated_at").Default(timeNow).UpdateDefault(timeNow),
@@ -48,11 +49,14 @@ func (ScheduleLayer) Fields() []ent.Field {
 }
 
 func (ScheduleLayer) Edges() []ent.Edge {
-	return nil
+	return []ent.Edge{
+		edge.From("schedule", OnCallSchedule.Type).Ref("layers").Field("schedule_id").Unique().Required(),
+	}
 }
 
 func (ScheduleLayer) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("schedule_id"),
+		index.Fields("schedule_id", "priority").Unique(),
 	}
 }

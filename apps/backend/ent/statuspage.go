@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/statuspage"
+	"alga/ent/team"
 	"fmt"
 	"strings"
 	"time"
@@ -25,7 +26,7 @@ type StatusPage struct {
 	// Description holds the value of the "description" field.
 	Description string `json:"description,omitempty"`
 	// Visibility holds the value of the "visibility" field.
-	Visibility string `json:"visibility,omitempty"`
+	Visibility statuspage.Visibility `json:"visibility,omitempty"`
 	// Enabled holds the value of the "enabled" field.
 	Enabled bool `json:"enabled,omitempty"`
 	// OwnerTeamID holds the value of the "owner_team_id" field.
@@ -33,8 +34,42 @@ type StatusPage struct {
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt    time.Time `json:"updated_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the StatusPageQuery when eager-loading is set.
+	Edges        StatusPageEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// StatusPageEdges holds the relations/edges for other nodes in the graph.
+type StatusPageEdges struct {
+	// Components holds the value of the components edge.
+	Components []*StatusPageComponent `json:"components,omitempty"`
+	// OwnerTeam holds the value of the owner_team edge.
+	OwnerTeam *Team `json:"owner_team,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [2]bool
+}
+
+// ComponentsOrErr returns the Components value or an error if the edge
+// was not loaded in eager-loading.
+func (e StatusPageEdges) ComponentsOrErr() ([]*StatusPageComponent, error) {
+	if e.loadedTypes[0] {
+		return e.Components, nil
+	}
+	return nil, &NotLoadedError{edge: "components"}
+}
+
+// OwnerTeamOrErr returns the OwnerTeam value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e StatusPageEdges) OwnerTeamOrErr() (*Team, error) {
+	if e.OwnerTeam != nil {
+		return e.OwnerTeam, nil
+	} else if e.loadedTypes[1] {
+		return nil, &NotFoundError{label: team.Label}
+	}
+	return nil, &NotLoadedError{edge: "owner_team"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -95,7 +130,7 @@ func (_m *StatusPage) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field visibility", values[i])
 			} else if value.Valid {
-				_m.Visibility = value.String
+				_m.Visibility = statuspage.Visibility(value.String)
 			}
 		case statuspage.FieldEnabled:
 			if value, ok := values[i].(*sql.NullBool); !ok {
@@ -135,6 +170,16 @@ func (_m *StatusPage) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
 }
 
+// QueryComponents queries the "components" edge of the StatusPage entity.
+func (_m *StatusPage) QueryComponents() *StatusPageComponentQuery {
+	return NewStatusPageClient(_m.config).QueryComponents(_m)
+}
+
+// QueryOwnerTeam queries the "owner_team" edge of the StatusPage entity.
+func (_m *StatusPage) QueryOwnerTeam() *TeamQuery {
+	return NewStatusPageClient(_m.config).QueryOwnerTeam(_m)
+}
+
 // Update returns a builder for updating this StatusPage.
 // Note that you need to call StatusPage.Unwrap() before calling this method if this StatusPage
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -168,7 +213,7 @@ func (_m *StatusPage) String() string {
 	builder.WriteString(_m.Description)
 	builder.WriteString(", ")
 	builder.WriteString("visibility=")
-	builder.WriteString(_m.Visibility)
+	builder.WriteString(fmt.Sprintf("%v", _m.Visibility))
 	builder.WriteString(", ")
 	builder.WriteString("enabled=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Enabled))

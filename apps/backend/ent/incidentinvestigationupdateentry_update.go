@@ -31,16 +31,16 @@ func (_u *IncidentInvestigationUpdateEntryUpdate) Where(ps ...predicate.Incident
 	return _u
 }
 
-// SetIncidentInvestigationUUID sets the "incident_investigation_uuid" field.
-func (_u *IncidentInvestigationUpdateEntryUpdate) SetIncidentInvestigationUUID(v uuid.UUID) *IncidentInvestigationUpdateEntryUpdate {
-	_u.mutation.SetIncidentInvestigationUUID(v)
+// SetIncidentInvestigationID sets the "incident_investigation_id" field.
+func (_u *IncidentInvestigationUpdateEntryUpdate) SetIncidentInvestigationID(v uuid.UUID) *IncidentInvestigationUpdateEntryUpdate {
+	_u.mutation.SetIncidentInvestigationID(v)
 	return _u
 }
 
-// SetNillableIncidentInvestigationUUID sets the "incident_investigation_uuid" field if the given value is not nil.
-func (_u *IncidentInvestigationUpdateEntryUpdate) SetNillableIncidentInvestigationUUID(v *uuid.UUID) *IncidentInvestigationUpdateEntryUpdate {
+// SetNillableIncidentInvestigationID sets the "incident_investigation_id" field if the given value is not nil.
+func (_u *IncidentInvestigationUpdateEntryUpdate) SetNillableIncidentInvestigationID(v *uuid.UUID) *IncidentInvestigationUpdateEntryUpdate {
 	if v != nil {
-		_u.SetIncidentInvestigationUUID(*v)
+		_u.SetIncidentInvestigationID(*v)
 	}
 	return _u
 }
@@ -247,12 +247,6 @@ func (_u *IncidentInvestigationUpdateEntryUpdate) SetNillableCreatedAt(v *time.T
 	return _u
 }
 
-// SetIncidentInvestigationID sets the "incident_investigation" edge to the IncidentInvestigation entity by ID.
-func (_u *IncidentInvestigationUpdateEntryUpdate) SetIncidentInvestigationID(id uuid.UUID) *IncidentInvestigationUpdateEntryUpdate {
-	_u.mutation.SetIncidentInvestigationID(id)
-	return _u
-}
-
 // SetIncidentInvestigation sets the "incident_investigation" edge to the IncidentInvestigation entity.
 func (_u *IncidentInvestigationUpdateEntryUpdate) SetIncidentInvestigation(v *IncidentInvestigation) *IncidentInvestigationUpdateEntryUpdate {
 	return _u.SetIncidentInvestigationID(v.ID)
@@ -439,16 +433,16 @@ type IncidentInvestigationUpdateEntryUpdateOne struct {
 	mutation *IncidentInvestigationUpdateEntryMutation
 }
 
-// SetIncidentInvestigationUUID sets the "incident_investigation_uuid" field.
-func (_u *IncidentInvestigationUpdateEntryUpdateOne) SetIncidentInvestigationUUID(v uuid.UUID) *IncidentInvestigationUpdateEntryUpdateOne {
-	_u.mutation.SetIncidentInvestigationUUID(v)
+// SetIncidentInvestigationID sets the "incident_investigation_id" field.
+func (_u *IncidentInvestigationUpdateEntryUpdateOne) SetIncidentInvestigationID(v uuid.UUID) *IncidentInvestigationUpdateEntryUpdateOne {
+	_u.mutation.SetIncidentInvestigationID(v)
 	return _u
 }
 
-// SetNillableIncidentInvestigationUUID sets the "incident_investigation_uuid" field if the given value is not nil.
-func (_u *IncidentInvestigationUpdateEntryUpdateOne) SetNillableIncidentInvestigationUUID(v *uuid.UUID) *IncidentInvestigationUpdateEntryUpdateOne {
+// SetNillableIncidentInvestigationID sets the "incident_investigation_id" field if the given value is not nil.
+func (_u *IncidentInvestigationUpdateEntryUpdateOne) SetNillableIncidentInvestigationID(v *uuid.UUID) *IncidentInvestigationUpdateEntryUpdateOne {
 	if v != nil {
-		_u.SetIncidentInvestigationUUID(*v)
+		_u.SetIncidentInvestigationID(*v)
 	}
 	return _u
 }
@@ -652,12 +646,6 @@ func (_u *IncidentInvestigationUpdateEntryUpdateOne) SetNillableCreatedAt(v *tim
 	if v != nil {
 		_u.SetCreatedAt(*v)
 	}
-	return _u
-}
-
-// SetIncidentInvestigationID sets the "incident_investigation" edge to the IncidentInvestigation entity by ID.
-func (_u *IncidentInvestigationUpdateEntryUpdateOne) SetIncidentInvestigationID(id uuid.UUID) *IncidentInvestigationUpdateEntryUpdateOne {
-	_u.mutation.SetIncidentInvestigationID(id)
 	return _u
 }
 

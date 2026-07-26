@@ -48,11 +48,11 @@ func (s *pgNotificationStore) Create(ctx context.Context, n *NotificationRecord)
 
 	saved, err := s.client.Notification.Create().
 		SetUserID(n.UserID).
-		SetType(n.Type).
+		SetType(notification.Type(n.Type)).
 		SetTitle(n.Title).
 		SetMessage(n.Message).
 		SetRead(n.Read).
-		SetResourceType(n.ResourceType).
+		SetResourceType(notification.ResourceType(n.ResourceType)).
 		SetResourceID(n.ResourceID).
 		SetTriggeredByUserID(n.TriggeredByUserID).
 		SetTriggeredByDisplayName(n.TriggeredByDisplayName).
@@ -84,14 +84,18 @@ func (s *pgNotificationStore) ListByUser(ctx context.Context, userID string, lim
 
 	var records []NotificationRecord
 	for _, n := range nfns {
+		resourceType := ""
+		if n.ResourceType != nil {
+			resourceType = string(*n.ResourceType)
+		}
 		records = append(records, NotificationRecord{
 			ID:                     n.ID,
 			UserID:                 n.UserID,
-			Type:                   n.Type,
+			Type:                   string(n.Type),
 			Title:                  n.Title,
 			Message:                n.Message,
 			Read:                   n.Read,
-			ResourceType:           n.ResourceType,
+			ResourceType:           resourceType,
 			ResourceID:             n.ResourceID,
 			TriggeredByUserID:      n.TriggeredByUserID,
 			TriggeredByDisplayName: n.TriggeredByDisplayName,

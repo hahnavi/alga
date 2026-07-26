@@ -3,9 +3,11 @@
 package knowledgenote
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -40,8 +42,17 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// EdgeAuthor holds the string denoting the author edge name in mutations.
+	EdgeAuthor = "author"
 	// Table holds the table name of the knowledgenote in the database.
 	Table = "knowledge_notes"
+	// AuthorTable is the table that holds the author relation/edge.
+	AuthorTable = "knowledge_notes"
+	// AuthorInverseTable is the table name for the User entity.
+	// It exists in this package in order to avoid circular dependency with the "user" package.
+	AuthorInverseTable = "users"
+	// AuthorColumn is the table column denoting the author relation/edge.
+	AuthorColumn = "author_id"
 )
 
 // Columns holds all SQL columns for knowledgenote fields.
@@ -73,14 +84,10 @@ func ValidColumn(column string) bool {
 }
 
 var (
-	// KindValidator is a validator for the "kind" field. It is called by the builders before save.
-	KindValidator func(string) error
 	// TitleValidator is a validator for the "title" field. It is called by the builders before save.
 	TitleValidator func(string) error
 	// BodyMarkdownValidator is a validator for the "body_markdown" field. It is called by the builders before save.
 	BodyMarkdownValidator func(string) error
-	// DefaultAuthorType holds the default value on creation for the "author_type" field.
-	DefaultAuthorType string
 	// DefaultAuthorName holds the default value on creation for the "author_name" field.
 	DefaultAuthorName string
 	// DefaultSourceInvestigationID holds the default value on creation for the "source_investigation_id" field.
@@ -94,6 +101,57 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// Kind defines the type for the "kind" enum field.
+type Kind string
+
+// Kind values.
+const (
+	KindRunbook      Kind = "runbook"
+	KindKnownIssue   Kind = "known_issue"
+	KindServiceOwner Kind = "service_owner"
+	KindFact         Kind = "fact"
+)
+
+func (k Kind) String() string {
+	return string(k)
+}
+
+// KindValidator is a validator for the "kind" field enum values. It is called by the builders before save.
+func KindValidator(k Kind) error {
+	switch k {
+	case KindRunbook, KindKnownIssue, KindServiceOwner, KindFact:
+		return nil
+	default:
+		return fmt.Errorf("knowledgenote: invalid enum value for kind field: %q", k)
+	}
+}
+
+// AuthorType defines the type for the "author_type" enum field.
+type AuthorType string
+
+// AuthorTypeUser is the default value of the AuthorType enum.
+const DefaultAuthorType = AuthorTypeUser
+
+// AuthorType values.
+const (
+	AuthorTypeUser  AuthorType = "user"
+	AuthorTypeAgent AuthorType = "agent"
+)
+
+func (at AuthorType) String() string {
+	return string(at)
+}
+
+// AuthorTypeValidator is a validator for the "author_type" field enum values. It is called by the builders before save.
+func AuthorTypeValidator(at AuthorType) error {
+	switch at {
+	case AuthorTypeUser, AuthorTypeAgent:
+		return nil
+	default:
+		return fmt.Errorf("knowledgenote: invalid enum value for author_type field: %q", at)
+	}
+}
 
 // OrderOption defines the ordering options for the KnowledgeNote queries.
 type OrderOption func(*sql.Selector)
@@ -156,4 +214,18 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByAuthorField orders the results by author field.
+func ByAuthorField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAuthorStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newAuthorStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AuthorInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, AuthorTable, AuthorColumn),
+	)
 }

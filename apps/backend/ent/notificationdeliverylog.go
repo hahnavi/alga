@@ -23,11 +23,11 @@ type NotificationDeliveryLog struct {
 	// IncidentID holds the value of the "incident_id" field.
 	IncidentID *uuid.UUID `json:"incident_id,omitempty"`
 	// NotificationType holds the value of the "notification_type" field.
-	NotificationType string `json:"notification_type,omitempty"`
+	NotificationType notificationdeliverylog.NotificationType `json:"notification_type,omitempty"`
 	// Channel holds the value of the "channel" field.
-	Channel string `json:"channel,omitempty"`
+	Channel notificationdeliverylog.Channel `json:"channel,omitempty"`
 	// Status holds the value of the "status" field.
-	Status string `json:"status,omitempty"`
+	Status notificationdeliverylog.Status `json:"status,omitempty"`
 	// ErrorMessage holds the value of the "error_message" field.
 	ErrorMessage string `json:"error_message,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -86,19 +86,19 @@ func (_m *NotificationDeliveryLog) assignValues(columns []string, values []any) 
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field notification_type", values[i])
 			} else if value.Valid {
-				_m.NotificationType = value.String
+				_m.NotificationType = notificationdeliverylog.NotificationType(value.String)
 			}
 		case notificationdeliverylog.FieldChannel:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field channel", values[i])
 			} else if value.Valid {
-				_m.Channel = value.String
+				_m.Channel = notificationdeliverylog.Channel(value.String)
 			}
 		case notificationdeliverylog.FieldStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
-				_m.Status = value.String
+				_m.Status = notificationdeliverylog.Status(value.String)
 			}
 		case notificationdeliverylog.FieldErrorMessage:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -157,13 +157,13 @@ func (_m *NotificationDeliveryLog) String() string {
 	}
 	builder.WriteString(", ")
 	builder.WriteString("notification_type=")
-	builder.WriteString(_m.NotificationType)
+	builder.WriteString(fmt.Sprintf("%v", _m.NotificationType))
 	builder.WriteString(", ")
 	builder.WriteString("channel=")
-	builder.WriteString(_m.Channel)
+	builder.WriteString(fmt.Sprintf("%v", _m.Channel))
 	builder.WriteString(", ")
 	builder.WriteString("status=")
-	builder.WriteString(_m.Status)
+	builder.WriteString(fmt.Sprintf("%v", _m.Status))
 	builder.WriteString(", ")
 	builder.WriteString("error_message=")
 	builder.WriteString(_m.ErrorMessage)

@@ -74,7 +74,7 @@ func (s *pgAgentDMStore) AddMessage(agentTokenHex string, role AgentDMMessageRol
 	b := s.client.AgentDMMessage.Create().
 		SetAgentTokenID(agentTokenID).
 		SetChatID(AlgaAgentDMChatID()).
-		SetRole(string(role)).
+		SetRole(agentdmmessage.Role(role)).
 		SetBody(body).
 		SetCreatedAt(now).
 		SetUpdatedAt(now)

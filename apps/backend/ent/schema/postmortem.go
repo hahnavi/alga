@@ -4,6 +4,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -24,7 +25,7 @@ func (PostMortem) Fields() []ent.Field {
 		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
 		field.UUID("incident_id", uuid.UUID{}).Unique(),
 		field.String("title").Default(""),
-		field.String("status").Default("draft"),
+		field.Enum("status").Values("draft", "in_review", "approved", "published").Default("draft"),
 		field.Text("summary").Default(""),
 		field.JSON("timeline", []map[string]any{}).Optional(),
 		field.Text("root_cause").Default(""),
@@ -43,11 +44,17 @@ func (PostMortem) Fields() []ent.Field {
 }
 
 func (PostMortem) Edges() []ent.Edge {
-	return nil
+	return []ent.Edge{
+		edge.From("incident", Incident.Type).Ref("post_mortem").Field("incident_id").Unique().Required(),
+		edge.From("approved_by", User.Type).Ref("approved_post_mortems").Field("approved_by_id").Unique(),
+		edge.To("action_items", ActionItem.Type).Annotations(entsql.Annotation{OnDelete: entsql.Cascade}),
+	}
 }
 
 func (PostMortem) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("status"),
+		index.Fields("incident_id"),
+		index.Fields("status", "created_at"),
+		index.Fields("approved_by_id"),
 	}
 }

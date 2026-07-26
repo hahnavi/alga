@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -20,8 +21,35 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// EdgeTeam holds the string denoting the team edge name in mutations.
+	EdgeTeam = "team"
+	// EdgeLayers holds the string denoting the layers edge name in mutations.
+	EdgeLayers = "layers"
+	// EdgeOverrides holds the string denoting the overrides edge name in mutations.
+	EdgeOverrides = "overrides"
 	// Table holds the table name of the oncallschedule in the database.
 	Table = "on_call_schedules"
+	// TeamTable is the table that holds the team relation/edge.
+	TeamTable = "on_call_schedules"
+	// TeamInverseTable is the table name for the Team entity.
+	// It exists in this package in order to avoid circular dependency with the "team" package.
+	TeamInverseTable = "teams"
+	// TeamColumn is the table column denoting the team relation/edge.
+	TeamColumn = "team_id"
+	// LayersTable is the table that holds the layers relation/edge.
+	LayersTable = "schedule_layers"
+	// LayersInverseTable is the table name for the ScheduleLayer entity.
+	// It exists in this package in order to avoid circular dependency with the "schedulelayer" package.
+	LayersInverseTable = "schedule_layers"
+	// LayersColumn is the table column denoting the layers relation/edge.
+	LayersColumn = "schedule_id"
+	// OverridesTable is the table that holds the overrides relation/edge.
+	OverridesTable = "schedule_overrides"
+	// OverridesInverseTable is the table name for the ScheduleOverride entity.
+	// It exists in this package in order to avoid circular dependency with the "scheduleoverride" package.
+	OverridesInverseTable = "schedule_overrides"
+	// OverridesColumn is the table column denoting the overrides relation/edge.
+	OverridesColumn = "schedule_id"
 )
 
 // Columns holds all SQL columns for oncallschedule fields.
@@ -74,4 +102,60 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByTeamField orders the results by team field.
+func ByTeamField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newTeamStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByLayersCount orders the results by layers count.
+func ByLayersCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newLayersStep(), opts...)
+	}
+}
+
+// ByLayers orders the results by layers terms.
+func ByLayers(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newLayersStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByOverridesCount orders the results by overrides count.
+func ByOverridesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newOverridesStep(), opts...)
+	}
+}
+
+// ByOverrides orders the results by overrides terms.
+func ByOverrides(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newOverridesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+func newTeamStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(TeamInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, TeamTable, TeamColumn),
+	)
+}
+func newLayersStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(LayersInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, LayersTable, LayersColumn),
+	)
+}
+func newOverridesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(OverridesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, OverridesTable, OverridesColumn),
+	)
 }

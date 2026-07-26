@@ -3,8 +3,10 @@
 package ent
 
 import (
+	"alga/ent/oncallschedule"
 	"alga/ent/predicate"
 	"alga/ent/scheduleoverride"
+	"alga/ent/user"
 	"context"
 	"errors"
 	"fmt"
@@ -119,9 +121,31 @@ func (_u *ScheduleOverrideUpdate) SetNillableCreatedAt(v *time.Time) *ScheduleOv
 	return _u
 }
 
+// SetSchedule sets the "schedule" edge to the OnCallSchedule entity.
+func (_u *ScheduleOverrideUpdate) SetSchedule(v *OnCallSchedule) *ScheduleOverrideUpdate {
+	return _u.SetScheduleID(v.ID)
+}
+
+// SetUser sets the "user" edge to the User entity.
+func (_u *ScheduleOverrideUpdate) SetUser(v *User) *ScheduleOverrideUpdate {
+	return _u.SetUserID(v.ID)
+}
+
 // Mutation returns the ScheduleOverrideMutation object of the builder.
 func (_u *ScheduleOverrideUpdate) Mutation() *ScheduleOverrideMutation {
 	return _u.mutation
+}
+
+// ClearSchedule clears the "schedule" edge to the OnCallSchedule entity.
+func (_u *ScheduleOverrideUpdate) ClearSchedule() *ScheduleOverrideUpdate {
+	_u.mutation.ClearSchedule()
+	return _u
+}
+
+// ClearUser clears the "user" edge to the User entity.
+func (_u *ScheduleOverrideUpdate) ClearUser() *ScheduleOverrideUpdate {
+	_u.mutation.ClearUser()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -151,7 +175,21 @@ func (_u *ScheduleOverrideUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (_u *ScheduleOverrideUpdate) check() error {
+	if _u.mutation.ScheduleCleared() && len(_u.mutation.ScheduleIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "ScheduleOverride.schedule"`)
+	}
+	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "ScheduleOverride.user"`)
+	}
+	return nil
+}
+
 func (_u *ScheduleOverrideUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(scheduleoverride.Table, scheduleoverride.Columns, sqlgraph.NewFieldSpec(scheduleoverride.FieldID, field.TypeUUID))
 	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
@@ -159,12 +197,6 @@ func (_u *ScheduleOverrideUpdate) sqlSave(ctx context.Context) (_node int, err e
 				ps[i](selector)
 			}
 		}
-	}
-	if value, ok := _u.mutation.ScheduleID(); ok {
-		_spec.SetField(scheduleoverride.FieldScheduleID, field.TypeUUID, value)
-	}
-	if value, ok := _u.mutation.UserID(); ok {
-		_spec.SetField(scheduleoverride.FieldUserID, field.TypeUUID, value)
 	}
 	if value, ok := _u.mutation.StartAt(); ok {
 		_spec.SetField(scheduleoverride.FieldStartAt, field.TypeTime, value)
@@ -180,6 +212,64 @@ func (_u *ScheduleOverrideUpdate) sqlSave(ctx context.Context) (_node int, err e
 	}
 	if value, ok := _u.mutation.CreatedAt(); ok {
 		_spec.SetField(scheduleoverride.FieldCreatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.ScheduleCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   scheduleoverride.ScheduleTable,
+			Columns: []string{scheduleoverride.ScheduleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oncallschedule.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ScheduleIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   scheduleoverride.ScheduleTable,
+			Columns: []string{scheduleoverride.ScheduleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oncallschedule.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.UserCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   scheduleoverride.UserTable,
+			Columns: []string{scheduleoverride.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.UserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   scheduleoverride.UserTable,
+			Columns: []string{scheduleoverride.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -291,9 +381,31 @@ func (_u *ScheduleOverrideUpdateOne) SetNillableCreatedAt(v *time.Time) *Schedul
 	return _u
 }
 
+// SetSchedule sets the "schedule" edge to the OnCallSchedule entity.
+func (_u *ScheduleOverrideUpdateOne) SetSchedule(v *OnCallSchedule) *ScheduleOverrideUpdateOne {
+	return _u.SetScheduleID(v.ID)
+}
+
+// SetUser sets the "user" edge to the User entity.
+func (_u *ScheduleOverrideUpdateOne) SetUser(v *User) *ScheduleOverrideUpdateOne {
+	return _u.SetUserID(v.ID)
+}
+
 // Mutation returns the ScheduleOverrideMutation object of the builder.
 func (_u *ScheduleOverrideUpdateOne) Mutation() *ScheduleOverrideMutation {
 	return _u.mutation
+}
+
+// ClearSchedule clears the "schedule" edge to the OnCallSchedule entity.
+func (_u *ScheduleOverrideUpdateOne) ClearSchedule() *ScheduleOverrideUpdateOne {
+	_u.mutation.ClearSchedule()
+	return _u
+}
+
+// ClearUser clears the "user" edge to the User entity.
+func (_u *ScheduleOverrideUpdateOne) ClearUser() *ScheduleOverrideUpdateOne {
+	_u.mutation.ClearUser()
+	return _u
 }
 
 // Where appends a list predicates to the ScheduleOverrideUpdate builder.
@@ -336,7 +448,21 @@ func (_u *ScheduleOverrideUpdateOne) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (_u *ScheduleOverrideUpdateOne) check() error {
+	if _u.mutation.ScheduleCleared() && len(_u.mutation.ScheduleIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "ScheduleOverride.schedule"`)
+	}
+	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "ScheduleOverride.user"`)
+	}
+	return nil
+}
+
 func (_u *ScheduleOverrideUpdateOne) sqlSave(ctx context.Context) (_node *ScheduleOverride, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(scheduleoverride.Table, scheduleoverride.Columns, sqlgraph.NewFieldSpec(scheduleoverride.FieldID, field.TypeUUID))
 	id, ok := _u.mutation.ID()
 	if !ok {
@@ -362,12 +488,6 @@ func (_u *ScheduleOverrideUpdateOne) sqlSave(ctx context.Context) (_node *Schedu
 			}
 		}
 	}
-	if value, ok := _u.mutation.ScheduleID(); ok {
-		_spec.SetField(scheduleoverride.FieldScheduleID, field.TypeUUID, value)
-	}
-	if value, ok := _u.mutation.UserID(); ok {
-		_spec.SetField(scheduleoverride.FieldUserID, field.TypeUUID, value)
-	}
 	if value, ok := _u.mutation.StartAt(); ok {
 		_spec.SetField(scheduleoverride.FieldStartAt, field.TypeTime, value)
 	}
@@ -382,6 +502,64 @@ func (_u *ScheduleOverrideUpdateOne) sqlSave(ctx context.Context) (_node *Schedu
 	}
 	if value, ok := _u.mutation.CreatedAt(); ok {
 		_spec.SetField(scheduleoverride.FieldCreatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.ScheduleCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   scheduleoverride.ScheduleTable,
+			Columns: []string{scheduleoverride.ScheduleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oncallschedule.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ScheduleIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   scheduleoverride.ScheduleTable,
+			Columns: []string{scheduleoverride.ScheduleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oncallschedule.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.UserCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   scheduleoverride.UserTable,
+			Columns: []string{scheduleoverride.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.UserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   scheduleoverride.UserTable,
+			Columns: []string{scheduleoverride.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &ScheduleOverride{config: _u.config}
 	_spec.Assign = _node.assignValues

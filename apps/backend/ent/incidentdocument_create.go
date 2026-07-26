@@ -79,6 +79,26 @@ func (_c *IncidentDocumentCreate) SetNillableUpdatedAt(v *time.Time) *IncidentDo
 	return _c
 }
 
+// SetIncidentID sets the "incident_id" field.
+func (_c *IncidentDocumentCreate) SetIncidentID(v uuid.UUID) *IncidentDocumentCreate {
+	_c.mutation.SetIncidentID(v)
+	return _c
+}
+
+// SetUpdatedByID sets the "updated_by_id" field.
+func (_c *IncidentDocumentCreate) SetUpdatedByID(v uuid.UUID) *IncidentDocumentCreate {
+	_c.mutation.SetUpdatedByID(v)
+	return _c
+}
+
+// SetNillableUpdatedByID sets the "updated_by_id" field if the given value is not nil.
+func (_c *IncidentDocumentCreate) SetNillableUpdatedByID(v *uuid.UUID) *IncidentDocumentCreate {
+	if v != nil {
+		_c.SetUpdatedByID(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *IncidentDocumentCreate) SetID(v uuid.UUID) *IncidentDocumentCreate {
 	_c.mutation.SetID(v)
@@ -93,29 +113,9 @@ func (_c *IncidentDocumentCreate) SetNillableID(v *uuid.UUID) *IncidentDocumentC
 	return _c
 }
 
-// SetIncidentID sets the "incident" edge to the Incident entity by ID.
-func (_c *IncidentDocumentCreate) SetIncidentID(id uuid.UUID) *IncidentDocumentCreate {
-	_c.mutation.SetIncidentID(id)
-	return _c
-}
-
 // SetIncident sets the "incident" edge to the Incident entity.
 func (_c *IncidentDocumentCreate) SetIncident(v *Incident) *IncidentDocumentCreate {
 	return _c.SetIncidentID(v.ID)
-}
-
-// SetUpdatedByID sets the "updated_by" edge to the User entity by ID.
-func (_c *IncidentDocumentCreate) SetUpdatedByID(id uuid.UUID) *IncidentDocumentCreate {
-	_c.mutation.SetUpdatedByID(id)
-	return _c
-}
-
-// SetNillableUpdatedByID sets the "updated_by" edge to the User entity by ID if the given value is not nil.
-func (_c *IncidentDocumentCreate) SetNillableUpdatedByID(id *uuid.UUID) *IncidentDocumentCreate {
-	if id != nil {
-		_c = _c.SetUpdatedByID(*id)
-	}
-	return _c
 }
 
 // SetUpdatedBy sets the "updated_by" edge to the User entity.
@@ -194,6 +194,9 @@ func (_c *IncidentDocumentCreate) check() error {
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "IncidentDocument.updated_at"`)}
 	}
+	if _, ok := _c.mutation.IncidentID(); !ok {
+		return &ValidationError{Name: "incident_id", err: errors.New(`ent: missing required field "IncidentDocument.incident_id"`)}
+	}
 	if len(_c.mutation.IncidentIDs()) == 0 {
 		return &ValidationError{Name: "incident", err: errors.New(`ent: missing required edge "IncidentDocument.incident"`)}
 	}
@@ -262,7 +265,7 @@ func (_c *IncidentDocumentCreate) createSpec() (*IncidentDocument, *sqlgraph.Cre
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.incident_documents = &nodes[0]
+		_node.IncidentID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.UpdatedByIDs(); len(nodes) > 0 {
@@ -279,7 +282,7 @@ func (_c *IncidentDocumentCreate) createSpec() (*IncidentDocument, *sqlgraph.Cre
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.user_document_edits = &nodes[0]
+		_node.UpdatedByID = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

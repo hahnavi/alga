@@ -1,9 +1,9 @@
 package schema
 
 import (
-	"time"
-
 	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
+	"entgo.io/ent/schema"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -13,9 +13,15 @@ type Playbook struct {
 	ent.Schema
 }
 
+func (Playbook) Annotations() []schema.Annotation {
+	return []schema.Annotation{
+		entsql.Annotation{Table: "playbooks"},
+	}
+}
+
 func (Playbook) Fields() []ent.Field {
 	return []ent.Field{
-		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).Unique(),
+		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
 		field.String("title").Unique(),
 		field.Enum("kind").Values("procedure", "mitigation"),
 		field.Text("summary").Optional(),
@@ -23,8 +29,8 @@ func (Playbook) Fields() []ent.Field {
 		field.JSON("label_selectors", []map[string]any{}).Optional(),
 		field.JSON("tags", []string{}).Optional(),
 		field.UUID("created_by", uuid.UUID{}),
-		field.Time("created_at").Default(time.Now).Immutable(),
-		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
+		field.Time("created_at").Default(timeNow).Immutable(),
+		field.Time("updated_at").Default(timeNow).UpdateDefault(timeNow),
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"alga/ent/handoffrecord"
 	"alga/ent/oncallschedule"
 	"alga/ent/predicate"
+	"alga/ent/user"
 	"context"
 	"fmt"
 	"math"
@@ -20,11 +21,13 @@ import (
 // HandoffRecordQuery is the builder for querying HandoffRecord entities.
 type HandoffRecordQuery struct {
 	config
-	ctx          *QueryContext
-	order        []handoffrecord.OrderOption
-	inters       []Interceptor
-	predicates   []predicate.HandoffRecord
-	withSchedule *OnCallScheduleQuery
+	ctx              *QueryContext
+	order            []handoffrecord.OrderOption
+	inters           []Interceptor
+	predicates       []predicate.HandoffRecord
+	withSchedule     *OnCallScheduleQuery
+	withOutgoingUser *UserQuery
+	withIncomingUser *UserQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -76,6 +79,50 @@ func (_q *HandoffRecordQuery) QuerySchedule() *OnCallScheduleQuery {
 			sqlgraph.From(handoffrecord.Table, handoffrecord.FieldID, selector),
 			sqlgraph.To(oncallschedule.Table, oncallschedule.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, false, handoffrecord.ScheduleTable, handoffrecord.ScheduleColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryOutgoingUser chains the current query on the "outgoing_user" edge.
+func (_q *HandoffRecordQuery) QueryOutgoingUser() *UserQuery {
+	query := (&UserClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(handoffrecord.Table, handoffrecord.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, handoffrecord.OutgoingUserTable, handoffrecord.OutgoingUserColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryIncomingUser chains the current query on the "incoming_user" edge.
+func (_q *HandoffRecordQuery) QueryIncomingUser() *UserQuery {
+	query := (&UserClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(handoffrecord.Table, handoffrecord.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, handoffrecord.IncomingUserTable, handoffrecord.IncomingUserColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -270,12 +317,14 @@ func (_q *HandoffRecordQuery) Clone() *HandoffRecordQuery {
 		return nil
 	}
 	return &HandoffRecordQuery{
-		config:       _q.config,
-		ctx:          _q.ctx.Clone(),
-		order:        append([]handoffrecord.OrderOption{}, _q.order...),
-		inters:       append([]Interceptor{}, _q.inters...),
-		predicates:   append([]predicate.HandoffRecord{}, _q.predicates...),
-		withSchedule: _q.withSchedule.Clone(),
+		config:           _q.config,
+		ctx:              _q.ctx.Clone(),
+		order:            append([]handoffrecord.OrderOption{}, _q.order...),
+		inters:           append([]Interceptor{}, _q.inters...),
+		predicates:       append([]predicate.HandoffRecord{}, _q.predicates...),
+		withSchedule:     _q.withSchedule.Clone(),
+		withOutgoingUser: _q.withOutgoingUser.Clone(),
+		withIncomingUser: _q.withIncomingUser.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -290,6 +339,28 @@ func (_q *HandoffRecordQuery) WithSchedule(opts ...func(*OnCallScheduleQuery)) *
 		opt(query)
 	}
 	_q.withSchedule = query
+	return _q
+}
+
+// WithOutgoingUser tells the query-builder to eager-load the nodes that are connected to
+// the "outgoing_user" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *HandoffRecordQuery) WithOutgoingUser(opts ...func(*UserQuery)) *HandoffRecordQuery {
+	query := (&UserClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withOutgoingUser = query
+	return _q
+}
+
+// WithIncomingUser tells the query-builder to eager-load the nodes that are connected to
+// the "incoming_user" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *HandoffRecordQuery) WithIncomingUser(opts ...func(*UserQuery)) *HandoffRecordQuery {
+	query := (&UserClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withIncomingUser = query
 	return _q
 }
 
@@ -371,8 +442,10 @@ func (_q *HandoffRecordQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 	var (
 		nodes       = []*HandoffRecord{}
 		_spec       = _q.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [3]bool{
 			_q.withSchedule != nil,
+			_q.withOutgoingUser != nil,
+			_q.withIncomingUser != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -396,6 +469,18 @@ func (_q *HandoffRecordQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 	if query := _q.withSchedule; query != nil {
 		if err := _q.loadSchedule(ctx, query, nodes, nil,
 			func(n *HandoffRecord, e *OnCallSchedule) { n.Edges.Schedule = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withOutgoingUser; query != nil {
+		if err := _q.loadOutgoingUser(ctx, query, nodes, nil,
+			func(n *HandoffRecord, e *User) { n.Edges.OutgoingUser = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withIncomingUser; query != nil {
+		if err := _q.loadIncomingUser(ctx, query, nodes, nil,
+			func(n *HandoffRecord, e *User) { n.Edges.IncomingUser = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -431,6 +516,70 @@ func (_q *HandoffRecordQuery) loadSchedule(ctx context.Context, query *OnCallSch
 	}
 	return nil
 }
+func (_q *HandoffRecordQuery) loadOutgoingUser(ctx context.Context, query *UserQuery, nodes []*HandoffRecord, init func(*HandoffRecord), assign func(*HandoffRecord, *User)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*HandoffRecord)
+	for i := range nodes {
+		if nodes[i].OutgoingUserID == nil {
+			continue
+		}
+		fk := *nodes[i].OutgoingUserID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(user.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "outgoing_user_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *HandoffRecordQuery) loadIncomingUser(ctx context.Context, query *UserQuery, nodes []*HandoffRecord, init func(*HandoffRecord), assign func(*HandoffRecord, *User)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*HandoffRecord)
+	for i := range nodes {
+		if nodes[i].IncomingUserID == nil {
+			continue
+		}
+		fk := *nodes[i].IncomingUserID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(user.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "incoming_user_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
 
 func (_q *HandoffRecordQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
@@ -459,6 +608,12 @@ func (_q *HandoffRecordQuery) querySpec() *sqlgraph.QuerySpec {
 		}
 		if _q.withSchedule != nil {
 			_spec.Node.AddColumnOnce(handoffrecord.FieldScheduleID)
+		}
+		if _q.withOutgoingUser != nil {
+			_spec.Node.AddColumnOnce(handoffrecord.FieldOutgoingUserID)
+		}
+		if _q.withIncomingUser != nil {
+			_spec.Node.AddColumnOnce(handoffrecord.FieldIncomingUserID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

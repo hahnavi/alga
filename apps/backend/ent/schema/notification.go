@@ -23,11 +23,11 @@ func (Notification) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
 		field.String("user_id").NotEmpty(),
-		field.String("type").NotEmpty(),
+		field.Enum("type").Values("escalation", "oncall_handoff", "post_mortem_review_requested", "action_item_assigned", "mention", "info"),
 		field.String("title").NotEmpty(),
 		field.String("message").NotEmpty(),
 		field.Bool("read").Default(false),
-		field.String("resource_type").Optional().Default(""),
+		field.Enum("resource_type").Values("incident", "investigation", "post_mortem", "action_item").Optional().Nillable(),
 		field.String("resource_id").Optional().Default(""),
 		field.String("triggered_by_user_id").Optional().Default(""),
 		field.String("triggered_by_display_name").Optional().Default(""),

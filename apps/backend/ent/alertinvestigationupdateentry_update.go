@@ -31,16 +31,16 @@ func (_u *AlertInvestigationUpdateEntryUpdate) Where(ps ...predicate.AlertInvest
 	return _u
 }
 
-// SetAlertInvestigationUUID sets the "alert_investigation_uuid" field.
-func (_u *AlertInvestigationUpdateEntryUpdate) SetAlertInvestigationUUID(v uuid.UUID) *AlertInvestigationUpdateEntryUpdate {
-	_u.mutation.SetAlertInvestigationUUID(v)
+// SetAlertInvestigationID sets the "alert_investigation_id" field.
+func (_u *AlertInvestigationUpdateEntryUpdate) SetAlertInvestigationID(v uuid.UUID) *AlertInvestigationUpdateEntryUpdate {
+	_u.mutation.SetAlertInvestigationID(v)
 	return _u
 }
 
-// SetNillableAlertInvestigationUUID sets the "alert_investigation_uuid" field if the given value is not nil.
-func (_u *AlertInvestigationUpdateEntryUpdate) SetNillableAlertInvestigationUUID(v *uuid.UUID) *AlertInvestigationUpdateEntryUpdate {
+// SetNillableAlertInvestigationID sets the "alert_investigation_id" field if the given value is not nil.
+func (_u *AlertInvestigationUpdateEntryUpdate) SetNillableAlertInvestigationID(v *uuid.UUID) *AlertInvestigationUpdateEntryUpdate {
 	if v != nil {
-		_u.SetAlertInvestigationUUID(*v)
+		_u.SetAlertInvestigationID(*v)
 	}
 	return _u
 }
@@ -247,12 +247,6 @@ func (_u *AlertInvestigationUpdateEntryUpdate) SetNillableCreatedAt(v *time.Time
 	return _u
 }
 
-// SetAlertInvestigationID sets the "alert_investigation" edge to the AlertInvestigation entity by ID.
-func (_u *AlertInvestigationUpdateEntryUpdate) SetAlertInvestigationID(id uuid.UUID) *AlertInvestigationUpdateEntryUpdate {
-	_u.mutation.SetAlertInvestigationID(id)
-	return _u
-}
-
 // SetAlertInvestigation sets the "alert_investigation" edge to the AlertInvestigation entity.
 func (_u *AlertInvestigationUpdateEntryUpdate) SetAlertInvestigation(v *AlertInvestigation) *AlertInvestigationUpdateEntryUpdate {
 	return _u.SetAlertInvestigationID(v.ID)
@@ -439,16 +433,16 @@ type AlertInvestigationUpdateEntryUpdateOne struct {
 	mutation *AlertInvestigationUpdateEntryMutation
 }
 
-// SetAlertInvestigationUUID sets the "alert_investigation_uuid" field.
-func (_u *AlertInvestigationUpdateEntryUpdateOne) SetAlertInvestigationUUID(v uuid.UUID) *AlertInvestigationUpdateEntryUpdateOne {
-	_u.mutation.SetAlertInvestigationUUID(v)
+// SetAlertInvestigationID sets the "alert_investigation_id" field.
+func (_u *AlertInvestigationUpdateEntryUpdateOne) SetAlertInvestigationID(v uuid.UUID) *AlertInvestigationUpdateEntryUpdateOne {
+	_u.mutation.SetAlertInvestigationID(v)
 	return _u
 }
 
-// SetNillableAlertInvestigationUUID sets the "alert_investigation_uuid" field if the given value is not nil.
-func (_u *AlertInvestigationUpdateEntryUpdateOne) SetNillableAlertInvestigationUUID(v *uuid.UUID) *AlertInvestigationUpdateEntryUpdateOne {
+// SetNillableAlertInvestigationID sets the "alert_investigation_id" field if the given value is not nil.
+func (_u *AlertInvestigationUpdateEntryUpdateOne) SetNillableAlertInvestigationID(v *uuid.UUID) *AlertInvestigationUpdateEntryUpdateOne {
 	if v != nil {
-		_u.SetAlertInvestigationUUID(*v)
+		_u.SetAlertInvestigationID(*v)
 	}
 	return _u
 }
@@ -652,12 +646,6 @@ func (_u *AlertInvestigationUpdateEntryUpdateOne) SetNillableCreatedAt(v *time.T
 	if v != nil {
 		_u.SetCreatedAt(*v)
 	}
-	return _u
-}
-
-// SetAlertInvestigationID sets the "alert_investigation" edge to the AlertInvestigation entity by ID.
-func (_u *AlertInvestigationUpdateEntryUpdateOne) SetAlertInvestigationID(id uuid.UUID) *AlertInvestigationUpdateEntryUpdateOne {
-	_u.mutation.SetAlertInvestigationID(id)
 	return _u
 }
 

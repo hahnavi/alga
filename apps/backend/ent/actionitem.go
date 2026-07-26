@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/actionitem"
+	"alga/ent/postmortem"
 	"fmt"
 	"strings"
 	"time"
@@ -23,22 +24,45 @@ type ActionItem struct {
 	// Description holds the value of the "description" field.
 	Description string `json:"description,omitempty"`
 	// Type holds the value of the "type" field.
-	Type string `json:"type,omitempty"`
+	Type actionitem.Type `json:"type,omitempty"`
 	// AssigneeName holds the value of the "assignee_name" field.
 	AssigneeName string `json:"assignee_name,omitempty"`
 	// AssigneeID holds the value of the "assignee_id" field.
 	AssigneeID *uuid.UUID `json:"assignee_id,omitempty"`
 	// Status holds the value of the "status" field.
-	Status string `json:"status,omitempty"`
+	Status actionitem.Status `json:"status,omitempty"`
 	// Priority holds the value of the "priority" field.
-	Priority string `json:"priority,omitempty"`
+	Priority actionitem.Priority `json:"priority,omitempty"`
 	// DueDate holds the value of the "due_date" field.
 	DueDate *time.Time `json:"due_date,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt    time.Time `json:"updated_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the ActionItemQuery when eager-loading is set.
+	Edges        ActionItemEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// ActionItemEdges holds the relations/edges for other nodes in the graph.
+type ActionItemEdges struct {
+	// PostMortem holds the value of the post_mortem edge.
+	PostMortem *PostMortem `json:"post_mortem,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// PostMortemOrErr returns the PostMortem value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ActionItemEdges) PostMortemOrErr() (*PostMortem, error) {
+	if e.PostMortem != nil {
+		return e.PostMortem, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: postmortem.Label}
+	}
+	return nil, &NotLoadedError{edge: "post_mortem"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -91,7 +115,7 @@ func (_m *ActionItem) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field type", values[i])
 			} else if value.Valid {
-				_m.Type = value.String
+				_m.Type = actionitem.Type(value.String)
 			}
 		case actionitem.FieldAssigneeName:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -110,13 +134,13 @@ func (_m *ActionItem) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
-				_m.Status = value.String
+				_m.Status = actionitem.Status(value.String)
 			}
 		case actionitem.FieldPriority:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field priority", values[i])
 			} else if value.Valid {
-				_m.Priority = value.String
+				_m.Priority = actionitem.Priority(value.String)
 			}
 		case actionitem.FieldDueDate:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -150,6 +174,11 @@ func (_m *ActionItem) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
 }
 
+// QueryPostMortem queries the "post_mortem" edge of the ActionItem entity.
+func (_m *ActionItem) QueryPostMortem() *PostMortemQuery {
+	return NewActionItemClient(_m.config).QueryPostMortem(_m)
+}
+
 // Update returns a builder for updating this ActionItem.
 // Note that you need to call ActionItem.Unwrap() before calling this method if this ActionItem
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -180,7 +209,7 @@ func (_m *ActionItem) String() string {
 	builder.WriteString(_m.Description)
 	builder.WriteString(", ")
 	builder.WriteString("type=")
-	builder.WriteString(_m.Type)
+	builder.WriteString(fmt.Sprintf("%v", _m.Type))
 	builder.WriteString(", ")
 	builder.WriteString("assignee_name=")
 	builder.WriteString(_m.AssigneeName)
@@ -191,10 +220,10 @@ func (_m *ActionItem) String() string {
 	}
 	builder.WriteString(", ")
 	builder.WriteString("status=")
-	builder.WriteString(_m.Status)
+	builder.WriteString(fmt.Sprintf("%v", _m.Status))
 	builder.WriteString(", ")
 	builder.WriteString("priority=")
-	builder.WriteString(_m.Priority)
+	builder.WriteString(fmt.Sprintf("%v", _m.Priority))
 	builder.WriteString(", ")
 	if v := _m.DueDate; v != nil {
 		builder.WriteString("due_date=")

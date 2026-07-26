@@ -34,11 +34,12 @@ type IncidentTimelineEntry struct {
 	IcsEventType *string `json:"ics_event_type,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
+	// IncidentID holds the value of the "incident_id" field.
+	IncidentID uuid.UUID `json:"incident_id,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the IncidentTimelineEntryQuery when eager-loading is set.
-	Edges             IncidentTimelineEntryEdges `json:"edges"`
-	incident_timeline *uuid.UUID
-	selectValues      sql.SelectValues
+	Edges        IncidentTimelineEntryEdges `json:"edges"`
+	selectValues sql.SelectValues
 }
 
 // IncidentTimelineEntryEdges holds the relations/edges for other nodes in the graph.
@@ -74,10 +75,8 @@ func (*IncidentTimelineEntry) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case incidenttimelineentry.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
-		case incidenttimelineentry.FieldID:
+		case incidenttimelineentry.FieldID, incidenttimelineentry.FieldIncidentID:
 			values[i] = new(uuid.UUID)
-		case incidenttimelineentry.ForeignKeys[0]: // incident_timeline
-			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -145,12 +144,11 @@ func (_m *IncidentTimelineEntry) assignValues(columns []string, values []any) er
 			} else if value.Valid {
 				_m.CreatedAt = value.Time
 			}
-		case incidenttimelineentry.ForeignKeys[0]:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field incident_timeline", values[i])
-			} else if value.Valid {
-				_m.incident_timeline = new(uuid.UUID)
-				*_m.incident_timeline = *value.S.(*uuid.UUID)
+		case incidenttimelineentry.FieldIncidentID:
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field incident_id", values[i])
+			} else if value != nil {
+				_m.IncidentID = *value
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
@@ -217,6 +215,9 @@ func (_m *IncidentTimelineEntry) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("incident_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.IncidentID))
 	builder.WriteByte(')')
 	return builder.String()
 }

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -34,8 +35,17 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// EdgeProvider holds the string denoting the provider edge name in mutations.
+	EdgeProvider = "provider"
 	// Table holds the table name of the sharedsecret in the database.
 	Table = "shared_secrets"
+	// ProviderTable is the table that holds the provider relation/edge.
+	ProviderTable = "shared_secrets"
+	// ProviderInverseTable is the table name for the CredentialProvider entity.
+	// It exists in this package in order to avoid circular dependency with the "credentialprovider" package.
+	ProviderInverseTable = "credential_providers"
+	// ProviderColumn is the table column denoting the provider relation/edge.
+	ProviderColumn = "provider_id"
 )
 
 // Columns holds all SQL columns for sharedsecret fields.
@@ -137,4 +147,18 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByProviderField orders the results by provider field.
+func ByProviderField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProviderStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newProviderStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProviderInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, ProviderTable, ProviderColumn),
+	)
 }

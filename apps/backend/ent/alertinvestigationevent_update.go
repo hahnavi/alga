@@ -30,28 +30,28 @@ func (_u *AlertInvestigationEventUpdate) Where(ps ...predicate.AlertInvestigatio
 	return _u
 }
 
-// SetAlertInvestigationUUID sets the "alert_investigation_uuid" field.
-func (_u *AlertInvestigationEventUpdate) SetAlertInvestigationUUID(v uuid.UUID) *AlertInvestigationEventUpdate {
-	_u.mutation.SetAlertInvestigationUUID(v)
+// SetAlertInvestigationID sets the "alert_investigation_id" field.
+func (_u *AlertInvestigationEventUpdate) SetAlertInvestigationID(v uuid.UUID) *AlertInvestigationEventUpdate {
+	_u.mutation.SetAlertInvestigationID(v)
 	return _u
 }
 
-// SetNillableAlertInvestigationUUID sets the "alert_investigation_uuid" field if the given value is not nil.
-func (_u *AlertInvestigationEventUpdate) SetNillableAlertInvestigationUUID(v *uuid.UUID) *AlertInvestigationEventUpdate {
+// SetNillableAlertInvestigationID sets the "alert_investigation_id" field if the given value is not nil.
+func (_u *AlertInvestigationEventUpdate) SetNillableAlertInvestigationID(v *uuid.UUID) *AlertInvestigationEventUpdate {
 	if v != nil {
-		_u.SetAlertInvestigationUUID(*v)
+		_u.SetAlertInvestigationID(*v)
 	}
 	return _u
 }
 
 // SetEventType sets the "event_type" field.
-func (_u *AlertInvestigationEventUpdate) SetEventType(v string) *AlertInvestigationEventUpdate {
+func (_u *AlertInvestigationEventUpdate) SetEventType(v alertinvestigationevent.EventType) *AlertInvestigationEventUpdate {
 	_u.mutation.SetEventType(v)
 	return _u
 }
 
 // SetNillableEventType sets the "event_type" field if the given value is not nil.
-func (_u *AlertInvestigationEventUpdate) SetNillableEventType(v *string) *AlertInvestigationEventUpdate {
+func (_u *AlertInvestigationEventUpdate) SetNillableEventType(v *alertinvestigationevent.EventType) *AlertInvestigationEventUpdate {
 	if v != nil {
 		_u.SetEventType(*v)
 	}
@@ -224,12 +224,6 @@ func (_u *AlertInvestigationEventUpdate) SetNillableCreatedAt(v *time.Time) *Ale
 	return _u
 }
 
-// SetAlertInvestigationID sets the "alert_investigation" edge to the AlertInvestigation entity by ID.
-func (_u *AlertInvestigationEventUpdate) SetAlertInvestigationID(id uuid.UUID) *AlertInvestigationEventUpdate {
-	_u.mutation.SetAlertInvestigationID(id)
-	return _u
-}
-
 // SetAlertInvestigation sets the "alert_investigation" edge to the AlertInvestigation entity.
 func (_u *AlertInvestigationEventUpdate) SetAlertInvestigation(v *AlertInvestigation) *AlertInvestigationEventUpdate {
 	return _u.SetAlertInvestigationID(v.ID)
@@ -299,7 +293,7 @@ func (_u *AlertInvestigationEventUpdate) sqlSave(ctx context.Context) (_node int
 		}
 	}
 	if value, ok := _u.mutation.EventType(); ok {
-		_spec.SetField(alertinvestigationevent.FieldEventType, field.TypeString, value)
+		_spec.SetField(alertinvestigationevent.FieldEventType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Reason(); ok {
 		_spec.SetField(alertinvestigationevent.FieldReason, field.TypeString, value)
@@ -401,28 +395,28 @@ type AlertInvestigationEventUpdateOne struct {
 	mutation *AlertInvestigationEventMutation
 }
 
-// SetAlertInvestigationUUID sets the "alert_investigation_uuid" field.
-func (_u *AlertInvestigationEventUpdateOne) SetAlertInvestigationUUID(v uuid.UUID) *AlertInvestigationEventUpdateOne {
-	_u.mutation.SetAlertInvestigationUUID(v)
+// SetAlertInvestigationID sets the "alert_investigation_id" field.
+func (_u *AlertInvestigationEventUpdateOne) SetAlertInvestigationID(v uuid.UUID) *AlertInvestigationEventUpdateOne {
+	_u.mutation.SetAlertInvestigationID(v)
 	return _u
 }
 
-// SetNillableAlertInvestigationUUID sets the "alert_investigation_uuid" field if the given value is not nil.
-func (_u *AlertInvestigationEventUpdateOne) SetNillableAlertInvestigationUUID(v *uuid.UUID) *AlertInvestigationEventUpdateOne {
+// SetNillableAlertInvestigationID sets the "alert_investigation_id" field if the given value is not nil.
+func (_u *AlertInvestigationEventUpdateOne) SetNillableAlertInvestigationID(v *uuid.UUID) *AlertInvestigationEventUpdateOne {
 	if v != nil {
-		_u.SetAlertInvestigationUUID(*v)
+		_u.SetAlertInvestigationID(*v)
 	}
 	return _u
 }
 
 // SetEventType sets the "event_type" field.
-func (_u *AlertInvestigationEventUpdateOne) SetEventType(v string) *AlertInvestigationEventUpdateOne {
+func (_u *AlertInvestigationEventUpdateOne) SetEventType(v alertinvestigationevent.EventType) *AlertInvestigationEventUpdateOne {
 	_u.mutation.SetEventType(v)
 	return _u
 }
 
 // SetNillableEventType sets the "event_type" field if the given value is not nil.
-func (_u *AlertInvestigationEventUpdateOne) SetNillableEventType(v *string) *AlertInvestigationEventUpdateOne {
+func (_u *AlertInvestigationEventUpdateOne) SetNillableEventType(v *alertinvestigationevent.EventType) *AlertInvestigationEventUpdateOne {
 	if v != nil {
 		_u.SetEventType(*v)
 	}
@@ -595,12 +589,6 @@ func (_u *AlertInvestigationEventUpdateOne) SetNillableCreatedAt(v *time.Time) *
 	return _u
 }
 
-// SetAlertInvestigationID sets the "alert_investigation" edge to the AlertInvestigation entity by ID.
-func (_u *AlertInvestigationEventUpdateOne) SetAlertInvestigationID(id uuid.UUID) *AlertInvestigationEventUpdateOne {
-	_u.mutation.SetAlertInvestigationID(id)
-	return _u
-}
-
 // SetAlertInvestigation sets the "alert_investigation" edge to the AlertInvestigation entity.
 func (_u *AlertInvestigationEventUpdateOne) SetAlertInvestigation(v *AlertInvestigation) *AlertInvestigationEventUpdateOne {
 	return _u.SetAlertInvestigationID(v.ID)
@@ -700,7 +688,7 @@ func (_u *AlertInvestigationEventUpdateOne) sqlSave(ctx context.Context) (_node 
 		}
 	}
 	if value, ok := _u.mutation.EventType(); ok {
-		_spec.SetField(alertinvestigationevent.FieldEventType, field.TypeString, value)
+		_spec.SetField(alertinvestigationevent.FieldEventType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Reason(); ok {
 		_spec.SetField(alertinvestigationevent.FieldReason, field.TypeString, value)

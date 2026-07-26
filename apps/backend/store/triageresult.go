@@ -126,6 +126,22 @@ func pgTriageResultToRecord(e *ent.TriageResult) *TriageResultRecord {
 	if e.OverriddenBy != uuid.Nil {
 		overriddenBy = &e.OverriddenBy
 	}
+	severityInput := ""
+	if e.SeverityInput != nil {
+		severityInput = string(*e.SeverityInput)
+	}
+	severityClassified := ""
+	if e.SeverityClassified != nil {
+		severityClassified = string(*e.SeverityClassified)
+	}
+	category := ""
+	if e.Category != nil {
+		category = string(*e.Category)
+	}
+	overriddenTo := ""
+	if e.OverriddenTo != nil {
+		overriddenTo = string(*e.OverriddenTo)
+	}
 	return &TriageResultRecord{
 		ID:                 e.ID,
 		TriageNumber:       e.TriageNumber,
@@ -133,17 +149,17 @@ func pgTriageResultToRecord(e *ent.TriageResult) *TriageResultRecord {
 		AlertCount:         e.AlertCount,
 		AlertFingerprints:  fps,
 		AlertLabels:        labels,
-		SeverityInput:      e.SeverityInput,
-		Decision:           e.Decision,
+		SeverityInput:      severityInput,
+		Decision:           string(e.Decision),
 		Confidence:         e.Confidence,
-		SeverityClassified: e.SeverityClassified,
-		Category:           e.Category,
+		SeverityClassified: severityClassified,
+		Category:           category,
 		Reasoning:          e.Reasoning,
 		SuggestedActions:   actions,
 		Enrichment:         enrichment,
 		ContextUsed:        contextUsed,
-		Outcome:            e.Outcome,
-		OverriddenTo:       e.OverriddenTo,
+		Outcome:            string(e.Outcome),
+		OverriddenTo:       overriddenTo,
 		OverriddenBy:       overriddenBy,
 		OverriddenAt:       e.OverriddenAt,
 		ModelUsed:          e.ModelUsed,
@@ -198,17 +214,17 @@ func (s *pgTriageResultStore) Create(ctx context.Context, record *TriageResultRe
 		SetAlertCount(record.AlertCount).
 		SetAlertFingerprints(record.AlertFingerprints).
 		SetAlertLabels(record.AlertLabels).
-		SetSeverityInput(record.SeverityInput).
-		SetDecision(record.Decision).
+		SetSeverityInput(triageresult.SeverityInput(record.SeverityInput)).
+		SetDecision(triageresult.Decision(record.Decision)).
 		SetConfidence(record.Confidence).
-		SetSeverityClassified(record.SeverityClassified).
-		SetCategory(record.Category).
+		SetSeverityClassified(triageresult.SeverityClassified(record.SeverityClassified)).
+		SetCategory(triageresult.Category(record.Category)).
 		SetReasoning(record.Reasoning).
 		SetSuggestedActions(record.SuggestedActions).
 		SetEnrichment(record.Enrichment).
 		SetContextUsed(record.ContextUsed).
-		SetOutcome(record.Outcome).
-		SetOverriddenTo(record.OverriddenTo).
+		SetOutcome(triageresult.Outcome(record.Outcome)).
+		SetOverriddenTo(triageresult.OverriddenTo(record.OverriddenTo)).
 		SetModelUsed(record.ModelUsed).
 		SetTriageDurationMs(record.TriageDurationMs).
 		SetTraceID(record.TraceID).
@@ -242,25 +258,25 @@ func (s *pgTriageResultStore) Update(ctx context.Context, id string, patch *Tria
 	b := s.client.TriageResult.UpdateOneID(uid).SetUpdatedAt(time.Now().UTC())
 
 	if patch.Decision != "" {
-		b.SetDecision(patch.Decision)
+		b.SetDecision(triageresult.Decision(patch.Decision))
 	}
 	if patch.Confidence != 0 {
 		b.SetConfidence(patch.Confidence)
 	}
 	if patch.SeverityClassified != "" {
-		b.SetSeverityClassified(patch.SeverityClassified)
+		b.SetSeverityClassified(triageresult.SeverityClassified(patch.SeverityClassified))
 	}
 	if patch.Category != "" {
-		b.SetCategory(patch.Category)
+		b.SetCategory(triageresult.Category(patch.Category))
 	}
 	if patch.Reasoning != "" {
 		b.SetReasoning(patch.Reasoning)
 	}
 	if patch.Outcome != "" {
-		b.SetOutcome(patch.Outcome)
+		b.SetOutcome(triageresult.Outcome(patch.Outcome))
 	}
 	if patch.OverriddenTo != "" {
-		b.SetOverriddenTo(patch.OverriddenTo)
+		b.SetOverriddenTo(triageresult.OverriddenTo(patch.OverriddenTo))
 	}
 	if patch.OverriddenBy != nil {
 		b.SetNillableOverriddenBy(patch.OverriddenBy)
@@ -313,16 +329,16 @@ func (s *pgTriageResultStore) List(ctx context.Context, q TriageResultQuery) ([]
 	query := s.client.TriageResult.Query()
 
 	if decision := strings.TrimSpace(q.Decision); decision != "" {
-		query = query.Where(triageresult.Decision(decision))
+		query = query.Where(triageresult.DecisionEQ(triageresult.Decision(decision)))
 	}
 	if outcome := strings.TrimSpace(q.Outcome); outcome != "" {
-		query = query.Where(triageresult.Outcome(outcome))
+		query = query.Where(triageresult.OutcomeEQ(triageresult.Outcome(outcome)))
 	}
 	if category := strings.TrimSpace(q.Category); category != "" {
-		query = query.Where(triageresult.Category(category))
+		query = query.Where(triageresult.CategoryEQ(triageresult.Category(category)))
 	}
 	if severity := strings.TrimSpace(q.Severity); severity != "" {
-		query = query.Where(triageresult.SeverityInput(severity))
+		query = query.Where(triageresult.SeverityInputEQ(triageresult.SeverityInput(severity)))
 	}
 	if !q.StartDate.IsZero() {
 		query = query.Where(triageresult.CreatedAtGTE(q.StartDate))
@@ -355,7 +371,7 @@ func (s *pgTriageResultStore) List(ctx context.Context, q TriageResultQuery) ([]
 		if q.Search != "" {
 			text := strings.TrimSpace(strings.ToLower(q.Search))
 			if !strings.Contains(strings.ToLower(tr.CorrelationKey), text) &&
-				!strings.Contains(strings.ToLower(tr.Decision), text) &&
+				!strings.Contains(strings.ToLower(string(tr.Decision)), text) &&
 				!strings.Contains(strings.ToLower(tr.Reasoning), text) &&
 				!strings.Contains(strings.ToLower(tr.TraceID), text) {
 				continue
@@ -394,17 +410,17 @@ func (s *pgTriageResultStore) GetByCorrelationKey(ctx context.Context, key strin
 }
 
 func (s *pgTriageResultStore) CountByOutcome(ctx context.Context) (confirmed, overridden, pending int64, err error) {
-	c, err := s.client.TriageResult.Query().Where(triageresult.Outcome(TriageResultOutcomeConfirmed)).Count(ctx)
+	c, err := s.client.TriageResult.Query().Where(triageresult.OutcomeEQ(triageresult.OutcomeConfirmed)).Count(ctx)
 	if err != nil {
 		return 0, 0, 0, fmt.Errorf("count confirmed: %w", err)
 	}
 	confirmed = int64(c)
-	c, err = s.client.TriageResult.Query().Where(triageresult.Outcome(TriageResultOutcomeOverridden)).Count(ctx)
+	c, err = s.client.TriageResult.Query().Where(triageresult.OutcomeEQ(triageresult.OutcomeOverridden)).Count(ctx)
 	if err != nil {
 		return 0, 0, 0, fmt.Errorf("count overridden: %w", err)
 	}
 	overridden = int64(c)
-	c, err = s.client.TriageResult.Query().Where(triageresult.Outcome(TriageResultOutcomePending)).Count(ctx)
+	c, err = s.client.TriageResult.Query().Where(triageresult.OutcomeEQ(triageresult.OutcomePending)).Count(ctx)
 	if err != nil {
 		return 0, 0, 0, fmt.Errorf("count pending: %w", err)
 	}
@@ -419,7 +435,7 @@ func (s *pgTriageResultStore) CountByDecision(ctx context.Context) (map[string]i
 	}
 	m := make(map[string]int64)
 	for _, tr := range items {
-		m[tr.Decision]++
+		m[string(tr.Decision)]++
 	}
 	return m, nil
 }
@@ -431,8 +447,8 @@ func (s *pgTriageResultStore) CountByCategory(ctx context.Context) (map[string]i
 	}
 	m := make(map[string]int64)
 	for _, tr := range items {
-		if tr.Category != "" {
-			m[tr.Category]++
+		if tr.Category != nil && *tr.Category != "" {
+			m[string(*tr.Category)]++
 		}
 	}
 	return m, nil
@@ -485,7 +501,7 @@ func (s *pgTriageResultStore) VolumeTrend(ctx context.Context, days int) ([]Tria
 		if _, ok := dayMap[key]; !ok {
 			dayMap[key] = make(map[string]int64)
 		}
-		dayMap[key][tr.Decision]++
+		dayMap[key][string(tr.Decision)]++
 	}
 
 	var out []TriageVolumeDay

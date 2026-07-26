@@ -3,6 +3,7 @@
 package notificationdeliverylog
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -55,12 +56,6 @@ func ValidColumn(column string) bool {
 }
 
 var (
-	// NotificationTypeValidator is a validator for the "notification_type" field. It is called by the builders before save.
-	NotificationTypeValidator func(string) error
-	// ChannelValidator is a validator for the "channel" field. It is called by the builders before save.
-	ChannelValidator func(string) error
-	// DefaultStatus holds the default value on creation for the "status" field.
-	DefaultStatus string
 	// DefaultErrorMessage holds the default value on creation for the "error_message" field.
 	DefaultErrorMessage string
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
@@ -68,6 +63,91 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// NotificationType defines the type for the "notification_type" enum field.
+type NotificationType string
+
+// NotificationType values.
+const (
+	NotificationTypeEscalation                NotificationType = "escalation"
+	NotificationTypeOncallHandoff             NotificationType = "oncall_handoff"
+	NotificationTypePostMortemReviewRequested NotificationType = "post_mortem_review_requested"
+	NotificationTypeActionItemAssigned        NotificationType = "action_item_assigned"
+	NotificationTypeMention                   NotificationType = "mention"
+	NotificationTypeInfo                      NotificationType = "info"
+)
+
+func (nt NotificationType) String() string {
+	return string(nt)
+}
+
+// NotificationTypeValidator is a validator for the "notification_type" field enum values. It is called by the builders before save.
+func NotificationTypeValidator(nt NotificationType) error {
+	switch nt {
+	case NotificationTypeEscalation, NotificationTypeOncallHandoff, NotificationTypePostMortemReviewRequested, NotificationTypeActionItemAssigned, NotificationTypeMention, NotificationTypeInfo:
+		return nil
+	default:
+		return fmt.Errorf("notificationdeliverylog: invalid enum value for notification_type field: %q", nt)
+	}
+}
+
+// Channel defines the type for the "channel" enum field.
+type Channel string
+
+// Channel values.
+const (
+	ChannelEmail      Channel = "email"
+	ChannelMattermost Channel = "mattermost"
+	ChannelSlack      Channel = "slack"
+	ChannelVoice      Channel = "voice"
+)
+
+func (c Channel) String() string {
+	return string(c)
+}
+
+// ChannelValidator is a validator for the "channel" field enum values. It is called by the builders before save.
+func ChannelValidator(c Channel) error {
+	switch c {
+	case ChannelEmail, ChannelMattermost, ChannelSlack, ChannelVoice:
+		return nil
+	default:
+		return fmt.Errorf("notificationdeliverylog: invalid enum value for channel field: %q", c)
+	}
+}
+
+// Status defines the type for the "status" enum field.
+type Status string
+
+// StatusSent is the default value of the Status enum.
+const DefaultStatus = StatusSent
+
+// Status values.
+const (
+	StatusSent             Status = "sent"
+	StatusDelivered        Status = "delivered"
+	StatusFailed           Status = "failed"
+	StatusQueued           Status = "queued"
+	StatusSkipped          Status = "skipped"
+	StatusSkippedNoSlackID Status = "skipped_no_slack_id"
+	StatusSkippedNoPhone   Status = "skipped_no_phone"
+	StatusSkippedOptOut    Status = "skipped_opt_out"
+	StatusSkippedDedup     Status = "skipped_dedup"
+)
+
+func (s Status) String() string {
+	return string(s)
+}
+
+// StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
+func StatusValidator(s Status) error {
+	switch s {
+	case StatusSent, StatusDelivered, StatusFailed, StatusQueued, StatusSkipped, StatusSkippedNoSlackID, StatusSkippedNoPhone, StatusSkippedOptOut, StatusSkippedDedup:
+		return nil
+	default:
+		return fmt.Errorf("notificationdeliverylog: invalid enum value for status field: %q", s)
+	}
+}
 
 // OrderOption defines the ordering options for the NotificationDeliveryLog queries.
 type OrderOption func(*sql.Selector)

@@ -25,8 +25,73 @@ type Team struct {
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt    time.Time `json:"updated_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the TeamQuery when eager-loading is set.
+	Edges        TeamEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// TeamEdges holds the relations/edges for other nodes in the graph.
+type TeamEdges struct {
+	// TeamMembers holds the value of the team_members edge.
+	TeamMembers []*TeamMember `json:"team_members,omitempty"`
+	// OwnedServices holds the value of the owned_services edge.
+	OwnedServices []*Service `json:"owned_services,omitempty"`
+	// OwnedStatusPages holds the value of the owned_status_pages edge.
+	OwnedStatusPages []*StatusPage `json:"owned_status_pages,omitempty"`
+	// OnCallSchedule holds the value of the on_call_schedule edge.
+	OnCallSchedule []*OnCallSchedule `json:"on_call_schedule,omitempty"`
+	// Heartbeats holds the value of the heartbeats edge.
+	Heartbeats []*Heartbeat `json:"heartbeats,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [5]bool
+}
+
+// TeamMembersOrErr returns the TeamMembers value or an error if the edge
+// was not loaded in eager-loading.
+func (e TeamEdges) TeamMembersOrErr() ([]*TeamMember, error) {
+	if e.loadedTypes[0] {
+		return e.TeamMembers, nil
+	}
+	return nil, &NotLoadedError{edge: "team_members"}
+}
+
+// OwnedServicesOrErr returns the OwnedServices value or an error if the edge
+// was not loaded in eager-loading.
+func (e TeamEdges) OwnedServicesOrErr() ([]*Service, error) {
+	if e.loadedTypes[1] {
+		return e.OwnedServices, nil
+	}
+	return nil, &NotLoadedError{edge: "owned_services"}
+}
+
+// OwnedStatusPagesOrErr returns the OwnedStatusPages value or an error if the edge
+// was not loaded in eager-loading.
+func (e TeamEdges) OwnedStatusPagesOrErr() ([]*StatusPage, error) {
+	if e.loadedTypes[2] {
+		return e.OwnedStatusPages, nil
+	}
+	return nil, &NotLoadedError{edge: "owned_status_pages"}
+}
+
+// OnCallScheduleOrErr returns the OnCallSchedule value or an error if the edge
+// was not loaded in eager-loading.
+func (e TeamEdges) OnCallScheduleOrErr() ([]*OnCallSchedule, error) {
+	if e.loadedTypes[3] {
+		return e.OnCallSchedule, nil
+	}
+	return nil, &NotLoadedError{edge: "on_call_schedule"}
+}
+
+// HeartbeatsOrErr returns the Heartbeats value or an error if the edge
+// was not loaded in eager-loading.
+func (e TeamEdges) HeartbeatsOrErr() ([]*Heartbeat, error) {
+	if e.loadedTypes[4] {
+		return e.Heartbeats, nil
+	}
+	return nil, &NotLoadedError{edge: "heartbeats"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -96,6 +161,31 @@ func (_m *Team) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *Team) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
+}
+
+// QueryTeamMembers queries the "team_members" edge of the Team entity.
+func (_m *Team) QueryTeamMembers() *TeamMemberQuery {
+	return NewTeamClient(_m.config).QueryTeamMembers(_m)
+}
+
+// QueryOwnedServices queries the "owned_services" edge of the Team entity.
+func (_m *Team) QueryOwnedServices() *ServiceQuery {
+	return NewTeamClient(_m.config).QueryOwnedServices(_m)
+}
+
+// QueryOwnedStatusPages queries the "owned_status_pages" edge of the Team entity.
+func (_m *Team) QueryOwnedStatusPages() *StatusPageQuery {
+	return NewTeamClient(_m.config).QueryOwnedStatusPages(_m)
+}
+
+// QueryOnCallSchedule queries the "on_call_schedule" edge of the Team entity.
+func (_m *Team) QueryOnCallSchedule() *OnCallScheduleQuery {
+	return NewTeamClient(_m.config).QueryOnCallSchedule(_m)
+}
+
+// QueryHeartbeats queries the "heartbeats" edge of the Team entity.
+func (_m *Team) QueryHeartbeats() *HeartbeatQuery {
+	return NewTeamClient(_m.config).QueryHeartbeats(_m)
 }
 
 // Update returns a builder for updating this Team.

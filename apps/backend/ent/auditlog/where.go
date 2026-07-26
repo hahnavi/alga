@@ -95,6 +95,16 @@ func RequestID(v string) predicate.AuditLog {
 	return predicate.AuditLog(sql.FieldEQ(FieldRequestID, v))
 }
 
+// EntityType applies equality check predicate on the "entity_type" field. It's identical to EntityTypeEQ.
+func EntityType(v string) predicate.AuditLog {
+	return predicate.AuditLog(sql.FieldEQ(FieldEntityType, v))
+}
+
+// EntityID applies equality check predicate on the "entity_id" field. It's identical to EntityIDEQ.
+func EntityID(v uuid.UUID) predicate.AuditLog {
+	return predicate.AuditLog(sql.FieldEQ(FieldEntityID, v))
+}
+
 // TimestampEQ applies the EQ predicate on the "timestamp" field.
 func TimestampEQ(v time.Time) predicate.AuditLog {
 	return predicate.AuditLog(sql.FieldEQ(FieldTimestamp, v))
@@ -568,6 +578,131 @@ func RequestIDEqualFold(v string) predicate.AuditLog {
 // RequestIDContainsFold applies the ContainsFold predicate on the "request_id" field.
 func RequestIDContainsFold(v string) predicate.AuditLog {
 	return predicate.AuditLog(sql.FieldContainsFold(FieldRequestID, v))
+}
+
+// EntityTypeEQ applies the EQ predicate on the "entity_type" field.
+func EntityTypeEQ(v string) predicate.AuditLog {
+	return predicate.AuditLog(sql.FieldEQ(FieldEntityType, v))
+}
+
+// EntityTypeNEQ applies the NEQ predicate on the "entity_type" field.
+func EntityTypeNEQ(v string) predicate.AuditLog {
+	return predicate.AuditLog(sql.FieldNEQ(FieldEntityType, v))
+}
+
+// EntityTypeIn applies the In predicate on the "entity_type" field.
+func EntityTypeIn(vs ...string) predicate.AuditLog {
+	return predicate.AuditLog(sql.FieldIn(FieldEntityType, vs...))
+}
+
+// EntityTypeNotIn applies the NotIn predicate on the "entity_type" field.
+func EntityTypeNotIn(vs ...string) predicate.AuditLog {
+	return predicate.AuditLog(sql.FieldNotIn(FieldEntityType, vs...))
+}
+
+// EntityTypeGT applies the GT predicate on the "entity_type" field.
+func EntityTypeGT(v string) predicate.AuditLog {
+	return predicate.AuditLog(sql.FieldGT(FieldEntityType, v))
+}
+
+// EntityTypeGTE applies the GTE predicate on the "entity_type" field.
+func EntityTypeGTE(v string) predicate.AuditLog {
+	return predicate.AuditLog(sql.FieldGTE(FieldEntityType, v))
+}
+
+// EntityTypeLT applies the LT predicate on the "entity_type" field.
+func EntityTypeLT(v string) predicate.AuditLog {
+	return predicate.AuditLog(sql.FieldLT(FieldEntityType, v))
+}
+
+// EntityTypeLTE applies the LTE predicate on the "entity_type" field.
+func EntityTypeLTE(v string) predicate.AuditLog {
+	return predicate.AuditLog(sql.FieldLTE(FieldEntityType, v))
+}
+
+// EntityTypeContains applies the Contains predicate on the "entity_type" field.
+func EntityTypeContains(v string) predicate.AuditLog {
+	return predicate.AuditLog(sql.FieldContains(FieldEntityType, v))
+}
+
+// EntityTypeHasPrefix applies the HasPrefix predicate on the "entity_type" field.
+func EntityTypeHasPrefix(v string) predicate.AuditLog {
+	return predicate.AuditLog(sql.FieldHasPrefix(FieldEntityType, v))
+}
+
+// EntityTypeHasSuffix applies the HasSuffix predicate on the "entity_type" field.
+func EntityTypeHasSuffix(v string) predicate.AuditLog {
+	return predicate.AuditLog(sql.FieldHasSuffix(FieldEntityType, v))
+}
+
+// EntityTypeIsNil applies the IsNil predicate on the "entity_type" field.
+func EntityTypeIsNil() predicate.AuditLog {
+	return predicate.AuditLog(sql.FieldIsNull(FieldEntityType))
+}
+
+// EntityTypeNotNil applies the NotNil predicate on the "entity_type" field.
+func EntityTypeNotNil() predicate.AuditLog {
+	return predicate.AuditLog(sql.FieldNotNull(FieldEntityType))
+}
+
+// EntityTypeEqualFold applies the EqualFold predicate on the "entity_type" field.
+func EntityTypeEqualFold(v string) predicate.AuditLog {
+	return predicate.AuditLog(sql.FieldEqualFold(FieldEntityType, v))
+}
+
+// EntityTypeContainsFold applies the ContainsFold predicate on the "entity_type" field.
+func EntityTypeContainsFold(v string) predicate.AuditLog {
+	return predicate.AuditLog(sql.FieldContainsFold(FieldEntityType, v))
+}
+
+// EntityIDEQ applies the EQ predicate on the "entity_id" field.
+func EntityIDEQ(v uuid.UUID) predicate.AuditLog {
+	return predicate.AuditLog(sql.FieldEQ(FieldEntityID, v))
+}
+
+// EntityIDNEQ applies the NEQ predicate on the "entity_id" field.
+func EntityIDNEQ(v uuid.UUID) predicate.AuditLog {
+	return predicate.AuditLog(sql.FieldNEQ(FieldEntityID, v))
+}
+
+// EntityIDIn applies the In predicate on the "entity_id" field.
+func EntityIDIn(vs ...uuid.UUID) predicate.AuditLog {
+	return predicate.AuditLog(sql.FieldIn(FieldEntityID, vs...))
+}
+
+// EntityIDNotIn applies the NotIn predicate on the "entity_id" field.
+func EntityIDNotIn(vs ...uuid.UUID) predicate.AuditLog {
+	return predicate.AuditLog(sql.FieldNotIn(FieldEntityID, vs...))
+}
+
+// EntityIDGT applies the GT predicate on the "entity_id" field.
+func EntityIDGT(v uuid.UUID) predicate.AuditLog {
+	return predicate.AuditLog(sql.FieldGT(FieldEntityID, v))
+}
+
+// EntityIDGTE applies the GTE predicate on the "entity_id" field.
+func EntityIDGTE(v uuid.UUID) predicate.AuditLog {
+	return predicate.AuditLog(sql.FieldGTE(FieldEntityID, v))
+}
+
+// EntityIDLT applies the LT predicate on the "entity_id" field.
+func EntityIDLT(v uuid.UUID) predicate.AuditLog {
+	return predicate.AuditLog(sql.FieldLT(FieldEntityID, v))
+}
+
+// EntityIDLTE applies the LTE predicate on the "entity_id" field.
+func EntityIDLTE(v uuid.UUID) predicate.AuditLog {
+	return predicate.AuditLog(sql.FieldLTE(FieldEntityID, v))
+}
+
+// EntityIDIsNil applies the IsNil predicate on the "entity_id" field.
+func EntityIDIsNil() predicate.AuditLog {
+	return predicate.AuditLog(sql.FieldIsNull(FieldEntityID))
+}
+
+// EntityIDNotNil applies the NotNil predicate on the "entity_id" field.
+func EntityIDNotNil() predicate.AuditLog {
+	return predicate.AuditLog(sql.FieldNotNull(FieldEntityID))
 }
 
 // And groups predicates with the AND operator between them.

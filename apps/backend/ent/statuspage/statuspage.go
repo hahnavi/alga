@@ -3,9 +3,11 @@
 package statuspage
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -30,8 +32,26 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// EdgeComponents holds the string denoting the components edge name in mutations.
+	EdgeComponents = "components"
+	// EdgeOwnerTeam holds the string denoting the owner_team edge name in mutations.
+	EdgeOwnerTeam = "owner_team"
 	// Table holds the table name of the statuspage in the database.
 	Table = "status_pages"
+	// ComponentsTable is the table that holds the components relation/edge.
+	ComponentsTable = "status_page_components"
+	// ComponentsInverseTable is the table name for the StatusPageComponent entity.
+	// It exists in this package in order to avoid circular dependency with the "statuspagecomponent" package.
+	ComponentsInverseTable = "status_page_components"
+	// ComponentsColumn is the table column denoting the components relation/edge.
+	ComponentsColumn = "status_page_id"
+	// OwnerTeamTable is the table that holds the owner_team relation/edge.
+	OwnerTeamTable = "status_pages"
+	// OwnerTeamInverseTable is the table name for the Team entity.
+	// It exists in this package in order to avoid circular dependency with the "team" package.
+	OwnerTeamInverseTable = "teams"
+	// OwnerTeamColumn is the table column denoting the owner_team relation/edge.
+	OwnerTeamColumn = "owner_team_id"
 )
 
 // Columns holds all SQL columns for statuspage fields.
@@ -64,8 +84,6 @@ var (
 	SlugValidator func(string) error
 	// DefaultDescription holds the default value on creation for the "description" field.
 	DefaultDescription string
-	// DefaultVisibility holds the default value on creation for the "visibility" field.
-	DefaultVisibility string
 	// DefaultEnabled holds the default value on creation for the "enabled" field.
 	DefaultEnabled bool
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
@@ -77,6 +95,32 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// Visibility defines the type for the "visibility" enum field.
+type Visibility string
+
+// VisibilityInternal is the default value of the Visibility enum.
+const DefaultVisibility = VisibilityInternal
+
+// Visibility values.
+const (
+	VisibilityInternal Visibility = "internal"
+	VisibilityPublic   Visibility = "public"
+)
+
+func (v Visibility) String() string {
+	return string(v)
+}
+
+// VisibilityValidator is a validator for the "visibility" field enum values. It is called by the builders before save.
+func VisibilityValidator(v Visibility) error {
+	switch v {
+	case VisibilityInternal, VisibilityPublic:
+		return nil
+	default:
+		return fmt.Errorf("statuspage: invalid enum value for visibility field: %q", v)
+	}
+}
 
 // OrderOption defines the ordering options for the StatusPage queries.
 type OrderOption func(*sql.Selector)
@@ -124,4 +168,39 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByComponentsCount orders the results by components count.
+func ByComponentsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newComponentsStep(), opts...)
+	}
+}
+
+// ByComponents orders the results by components terms.
+func ByComponents(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newComponentsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByOwnerTeamField orders the results by owner_team field.
+func ByOwnerTeamField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newOwnerTeamStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newComponentsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ComponentsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ComponentsTable, ComponentsColumn),
+	)
+}
+func newOwnerTeamStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(OwnerTeamInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, OwnerTeamTable, OwnerTeamColumn),
+	)
 }

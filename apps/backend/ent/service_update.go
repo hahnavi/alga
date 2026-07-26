@@ -3,8 +3,13 @@
 package ent
 
 import (
+	"alga/ent/escalationpolicy"
+	"alga/ent/incident"
 	"alga/ent/predicate"
 	"alga/ent/service"
+	"alga/ent/servicedependency"
+	"alga/ent/statuspagecomponent"
+	"alga/ent/team"
 	"context"
 	"errors"
 	"fmt"
@@ -167,13 +172,13 @@ func (_u *ServiceUpdate) AddSLAResolveMinutes(v int) *ServiceUpdate {
 }
 
 // SetStatus sets the "status" field.
-func (_u *ServiceUpdate) SetStatus(v string) *ServiceUpdate {
+func (_u *ServiceUpdate) SetStatus(v service.Status) *ServiceUpdate {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *ServiceUpdate) SetNillableStatus(v *string) *ServiceUpdate {
+func (_u *ServiceUpdate) SetNillableStatus(v *service.Status) *ServiceUpdate {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -200,9 +205,175 @@ func (_u *ServiceUpdate) SetUpdatedAt(v time.Time) *ServiceUpdate {
 	return _u
 }
 
+// AddDependencyIDs adds the "dependencies" edge to the ServiceDependency entity by IDs.
+func (_u *ServiceUpdate) AddDependencyIDs(ids ...uuid.UUID) *ServiceUpdate {
+	_u.mutation.AddDependencyIDs(ids...)
+	return _u
+}
+
+// AddDependencies adds the "dependencies" edges to the ServiceDependency entity.
+func (_u *ServiceUpdate) AddDependencies(v ...*ServiceDependency) *ServiceUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddDependencyIDs(ids...)
+}
+
+// AddDependedOnByIDs adds the "depended_on_by" edge to the ServiceDependency entity by IDs.
+func (_u *ServiceUpdate) AddDependedOnByIDs(ids ...uuid.UUID) *ServiceUpdate {
+	_u.mutation.AddDependedOnByIDs(ids...)
+	return _u
+}
+
+// AddDependedOnBy adds the "depended_on_by" edges to the ServiceDependency entity.
+func (_u *ServiceUpdate) AddDependedOnBy(v ...*ServiceDependency) *ServiceUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddDependedOnByIDs(ids...)
+}
+
+// AddStatusPageComponentIDs adds the "status_page_components" edge to the StatusPageComponent entity by IDs.
+func (_u *ServiceUpdate) AddStatusPageComponentIDs(ids ...uuid.UUID) *ServiceUpdate {
+	_u.mutation.AddStatusPageComponentIDs(ids...)
+	return _u
+}
+
+// AddStatusPageComponents adds the "status_page_components" edges to the StatusPageComponent entity.
+func (_u *ServiceUpdate) AddStatusPageComponents(v ...*StatusPageComponent) *ServiceUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddStatusPageComponentIDs(ids...)
+}
+
+// AddIncidentIDs adds the "incidents" edge to the Incident entity by IDs.
+func (_u *ServiceUpdate) AddIncidentIDs(ids ...uuid.UUID) *ServiceUpdate {
+	_u.mutation.AddIncidentIDs(ids...)
+	return _u
+}
+
+// AddIncidents adds the "incidents" edges to the Incident entity.
+func (_u *ServiceUpdate) AddIncidents(v ...*Incident) *ServiceUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddIncidentIDs(ids...)
+}
+
+// SetOwnerTeam sets the "owner_team" edge to the Team entity.
+func (_u *ServiceUpdate) SetOwnerTeam(v *Team) *ServiceUpdate {
+	return _u.SetOwnerTeamID(v.ID)
+}
+
+// SetEscalationPolicy sets the "escalation_policy" edge to the EscalationPolicy entity.
+func (_u *ServiceUpdate) SetEscalationPolicy(v *EscalationPolicy) *ServiceUpdate {
+	return _u.SetEscalationPolicyID(v.ID)
+}
+
 // Mutation returns the ServiceMutation object of the builder.
 func (_u *ServiceUpdate) Mutation() *ServiceMutation {
 	return _u.mutation
+}
+
+// ClearDependencies clears all "dependencies" edges to the ServiceDependency entity.
+func (_u *ServiceUpdate) ClearDependencies() *ServiceUpdate {
+	_u.mutation.ClearDependencies()
+	return _u
+}
+
+// RemoveDependencyIDs removes the "dependencies" edge to ServiceDependency entities by IDs.
+func (_u *ServiceUpdate) RemoveDependencyIDs(ids ...uuid.UUID) *ServiceUpdate {
+	_u.mutation.RemoveDependencyIDs(ids...)
+	return _u
+}
+
+// RemoveDependencies removes "dependencies" edges to ServiceDependency entities.
+func (_u *ServiceUpdate) RemoveDependencies(v ...*ServiceDependency) *ServiceUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveDependencyIDs(ids...)
+}
+
+// ClearDependedOnBy clears all "depended_on_by" edges to the ServiceDependency entity.
+func (_u *ServiceUpdate) ClearDependedOnBy() *ServiceUpdate {
+	_u.mutation.ClearDependedOnBy()
+	return _u
+}
+
+// RemoveDependedOnByIDs removes the "depended_on_by" edge to ServiceDependency entities by IDs.
+func (_u *ServiceUpdate) RemoveDependedOnByIDs(ids ...uuid.UUID) *ServiceUpdate {
+	_u.mutation.RemoveDependedOnByIDs(ids...)
+	return _u
+}
+
+// RemoveDependedOnBy removes "depended_on_by" edges to ServiceDependency entities.
+func (_u *ServiceUpdate) RemoveDependedOnBy(v ...*ServiceDependency) *ServiceUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveDependedOnByIDs(ids...)
+}
+
+// ClearStatusPageComponents clears all "status_page_components" edges to the StatusPageComponent entity.
+func (_u *ServiceUpdate) ClearStatusPageComponents() *ServiceUpdate {
+	_u.mutation.ClearStatusPageComponents()
+	return _u
+}
+
+// RemoveStatusPageComponentIDs removes the "status_page_components" edge to StatusPageComponent entities by IDs.
+func (_u *ServiceUpdate) RemoveStatusPageComponentIDs(ids ...uuid.UUID) *ServiceUpdate {
+	_u.mutation.RemoveStatusPageComponentIDs(ids...)
+	return _u
+}
+
+// RemoveStatusPageComponents removes "status_page_components" edges to StatusPageComponent entities.
+func (_u *ServiceUpdate) RemoveStatusPageComponents(v ...*StatusPageComponent) *ServiceUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveStatusPageComponentIDs(ids...)
+}
+
+// ClearIncidents clears all "incidents" edges to the Incident entity.
+func (_u *ServiceUpdate) ClearIncidents() *ServiceUpdate {
+	_u.mutation.ClearIncidents()
+	return _u
+}
+
+// RemoveIncidentIDs removes the "incidents" edge to Incident entities by IDs.
+func (_u *ServiceUpdate) RemoveIncidentIDs(ids ...uuid.UUID) *ServiceUpdate {
+	_u.mutation.RemoveIncidentIDs(ids...)
+	return _u
+}
+
+// RemoveIncidents removes "incidents" edges to Incident entities.
+func (_u *ServiceUpdate) RemoveIncidents(v ...*Incident) *ServiceUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveIncidentIDs(ids...)
+}
+
+// ClearOwnerTeam clears the "owner_team" edge to the Team entity.
+func (_u *ServiceUpdate) ClearOwnerTeam() *ServiceUpdate {
+	_u.mutation.ClearOwnerTeam()
+	return _u
+}
+
+// ClearEscalationPolicy clears the "escalation_policy" edge to the EscalationPolicy entity.
+func (_u *ServiceUpdate) ClearEscalationPolicy() *ServiceUpdate {
+	_u.mutation.ClearEscalationPolicy()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -248,6 +419,21 @@ func (_u *ServiceUpdate) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "Service.name": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.SLAResponseMinutes(); ok {
+		if err := service.SLAResponseMinutesValidator(v); err != nil {
+			return &ValidationError{Name: "sla_response_minutes", err: fmt.Errorf(`ent: validator failed for field "Service.sla_response_minutes": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.SLAResolveMinutes(); ok {
+		if err := service.SLAResolveMinutesValidator(v); err != nil {
+			return &ValidationError{Name: "sla_resolve_minutes", err: fmt.Errorf(`ent: validator failed for field "Service.sla_resolve_minutes": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := service.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Service.status": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -272,18 +458,6 @@ func (_u *ServiceUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.Description(); ok {
 		_spec.SetField(service.FieldDescription, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.OwnerTeamID(); ok {
-		_spec.SetField(service.FieldOwnerTeamID, field.TypeUUID, value)
-	}
-	if _u.mutation.OwnerTeamIDCleared() {
-		_spec.ClearField(service.FieldOwnerTeamID, field.TypeUUID)
-	}
-	if value, ok := _u.mutation.EscalationPolicyID(); ok {
-		_spec.SetField(service.FieldEscalationPolicyID, field.TypeUUID, value)
-	}
-	if _u.mutation.EscalationPolicyIDCleared() {
-		_spec.ClearField(service.FieldEscalationPolicyID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.LabelMatchers(); ok {
 		_spec.SetField(service.FieldLabelMatchers, field.TypeJSON, value)
 	}
@@ -305,13 +479,251 @@ func (_u *ServiceUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		_spec.AddField(service.FieldSLAResolveMinutes, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(service.FieldStatus, field.TypeString, value)
+		_spec.SetField(service.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.CreatedAt(); ok {
 		_spec.SetField(service.FieldCreatedAt, field.TypeTime, value)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(service.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.DependenciesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   service.DependenciesTable,
+			Columns: []string{service.DependenciesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(servicedependency.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedDependenciesIDs(); len(nodes) > 0 && !_u.mutation.DependenciesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   service.DependenciesTable,
+			Columns: []string{service.DependenciesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(servicedependency.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.DependenciesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   service.DependenciesTable,
+			Columns: []string{service.DependenciesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(servicedependency.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.DependedOnByCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   service.DependedOnByTable,
+			Columns: []string{service.DependedOnByColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(servicedependency.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedDependedOnByIDs(); len(nodes) > 0 && !_u.mutation.DependedOnByCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   service.DependedOnByTable,
+			Columns: []string{service.DependedOnByColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(servicedependency.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.DependedOnByIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   service.DependedOnByTable,
+			Columns: []string{service.DependedOnByColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(servicedependency.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.StatusPageComponentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   service.StatusPageComponentsTable,
+			Columns: []string{service.StatusPageComponentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(statuspagecomponent.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedStatusPageComponentsIDs(); len(nodes) > 0 && !_u.mutation.StatusPageComponentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   service.StatusPageComponentsTable,
+			Columns: []string{service.StatusPageComponentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(statuspagecomponent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.StatusPageComponentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   service.StatusPageComponentsTable,
+			Columns: []string{service.StatusPageComponentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(statuspagecomponent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.IncidentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   service.IncidentsTable,
+			Columns: []string{service.IncidentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedIncidentsIDs(); len(nodes) > 0 && !_u.mutation.IncidentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   service.IncidentsTable,
+			Columns: []string{service.IncidentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.IncidentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   service.IncidentsTable,
+			Columns: []string{service.IncidentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.OwnerTeamCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   service.OwnerTeamTable,
+			Columns: []string{service.OwnerTeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OwnerTeamIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   service.OwnerTeamTable,
+			Columns: []string{service.OwnerTeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.EscalationPolicyCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   service.EscalationPolicyTable,
+			Columns: []string{service.EscalationPolicyColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(escalationpolicy.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.EscalationPolicyIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   service.EscalationPolicyTable,
+			Columns: []string{service.EscalationPolicyColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(escalationpolicy.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -470,13 +882,13 @@ func (_u *ServiceUpdateOne) AddSLAResolveMinutes(v int) *ServiceUpdateOne {
 }
 
 // SetStatus sets the "status" field.
-func (_u *ServiceUpdateOne) SetStatus(v string) *ServiceUpdateOne {
+func (_u *ServiceUpdateOne) SetStatus(v service.Status) *ServiceUpdateOne {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *ServiceUpdateOne) SetNillableStatus(v *string) *ServiceUpdateOne {
+func (_u *ServiceUpdateOne) SetNillableStatus(v *service.Status) *ServiceUpdateOne {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -503,9 +915,175 @@ func (_u *ServiceUpdateOne) SetUpdatedAt(v time.Time) *ServiceUpdateOne {
 	return _u
 }
 
+// AddDependencyIDs adds the "dependencies" edge to the ServiceDependency entity by IDs.
+func (_u *ServiceUpdateOne) AddDependencyIDs(ids ...uuid.UUID) *ServiceUpdateOne {
+	_u.mutation.AddDependencyIDs(ids...)
+	return _u
+}
+
+// AddDependencies adds the "dependencies" edges to the ServiceDependency entity.
+func (_u *ServiceUpdateOne) AddDependencies(v ...*ServiceDependency) *ServiceUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddDependencyIDs(ids...)
+}
+
+// AddDependedOnByIDs adds the "depended_on_by" edge to the ServiceDependency entity by IDs.
+func (_u *ServiceUpdateOne) AddDependedOnByIDs(ids ...uuid.UUID) *ServiceUpdateOne {
+	_u.mutation.AddDependedOnByIDs(ids...)
+	return _u
+}
+
+// AddDependedOnBy adds the "depended_on_by" edges to the ServiceDependency entity.
+func (_u *ServiceUpdateOne) AddDependedOnBy(v ...*ServiceDependency) *ServiceUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddDependedOnByIDs(ids...)
+}
+
+// AddStatusPageComponentIDs adds the "status_page_components" edge to the StatusPageComponent entity by IDs.
+func (_u *ServiceUpdateOne) AddStatusPageComponentIDs(ids ...uuid.UUID) *ServiceUpdateOne {
+	_u.mutation.AddStatusPageComponentIDs(ids...)
+	return _u
+}
+
+// AddStatusPageComponents adds the "status_page_components" edges to the StatusPageComponent entity.
+func (_u *ServiceUpdateOne) AddStatusPageComponents(v ...*StatusPageComponent) *ServiceUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddStatusPageComponentIDs(ids...)
+}
+
+// AddIncidentIDs adds the "incidents" edge to the Incident entity by IDs.
+func (_u *ServiceUpdateOne) AddIncidentIDs(ids ...uuid.UUID) *ServiceUpdateOne {
+	_u.mutation.AddIncidentIDs(ids...)
+	return _u
+}
+
+// AddIncidents adds the "incidents" edges to the Incident entity.
+func (_u *ServiceUpdateOne) AddIncidents(v ...*Incident) *ServiceUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddIncidentIDs(ids...)
+}
+
+// SetOwnerTeam sets the "owner_team" edge to the Team entity.
+func (_u *ServiceUpdateOne) SetOwnerTeam(v *Team) *ServiceUpdateOne {
+	return _u.SetOwnerTeamID(v.ID)
+}
+
+// SetEscalationPolicy sets the "escalation_policy" edge to the EscalationPolicy entity.
+func (_u *ServiceUpdateOne) SetEscalationPolicy(v *EscalationPolicy) *ServiceUpdateOne {
+	return _u.SetEscalationPolicyID(v.ID)
+}
+
 // Mutation returns the ServiceMutation object of the builder.
 func (_u *ServiceUpdateOne) Mutation() *ServiceMutation {
 	return _u.mutation
+}
+
+// ClearDependencies clears all "dependencies" edges to the ServiceDependency entity.
+func (_u *ServiceUpdateOne) ClearDependencies() *ServiceUpdateOne {
+	_u.mutation.ClearDependencies()
+	return _u
+}
+
+// RemoveDependencyIDs removes the "dependencies" edge to ServiceDependency entities by IDs.
+func (_u *ServiceUpdateOne) RemoveDependencyIDs(ids ...uuid.UUID) *ServiceUpdateOne {
+	_u.mutation.RemoveDependencyIDs(ids...)
+	return _u
+}
+
+// RemoveDependencies removes "dependencies" edges to ServiceDependency entities.
+func (_u *ServiceUpdateOne) RemoveDependencies(v ...*ServiceDependency) *ServiceUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveDependencyIDs(ids...)
+}
+
+// ClearDependedOnBy clears all "depended_on_by" edges to the ServiceDependency entity.
+func (_u *ServiceUpdateOne) ClearDependedOnBy() *ServiceUpdateOne {
+	_u.mutation.ClearDependedOnBy()
+	return _u
+}
+
+// RemoveDependedOnByIDs removes the "depended_on_by" edge to ServiceDependency entities by IDs.
+func (_u *ServiceUpdateOne) RemoveDependedOnByIDs(ids ...uuid.UUID) *ServiceUpdateOne {
+	_u.mutation.RemoveDependedOnByIDs(ids...)
+	return _u
+}
+
+// RemoveDependedOnBy removes "depended_on_by" edges to ServiceDependency entities.
+func (_u *ServiceUpdateOne) RemoveDependedOnBy(v ...*ServiceDependency) *ServiceUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveDependedOnByIDs(ids...)
+}
+
+// ClearStatusPageComponents clears all "status_page_components" edges to the StatusPageComponent entity.
+func (_u *ServiceUpdateOne) ClearStatusPageComponents() *ServiceUpdateOne {
+	_u.mutation.ClearStatusPageComponents()
+	return _u
+}
+
+// RemoveStatusPageComponentIDs removes the "status_page_components" edge to StatusPageComponent entities by IDs.
+func (_u *ServiceUpdateOne) RemoveStatusPageComponentIDs(ids ...uuid.UUID) *ServiceUpdateOne {
+	_u.mutation.RemoveStatusPageComponentIDs(ids...)
+	return _u
+}
+
+// RemoveStatusPageComponents removes "status_page_components" edges to StatusPageComponent entities.
+func (_u *ServiceUpdateOne) RemoveStatusPageComponents(v ...*StatusPageComponent) *ServiceUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveStatusPageComponentIDs(ids...)
+}
+
+// ClearIncidents clears all "incidents" edges to the Incident entity.
+func (_u *ServiceUpdateOne) ClearIncidents() *ServiceUpdateOne {
+	_u.mutation.ClearIncidents()
+	return _u
+}
+
+// RemoveIncidentIDs removes the "incidents" edge to Incident entities by IDs.
+func (_u *ServiceUpdateOne) RemoveIncidentIDs(ids ...uuid.UUID) *ServiceUpdateOne {
+	_u.mutation.RemoveIncidentIDs(ids...)
+	return _u
+}
+
+// RemoveIncidents removes "incidents" edges to Incident entities.
+func (_u *ServiceUpdateOne) RemoveIncidents(v ...*Incident) *ServiceUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveIncidentIDs(ids...)
+}
+
+// ClearOwnerTeam clears the "owner_team" edge to the Team entity.
+func (_u *ServiceUpdateOne) ClearOwnerTeam() *ServiceUpdateOne {
+	_u.mutation.ClearOwnerTeam()
+	return _u
+}
+
+// ClearEscalationPolicy clears the "escalation_policy" edge to the EscalationPolicy entity.
+func (_u *ServiceUpdateOne) ClearEscalationPolicy() *ServiceUpdateOne {
+	_u.mutation.ClearEscalationPolicy()
+	return _u
 }
 
 // Where appends a list predicates to the ServiceUpdate builder.
@@ -564,6 +1142,21 @@ func (_u *ServiceUpdateOne) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "Service.name": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.SLAResponseMinutes(); ok {
+		if err := service.SLAResponseMinutesValidator(v); err != nil {
+			return &ValidationError{Name: "sla_response_minutes", err: fmt.Errorf(`ent: validator failed for field "Service.sla_response_minutes": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.SLAResolveMinutes(); ok {
+		if err := service.SLAResolveMinutesValidator(v); err != nil {
+			return &ValidationError{Name: "sla_resolve_minutes", err: fmt.Errorf(`ent: validator failed for field "Service.sla_resolve_minutes": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := service.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Service.status": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -605,18 +1198,6 @@ func (_u *ServiceUpdateOne) sqlSave(ctx context.Context) (_node *Service, err er
 	if value, ok := _u.mutation.Description(); ok {
 		_spec.SetField(service.FieldDescription, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.OwnerTeamID(); ok {
-		_spec.SetField(service.FieldOwnerTeamID, field.TypeUUID, value)
-	}
-	if _u.mutation.OwnerTeamIDCleared() {
-		_spec.ClearField(service.FieldOwnerTeamID, field.TypeUUID)
-	}
-	if value, ok := _u.mutation.EscalationPolicyID(); ok {
-		_spec.SetField(service.FieldEscalationPolicyID, field.TypeUUID, value)
-	}
-	if _u.mutation.EscalationPolicyIDCleared() {
-		_spec.ClearField(service.FieldEscalationPolicyID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.LabelMatchers(); ok {
 		_spec.SetField(service.FieldLabelMatchers, field.TypeJSON, value)
 	}
@@ -638,13 +1219,251 @@ func (_u *ServiceUpdateOne) sqlSave(ctx context.Context) (_node *Service, err er
 		_spec.AddField(service.FieldSLAResolveMinutes, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(service.FieldStatus, field.TypeString, value)
+		_spec.SetField(service.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.CreatedAt(); ok {
 		_spec.SetField(service.FieldCreatedAt, field.TypeTime, value)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(service.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.DependenciesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   service.DependenciesTable,
+			Columns: []string{service.DependenciesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(servicedependency.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedDependenciesIDs(); len(nodes) > 0 && !_u.mutation.DependenciesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   service.DependenciesTable,
+			Columns: []string{service.DependenciesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(servicedependency.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.DependenciesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   service.DependenciesTable,
+			Columns: []string{service.DependenciesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(servicedependency.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.DependedOnByCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   service.DependedOnByTable,
+			Columns: []string{service.DependedOnByColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(servicedependency.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedDependedOnByIDs(); len(nodes) > 0 && !_u.mutation.DependedOnByCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   service.DependedOnByTable,
+			Columns: []string{service.DependedOnByColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(servicedependency.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.DependedOnByIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   service.DependedOnByTable,
+			Columns: []string{service.DependedOnByColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(servicedependency.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.StatusPageComponentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   service.StatusPageComponentsTable,
+			Columns: []string{service.StatusPageComponentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(statuspagecomponent.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedStatusPageComponentsIDs(); len(nodes) > 0 && !_u.mutation.StatusPageComponentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   service.StatusPageComponentsTable,
+			Columns: []string{service.StatusPageComponentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(statuspagecomponent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.StatusPageComponentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   service.StatusPageComponentsTable,
+			Columns: []string{service.StatusPageComponentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(statuspagecomponent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.IncidentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   service.IncidentsTable,
+			Columns: []string{service.IncidentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedIncidentsIDs(); len(nodes) > 0 && !_u.mutation.IncidentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   service.IncidentsTable,
+			Columns: []string{service.IncidentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.IncidentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   service.IncidentsTable,
+			Columns: []string{service.IncidentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.OwnerTeamCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   service.OwnerTeamTable,
+			Columns: []string{service.OwnerTeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OwnerTeamIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   service.OwnerTeamTable,
+			Columns: []string{service.OwnerTeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.EscalationPolicyCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   service.EscalationPolicyTable,
+			Columns: []string{service.EscalationPolicyColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(escalationpolicy.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.EscalationPolicyIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   service.EscalationPolicyTable,
+			Columns: []string{service.EscalationPolicyColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(escalationpolicy.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &Service{config: _u.config}
 	_spec.Assign = _node.assignValues

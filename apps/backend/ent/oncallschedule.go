@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/oncallschedule"
+	"alga/ent/team"
 	"fmt"
 	"strings"
 	"time"
@@ -23,8 +24,53 @@ type OnCallSchedule struct {
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt    time.Time `json:"updated_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the OnCallScheduleQuery when eager-loading is set.
+	Edges        OnCallScheduleEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// OnCallScheduleEdges holds the relations/edges for other nodes in the graph.
+type OnCallScheduleEdges struct {
+	// Team holds the value of the team edge.
+	Team *Team `json:"team,omitempty"`
+	// Layers holds the value of the layers edge.
+	Layers []*ScheduleLayer `json:"layers,omitempty"`
+	// Overrides holds the value of the overrides edge.
+	Overrides []*ScheduleOverride `json:"overrides,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [3]bool
+}
+
+// TeamOrErr returns the Team value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e OnCallScheduleEdges) TeamOrErr() (*Team, error) {
+	if e.Team != nil {
+		return e.Team, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: team.Label}
+	}
+	return nil, &NotLoadedError{edge: "team"}
+}
+
+// LayersOrErr returns the Layers value or an error if the edge
+// was not loaded in eager-loading.
+func (e OnCallScheduleEdges) LayersOrErr() ([]*ScheduleLayer, error) {
+	if e.loadedTypes[1] {
+		return e.Layers, nil
+	}
+	return nil, &NotLoadedError{edge: "layers"}
+}
+
+// OverridesOrErr returns the Overrides value or an error if the edge
+// was not loaded in eager-loading.
+func (e OnCallScheduleEdges) OverridesOrErr() ([]*ScheduleOverride, error) {
+	if e.loadedTypes[2] {
+		return e.Overrides, nil
+	}
+	return nil, &NotLoadedError{edge: "overrides"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -89,6 +135,21 @@ func (_m *OnCallSchedule) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *OnCallSchedule) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
+}
+
+// QueryTeam queries the "team" edge of the OnCallSchedule entity.
+func (_m *OnCallSchedule) QueryTeam() *TeamQuery {
+	return NewOnCallScheduleClient(_m.config).QueryTeam(_m)
+}
+
+// QueryLayers queries the "layers" edge of the OnCallSchedule entity.
+func (_m *OnCallSchedule) QueryLayers() *ScheduleLayerQuery {
+	return NewOnCallScheduleClient(_m.config).QueryLayers(_m)
+}
+
+// QueryOverrides queries the "overrides" edge of the OnCallSchedule entity.
+func (_m *OnCallSchedule) QueryOverrides() *ScheduleOverrideQuery {
+	return NewOnCallScheduleClient(_m.config).QueryOverrides(_m)
 }
 
 // Update returns a builder for updating this OnCallSchedule.

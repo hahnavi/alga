@@ -131,6 +131,34 @@ func (_c *AuditLogCreate) SetNillableRequestID(v *string) *AuditLogCreate {
 	return _c
 }
 
+// SetEntityType sets the "entity_type" field.
+func (_c *AuditLogCreate) SetEntityType(v string) *AuditLogCreate {
+	_c.mutation.SetEntityType(v)
+	return _c
+}
+
+// SetNillableEntityType sets the "entity_type" field if the given value is not nil.
+func (_c *AuditLogCreate) SetNillableEntityType(v *string) *AuditLogCreate {
+	if v != nil {
+		_c.SetEntityType(*v)
+	}
+	return _c
+}
+
+// SetEntityID sets the "entity_id" field.
+func (_c *AuditLogCreate) SetEntityID(v uuid.UUID) *AuditLogCreate {
+	_c.mutation.SetEntityID(v)
+	return _c
+}
+
+// SetNillableEntityID sets the "entity_id" field if the given value is not nil.
+func (_c *AuditLogCreate) SetNillableEntityID(v *uuid.UUID) *AuditLogCreate {
+	if v != nil {
+		_c.SetEntityID(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *AuditLogCreate) SetID(v uuid.UUID) *AuditLogCreate {
 	_c.mutation.SetID(v)
@@ -203,6 +231,10 @@ func (_c *AuditLogCreate) defaults() {
 	if _, ok := _c.mutation.RequestID(); !ok {
 		v := auditlog.DefaultRequestID
 		_c.mutation.SetRequestID(v)
+	}
+	if _, ok := _c.mutation.EntityType(); !ok {
+		v := auditlog.DefaultEntityType
+		_c.mutation.SetEntityType(v)
 	}
 	if _, ok := _c.mutation.ID(); !ok {
 		v := auditlog.DefaultID()
@@ -296,6 +328,14 @@ func (_c *AuditLogCreate) createSpec() (*AuditLog, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.RequestID(); ok {
 		_spec.SetField(auditlog.FieldRequestID, field.TypeString, value)
 		_node.RequestID = value
+	}
+	if value, ok := _c.mutation.EntityType(); ok {
+		_spec.SetField(auditlog.FieldEntityType, field.TypeString, value)
+		_node.EntityType = value
+	}
+	if value, ok := _c.mutation.EntityID(); ok {
+		_spec.SetField(auditlog.FieldEntityID, field.TypeUUID, value)
+		_node.EntityID = &value
 	}
 	return _node, _spec
 }

@@ -3,6 +3,7 @@
 package icsroleassignment
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -15,6 +16,14 @@ const (
 	Label = "ics_role_assignment"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
+	// FieldParentID holds the string denoting the parent_id field in the database.
+	FieldParentID = "parent_id"
+	// FieldIncidentID holds the string denoting the incident_id field in the database.
+	FieldIncidentID = "incident_id"
+	// FieldUserID holds the string denoting the user_id field in the database.
+	FieldUserID = "user_id"
+	// FieldAgentTokenID holds the string denoting the agent_token_id field in the database.
+	FieldAgentTokenID = "agent_token_id"
 	// FieldRoleType holds the string denoting the role_type field in the database.
 	FieldRoleType = "role_type"
 	// FieldStatus holds the string denoting the status field in the database.
@@ -35,6 +44,8 @@ const (
 	EdgeUser = "user"
 	// EdgeAgentToken holds the string denoting the agent_token edge name in mutations.
 	EdgeAgentToken = "agent_token"
+	// EdgeChildren holds the string denoting the children edge name in mutations.
+	EdgeChildren = "children"
 	// EdgeParent holds the string denoting the parent edge name in mutations.
 	EdgeParent = "parent"
 	// Table holds the table name of the icsroleassignment in the database.
@@ -45,30 +56,38 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "incident" package.
 	IncidentInverseTable = "incidents"
 	// IncidentColumn is the table column denoting the incident relation/edge.
-	IncidentColumn = "incident_ics_roles"
+	IncidentColumn = "incident_id"
 	// UserTable is the table that holds the user relation/edge.
 	UserTable = "ics_role_assignments"
 	// UserInverseTable is the table name for the User entity.
 	// It exists in this package in order to avoid circular dependency with the "user" package.
 	UserInverseTable = "users"
 	// UserColumn is the table column denoting the user relation/edge.
-	UserColumn = "user_ics_role_assignments"
+	UserColumn = "user_id"
 	// AgentTokenTable is the table that holds the agent_token relation/edge.
 	AgentTokenTable = "ics_role_assignments"
 	// AgentTokenInverseTable is the table name for the AgentToken entity.
 	// It exists in this package in order to avoid circular dependency with the "agenttoken" package.
 	AgentTokenInverseTable = "agent_tokens"
 	// AgentTokenColumn is the table column denoting the agent_token relation/edge.
-	AgentTokenColumn = "agent_token_ics_roles"
+	AgentTokenColumn = "agent_token_id"
+	// ChildrenTable is the table that holds the children relation/edge.
+	ChildrenTable = "ics_role_assignments"
+	// ChildrenColumn is the table column denoting the children relation/edge.
+	ChildrenColumn = "parent_id"
 	// ParentTable is the table that holds the parent relation/edge.
 	ParentTable = "ics_role_assignments"
 	// ParentColumn is the table column denoting the parent relation/edge.
-	ParentColumn = "ics_role_assignment_parent"
+	ParentColumn = "parent_id"
 )
 
 // Columns holds all SQL columns for icsroleassignment fields.
 var Columns = []string{
 	FieldID,
+	FieldParentID,
+	FieldIncidentID,
+	FieldUserID,
+	FieldAgentTokenID,
 	FieldRoleType,
 	FieldStatus,
 	FieldAssigneeType,
@@ -78,15 +97,6 @@ var Columns = []string{
 	FieldEndedAt,
 }
 
-// ForeignKeys holds the SQL foreign-keys that are owned by the "ics_role_assignments"
-// table and are not defined as standalone fields in the schema.
-var ForeignKeys = []string{
-	"agent_token_ics_roles",
-	"ics_role_assignment_parent",
-	"incident_ics_roles",
-	"user_ics_role_assignments",
-}
-
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
@@ -94,26 +104,119 @@ func ValidColumn(column string) bool {
 			return true
 		}
 	}
-	for i := range ForeignKeys {
-		if column == ForeignKeys[i] {
-			return true
-		}
-	}
 	return false
 }
 
 var (
-	// DefaultRoleType holds the default value on creation for the "role_type" field.
-	DefaultRoleType string
-	// DefaultStatus holds the default value on creation for the "status" field.
-	DefaultStatus string
-	// DefaultAssigneeType holds the default value on creation for the "assignee_type" field.
-	DefaultAssigneeType string
 	// DefaultStartedAt holds the default value on creation for the "started_at" field.
 	DefaultStartedAt func() time.Time
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// RoleType defines the type for the "role_type" enum field.
+type RoleType string
+
+// RoleTypeResponder is the default value of the RoleType enum.
+const DefaultRoleType = RoleTypeResponder
+
+// RoleType values.
+const (
+	RoleTypeIncidentCommander  RoleType = "incident_commander"
+	RoleTypeCommunicationsLead RoleType = "communications_lead"
+	RoleTypeResponder          RoleType = "responder"
+)
+
+func (rt RoleType) String() string {
+	return string(rt)
+}
+
+// RoleTypeValidator is a validator for the "role_type" field enum values. It is called by the builders before save.
+func RoleTypeValidator(rt RoleType) error {
+	switch rt {
+	case RoleTypeIncidentCommander, RoleTypeCommunicationsLead, RoleTypeResponder:
+		return nil
+	default:
+		return fmt.Errorf("icsroleassignment: invalid enum value for role_type field: %q", rt)
+	}
+}
+
+// Status defines the type for the "status" enum field.
+type Status string
+
+// StatusActive is the default value of the Status enum.
+const DefaultStatus = StatusActive
+
+// Status values.
+const (
+	StatusActive Status = "active"
+	StatusEnded  Status = "ended"
+)
+
+func (s Status) String() string {
+	return string(s)
+}
+
+// StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
+func StatusValidator(s Status) error {
+	switch s {
+	case StatusActive, StatusEnded:
+		return nil
+	default:
+		return fmt.Errorf("icsroleassignment: invalid enum value for status field: %q", s)
+	}
+}
+
+// AssigneeType defines the type for the "assignee_type" enum field.
+type AssigneeType string
+
+// AssigneeTypeUser is the default value of the AssigneeType enum.
+const DefaultAssigneeType = AssigneeTypeUser
+
+// AssigneeType values.
+const (
+	AssigneeTypeUser  AssigneeType = "user"
+	AssigneeTypeAgent AssigneeType = "agent"
+)
+
+func (at AssigneeType) String() string {
+	return string(at)
+}
+
+// AssigneeTypeValidator is a validator for the "assignee_type" field enum values. It is called by the builders before save.
+func AssigneeTypeValidator(at AssigneeType) error {
+	switch at {
+	case AssigneeTypeUser, AssigneeTypeAgent:
+		return nil
+	default:
+		return fmt.Errorf("icsroleassignment: invalid enum value for assignee_type field: %q", at)
+	}
+}
+
+// EndedReason defines the type for the "ended_reason" enum field.
+type EndedReason string
+
+// EndedReason values.
+const (
+	EndedReasonReplaced         EndedReason = "replaced"
+	EndedReasonIncidentResolved EndedReason = "incident_resolved"
+	EndedReasonAssigned         EndedReason = "assigned"
+	EndedReasonAgentOffline     EndedReason = "agent_offline"
+)
+
+func (er EndedReason) String() string {
+	return string(er)
+}
+
+// EndedReasonValidator is a validator for the "ended_reason" field enum values. It is called by the builders before save.
+func EndedReasonValidator(er EndedReason) error {
+	switch er {
+	case EndedReasonReplaced, EndedReasonIncidentResolved, EndedReasonAssigned, EndedReasonAgentOffline:
+		return nil
+	default:
+		return fmt.Errorf("icsroleassignment: invalid enum value for ended_reason field: %q", er)
+	}
+}
 
 // OrderOption defines the ordering options for the ICSRoleAssignment queries.
 type OrderOption func(*sql.Selector)
@@ -121,6 +224,26 @@ type OrderOption func(*sql.Selector)
 // ByID orders the results by the id field.
 func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByParentID orders the results by the parent_id field.
+func ByParentID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldParentID, opts...).ToFunc()
+}
+
+// ByIncidentID orders the results by the incident_id field.
+func ByIncidentID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIncidentID, opts...).ToFunc()
+}
+
+// ByUserID orders the results by the user_id field.
+func ByUserID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldUserID, opts...).ToFunc()
+}
+
+// ByAgentTokenID orders the results by the agent_token_id field.
+func ByAgentTokenID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAgentTokenID, opts...).ToFunc()
 }
 
 // ByRoleType orders the results by the role_type field.
@@ -179,6 +302,20 @@ func ByAgentTokenField(field string, opts ...sql.OrderTermOption) OrderOption {
 	}
 }
 
+// ByChildrenCount orders the results by children count.
+func ByChildrenCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newChildrenStep(), opts...)
+	}
+}
+
+// ByChildren orders the results by children terms.
+func ByChildren(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newChildrenStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByParentField orders the results by parent field.
 func ByParentField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -206,10 +343,17 @@ func newAgentTokenStep() *sqlgraph.Step {
 		sqlgraph.Edge(sqlgraph.M2O, true, AgentTokenTable, AgentTokenColumn),
 	)
 }
+func newChildrenStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(Table, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ChildrenTable, ChildrenColumn),
+	)
+}
 func newParentStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(Table, FieldID),
-		sqlgraph.Edge(sqlgraph.O2O, false, ParentTable, ParentColumn),
+		sqlgraph.Edge(sqlgraph.M2O, true, ParentTable, ParentColumn),
 	)
 }

@@ -112,6 +112,12 @@ func (_c *IncidentTimelineEntryCreate) SetNillableCreatedAt(v *time.Time) *Incid
 	return _c
 }
 
+// SetIncidentID sets the "incident_id" field.
+func (_c *IncidentTimelineEntryCreate) SetIncidentID(v uuid.UUID) *IncidentTimelineEntryCreate {
+	_c.mutation.SetIncidentID(v)
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *IncidentTimelineEntryCreate) SetID(v uuid.UUID) *IncidentTimelineEntryCreate {
 	_c.mutation.SetID(v)
@@ -123,12 +129,6 @@ func (_c *IncidentTimelineEntryCreate) SetNillableID(v *uuid.UUID) *IncidentTime
 	if v != nil {
 		_c.SetID(*v)
 	}
-	return _c
-}
-
-// SetIncidentID sets the "incident" edge to the Incident entity by ID.
-func (_c *IncidentTimelineEntryCreate) SetIncidentID(id uuid.UUID) *IncidentTimelineEntryCreate {
-	_c.mutation.SetIncidentID(id)
 	return _c
 }
 
@@ -215,6 +215,9 @@ func (_c *IncidentTimelineEntryCreate) check() error {
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "IncidentTimelineEntry.created_at"`)}
 	}
+	if _, ok := _c.mutation.IncidentID(); !ok {
+		return &ValidationError{Name: "incident_id", err: errors.New(`ent: missing required field "IncidentTimelineEntry.incident_id"`)}
+	}
 	if len(_c.mutation.IncidentIDs()) == 0 {
 		return &ValidationError{Name: "incident", err: errors.New(`ent: missing required edge "IncidentTimelineEntry.incident"`)}
 	}
@@ -295,7 +298,7 @@ func (_c *IncidentTimelineEntryCreate) createSpec() (*IncidentTimelineEntry, *sq
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.incident_timeline = &nodes[0]
+		_node.IncidentID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

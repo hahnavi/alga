@@ -5,6 +5,7 @@ package ent
 import (
 	"alga/ent/knowledgenote"
 	"alga/ent/schema"
+	"alga/ent/user"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -21,7 +22,7 @@ type KnowledgeNote struct {
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
 	// Kind holds the value of the "kind" field.
-	Kind string `json:"kind,omitempty"`
+	Kind knowledgenote.Kind `json:"kind,omitempty"`
 	// Title holds the value of the "title" field.
 	Title string `json:"title,omitempty"`
 	// BodyMarkdown holds the value of the "body_markdown" field.
@@ -33,7 +34,7 @@ type KnowledgeNote struct {
 	// AuthorID holds the value of the "author_id" field.
 	AuthorID *uuid.UUID `json:"author_id,omitempty"`
 	// AuthorType holds the value of the "author_type" field.
-	AuthorType string `json:"author_type,omitempty"`
+	AuthorType knowledgenote.AuthorType `json:"author_type,omitempty"`
 	// AuthorName holds the value of the "author_name" field.
 	AuthorName string `json:"author_name,omitempty"`
 	// SourceInvestigationID holds the value of the "source_investigation_id" field.
@@ -45,8 +46,31 @@ type KnowledgeNote struct {
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt    time.Time `json:"updated_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the KnowledgeNoteQuery when eager-loading is set.
+	Edges        KnowledgeNoteEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// KnowledgeNoteEdges holds the relations/edges for other nodes in the graph.
+type KnowledgeNoteEdges struct {
+	// Author holds the value of the author edge.
+	Author *User `json:"author,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// AuthorOrErr returns the Author value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e KnowledgeNoteEdges) AuthorOrErr() (*User, error) {
+	if e.Author != nil {
+		return e.Author, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: user.Label}
+	}
+	return nil, &NotLoadedError{edge: "author"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -91,7 +115,7 @@ func (_m *KnowledgeNote) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field kind", values[i])
 			} else if value.Valid {
-				_m.Kind = value.String
+				_m.Kind = knowledgenote.Kind(value.String)
 			}
 		case knowledgenote.FieldTitle:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -132,7 +156,7 @@ func (_m *KnowledgeNote) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field author_type", values[i])
 			} else if value.Valid {
-				_m.AuthorType = value.String
+				_m.AuthorType = knowledgenote.AuthorType(value.String)
 			}
 		case knowledgenote.FieldAuthorName:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -185,6 +209,11 @@ func (_m *KnowledgeNote) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
 }
 
+// QueryAuthor queries the "author" edge of the KnowledgeNote entity.
+func (_m *KnowledgeNote) QueryAuthor() *UserQuery {
+	return NewKnowledgeNoteClient(_m.config).QueryAuthor(_m)
+}
+
 // Update returns a builder for updating this KnowledgeNote.
 // Note that you need to call KnowledgeNote.Unwrap() before calling this method if this KnowledgeNote
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -209,7 +238,7 @@ func (_m *KnowledgeNote) String() string {
 	builder.WriteString("KnowledgeNote(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("kind=")
-	builder.WriteString(_m.Kind)
+	builder.WriteString(fmt.Sprintf("%v", _m.Kind))
 	builder.WriteString(", ")
 	builder.WriteString("title=")
 	builder.WriteString(_m.Title)
@@ -229,7 +258,7 @@ func (_m *KnowledgeNote) String() string {
 	}
 	builder.WriteString(", ")
 	builder.WriteString("author_type=")
-	builder.WriteString(_m.AuthorType)
+	builder.WriteString(fmt.Sprintf("%v", _m.AuthorType))
 	builder.WriteString(", ")
 	builder.WriteString("author_name=")
 	builder.WriteString(_m.AuthorName)

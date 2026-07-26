@@ -3,9 +3,13 @@
 package ent
 
 import (
+	"alga/ent/alert"
+	"alga/ent/alertinvestigation"
 	"alga/ent/predicate"
 	"alga/ent/triageresult"
+	"alga/ent/user"
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -19,10 +23,13 @@ import (
 // TriageResultQuery is the builder for querying TriageResult entities.
 type TriageResultQuery struct {
 	config
-	ctx        *QueryContext
-	order      []triageresult.OrderOption
-	inters     []Interceptor
-	predicates []predicate.TriageResult
+	ctx                     *QueryContext
+	order                   []triageresult.OrderOption
+	inters                  []Interceptor
+	predicates              []predicate.TriageResult
+	withAlerts              *AlertQuery
+	withAlertInvestigations *AlertInvestigationQuery
+	withOverriddenByUser    *UserQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -57,6 +64,72 @@ func (_q *TriageResultQuery) Unique(unique bool) *TriageResultQuery {
 func (_q *TriageResultQuery) Order(o ...triageresult.OrderOption) *TriageResultQuery {
 	_q.order = append(_q.order, o...)
 	return _q
+}
+
+// QueryAlerts chains the current query on the "alerts" edge.
+func (_q *TriageResultQuery) QueryAlerts() *AlertQuery {
+	query := (&AlertClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(triageresult.Table, triageresult.FieldID, selector),
+			sqlgraph.To(alert.Table, alert.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, triageresult.AlertsTable, triageresult.AlertsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryAlertInvestigations chains the current query on the "alert_investigations" edge.
+func (_q *TriageResultQuery) QueryAlertInvestigations() *AlertInvestigationQuery {
+	query := (&AlertInvestigationClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(triageresult.Table, triageresult.FieldID, selector),
+			sqlgraph.To(alertinvestigation.Table, alertinvestigation.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, triageresult.AlertInvestigationsTable, triageresult.AlertInvestigationsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryOverriddenByUser chains the current query on the "overridden_by_user" edge.
+func (_q *TriageResultQuery) QueryOverriddenByUser() *UserQuery {
+	query := (&UserClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(triageresult.Table, triageresult.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, triageresult.OverriddenByUserTable, triageresult.OverriddenByUserColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first TriageResult entity from the query.
@@ -246,15 +319,51 @@ func (_q *TriageResultQuery) Clone() *TriageResultQuery {
 		return nil
 	}
 	return &TriageResultQuery{
-		config:     _q.config,
-		ctx:        _q.ctx.Clone(),
-		order:      append([]triageresult.OrderOption{}, _q.order...),
-		inters:     append([]Interceptor{}, _q.inters...),
-		predicates: append([]predicate.TriageResult{}, _q.predicates...),
+		config:                  _q.config,
+		ctx:                     _q.ctx.Clone(),
+		order:                   append([]triageresult.OrderOption{}, _q.order...),
+		inters:                  append([]Interceptor{}, _q.inters...),
+		predicates:              append([]predicate.TriageResult{}, _q.predicates...),
+		withAlerts:              _q.withAlerts.Clone(),
+		withAlertInvestigations: _q.withAlertInvestigations.Clone(),
+		withOverriddenByUser:    _q.withOverriddenByUser.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
+}
+
+// WithAlerts tells the query-builder to eager-load the nodes that are connected to
+// the "alerts" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *TriageResultQuery) WithAlerts(opts ...func(*AlertQuery)) *TriageResultQuery {
+	query := (&AlertClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withAlerts = query
+	return _q
+}
+
+// WithAlertInvestigations tells the query-builder to eager-load the nodes that are connected to
+// the "alert_investigations" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *TriageResultQuery) WithAlertInvestigations(opts ...func(*AlertInvestigationQuery)) *TriageResultQuery {
+	query := (&AlertInvestigationClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withAlertInvestigations = query
+	return _q
+}
+
+// WithOverriddenByUser tells the query-builder to eager-load the nodes that are connected to
+// the "overridden_by_user" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *TriageResultQuery) WithOverriddenByUser(opts ...func(*UserQuery)) *TriageResultQuery {
+	query := (&UserClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withOverriddenByUser = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -333,8 +442,13 @@ func (_q *TriageResultQuery) prepareQuery(ctx context.Context) error {
 
 func (_q *TriageResultQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*TriageResult, error) {
 	var (
-		nodes = []*TriageResult{}
-		_spec = _q.querySpec()
+		nodes       = []*TriageResult{}
+		_spec       = _q.querySpec()
+		loadedTypes = [3]bool{
+			_q.withAlerts != nil,
+			_q.withAlertInvestigations != nil,
+			_q.withOverriddenByUser != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*TriageResult).scanValues(nil, columns)
@@ -342,6 +456,7 @@ func (_q *TriageResultQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &TriageResult{config: _q.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -353,7 +468,125 @@ func (_q *TriageResultQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := _q.withAlerts; query != nil {
+		if err := _q.loadAlerts(ctx, query, nodes,
+			func(n *TriageResult) { n.Edges.Alerts = []*Alert{} },
+			func(n *TriageResult, e *Alert) { n.Edges.Alerts = append(n.Edges.Alerts, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withAlertInvestigations; query != nil {
+		if err := _q.loadAlertInvestigations(ctx, query, nodes,
+			func(n *TriageResult) { n.Edges.AlertInvestigations = []*AlertInvestigation{} },
+			func(n *TriageResult, e *AlertInvestigation) {
+				n.Edges.AlertInvestigations = append(n.Edges.AlertInvestigations, e)
+			}); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withOverriddenByUser; query != nil {
+		if err := _q.loadOverriddenByUser(ctx, query, nodes, nil,
+			func(n *TriageResult, e *User) { n.Edges.OverriddenByUser = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (_q *TriageResultQuery) loadAlerts(ctx context.Context, query *AlertQuery, nodes []*TriageResult, init func(*TriageResult), assign func(*TriageResult, *Alert)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*TriageResult)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(alert.FieldTriageResultID)
+	}
+	query.Where(predicate.Alert(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(triageresult.AlertsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.TriageResultID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "triage_result_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "triage_result_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *TriageResultQuery) loadAlertInvestigations(ctx context.Context, query *AlertInvestigationQuery, nodes []*TriageResult, init func(*TriageResult), assign func(*TriageResult, *AlertInvestigation)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*TriageResult)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(alertinvestigation.FieldTriageResultID)
+	}
+	query.Where(predicate.AlertInvestigation(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(triageresult.AlertInvestigationsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.TriageResultID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "triage_result_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "triage_result_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *TriageResultQuery) loadOverriddenByUser(ctx context.Context, query *UserQuery, nodes []*TriageResult, init func(*TriageResult), assign func(*TriageResult, *User)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*TriageResult)
+	for i := range nodes {
+		fk := nodes[i].OverriddenBy
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(user.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "overridden_by" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
 }
 
 func (_q *TriageResultQuery) sqlCount(ctx context.Context) (int, error) {
@@ -380,6 +613,9 @@ func (_q *TriageResultQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != triageresult.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if _q.withOverriddenByUser != nil {
+			_spec.Node.AddColumnOnce(triageresult.FieldOverriddenBy)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

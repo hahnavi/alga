@@ -3,9 +3,13 @@
 package ent
 
 import (
+	"alga/ent/actionitem"
+	"alga/ent/incident"
 	"alga/ent/postmortem"
 	"alga/ent/predicate"
+	"alga/ent/user"
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -19,10 +23,13 @@ import (
 // PostMortemQuery is the builder for querying PostMortem entities.
 type PostMortemQuery struct {
 	config
-	ctx        *QueryContext
-	order      []postmortem.OrderOption
-	inters     []Interceptor
-	predicates []predicate.PostMortem
+	ctx             *QueryContext
+	order           []postmortem.OrderOption
+	inters          []Interceptor
+	predicates      []predicate.PostMortem
+	withIncident    *IncidentQuery
+	withApprovedBy  *UserQuery
+	withActionItems *ActionItemQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -57,6 +64,72 @@ func (_q *PostMortemQuery) Unique(unique bool) *PostMortemQuery {
 func (_q *PostMortemQuery) Order(o ...postmortem.OrderOption) *PostMortemQuery {
 	_q.order = append(_q.order, o...)
 	return _q
+}
+
+// QueryIncident chains the current query on the "incident" edge.
+func (_q *PostMortemQuery) QueryIncident() *IncidentQuery {
+	query := (&IncidentClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(postmortem.Table, postmortem.FieldID, selector),
+			sqlgraph.To(incident.Table, incident.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, postmortem.IncidentTable, postmortem.IncidentColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryApprovedBy chains the current query on the "approved_by" edge.
+func (_q *PostMortemQuery) QueryApprovedBy() *UserQuery {
+	query := (&UserClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(postmortem.Table, postmortem.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, postmortem.ApprovedByTable, postmortem.ApprovedByColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryActionItems chains the current query on the "action_items" edge.
+func (_q *PostMortemQuery) QueryActionItems() *ActionItemQuery {
+	query := (&ActionItemClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(postmortem.Table, postmortem.FieldID, selector),
+			sqlgraph.To(actionitem.Table, actionitem.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, postmortem.ActionItemsTable, postmortem.ActionItemsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first PostMortem entity from the query.
@@ -246,15 +319,51 @@ func (_q *PostMortemQuery) Clone() *PostMortemQuery {
 		return nil
 	}
 	return &PostMortemQuery{
-		config:     _q.config,
-		ctx:        _q.ctx.Clone(),
-		order:      append([]postmortem.OrderOption{}, _q.order...),
-		inters:     append([]Interceptor{}, _q.inters...),
-		predicates: append([]predicate.PostMortem{}, _q.predicates...),
+		config:          _q.config,
+		ctx:             _q.ctx.Clone(),
+		order:           append([]postmortem.OrderOption{}, _q.order...),
+		inters:          append([]Interceptor{}, _q.inters...),
+		predicates:      append([]predicate.PostMortem{}, _q.predicates...),
+		withIncident:    _q.withIncident.Clone(),
+		withApprovedBy:  _q.withApprovedBy.Clone(),
+		withActionItems: _q.withActionItems.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
+}
+
+// WithIncident tells the query-builder to eager-load the nodes that are connected to
+// the "incident" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *PostMortemQuery) WithIncident(opts ...func(*IncidentQuery)) *PostMortemQuery {
+	query := (&IncidentClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withIncident = query
+	return _q
+}
+
+// WithApprovedBy tells the query-builder to eager-load the nodes that are connected to
+// the "approved_by" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *PostMortemQuery) WithApprovedBy(opts ...func(*UserQuery)) *PostMortemQuery {
+	query := (&UserClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withApprovedBy = query
+	return _q
+}
+
+// WithActionItems tells the query-builder to eager-load the nodes that are connected to
+// the "action_items" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *PostMortemQuery) WithActionItems(opts ...func(*ActionItemQuery)) *PostMortemQuery {
+	query := (&ActionItemClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withActionItems = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -333,8 +442,13 @@ func (_q *PostMortemQuery) prepareQuery(ctx context.Context) error {
 
 func (_q *PostMortemQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*PostMortem, error) {
 	var (
-		nodes = []*PostMortem{}
-		_spec = _q.querySpec()
+		nodes       = []*PostMortem{}
+		_spec       = _q.querySpec()
+		loadedTypes = [3]bool{
+			_q.withIncident != nil,
+			_q.withApprovedBy != nil,
+			_q.withActionItems != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*PostMortem).scanValues(nil, columns)
@@ -342,6 +456,7 @@ func (_q *PostMortemQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*P
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &PostMortem{config: _q.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -353,7 +468,118 @@ func (_q *PostMortemQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*P
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := _q.withIncident; query != nil {
+		if err := _q.loadIncident(ctx, query, nodes, nil,
+			func(n *PostMortem, e *Incident) { n.Edges.Incident = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withApprovedBy; query != nil {
+		if err := _q.loadApprovedBy(ctx, query, nodes, nil,
+			func(n *PostMortem, e *User) { n.Edges.ApprovedBy = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withActionItems; query != nil {
+		if err := _q.loadActionItems(ctx, query, nodes,
+			func(n *PostMortem) { n.Edges.ActionItems = []*ActionItem{} },
+			func(n *PostMortem, e *ActionItem) { n.Edges.ActionItems = append(n.Edges.ActionItems, e) }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (_q *PostMortemQuery) loadIncident(ctx context.Context, query *IncidentQuery, nodes []*PostMortem, init func(*PostMortem), assign func(*PostMortem, *Incident)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*PostMortem)
+	for i := range nodes {
+		fk := nodes[i].IncidentID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(incident.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "incident_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *PostMortemQuery) loadApprovedBy(ctx context.Context, query *UserQuery, nodes []*PostMortem, init func(*PostMortem), assign func(*PostMortem, *User)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*PostMortem)
+	for i := range nodes {
+		if nodes[i].ApprovedByID == nil {
+			continue
+		}
+		fk := *nodes[i].ApprovedByID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(user.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "approved_by_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (_q *PostMortemQuery) loadActionItems(ctx context.Context, query *ActionItemQuery, nodes []*PostMortem, init func(*PostMortem), assign func(*PostMortem, *ActionItem)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*PostMortem)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(actionitem.FieldPostMortemID)
+	}
+	query.Where(predicate.ActionItem(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(postmortem.ActionItemsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.PostMortemID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "post_mortem_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
 }
 
 func (_q *PostMortemQuery) sqlCount(ctx context.Context) (int, error) {
@@ -380,6 +606,12 @@ func (_q *PostMortemQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != postmortem.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if _q.withIncident != nil {
+			_spec.Node.AddColumnOnce(postmortem.FieldIncidentID)
+		}
+		if _q.withApprovedBy != nil {
+			_spec.Node.AddColumnOnce(postmortem.FieldApprovedByID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

@@ -407,6 +407,8 @@ type mockAuditStore struct{}
 
 func (m *mockAuditStore) Log(event store.AuditEvent, userID *uuid.UUID, username, ip, userAgent string, success bool, details map[string]any) {
 }
+func (m *mockAuditStore) LogEntity(event store.AuditEvent, userID *uuid.UUID, username, ip, userAgent string, success bool, details map[string]any, entityType string, entityID *uuid.UUID) {
+}
 func (m *mockAuditStore) Query(filter map[string]any) ([]store.AuditRecord, error) {
 	return nil, nil
 }

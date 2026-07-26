@@ -23,6 +23,10 @@ const (
 	FieldVersion = "version"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// FieldIncidentID holds the string denoting the incident_id field in the database.
+	FieldIncidentID = "incident_id"
+	// FieldUpdatedByID holds the string denoting the updated_by_id field in the database.
+	FieldUpdatedByID = "updated_by_id"
 	// EdgeIncident holds the string denoting the incident edge name in mutations.
 	EdgeIncident = "incident"
 	// EdgeUpdatedBy holds the string denoting the updated_by edge name in mutations.
@@ -35,14 +39,14 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "incident" package.
 	IncidentInverseTable = "incidents"
 	// IncidentColumn is the table column denoting the incident relation/edge.
-	IncidentColumn = "incident_documents"
+	IncidentColumn = "incident_id"
 	// UpdatedByTable is the table that holds the updated_by relation/edge.
 	UpdatedByTable = "incident_documents"
 	// UpdatedByInverseTable is the table name for the User entity.
 	// It exists in this package in order to avoid circular dependency with the "user" package.
 	UpdatedByInverseTable = "users"
 	// UpdatedByColumn is the table column denoting the updated_by relation/edge.
-	UpdatedByColumn = "user_document_edits"
+	UpdatedByColumn = "updated_by_id"
 )
 
 // Columns holds all SQL columns for incidentdocument fields.
@@ -52,24 +56,14 @@ var Columns = []string{
 	FieldContent,
 	FieldVersion,
 	FieldUpdatedAt,
-}
-
-// ForeignKeys holds the SQL foreign-keys that are owned by the "incident_documents"
-// table and are not defined as standalone fields in the schema.
-var ForeignKeys = []string{
-	"incident_documents",
-	"user_document_edits",
+	FieldIncidentID,
+	FieldUpdatedByID,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
-			return true
-		}
-	}
-	for i := range ForeignKeys {
-		if column == ForeignKeys[i] {
 			return true
 		}
 	}
@@ -115,6 +109,16 @@ func ByVersion(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByIncidentID orders the results by the incident_id field.
+func ByIncidentID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIncidentID, opts...).ToFunc()
+}
+
+// ByUpdatedByID orders the results by the updated_by_id field.
+func ByUpdatedByID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldUpdatedByID, opts...).ToFunc()
 }
 
 // ByIncidentField orders the results by incident field.

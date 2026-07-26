@@ -3,7 +3,9 @@
 package ent
 
 import (
+	"alga/ent/agentask"
 	"alga/ent/agentdmmessage"
+	"alga/ent/agentmemory"
 	"alga/ent/agenttoken"
 	"alga/ent/icsroleassignment"
 	"alga/ent/predicate"
@@ -48,13 +50,13 @@ func (_u *AgentTokenUpdate) SetNillableName(v *string) *AgentTokenUpdate {
 }
 
 // SetAgentType sets the "agent_type" field.
-func (_u *AgentTokenUpdate) SetAgentType(v string) *AgentTokenUpdate {
+func (_u *AgentTokenUpdate) SetAgentType(v agenttoken.AgentType) *AgentTokenUpdate {
 	_u.mutation.SetAgentType(v)
 	return _u
 }
 
 // SetNillableAgentType sets the "agent_type" field if the given value is not nil.
-func (_u *AgentTokenUpdate) SetNillableAgentType(v *string) *AgentTokenUpdate {
+func (_u *AgentTokenUpdate) SetNillableAgentType(v *agenttoken.AgentType) *AgentTokenUpdate {
 	if v != nil {
 		_u.SetAgentType(*v)
 	}
@@ -277,6 +279,66 @@ func (_u *AgentTokenUpdate) AddIcsRoles(v ...*ICSRoleAssignment) *AgentTokenUpda
 	return _u.AddIcsRoleIDs(ids...)
 }
 
+// AddMemoryIDs adds the "memories" edge to the AgentMemory entity by IDs.
+func (_u *AgentTokenUpdate) AddMemoryIDs(ids ...uuid.UUID) *AgentTokenUpdate {
+	_u.mutation.AddMemoryIDs(ids...)
+	return _u
+}
+
+// AddMemories adds the "memories" edges to the AgentMemory entity.
+func (_u *AgentTokenUpdate) AddMemories(v ...*AgentMemory) *AgentTokenUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddMemoryIDs(ids...)
+}
+
+// AddSentAskIDs adds the "sent_asks" edge to the AgentAsk entity by IDs.
+func (_u *AgentTokenUpdate) AddSentAskIDs(ids ...uuid.UUID) *AgentTokenUpdate {
+	_u.mutation.AddSentAskIDs(ids...)
+	return _u
+}
+
+// AddSentAsks adds the "sent_asks" edges to the AgentAsk entity.
+func (_u *AgentTokenUpdate) AddSentAsks(v ...*AgentAsk) *AgentTokenUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddSentAskIDs(ids...)
+}
+
+// AddReceivedAskIDs adds the "received_asks" edge to the AgentAsk entity by IDs.
+func (_u *AgentTokenUpdate) AddReceivedAskIDs(ids ...uuid.UUID) *AgentTokenUpdate {
+	_u.mutation.AddReceivedAskIDs(ids...)
+	return _u
+}
+
+// AddReceivedAsks adds the "received_asks" edges to the AgentAsk entity.
+func (_u *AgentTokenUpdate) AddReceivedAsks(v ...*AgentAsk) *AgentTokenUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddReceivedAskIDs(ids...)
+}
+
+// AddRepliedAskIDs adds the "replied_asks" edge to the AgentAsk entity by IDs.
+func (_u *AgentTokenUpdate) AddRepliedAskIDs(ids ...uuid.UUID) *AgentTokenUpdate {
+	_u.mutation.AddRepliedAskIDs(ids...)
+	return _u
+}
+
+// AddRepliedAsks adds the "replied_asks" edges to the AgentAsk entity.
+func (_u *AgentTokenUpdate) AddRepliedAsks(v ...*AgentAsk) *AgentTokenUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddRepliedAskIDs(ids...)
+}
+
 // Mutation returns the AgentTokenMutation object of the builder.
 func (_u *AgentTokenUpdate) Mutation() *AgentTokenMutation {
 	return _u.mutation
@@ -324,6 +386,90 @@ func (_u *AgentTokenUpdate) RemoveIcsRoles(v ...*ICSRoleAssignment) *AgentTokenU
 	return _u.RemoveIcsRoleIDs(ids...)
 }
 
+// ClearMemories clears all "memories" edges to the AgentMemory entity.
+func (_u *AgentTokenUpdate) ClearMemories() *AgentTokenUpdate {
+	_u.mutation.ClearMemories()
+	return _u
+}
+
+// RemoveMemoryIDs removes the "memories" edge to AgentMemory entities by IDs.
+func (_u *AgentTokenUpdate) RemoveMemoryIDs(ids ...uuid.UUID) *AgentTokenUpdate {
+	_u.mutation.RemoveMemoryIDs(ids...)
+	return _u
+}
+
+// RemoveMemories removes "memories" edges to AgentMemory entities.
+func (_u *AgentTokenUpdate) RemoveMemories(v ...*AgentMemory) *AgentTokenUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveMemoryIDs(ids...)
+}
+
+// ClearSentAsks clears all "sent_asks" edges to the AgentAsk entity.
+func (_u *AgentTokenUpdate) ClearSentAsks() *AgentTokenUpdate {
+	_u.mutation.ClearSentAsks()
+	return _u
+}
+
+// RemoveSentAskIDs removes the "sent_asks" edge to AgentAsk entities by IDs.
+func (_u *AgentTokenUpdate) RemoveSentAskIDs(ids ...uuid.UUID) *AgentTokenUpdate {
+	_u.mutation.RemoveSentAskIDs(ids...)
+	return _u
+}
+
+// RemoveSentAsks removes "sent_asks" edges to AgentAsk entities.
+func (_u *AgentTokenUpdate) RemoveSentAsks(v ...*AgentAsk) *AgentTokenUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveSentAskIDs(ids...)
+}
+
+// ClearReceivedAsks clears all "received_asks" edges to the AgentAsk entity.
+func (_u *AgentTokenUpdate) ClearReceivedAsks() *AgentTokenUpdate {
+	_u.mutation.ClearReceivedAsks()
+	return _u
+}
+
+// RemoveReceivedAskIDs removes the "received_asks" edge to AgentAsk entities by IDs.
+func (_u *AgentTokenUpdate) RemoveReceivedAskIDs(ids ...uuid.UUID) *AgentTokenUpdate {
+	_u.mutation.RemoveReceivedAskIDs(ids...)
+	return _u
+}
+
+// RemoveReceivedAsks removes "received_asks" edges to AgentAsk entities.
+func (_u *AgentTokenUpdate) RemoveReceivedAsks(v ...*AgentAsk) *AgentTokenUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveReceivedAskIDs(ids...)
+}
+
+// ClearRepliedAsks clears all "replied_asks" edges to the AgentAsk entity.
+func (_u *AgentTokenUpdate) ClearRepliedAsks() *AgentTokenUpdate {
+	_u.mutation.ClearRepliedAsks()
+	return _u
+}
+
+// RemoveRepliedAskIDs removes the "replied_asks" edge to AgentAsk entities by IDs.
+func (_u *AgentTokenUpdate) RemoveRepliedAskIDs(ids ...uuid.UUID) *AgentTokenUpdate {
+	_u.mutation.RemoveRepliedAskIDs(ids...)
+	return _u
+}
+
+// RemoveRepliedAsks removes "replied_asks" edges to AgentAsk entities.
+func (_u *AgentTokenUpdate) RemoveRepliedAsks(v ...*AgentAsk) *AgentTokenUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveRepliedAskIDs(ids...)
+}
+
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (_u *AgentTokenUpdate) Save(ctx context.Context) (int, error) {
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
@@ -358,6 +504,11 @@ func (_u *AgentTokenUpdate) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "AgentToken.name": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.AgentType(); ok {
+		if err := agenttoken.AgentTypeValidator(v); err != nil {
+			return &ValidationError{Name: "agent_type", err: fmt.Errorf(`ent: validator failed for field "AgentToken.agent_type": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.TokenHash(); ok {
 		if err := agenttoken.TokenHashValidator(v); err != nil {
 			return &ValidationError{Name: "token_hash", err: fmt.Errorf(`ent: validator failed for field "AgentToken.token_hash": %w`, err)}
@@ -387,7 +538,7 @@ func (_u *AgentTokenUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 		_spec.SetField(agenttoken.FieldName, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.AgentType(); ok {
-		_spec.SetField(agenttoken.FieldAgentType, field.TypeString, value)
+		_spec.SetField(agenttoken.FieldAgentType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.TokenHash(); ok {
 		_spec.SetField(agenttoken.FieldTokenHash, field.TypeString, value)
@@ -540,6 +691,186 @@ func (_u *AgentTokenUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.MemoriesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.MemoriesTable,
+			Columns: []string{agenttoken.MemoriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentmemory.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedMemoriesIDs(); len(nodes) > 0 && !_u.mutation.MemoriesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.MemoriesTable,
+			Columns: []string{agenttoken.MemoriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentmemory.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.MemoriesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.MemoriesTable,
+			Columns: []string{agenttoken.MemoriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentmemory.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.SentAsksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.SentAsksTable,
+			Columns: []string{agenttoken.SentAsksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentask.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedSentAsksIDs(); len(nodes) > 0 && !_u.mutation.SentAsksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.SentAsksTable,
+			Columns: []string{agenttoken.SentAsksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentask.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.SentAsksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.SentAsksTable,
+			Columns: []string{agenttoken.SentAsksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentask.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ReceivedAsksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.ReceivedAsksTable,
+			Columns: []string{agenttoken.ReceivedAsksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentask.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedReceivedAsksIDs(); len(nodes) > 0 && !_u.mutation.ReceivedAsksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.ReceivedAsksTable,
+			Columns: []string{agenttoken.ReceivedAsksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentask.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ReceivedAsksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.ReceivedAsksTable,
+			Columns: []string{agenttoken.ReceivedAsksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentask.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.RepliedAsksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.RepliedAsksTable,
+			Columns: []string{agenttoken.RepliedAsksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentask.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedRepliedAsksIDs(); len(nodes) > 0 && !_u.mutation.RepliedAsksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.RepliedAsksTable,
+			Columns: []string{agenttoken.RepliedAsksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentask.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RepliedAsksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.RepliedAsksTable,
+			Columns: []string{agenttoken.RepliedAsksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentask.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{agenttoken.Label}
@@ -575,13 +906,13 @@ func (_u *AgentTokenUpdateOne) SetNillableName(v *string) *AgentTokenUpdateOne {
 }
 
 // SetAgentType sets the "agent_type" field.
-func (_u *AgentTokenUpdateOne) SetAgentType(v string) *AgentTokenUpdateOne {
+func (_u *AgentTokenUpdateOne) SetAgentType(v agenttoken.AgentType) *AgentTokenUpdateOne {
 	_u.mutation.SetAgentType(v)
 	return _u
 }
 
 // SetNillableAgentType sets the "agent_type" field if the given value is not nil.
-func (_u *AgentTokenUpdateOne) SetNillableAgentType(v *string) *AgentTokenUpdateOne {
+func (_u *AgentTokenUpdateOne) SetNillableAgentType(v *agenttoken.AgentType) *AgentTokenUpdateOne {
 	if v != nil {
 		_u.SetAgentType(*v)
 	}
@@ -804,6 +1135,66 @@ func (_u *AgentTokenUpdateOne) AddIcsRoles(v ...*ICSRoleAssignment) *AgentTokenU
 	return _u.AddIcsRoleIDs(ids...)
 }
 
+// AddMemoryIDs adds the "memories" edge to the AgentMemory entity by IDs.
+func (_u *AgentTokenUpdateOne) AddMemoryIDs(ids ...uuid.UUID) *AgentTokenUpdateOne {
+	_u.mutation.AddMemoryIDs(ids...)
+	return _u
+}
+
+// AddMemories adds the "memories" edges to the AgentMemory entity.
+func (_u *AgentTokenUpdateOne) AddMemories(v ...*AgentMemory) *AgentTokenUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddMemoryIDs(ids...)
+}
+
+// AddSentAskIDs adds the "sent_asks" edge to the AgentAsk entity by IDs.
+func (_u *AgentTokenUpdateOne) AddSentAskIDs(ids ...uuid.UUID) *AgentTokenUpdateOne {
+	_u.mutation.AddSentAskIDs(ids...)
+	return _u
+}
+
+// AddSentAsks adds the "sent_asks" edges to the AgentAsk entity.
+func (_u *AgentTokenUpdateOne) AddSentAsks(v ...*AgentAsk) *AgentTokenUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddSentAskIDs(ids...)
+}
+
+// AddReceivedAskIDs adds the "received_asks" edge to the AgentAsk entity by IDs.
+func (_u *AgentTokenUpdateOne) AddReceivedAskIDs(ids ...uuid.UUID) *AgentTokenUpdateOne {
+	_u.mutation.AddReceivedAskIDs(ids...)
+	return _u
+}
+
+// AddReceivedAsks adds the "received_asks" edges to the AgentAsk entity.
+func (_u *AgentTokenUpdateOne) AddReceivedAsks(v ...*AgentAsk) *AgentTokenUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddReceivedAskIDs(ids...)
+}
+
+// AddRepliedAskIDs adds the "replied_asks" edge to the AgentAsk entity by IDs.
+func (_u *AgentTokenUpdateOne) AddRepliedAskIDs(ids ...uuid.UUID) *AgentTokenUpdateOne {
+	_u.mutation.AddRepliedAskIDs(ids...)
+	return _u
+}
+
+// AddRepliedAsks adds the "replied_asks" edges to the AgentAsk entity.
+func (_u *AgentTokenUpdateOne) AddRepliedAsks(v ...*AgentAsk) *AgentTokenUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddRepliedAskIDs(ids...)
+}
+
 // Mutation returns the AgentTokenMutation object of the builder.
 func (_u *AgentTokenUpdateOne) Mutation() *AgentTokenMutation {
 	return _u.mutation
@@ -849,6 +1240,90 @@ func (_u *AgentTokenUpdateOne) RemoveIcsRoles(v ...*ICSRoleAssignment) *AgentTok
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveIcsRoleIDs(ids...)
+}
+
+// ClearMemories clears all "memories" edges to the AgentMemory entity.
+func (_u *AgentTokenUpdateOne) ClearMemories() *AgentTokenUpdateOne {
+	_u.mutation.ClearMemories()
+	return _u
+}
+
+// RemoveMemoryIDs removes the "memories" edge to AgentMemory entities by IDs.
+func (_u *AgentTokenUpdateOne) RemoveMemoryIDs(ids ...uuid.UUID) *AgentTokenUpdateOne {
+	_u.mutation.RemoveMemoryIDs(ids...)
+	return _u
+}
+
+// RemoveMemories removes "memories" edges to AgentMemory entities.
+func (_u *AgentTokenUpdateOne) RemoveMemories(v ...*AgentMemory) *AgentTokenUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveMemoryIDs(ids...)
+}
+
+// ClearSentAsks clears all "sent_asks" edges to the AgentAsk entity.
+func (_u *AgentTokenUpdateOne) ClearSentAsks() *AgentTokenUpdateOne {
+	_u.mutation.ClearSentAsks()
+	return _u
+}
+
+// RemoveSentAskIDs removes the "sent_asks" edge to AgentAsk entities by IDs.
+func (_u *AgentTokenUpdateOne) RemoveSentAskIDs(ids ...uuid.UUID) *AgentTokenUpdateOne {
+	_u.mutation.RemoveSentAskIDs(ids...)
+	return _u
+}
+
+// RemoveSentAsks removes "sent_asks" edges to AgentAsk entities.
+func (_u *AgentTokenUpdateOne) RemoveSentAsks(v ...*AgentAsk) *AgentTokenUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveSentAskIDs(ids...)
+}
+
+// ClearReceivedAsks clears all "received_asks" edges to the AgentAsk entity.
+func (_u *AgentTokenUpdateOne) ClearReceivedAsks() *AgentTokenUpdateOne {
+	_u.mutation.ClearReceivedAsks()
+	return _u
+}
+
+// RemoveReceivedAskIDs removes the "received_asks" edge to AgentAsk entities by IDs.
+func (_u *AgentTokenUpdateOne) RemoveReceivedAskIDs(ids ...uuid.UUID) *AgentTokenUpdateOne {
+	_u.mutation.RemoveReceivedAskIDs(ids...)
+	return _u
+}
+
+// RemoveReceivedAsks removes "received_asks" edges to AgentAsk entities.
+func (_u *AgentTokenUpdateOne) RemoveReceivedAsks(v ...*AgentAsk) *AgentTokenUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveReceivedAskIDs(ids...)
+}
+
+// ClearRepliedAsks clears all "replied_asks" edges to the AgentAsk entity.
+func (_u *AgentTokenUpdateOne) ClearRepliedAsks() *AgentTokenUpdateOne {
+	_u.mutation.ClearRepliedAsks()
+	return _u
+}
+
+// RemoveRepliedAskIDs removes the "replied_asks" edge to AgentAsk entities by IDs.
+func (_u *AgentTokenUpdateOne) RemoveRepliedAskIDs(ids ...uuid.UUID) *AgentTokenUpdateOne {
+	_u.mutation.RemoveRepliedAskIDs(ids...)
+	return _u
+}
+
+// RemoveRepliedAsks removes "replied_asks" edges to AgentAsk entities.
+func (_u *AgentTokenUpdateOne) RemoveRepliedAsks(v ...*AgentAsk) *AgentTokenUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveRepliedAskIDs(ids...)
 }
 
 // Where appends a list predicates to the AgentTokenUpdate builder.
@@ -898,6 +1373,11 @@ func (_u *AgentTokenUpdateOne) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "AgentToken.name": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.AgentType(); ok {
+		if err := agenttoken.AgentTypeValidator(v); err != nil {
+			return &ValidationError{Name: "agent_type", err: fmt.Errorf(`ent: validator failed for field "AgentToken.agent_type": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.TokenHash(); ok {
 		if err := agenttoken.TokenHashValidator(v); err != nil {
 			return &ValidationError{Name: "token_hash", err: fmt.Errorf(`ent: validator failed for field "AgentToken.token_hash": %w`, err)}
@@ -944,7 +1424,7 @@ func (_u *AgentTokenUpdateOne) sqlSave(ctx context.Context) (_node *AgentToken, 
 		_spec.SetField(agenttoken.FieldName, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.AgentType(); ok {
-		_spec.SetField(agenttoken.FieldAgentType, field.TypeString, value)
+		_spec.SetField(agenttoken.FieldAgentType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.TokenHash(); ok {
 		_spec.SetField(agenttoken.FieldTokenHash, field.TypeString, value)
@@ -1090,6 +1570,186 @@ func (_u *AgentTokenUpdateOne) sqlSave(ctx context.Context) (_node *AgentToken, 
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(icsroleassignment.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.MemoriesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.MemoriesTable,
+			Columns: []string{agenttoken.MemoriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentmemory.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedMemoriesIDs(); len(nodes) > 0 && !_u.mutation.MemoriesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.MemoriesTable,
+			Columns: []string{agenttoken.MemoriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentmemory.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.MemoriesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.MemoriesTable,
+			Columns: []string{agenttoken.MemoriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentmemory.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.SentAsksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.SentAsksTable,
+			Columns: []string{agenttoken.SentAsksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentask.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedSentAsksIDs(); len(nodes) > 0 && !_u.mutation.SentAsksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.SentAsksTable,
+			Columns: []string{agenttoken.SentAsksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentask.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.SentAsksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.SentAsksTable,
+			Columns: []string{agenttoken.SentAsksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentask.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ReceivedAsksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.ReceivedAsksTable,
+			Columns: []string{agenttoken.ReceivedAsksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentask.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedReceivedAsksIDs(); len(nodes) > 0 && !_u.mutation.ReceivedAsksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.ReceivedAsksTable,
+			Columns: []string{agenttoken.ReceivedAsksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentask.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ReceivedAsksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.ReceivedAsksTable,
+			Columns: []string{agenttoken.ReceivedAsksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentask.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.RepliedAsksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.RepliedAsksTable,
+			Columns: []string{agenttoken.RepliedAsksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentask.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedRepliedAsksIDs(); len(nodes) > 0 && !_u.mutation.RepliedAsksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.RepliedAsksTable,
+			Columns: []string{agenttoken.RepliedAsksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentask.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RepliedAsksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.RepliedAsksTable,
+			Columns: []string{agenttoken.RepliedAsksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentask.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

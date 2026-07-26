@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -118,26 +119,6 @@ func UserIDIn(vs ...uuid.UUID) predicate.Session {
 // UserIDNotIn applies the NotIn predicate on the "user_id" field.
 func UserIDNotIn(vs ...uuid.UUID) predicate.Session {
 	return predicate.Session(sql.FieldNotIn(FieldUserID, vs...))
-}
-
-// UserIDGT applies the GT predicate on the "user_id" field.
-func UserIDGT(v uuid.UUID) predicate.Session {
-	return predicate.Session(sql.FieldGT(FieldUserID, v))
-}
-
-// UserIDGTE applies the GTE predicate on the "user_id" field.
-func UserIDGTE(v uuid.UUID) predicate.Session {
-	return predicate.Session(sql.FieldGTE(FieldUserID, v))
-}
-
-// UserIDLT applies the LT predicate on the "user_id" field.
-func UserIDLT(v uuid.UUID) predicate.Session {
-	return predicate.Session(sql.FieldLT(FieldUserID, v))
-}
-
-// UserIDLTE applies the LTE predicate on the "user_id" field.
-func UserIDLTE(v uuid.UUID) predicate.Session {
-	return predicate.Session(sql.FieldLTE(FieldUserID, v))
 }
 
 // IDHashEQ applies the EQ predicate on the "id_hash" field.
@@ -623,6 +604,29 @@ func UserAgentEqualFold(v string) predicate.Session {
 // UserAgentContainsFold applies the ContainsFold predicate on the "user_agent" field.
 func UserAgentContainsFold(v string) predicate.Session {
 	return predicate.Session(sql.FieldContainsFold(FieldUserAgent, v))
+}
+
+// HasUser applies the HasEdge predicate on the "user" edge.
+func HasUser() predicate.Session {
+	return predicate.Session(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, UserTable, UserColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasUserWith applies the HasEdge predicate on the "user" edge with a given conditions (other predicates).
+func HasUserWith(preds ...predicate.User) predicate.Session {
+	return predicate.Session(func(s *sql.Selector) {
+		step := newUserStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

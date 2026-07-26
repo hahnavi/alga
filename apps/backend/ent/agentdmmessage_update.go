@@ -45,13 +45,13 @@ func (_u *AgentDMMessageUpdate) SetNillableChatID(v *string) *AgentDMMessageUpda
 }
 
 // SetRole sets the "role" field.
-func (_u *AgentDMMessageUpdate) SetRole(v string) *AgentDMMessageUpdate {
+func (_u *AgentDMMessageUpdate) SetRole(v agentdmmessage.Role) *AgentDMMessageUpdate {
 	_u.mutation.SetRole(v)
 	return _u
 }
 
 // SetNillableRole sets the "role" field if the given value is not nil.
-func (_u *AgentDMMessageUpdate) SetNillableRole(v *string) *AgentDMMessageUpdate {
+func (_u *AgentDMMessageUpdate) SetNillableRole(v *agentdmmessage.Role) *AgentDMMessageUpdate {
 	if v != nil {
 		_u.SetRole(*v)
 	}
@@ -146,9 +146,17 @@ func (_u *AgentDMMessageUpdate) SetUpdatedAt(v time.Time) *AgentDMMessageUpdate 
 	return _u
 }
 
-// SetAgentTokenID sets the "agent_token" edge to the AgentToken entity by ID.
-func (_u *AgentDMMessageUpdate) SetAgentTokenID(id uuid.UUID) *AgentDMMessageUpdate {
-	_u.mutation.SetAgentTokenID(id)
+// SetAgentTokenID sets the "agent_token_id" field.
+func (_u *AgentDMMessageUpdate) SetAgentTokenID(v uuid.UUID) *AgentDMMessageUpdate {
+	_u.mutation.SetAgentTokenID(v)
+	return _u
+}
+
+// SetNillableAgentTokenID sets the "agent_token_id" field if the given value is not nil.
+func (_u *AgentDMMessageUpdate) SetNillableAgentTokenID(v *uuid.UUID) *AgentDMMessageUpdate {
+	if v != nil {
+		_u.SetAgentTokenID(*v)
+	}
 	return _u
 }
 
@@ -238,7 +246,7 @@ func (_u *AgentDMMessageUpdate) sqlSave(ctx context.Context) (_node int, err err
 		_spec.SetField(agentdmmessage.FieldChatID, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Role(); ok {
-		_spec.SetField(agentdmmessage.FieldRole, field.TypeString, value)
+		_spec.SetField(agentdmmessage.FieldRole, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Body(); ok {
 		_spec.SetField(agentdmmessage.FieldBody, field.TypeString, value)
@@ -328,13 +336,13 @@ func (_u *AgentDMMessageUpdateOne) SetNillableChatID(v *string) *AgentDMMessageU
 }
 
 // SetRole sets the "role" field.
-func (_u *AgentDMMessageUpdateOne) SetRole(v string) *AgentDMMessageUpdateOne {
+func (_u *AgentDMMessageUpdateOne) SetRole(v agentdmmessage.Role) *AgentDMMessageUpdateOne {
 	_u.mutation.SetRole(v)
 	return _u
 }
 
 // SetNillableRole sets the "role" field if the given value is not nil.
-func (_u *AgentDMMessageUpdateOne) SetNillableRole(v *string) *AgentDMMessageUpdateOne {
+func (_u *AgentDMMessageUpdateOne) SetNillableRole(v *agentdmmessage.Role) *AgentDMMessageUpdateOne {
 	if v != nil {
 		_u.SetRole(*v)
 	}
@@ -429,9 +437,17 @@ func (_u *AgentDMMessageUpdateOne) SetUpdatedAt(v time.Time) *AgentDMMessageUpda
 	return _u
 }
 
-// SetAgentTokenID sets the "agent_token" edge to the AgentToken entity by ID.
-func (_u *AgentDMMessageUpdateOne) SetAgentTokenID(id uuid.UUID) *AgentDMMessageUpdateOne {
-	_u.mutation.SetAgentTokenID(id)
+// SetAgentTokenID sets the "agent_token_id" field.
+func (_u *AgentDMMessageUpdateOne) SetAgentTokenID(v uuid.UUID) *AgentDMMessageUpdateOne {
+	_u.mutation.SetAgentTokenID(v)
+	return _u
+}
+
+// SetNillableAgentTokenID sets the "agent_token_id" field if the given value is not nil.
+func (_u *AgentDMMessageUpdateOne) SetNillableAgentTokenID(v *uuid.UUID) *AgentDMMessageUpdateOne {
+	if v != nil {
+		_u.SetAgentTokenID(*v)
+	}
 	return _u
 }
 
@@ -551,7 +567,7 @@ func (_u *AgentDMMessageUpdateOne) sqlSave(ctx context.Context) (_node *AgentDMM
 		_spec.SetField(agentdmmessage.FieldChatID, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Role(); ok {
-		_spec.SetField(agentdmmessage.FieldRole, field.TypeString, value)
+		_spec.SetField(agentdmmessage.FieldRole, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Body(); ok {
 		_spec.SetField(agentdmmessage.FieldBody, field.TypeString, value)

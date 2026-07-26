@@ -89,7 +89,7 @@ func (s *pgUserStore) CreateUser(email, password, role string) (*UserRecord, err
 	saved, err := s.client.User.Create().
 		SetEmail(email).
 		SetPassword(hash).
-		SetRole(role).
+		SetRole(user.Role(role)).
 		SetCreatedAt(now).
 		SetUpdatedAt(now).
 		Save(context.Background())
@@ -151,7 +151,7 @@ func (s *pgUserStore) UpdateUser(id uuid.UUID, updates map[string]any) error {
 		b.SetPassword(v)
 	}
 	if v, ok := updates["role"].(string); ok {
-		b.SetRole(v)
+		b.SetRole(user.Role(v))
 	}
 	if v, ok := updates["full_name"].(string); ok {
 		b.SetFullName(v)
@@ -229,7 +229,7 @@ func (s *pgUserStore) CountAdmins() (int64, error) {
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	count, err := s.client.User.Query().Where(user.Role("admin")).Count(ctx)
+	count, err := s.client.User.Query().Where(user.RoleEQ(user.Role("admin"))).Count(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to count admins: %w", err)
 	}
@@ -460,7 +460,7 @@ func pgUserToRecord(u *ent.User) *UserRecord {
 		PhoneCountry:        u.PhoneCountry,
 		Email:               u.Email,
 		Password:            u.Password,
-		Role:                u.Role,
+		Role:                string(u.Role),
 		CreatedAt:           u.CreatedAt,
 		UpdatedAt:           u.UpdatedAt,
 		GoogleID:            u.GoogleID,

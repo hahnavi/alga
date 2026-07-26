@@ -56,9 +56,9 @@ func IDLTE(id uuid.UUID) predicate.AlertInvestigationAlert {
 	return predicate.AlertInvestigationAlert(sql.FieldLTE(FieldID, id))
 }
 
-// AlertInvestigationUUID applies equality check predicate on the "alert_investigation_uuid" field. It's identical to AlertInvestigationUUIDEQ.
-func AlertInvestigationUUID(v uuid.UUID) predicate.AlertInvestigationAlert {
-	return predicate.AlertInvestigationAlert(sql.FieldEQ(FieldAlertInvestigationUUID, v))
+// AlertInvestigationID applies equality check predicate on the "alert_investigation_id" field. It's identical to AlertInvestigationIDEQ.
+func AlertInvestigationID(v uuid.UUID) predicate.AlertInvestigationAlert {
+	return predicate.AlertInvestigationAlert(sql.FieldEQ(FieldAlertInvestigationID, v))
 }
 
 // AlertID applies equality check predicate on the "alert_id" field. It's identical to AlertIDEQ.
@@ -116,24 +116,24 @@ func Current(v bool) predicate.AlertInvestigationAlert {
 	return predicate.AlertInvestigationAlert(sql.FieldEQ(FieldCurrent, v))
 }
 
-// AlertInvestigationUUIDEQ applies the EQ predicate on the "alert_investigation_uuid" field.
-func AlertInvestigationUUIDEQ(v uuid.UUID) predicate.AlertInvestigationAlert {
-	return predicate.AlertInvestigationAlert(sql.FieldEQ(FieldAlertInvestigationUUID, v))
+// AlertInvestigationIDEQ applies the EQ predicate on the "alert_investigation_id" field.
+func AlertInvestigationIDEQ(v uuid.UUID) predicate.AlertInvestigationAlert {
+	return predicate.AlertInvestigationAlert(sql.FieldEQ(FieldAlertInvestigationID, v))
 }
 
-// AlertInvestigationUUIDNEQ applies the NEQ predicate on the "alert_investigation_uuid" field.
-func AlertInvestigationUUIDNEQ(v uuid.UUID) predicate.AlertInvestigationAlert {
-	return predicate.AlertInvestigationAlert(sql.FieldNEQ(FieldAlertInvestigationUUID, v))
+// AlertInvestigationIDNEQ applies the NEQ predicate on the "alert_investigation_id" field.
+func AlertInvestigationIDNEQ(v uuid.UUID) predicate.AlertInvestigationAlert {
+	return predicate.AlertInvestigationAlert(sql.FieldNEQ(FieldAlertInvestigationID, v))
 }
 
-// AlertInvestigationUUIDIn applies the In predicate on the "alert_investigation_uuid" field.
-func AlertInvestigationUUIDIn(vs ...uuid.UUID) predicate.AlertInvestigationAlert {
-	return predicate.AlertInvestigationAlert(sql.FieldIn(FieldAlertInvestigationUUID, vs...))
+// AlertInvestigationIDIn applies the In predicate on the "alert_investigation_id" field.
+func AlertInvestigationIDIn(vs ...uuid.UUID) predicate.AlertInvestigationAlert {
+	return predicate.AlertInvestigationAlert(sql.FieldIn(FieldAlertInvestigationID, vs...))
 }
 
-// AlertInvestigationUUIDNotIn applies the NotIn predicate on the "alert_investigation_uuid" field.
-func AlertInvestigationUUIDNotIn(vs ...uuid.UUID) predicate.AlertInvestigationAlert {
-	return predicate.AlertInvestigationAlert(sql.FieldNotIn(FieldAlertInvestigationUUID, vs...))
+// AlertInvestigationIDNotIn applies the NotIn predicate on the "alert_investigation_id" field.
+func AlertInvestigationIDNotIn(vs ...uuid.UUID) predicate.AlertInvestigationAlert {
+	return predicate.AlertInvestigationAlert(sql.FieldNotIn(FieldAlertInvestigationID, vs...))
 }
 
 // AlertIDEQ applies the EQ predicate on the "alert_id" field.

@@ -3,8 +3,11 @@
 package ent
 
 import (
+	"alga/ent/escalationpolicy"
 	"alga/ent/incident"
 	"alga/ent/postmortem"
+	"alga/ent/service"
+	"alga/ent/user"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -29,15 +32,15 @@ type Incident struct {
 	// Summary holds the value of the "summary" field.
 	Summary string `json:"summary,omitempty"`
 	// Status holds the value of the "status" field.
-	Status string `json:"status,omitempty"`
+	Status incident.Status `json:"status,omitempty"`
 	// Severity holds the value of the "severity" field.
-	Severity string `json:"severity,omitempty"`
+	Severity incident.Severity `json:"severity,omitempty"`
 	// ImpactLevel holds the value of the "impact_level" field.
-	ImpactLevel string `json:"impact_level,omitempty"`
+	ImpactLevel incident.ImpactLevel `json:"impact_level,omitempty"`
 	// Priority holds the value of the "priority" field.
-	Priority string `json:"priority,omitempty"`
+	Priority incident.Priority `json:"priority,omitempty"`
 	// IncidentType holds the value of the "incident_type" field.
-	IncidentType string `json:"incident_type,omitempty"`
+	IncidentType incident.IncidentType `json:"incident_type,omitempty"`
 	// CommanderID holds the value of the "commander_id" field.
 	CommanderID *uuid.UUID `json:"commander_id,omitempty"`
 	// CommunicatorID holds the value of the "communicator_id" field.
@@ -45,9 +48,9 @@ type Incident struct {
 	// OnCallResponderID holds the value of the "on_call_responder_id" field.
 	OnCallResponderID *uuid.UUID `json:"on_call_responder_id,omitempty"`
 	// CommanderAssigneeType holds the value of the "commander_assignee_type" field.
-	CommanderAssigneeType string `json:"commander_assignee_type,omitempty"`
+	CommanderAssigneeType incident.CommanderAssigneeType `json:"commander_assignee_type,omitempty"`
 	// CommunicatorAssigneeType holds the value of the "communicator_assignee_type" field.
-	CommunicatorAssigneeType string `json:"communicator_assignee_type,omitempty"`
+	CommunicatorAssigneeType incident.CommunicatorAssigneeType `json:"communicator_assignee_type,omitempty"`
 	// ServiceID holds the value of the "service_id" field.
 	ServiceID *uuid.UUID `json:"service_id,omitempty"`
 	// EscalationPolicyID holds the value of the "escalation_policy_id" field.
@@ -102,9 +105,8 @@ type Incident struct {
 	DeletedAt *time.Time `json:"deleted_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the IncidentQuery when eager-loading is set.
-	Edges                IncidentEdges `json:"edges"`
-	incident_post_mortem *uuid.UUID
-	selectValues         sql.SelectValues
+	Edges        IncidentEdges `json:"edges"`
+	selectValues sql.SelectValues
 }
 
 // IncidentEdges holds the relations/edges for other nodes in the graph.
@@ -127,9 +129,19 @@ type IncidentEdges struct {
 	CoordinationMessages []*IncidentCoordinationMessage `json:"coordination_messages,omitempty"`
 	// CoordinationTasks holds the value of the coordination_tasks edge.
 	CoordinationTasks []*CoordinationTask `json:"coordination_tasks,omitempty"`
+	// Commander holds the value of the commander edge.
+	Commander *User `json:"commander,omitempty"`
+	// Communicator holds the value of the communicator edge.
+	Communicator *User `json:"communicator,omitempty"`
+	// OnCallResponder holds the value of the on_call_responder edge.
+	OnCallResponder *User `json:"on_call_responder,omitempty"`
+	// Service holds the value of the service edge.
+	Service *Service `json:"service,omitempty"`
+	// EscalationPolicy holds the value of the escalation_policy edge.
+	EscalationPolicy *EscalationPolicy `json:"escalation_policy,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [9]bool
+	loadedTypes [14]bool
 }
 
 // AlertsOrErr returns the Alerts value or an error if the edge
@@ -215,6 +227,61 @@ func (e IncidentEdges) CoordinationTasksOrErr() ([]*CoordinationTask, error) {
 	return nil, &NotLoadedError{edge: "coordination_tasks"}
 }
 
+// CommanderOrErr returns the Commander value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e IncidentEdges) CommanderOrErr() (*User, error) {
+	if e.Commander != nil {
+		return e.Commander, nil
+	} else if e.loadedTypes[9] {
+		return nil, &NotFoundError{label: user.Label}
+	}
+	return nil, &NotLoadedError{edge: "commander"}
+}
+
+// CommunicatorOrErr returns the Communicator value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e IncidentEdges) CommunicatorOrErr() (*User, error) {
+	if e.Communicator != nil {
+		return e.Communicator, nil
+	} else if e.loadedTypes[10] {
+		return nil, &NotFoundError{label: user.Label}
+	}
+	return nil, &NotLoadedError{edge: "communicator"}
+}
+
+// OnCallResponderOrErr returns the OnCallResponder value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e IncidentEdges) OnCallResponderOrErr() (*User, error) {
+	if e.OnCallResponder != nil {
+		return e.OnCallResponder, nil
+	} else if e.loadedTypes[11] {
+		return nil, &NotFoundError{label: user.Label}
+	}
+	return nil, &NotLoadedError{edge: "on_call_responder"}
+}
+
+// ServiceOrErr returns the Service value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e IncidentEdges) ServiceOrErr() (*Service, error) {
+	if e.Service != nil {
+		return e.Service, nil
+	} else if e.loadedTypes[12] {
+		return nil, &NotFoundError{label: service.Label}
+	}
+	return nil, &NotLoadedError{edge: "service"}
+}
+
+// EscalationPolicyOrErr returns the EscalationPolicy value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e IncidentEdges) EscalationPolicyOrErr() (*EscalationPolicy, error) {
+	if e.EscalationPolicy != nil {
+		return e.EscalationPolicy, nil
+	} else if e.loadedTypes[13] {
+		return nil, &NotFoundError{label: escalationpolicy.Label}
+	}
+	return nil, &NotLoadedError{edge: "escalation_policy"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Incident) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
@@ -234,8 +301,6 @@ func (*Incident) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullTime)
 		case incident.FieldID:
 			values[i] = new(uuid.UUID)
-		case incident.ForeignKeys[0]: // incident_post_mortem
-			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -285,31 +350,31 @@ func (_m *Incident) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
-				_m.Status = value.String
+				_m.Status = incident.Status(value.String)
 			}
 		case incident.FieldSeverity:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field severity", values[i])
 			} else if value.Valid {
-				_m.Severity = value.String
+				_m.Severity = incident.Severity(value.String)
 			}
 		case incident.FieldImpactLevel:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field impact_level", values[i])
 			} else if value.Valid {
-				_m.ImpactLevel = value.String
+				_m.ImpactLevel = incident.ImpactLevel(value.String)
 			}
 		case incident.FieldPriority:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field priority", values[i])
 			} else if value.Valid {
-				_m.Priority = value.String
+				_m.Priority = incident.Priority(value.String)
 			}
 		case incident.FieldIncidentType:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field incident_type", values[i])
 			} else if value.Valid {
-				_m.IncidentType = value.String
+				_m.IncidentType = incident.IncidentType(value.String)
 			}
 		case incident.FieldCommanderID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -336,13 +401,13 @@ func (_m *Incident) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field commander_assignee_type", values[i])
 			} else if value.Valid {
-				_m.CommanderAssigneeType = value.String
+				_m.CommanderAssigneeType = incident.CommanderAssigneeType(value.String)
 			}
 		case incident.FieldCommunicatorAssigneeType:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field communicator_assignee_type", values[i])
 			} else if value.Valid {
-				_m.CommunicatorAssigneeType = value.String
+				_m.CommunicatorAssigneeType = incident.CommunicatorAssigneeType(value.String)
 			}
 		case incident.FieldServiceID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -522,13 +587,6 @@ func (_m *Incident) assignValues(columns []string, values []any) error {
 				_m.DeletedAt = new(time.Time)
 				*_m.DeletedAt = value.Time
 			}
-		case incident.ForeignKeys[0]:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field incident_post_mortem", values[i])
-			} else if value.Valid {
-				_m.incident_post_mortem = new(uuid.UUID)
-				*_m.incident_post_mortem = *value.S.(*uuid.UUID)
-			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -587,6 +645,31 @@ func (_m *Incident) QueryCoordinationTasks() *CoordinationTaskQuery {
 	return NewIncidentClient(_m.config).QueryCoordinationTasks(_m)
 }
 
+// QueryCommander queries the "commander" edge of the Incident entity.
+func (_m *Incident) QueryCommander() *UserQuery {
+	return NewIncidentClient(_m.config).QueryCommander(_m)
+}
+
+// QueryCommunicator queries the "communicator" edge of the Incident entity.
+func (_m *Incident) QueryCommunicator() *UserQuery {
+	return NewIncidentClient(_m.config).QueryCommunicator(_m)
+}
+
+// QueryOnCallResponder queries the "on_call_responder" edge of the Incident entity.
+func (_m *Incident) QueryOnCallResponder() *UserQuery {
+	return NewIncidentClient(_m.config).QueryOnCallResponder(_m)
+}
+
+// QueryService queries the "service" edge of the Incident entity.
+func (_m *Incident) QueryService() *ServiceQuery {
+	return NewIncidentClient(_m.config).QueryService(_m)
+}
+
+// QueryEscalationPolicy queries the "escalation_policy" edge of the Incident entity.
+func (_m *Incident) QueryEscalationPolicy() *EscalationPolicyQuery {
+	return NewIncidentClient(_m.config).QueryEscalationPolicy(_m)
+}
+
 // Update returns a builder for updating this Incident.
 // Note that you need to call Incident.Unwrap() before calling this method if this Incident
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -623,19 +706,19 @@ func (_m *Incident) String() string {
 	builder.WriteString(_m.Summary)
 	builder.WriteString(", ")
 	builder.WriteString("status=")
-	builder.WriteString(_m.Status)
+	builder.WriteString(fmt.Sprintf("%v", _m.Status))
 	builder.WriteString(", ")
 	builder.WriteString("severity=")
-	builder.WriteString(_m.Severity)
+	builder.WriteString(fmt.Sprintf("%v", _m.Severity))
 	builder.WriteString(", ")
 	builder.WriteString("impact_level=")
-	builder.WriteString(_m.ImpactLevel)
+	builder.WriteString(fmt.Sprintf("%v", _m.ImpactLevel))
 	builder.WriteString(", ")
 	builder.WriteString("priority=")
-	builder.WriteString(_m.Priority)
+	builder.WriteString(fmt.Sprintf("%v", _m.Priority))
 	builder.WriteString(", ")
 	builder.WriteString("incident_type=")
-	builder.WriteString(_m.IncidentType)
+	builder.WriteString(fmt.Sprintf("%v", _m.IncidentType))
 	builder.WriteString(", ")
 	if v := _m.CommanderID; v != nil {
 		builder.WriteString("commander_id=")
@@ -653,10 +736,10 @@ func (_m *Incident) String() string {
 	}
 	builder.WriteString(", ")
 	builder.WriteString("commander_assignee_type=")
-	builder.WriteString(_m.CommanderAssigneeType)
+	builder.WriteString(fmt.Sprintf("%v", _m.CommanderAssigneeType))
 	builder.WriteString(", ")
 	builder.WriteString("communicator_assignee_type=")
-	builder.WriteString(_m.CommunicatorAssigneeType)
+	builder.WriteString(fmt.Sprintf("%v", _m.CommunicatorAssigneeType))
 	builder.WriteString(", ")
 	if v := _m.ServiceID; v != nil {
 		builder.WriteString("service_id=")

@@ -23,7 +23,7 @@ func (InvestigationThreadMessage) Annotations() []schema.Annotation {
 func (InvestigationThreadMessage) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
-		field.UUID("thread_uuid", uuid.UUID{}),
+		field.UUID("thread_id", uuid.UUID{}),
 		field.String("type").Default("comment"),
 		field.String("source").Default("user"),
 		field.Text("message").NotEmpty(),
@@ -47,12 +47,12 @@ func (InvestigationThreadMessage) Edges() []ent.Edge {
 			Ref("messages").
 			Unique().
 			Required().
-			Field("thread_uuid"),
+			Field("thread_id"),
 	}
 }
 
 func (InvestigationThreadMessage) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("thread_uuid", "created_at"),
+		index.Fields("thread_id", "created_at"),
 	}
 }

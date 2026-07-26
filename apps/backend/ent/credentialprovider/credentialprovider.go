@@ -3,9 +3,11 @@
 package credentialprovider
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -28,8 +30,17 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// EdgeSharedSecrets holds the string denoting the shared_secrets edge name in mutations.
+	EdgeSharedSecrets = "shared_secrets"
 	// Table holds the table name of the credentialprovider in the database.
 	Table = "credential_providers"
+	// SharedSecretsTable is the table that holds the shared_secrets relation/edge.
+	SharedSecretsTable = "shared_secrets"
+	// SharedSecretsInverseTable is the table name for the SharedSecret entity.
+	// It exists in this package in order to avoid circular dependency with the "sharedsecret" package.
+	SharedSecretsInverseTable = "shared_secrets"
+	// SharedSecretsColumn is the table column denoting the shared_secrets relation/edge.
+	SharedSecretsColumn = "provider_id"
 )
 
 // Columns holds all SQL columns for credentialprovider fields.
@@ -57,8 +68,6 @@ func ValidColumn(column string) bool {
 var (
 	// NameValidator is a validator for the "name" field. It is called by the builders before save.
 	NameValidator func(string) error
-	// DefaultType holds the default value on creation for the "type" field.
-	DefaultType string
 	// DefaultConfigEncrypted holds the default value on creation for the "config_encrypted" field.
 	DefaultConfigEncrypted string
 	// DefaultEnabled holds the default value on creation for the "enabled" field.
@@ -74,6 +83,35 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// Type defines the type for the "type" enum field.
+type Type string
+
+// TypeInternal is the default value of the Type enum.
+const DefaultType = TypeInternal
+
+// Type values.
+const (
+	TypeInternal          Type = "internal"
+	TypeHashicorpVault    Type = "hashicorp_vault"
+	TypeAWSSecretsManager Type = "aws_secrets_manager"
+	TypeGcpSecretManager  Type = "gcp_secret_manager"
+	TypeAzureKeyVault     Type = "azure_key_vault"
+)
+
+func (_type Type) String() string {
+	return string(_type)
+}
+
+// TypeValidator is a validator for the "type" field enum values. It is called by the builders before save.
+func TypeValidator(_type Type) error {
+	switch _type {
+	case TypeInternal, TypeHashicorpVault, TypeAWSSecretsManager, TypeGcpSecretManager, TypeAzureKeyVault:
+		return nil
+	default:
+		return fmt.Errorf("credentialprovider: invalid enum value for type field: %q", _type)
+	}
+}
 
 // OrderOption defines the ordering options for the CredentialProvider queries.
 type OrderOption func(*sql.Selector)
@@ -116,4 +154,25 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// BySharedSecretsCount orders the results by shared_secrets count.
+func BySharedSecretsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newSharedSecretsStep(), opts...)
+	}
+}
+
+// BySharedSecrets orders the results by shared_secrets terms.
+func BySharedSecrets(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newSharedSecretsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+func newSharedSecretsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(SharedSecretsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, SharedSecretsTable, SharedSecretsColumn),
+	)
 }

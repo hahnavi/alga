@@ -3,9 +3,11 @@
 package postmortem
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -48,8 +50,35 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// EdgeIncident holds the string denoting the incident edge name in mutations.
+	EdgeIncident = "incident"
+	// EdgeApprovedBy holds the string denoting the approved_by edge name in mutations.
+	EdgeApprovedBy = "approved_by"
+	// EdgeActionItems holds the string denoting the action_items edge name in mutations.
+	EdgeActionItems = "action_items"
 	// Table holds the table name of the postmortem in the database.
 	Table = "post_mortems"
+	// IncidentTable is the table that holds the incident relation/edge.
+	IncidentTable = "post_mortems"
+	// IncidentInverseTable is the table name for the Incident entity.
+	// It exists in this package in order to avoid circular dependency with the "incident" package.
+	IncidentInverseTable = "incidents"
+	// IncidentColumn is the table column denoting the incident relation/edge.
+	IncidentColumn = "incident_id"
+	// ApprovedByTable is the table that holds the approved_by relation/edge.
+	ApprovedByTable = "post_mortems"
+	// ApprovedByInverseTable is the table name for the User entity.
+	// It exists in this package in order to avoid circular dependency with the "user" package.
+	ApprovedByInverseTable = "users"
+	// ApprovedByColumn is the table column denoting the approved_by relation/edge.
+	ApprovedByColumn = "approved_by_id"
+	// ActionItemsTable is the table that holds the action_items relation/edge.
+	ActionItemsTable = "action_items"
+	// ActionItemsInverseTable is the table name for the ActionItem entity.
+	// It exists in this package in order to avoid circular dependency with the "actionitem" package.
+	ActionItemsInverseTable = "action_items"
+	// ActionItemsColumn is the table column denoting the action_items relation/edge.
+	ActionItemsColumn = "post_mortem_id"
 )
 
 // Columns holds all SQL columns for postmortem fields.
@@ -87,8 +116,6 @@ func ValidColumn(column string) bool {
 var (
 	// DefaultTitle holds the default value on creation for the "title" field.
 	DefaultTitle string
-	// DefaultStatus holds the default value on creation for the "status" field.
-	DefaultStatus string
 	// DefaultSummary holds the default value on creation for the "summary" field.
 	DefaultSummary string
 	// DefaultRootCause holds the default value on creation for the "root_cause" field.
@@ -114,6 +141,34 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// Status defines the type for the "status" enum field.
+type Status string
+
+// StatusDraft is the default value of the Status enum.
+const DefaultStatus = StatusDraft
+
+// Status values.
+const (
+	StatusDraft     Status = "draft"
+	StatusInReview  Status = "in_review"
+	StatusApproved  Status = "approved"
+	StatusPublished Status = "published"
+)
+
+func (s Status) String() string {
+	return string(s)
+}
+
+// StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
+func StatusValidator(s Status) error {
+	switch s {
+	case StatusDraft, StatusInReview, StatusApproved, StatusPublished:
+		return nil
+	default:
+		return fmt.Errorf("postmortem: invalid enum value for status field: %q", s)
+	}
+}
 
 // OrderOption defines the ordering options for the PostMortem queries.
 type OrderOption func(*sql.Selector)
@@ -196,4 +251,53 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByIncidentField orders the results by incident field.
+func ByIncidentField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newIncidentStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByApprovedByField orders the results by approved_by field.
+func ByApprovedByField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newApprovedByStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByActionItemsCount orders the results by action_items count.
+func ByActionItemsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newActionItemsStep(), opts...)
+	}
+}
+
+// ByActionItems orders the results by action_items terms.
+func ByActionItems(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newActionItemsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+func newIncidentStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(IncidentInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, true, IncidentTable, IncidentColumn),
+	)
+}
+func newApprovedByStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ApprovedByInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, ApprovedByTable, ApprovedByColumn),
+	)
+}
+func newActionItemsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ActionItemsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ActionItemsTable, ActionItemsColumn),
+	)
 }

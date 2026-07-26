@@ -29,6 +29,8 @@ const (
 	FieldIcsEventType = "ics_event_type"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
+	// FieldIncidentID holds the string denoting the incident_id field in the database.
+	FieldIncidentID = "incident_id"
 	// EdgeIncident holds the string denoting the incident edge name in mutations.
 	EdgeIncident = "incident"
 	// Table holds the table name of the incidenttimelineentry in the database.
@@ -39,7 +41,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "incident" package.
 	IncidentInverseTable = "incidents"
 	// IncidentColumn is the table column denoting the incident relation/edge.
-	IncidentColumn = "incident_timeline"
+	IncidentColumn = "incident_id"
 )
 
 // Columns holds all SQL columns for incidenttimelineentry fields.
@@ -52,23 +54,13 @@ var Columns = []string{
 	FieldMetadata,
 	FieldIcsEventType,
 	FieldCreatedAt,
-}
-
-// ForeignKeys holds the SQL foreign-keys that are owned by the "incident_timeline_entries"
-// table and are not defined as standalone fields in the schema.
-var ForeignKeys = []string{
-	"incident_timeline",
+	FieldIncidentID,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
-			return true
-		}
-	}
-	for i := range ForeignKeys {
-		if column == ForeignKeys[i] {
 			return true
 		}
 	}
@@ -126,6 +118,11 @@ func ByIcsEventType(opts ...sql.OrderTermOption) OrderOption {
 // ByCreatedAt orders the results by the created_at field.
 func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
+}
+
+// ByIncidentID orders the results by the incident_id field.
+func ByIncidentID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIncidentID, opts...).ToFunc()
 }
 
 // ByIncidentField orders the results by incident field.

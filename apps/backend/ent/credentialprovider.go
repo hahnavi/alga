@@ -21,9 +21,9 @@ type CredentialProvider struct {
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty"`
 	// Type holds the value of the "type" field.
-	Type string `json:"type,omitempty"`
+	Type credentialprovider.Type `json:"type,omitempty"`
 	// ConfigEncrypted holds the value of the "config_encrypted" field.
-	ConfigEncrypted string `json:"config_encrypted,omitempty"`
+	ConfigEncrypted string `json:"-"`
 	// Enabled holds the value of the "enabled" field.
 	Enabled bool `json:"enabled,omitempty"`
 	// System holds the value of the "system" field.
@@ -31,8 +31,29 @@ type CredentialProvider struct {
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt    time.Time `json:"updated_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the CredentialProviderQuery when eager-loading is set.
+	Edges        CredentialProviderEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// CredentialProviderEdges holds the relations/edges for other nodes in the graph.
+type CredentialProviderEdges struct {
+	// SharedSecrets holds the value of the shared_secrets edge.
+	SharedSecrets []*SharedSecret `json:"shared_secrets,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// SharedSecretsOrErr returns the SharedSecrets value or an error if the edge
+// was not loaded in eager-loading.
+func (e CredentialProviderEdges) SharedSecretsOrErr() ([]*SharedSecret, error) {
+	if e.loadedTypes[0] {
+		return e.SharedSecrets, nil
+	}
+	return nil, &NotLoadedError{edge: "shared_secrets"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -79,7 +100,7 @@ func (_m *CredentialProvider) assignValues(columns []string, values []any) error
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field type", values[i])
 			} else if value.Valid {
-				_m.Type = value.String
+				_m.Type = credentialprovider.Type(value.String)
 			}
 		case credentialprovider.FieldConfigEncrypted:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -124,6 +145,11 @@ func (_m *CredentialProvider) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
 }
 
+// QuerySharedSecrets queries the "shared_secrets" edge of the CredentialProvider entity.
+func (_m *CredentialProvider) QuerySharedSecrets() *SharedSecretQuery {
+	return NewCredentialProviderClient(_m.config).QuerySharedSecrets(_m)
+}
+
 // Update returns a builder for updating this CredentialProvider.
 // Note that you need to call CredentialProvider.Unwrap() before calling this method if this CredentialProvider
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -151,10 +177,9 @@ func (_m *CredentialProvider) String() string {
 	builder.WriteString(_m.Name)
 	builder.WriteString(", ")
 	builder.WriteString("type=")
-	builder.WriteString(_m.Type)
+	builder.WriteString(fmt.Sprintf("%v", _m.Type))
 	builder.WriteString(", ")
-	builder.WriteString("config_encrypted=")
-	builder.WriteString(_m.ConfigEncrypted)
+	builder.WriteString("config_encrypted=<sensitive>")
 	builder.WriteString(", ")
 	builder.WriteString("enabled=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Enabled))

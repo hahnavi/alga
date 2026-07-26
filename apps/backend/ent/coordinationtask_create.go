@@ -5,6 +5,7 @@ package ent
 import (
 	"alga/ent/coordinationtask"
 	"alga/ent/incident"
+	"alga/ent/incidentinvestigation"
 	"context"
 	"errors"
 	"fmt"
@@ -51,13 +52,13 @@ func (_c *CoordinationTaskCreate) SetNillableParentTaskID(v *uuid.UUID) *Coordin
 }
 
 // SetKind sets the "kind" field.
-func (_c *CoordinationTaskCreate) SetKind(v string) *CoordinationTaskCreate {
+func (_c *CoordinationTaskCreate) SetKind(v coordinationtask.Kind) *CoordinationTaskCreate {
 	_c.mutation.SetKind(v)
 	return _c
 }
 
 // SetNillableKind sets the "kind" field if the given value is not nil.
-func (_c *CoordinationTaskCreate) SetNillableKind(v *string) *CoordinationTaskCreate {
+func (_c *CoordinationTaskCreate) SetNillableKind(v *coordinationtask.Kind) *CoordinationTaskCreate {
 	if v != nil {
 		_c.SetKind(*v)
 	}
@@ -65,13 +66,13 @@ func (_c *CoordinationTaskCreate) SetNillableKind(v *string) *CoordinationTaskCr
 }
 
 // SetAssigneeRole sets the "assignee_role" field.
-func (_c *CoordinationTaskCreate) SetAssigneeRole(v string) *CoordinationTaskCreate {
+func (_c *CoordinationTaskCreate) SetAssigneeRole(v coordinationtask.AssigneeRole) *CoordinationTaskCreate {
 	_c.mutation.SetAssigneeRole(v)
 	return _c
 }
 
 // SetNillableAssigneeRole sets the "assignee_role" field if the given value is not nil.
-func (_c *CoordinationTaskCreate) SetNillableAssigneeRole(v *string) *CoordinationTaskCreate {
+func (_c *CoordinationTaskCreate) SetNillableAssigneeRole(v *coordinationtask.AssigneeRole) *CoordinationTaskCreate {
 	if v != nil {
 		_c.SetAssigneeRole(*v)
 	}
@@ -145,13 +146,13 @@ func (_c *CoordinationTaskCreate) SetNillableLinkedInvestigationID(v *uuid.UUID)
 }
 
 // SetStatus sets the "status" field.
-func (_c *CoordinationTaskCreate) SetStatus(v string) *CoordinationTaskCreate {
+func (_c *CoordinationTaskCreate) SetStatus(v coordinationtask.Status) *CoordinationTaskCreate {
 	_c.mutation.SetStatus(v)
 	return _c
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_c *CoordinationTaskCreate) SetNillableStatus(v *string) *CoordinationTaskCreate {
+func (_c *CoordinationTaskCreate) SetNillableStatus(v *coordinationtask.Status) *CoordinationTaskCreate {
 	if v != nil {
 		_c.SetStatus(*v)
 	}
@@ -337,6 +338,11 @@ func (_c *CoordinationTaskCreate) SetParentTask(v *CoordinationTask) *Coordinati
 	return _c.SetParentTaskID(v.ID)
 }
 
+// SetLinkedInvestigation sets the "linked_investigation" edge to the IncidentInvestigation entity.
+func (_c *CoordinationTaskCreate) SetLinkedInvestigation(v *IncidentInvestigation) *CoordinationTaskCreate {
+	return _c.SetLinkedInvestigationID(v.ID)
+}
+
 // Mutation returns the CoordinationTaskMutation object of the builder.
 func (_c *CoordinationTaskCreate) Mutation() *CoordinationTaskMutation {
 	return _c.mutation
@@ -435,8 +441,18 @@ func (_c *CoordinationTaskCreate) check() error {
 	if _, ok := _c.mutation.Kind(); !ok {
 		return &ValidationError{Name: "kind", err: errors.New(`ent: missing required field "CoordinationTask.kind"`)}
 	}
+	if v, ok := _c.mutation.Kind(); ok {
+		if err := coordinationtask.KindValidator(v); err != nil {
+			return &ValidationError{Name: "kind", err: fmt.Errorf(`ent: validator failed for field "CoordinationTask.kind": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.AssigneeRole(); !ok {
 		return &ValidationError{Name: "assignee_role", err: errors.New(`ent: missing required field "CoordinationTask.assignee_role"`)}
+	}
+	if v, ok := _c.mutation.AssigneeRole(); ok {
+		if err := coordinationtask.AssigneeRoleValidator(v); err != nil {
+			return &ValidationError{Name: "assignee_role", err: fmt.Errorf(`ent: validator failed for field "CoordinationTask.assignee_role": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.Goal(); !ok {
 		return &ValidationError{Name: "goal", err: errors.New(`ent: missing required field "CoordinationTask.goal"`)}
@@ -452,11 +468,26 @@ func (_c *CoordinationTaskCreate) check() error {
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "CoordinationTask.status"`)}
 	}
+	if v, ok := _c.mutation.Status(); ok {
+		if err := coordinationtask.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "CoordinationTask.status": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Priority(); !ok {
 		return &ValidationError{Name: "priority", err: errors.New(`ent: missing required field "CoordinationTask.priority"`)}
 	}
+	if v, ok := _c.mutation.Priority(); ok {
+		if err := coordinationtask.PriorityValidator(v); err != nil {
+			return &ValidationError{Name: "priority", err: fmt.Errorf(`ent: validator failed for field "CoordinationTask.priority": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.DispatchAttempts(); !ok {
 		return &ValidationError{Name: "dispatch_attempts", err: errors.New(`ent: missing required field "CoordinationTask.dispatch_attempts"`)}
+	}
+	if v, ok := _c.mutation.DispatchAttempts(); ok {
+		if err := coordinationtask.DispatchAttemptsValidator(v); err != nil {
+			return &ValidationError{Name: "dispatch_attempts", err: fmt.Errorf(`ent: validator failed for field "CoordinationTask.dispatch_attempts": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "CoordinationTask.created_at"`)}
@@ -500,11 +531,11 @@ func (_c *CoordinationTaskCreate) createSpec() (*CoordinationTask, *sqlgraph.Cre
 		_spec.ID.Value = &id
 	}
 	if value, ok := _c.mutation.Kind(); ok {
-		_spec.SetField(coordinationtask.FieldKind, field.TypeString, value)
+		_spec.SetField(coordinationtask.FieldKind, field.TypeEnum, value)
 		_node.Kind = value
 	}
 	if value, ok := _c.mutation.AssigneeRole(); ok {
-		_spec.SetField(coordinationtask.FieldAssigneeRole, field.TypeString, value)
+		_spec.SetField(coordinationtask.FieldAssigneeRole, field.TypeEnum, value)
 		_node.AssigneeRole = value
 	}
 	if value, ok := _c.mutation.AssigneeAgentID(); ok {
@@ -531,12 +562,8 @@ func (_c *CoordinationTaskCreate) createSpec() (*CoordinationTask, *sqlgraph.Cre
 		_spec.SetField(coordinationtask.FieldResultSchema, field.TypeJSON, value)
 		_node.ResultSchema = value
 	}
-	if value, ok := _c.mutation.LinkedInvestigationID(); ok {
-		_spec.SetField(coordinationtask.FieldLinkedInvestigationID, field.TypeUUID, value)
-		_node.LinkedInvestigationID = &value
-	}
 	if value, ok := _c.mutation.Status(); ok {
-		_spec.SetField(coordinationtask.FieldStatus, field.TypeString, value)
+		_spec.SetField(coordinationtask.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
 	}
 	if value, ok := _c.mutation.Priority(); ok {
@@ -627,6 +654,23 @@ func (_c *CoordinationTaskCreate) createSpec() (*CoordinationTask, *sqlgraph.Cre
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.ParentTaskID = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.LinkedInvestigationIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   coordinationtask.LinkedInvestigationTable,
+			Columns: []string{coordinationtask.LinkedInvestigationColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incidentinvestigation.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.LinkedInvestigationID = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

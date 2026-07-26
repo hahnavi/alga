@@ -31,6 +31,8 @@ func (AuditLog) Fields() []ent.Field {
 		field.Bool("success").Default(true),
 		field.JSON("details", map[string]any{}).Optional(),
 		field.String("request_id").Optional().Default(""),
+		field.String("entity_type").Optional().Default(""),
+		field.UUID("entity_id", uuid.UUID{}).Optional().Nillable(),
 	}
 }
 
@@ -40,7 +42,9 @@ func (AuditLog) Edges() []ent.Edge {
 
 func (AuditLog) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("timestamp"),
-		index.Fields("event"),
+		index.Fields("user_id", "timestamp"),
+		index.Fields("event", "timestamp"),
+		index.Fields("entity_type", "entity_id", "timestamp"),
+		index.Fields("request_id"),
 	}
 }

@@ -199,6 +199,11 @@ func (_u *PlaybookStepUpdate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *PlaybookStepUpdate) check() error {
+	if v, ok := _u.mutation.StepNumber(); ok {
+		if err := playbookstep.StepNumberValidator(v); err != nil {
+			return &ValidationError{Name: "step_number", err: fmt.Errorf(`ent: validator failed for field "PlaybookStep.step_number": %w`, err)}
+		}
+	}
 	if _u.mutation.PlaybookCleared() && len(_u.mutation.PlaybookIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "PlaybookStep.playbook"`)
 	}
@@ -478,6 +483,11 @@ func (_u *PlaybookStepUpdateOne) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *PlaybookStepUpdateOne) check() error {
+	if v, ok := _u.mutation.StepNumber(); ok {
+		if err := playbookstep.StepNumberValidator(v); err != nil {
+			return &ValidationError{Name: "step_number", err: fmt.Errorf(`ent: validator failed for field "PlaybookStep.step_number": %w`, err)}
+		}
+	}
 	if _u.mutation.PlaybookCleared() && len(_u.mutation.PlaybookIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "PlaybookStep.playbook"`)
 	}

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -55,11 +56,6 @@ func IDLTE(id uuid.UUID) predicate.KnowledgeNote {
 	return predicate.KnowledgeNote(sql.FieldLTE(FieldID, id))
 }
 
-// Kind applies equality check predicate on the "kind" field. It's identical to KindEQ.
-func Kind(v string) predicate.KnowledgeNote {
-	return predicate.KnowledgeNote(sql.FieldEQ(FieldKind, v))
-}
-
 // Title applies equality check predicate on the "title" field. It's identical to TitleEQ.
 func Title(v string) predicate.KnowledgeNote {
 	return predicate.KnowledgeNote(sql.FieldEQ(FieldTitle, v))
@@ -73,11 +69,6 @@ func BodyMarkdown(v string) predicate.KnowledgeNote {
 // AuthorID applies equality check predicate on the "author_id" field. It's identical to AuthorIDEQ.
 func AuthorID(v uuid.UUID) predicate.KnowledgeNote {
 	return predicate.KnowledgeNote(sql.FieldEQ(FieldAuthorID, v))
-}
-
-// AuthorType applies equality check predicate on the "author_type" field. It's identical to AuthorTypeEQ.
-func AuthorType(v string) predicate.KnowledgeNote {
-	return predicate.KnowledgeNote(sql.FieldEQ(FieldAuthorType, v))
 }
 
 // AuthorName applies equality check predicate on the "author_name" field. It's identical to AuthorNameEQ.
@@ -111,68 +102,23 @@ func UpdatedAt(v time.Time) predicate.KnowledgeNote {
 }
 
 // KindEQ applies the EQ predicate on the "kind" field.
-func KindEQ(v string) predicate.KnowledgeNote {
+func KindEQ(v Kind) predicate.KnowledgeNote {
 	return predicate.KnowledgeNote(sql.FieldEQ(FieldKind, v))
 }
 
 // KindNEQ applies the NEQ predicate on the "kind" field.
-func KindNEQ(v string) predicate.KnowledgeNote {
+func KindNEQ(v Kind) predicate.KnowledgeNote {
 	return predicate.KnowledgeNote(sql.FieldNEQ(FieldKind, v))
 }
 
 // KindIn applies the In predicate on the "kind" field.
-func KindIn(vs ...string) predicate.KnowledgeNote {
+func KindIn(vs ...Kind) predicate.KnowledgeNote {
 	return predicate.KnowledgeNote(sql.FieldIn(FieldKind, vs...))
 }
 
 // KindNotIn applies the NotIn predicate on the "kind" field.
-func KindNotIn(vs ...string) predicate.KnowledgeNote {
+func KindNotIn(vs ...Kind) predicate.KnowledgeNote {
 	return predicate.KnowledgeNote(sql.FieldNotIn(FieldKind, vs...))
-}
-
-// KindGT applies the GT predicate on the "kind" field.
-func KindGT(v string) predicate.KnowledgeNote {
-	return predicate.KnowledgeNote(sql.FieldGT(FieldKind, v))
-}
-
-// KindGTE applies the GTE predicate on the "kind" field.
-func KindGTE(v string) predicate.KnowledgeNote {
-	return predicate.KnowledgeNote(sql.FieldGTE(FieldKind, v))
-}
-
-// KindLT applies the LT predicate on the "kind" field.
-func KindLT(v string) predicate.KnowledgeNote {
-	return predicate.KnowledgeNote(sql.FieldLT(FieldKind, v))
-}
-
-// KindLTE applies the LTE predicate on the "kind" field.
-func KindLTE(v string) predicate.KnowledgeNote {
-	return predicate.KnowledgeNote(sql.FieldLTE(FieldKind, v))
-}
-
-// KindContains applies the Contains predicate on the "kind" field.
-func KindContains(v string) predicate.KnowledgeNote {
-	return predicate.KnowledgeNote(sql.FieldContains(FieldKind, v))
-}
-
-// KindHasPrefix applies the HasPrefix predicate on the "kind" field.
-func KindHasPrefix(v string) predicate.KnowledgeNote {
-	return predicate.KnowledgeNote(sql.FieldHasPrefix(FieldKind, v))
-}
-
-// KindHasSuffix applies the HasSuffix predicate on the "kind" field.
-func KindHasSuffix(v string) predicate.KnowledgeNote {
-	return predicate.KnowledgeNote(sql.FieldHasSuffix(FieldKind, v))
-}
-
-// KindEqualFold applies the EqualFold predicate on the "kind" field.
-func KindEqualFold(v string) predicate.KnowledgeNote {
-	return predicate.KnowledgeNote(sql.FieldEqualFold(FieldKind, v))
-}
-
-// KindContainsFold applies the ContainsFold predicate on the "kind" field.
-func KindContainsFold(v string) predicate.KnowledgeNote {
-	return predicate.KnowledgeNote(sql.FieldContainsFold(FieldKind, v))
 }
 
 // TitleEQ applies the EQ predicate on the "title" field.
@@ -345,26 +291,6 @@ func AuthorIDNotIn(vs ...uuid.UUID) predicate.KnowledgeNote {
 	return predicate.KnowledgeNote(sql.FieldNotIn(FieldAuthorID, vs...))
 }
 
-// AuthorIDGT applies the GT predicate on the "author_id" field.
-func AuthorIDGT(v uuid.UUID) predicate.KnowledgeNote {
-	return predicate.KnowledgeNote(sql.FieldGT(FieldAuthorID, v))
-}
-
-// AuthorIDGTE applies the GTE predicate on the "author_id" field.
-func AuthorIDGTE(v uuid.UUID) predicate.KnowledgeNote {
-	return predicate.KnowledgeNote(sql.FieldGTE(FieldAuthorID, v))
-}
-
-// AuthorIDLT applies the LT predicate on the "author_id" field.
-func AuthorIDLT(v uuid.UUID) predicate.KnowledgeNote {
-	return predicate.KnowledgeNote(sql.FieldLT(FieldAuthorID, v))
-}
-
-// AuthorIDLTE applies the LTE predicate on the "author_id" field.
-func AuthorIDLTE(v uuid.UUID) predicate.KnowledgeNote {
-	return predicate.KnowledgeNote(sql.FieldLTE(FieldAuthorID, v))
-}
-
 // AuthorIDIsNil applies the IsNil predicate on the "author_id" field.
 func AuthorIDIsNil() predicate.KnowledgeNote {
 	return predicate.KnowledgeNote(sql.FieldIsNull(FieldAuthorID))
@@ -376,68 +302,23 @@ func AuthorIDNotNil() predicate.KnowledgeNote {
 }
 
 // AuthorTypeEQ applies the EQ predicate on the "author_type" field.
-func AuthorTypeEQ(v string) predicate.KnowledgeNote {
+func AuthorTypeEQ(v AuthorType) predicate.KnowledgeNote {
 	return predicate.KnowledgeNote(sql.FieldEQ(FieldAuthorType, v))
 }
 
 // AuthorTypeNEQ applies the NEQ predicate on the "author_type" field.
-func AuthorTypeNEQ(v string) predicate.KnowledgeNote {
+func AuthorTypeNEQ(v AuthorType) predicate.KnowledgeNote {
 	return predicate.KnowledgeNote(sql.FieldNEQ(FieldAuthorType, v))
 }
 
 // AuthorTypeIn applies the In predicate on the "author_type" field.
-func AuthorTypeIn(vs ...string) predicate.KnowledgeNote {
+func AuthorTypeIn(vs ...AuthorType) predicate.KnowledgeNote {
 	return predicate.KnowledgeNote(sql.FieldIn(FieldAuthorType, vs...))
 }
 
 // AuthorTypeNotIn applies the NotIn predicate on the "author_type" field.
-func AuthorTypeNotIn(vs ...string) predicate.KnowledgeNote {
+func AuthorTypeNotIn(vs ...AuthorType) predicate.KnowledgeNote {
 	return predicate.KnowledgeNote(sql.FieldNotIn(FieldAuthorType, vs...))
-}
-
-// AuthorTypeGT applies the GT predicate on the "author_type" field.
-func AuthorTypeGT(v string) predicate.KnowledgeNote {
-	return predicate.KnowledgeNote(sql.FieldGT(FieldAuthorType, v))
-}
-
-// AuthorTypeGTE applies the GTE predicate on the "author_type" field.
-func AuthorTypeGTE(v string) predicate.KnowledgeNote {
-	return predicate.KnowledgeNote(sql.FieldGTE(FieldAuthorType, v))
-}
-
-// AuthorTypeLT applies the LT predicate on the "author_type" field.
-func AuthorTypeLT(v string) predicate.KnowledgeNote {
-	return predicate.KnowledgeNote(sql.FieldLT(FieldAuthorType, v))
-}
-
-// AuthorTypeLTE applies the LTE predicate on the "author_type" field.
-func AuthorTypeLTE(v string) predicate.KnowledgeNote {
-	return predicate.KnowledgeNote(sql.FieldLTE(FieldAuthorType, v))
-}
-
-// AuthorTypeContains applies the Contains predicate on the "author_type" field.
-func AuthorTypeContains(v string) predicate.KnowledgeNote {
-	return predicate.KnowledgeNote(sql.FieldContains(FieldAuthorType, v))
-}
-
-// AuthorTypeHasPrefix applies the HasPrefix predicate on the "author_type" field.
-func AuthorTypeHasPrefix(v string) predicate.KnowledgeNote {
-	return predicate.KnowledgeNote(sql.FieldHasPrefix(FieldAuthorType, v))
-}
-
-// AuthorTypeHasSuffix applies the HasSuffix predicate on the "author_type" field.
-func AuthorTypeHasSuffix(v string) predicate.KnowledgeNote {
-	return predicate.KnowledgeNote(sql.FieldHasSuffix(FieldAuthorType, v))
-}
-
-// AuthorTypeEqualFold applies the EqualFold predicate on the "author_type" field.
-func AuthorTypeEqualFold(v string) predicate.KnowledgeNote {
-	return predicate.KnowledgeNote(sql.FieldEqualFold(FieldAuthorType, v))
-}
-
-// AuthorTypeContainsFold applies the ContainsFold predicate on the "author_type" field.
-func AuthorTypeContainsFold(v string) predicate.KnowledgeNote {
-	return predicate.KnowledgeNote(sql.FieldContainsFold(FieldAuthorType, v))
 }
 
 // AuthorNameEQ applies the EQ predicate on the "author_name" field.
@@ -768,6 +649,29 @@ func UpdatedAtLT(v time.Time) predicate.KnowledgeNote {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.KnowledgeNote {
 	return predicate.KnowledgeNote(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// HasAuthor applies the HasEdge predicate on the "author" edge.
+func HasAuthor() predicate.KnowledgeNote {
+	return predicate.KnowledgeNote(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, AuthorTable, AuthorColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAuthorWith applies the HasEdge predicate on the "author" edge with a given conditions (other predicates).
+func HasAuthorWith(preds ...predicate.User) predicate.KnowledgeNote {
+	return predicate.KnowledgeNote(func(s *sql.Selector) {
+		step := newAuthorStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

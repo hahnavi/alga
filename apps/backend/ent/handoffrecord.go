@@ -5,6 +5,7 @@ package ent
 import (
 	"alga/ent/handoffrecord"
 	"alga/ent/oncallschedule"
+	"alga/ent/user"
 	"fmt"
 	"strings"
 	"time"
@@ -51,9 +52,13 @@ type HandoffRecord struct {
 type HandoffRecordEdges struct {
 	// Schedule holds the value of the schedule edge.
 	Schedule *OnCallSchedule `json:"schedule,omitempty"`
+	// OutgoingUser holds the value of the outgoing_user edge.
+	OutgoingUser *User `json:"outgoing_user,omitempty"`
+	// IncomingUser holds the value of the incoming_user edge.
+	IncomingUser *User `json:"incoming_user,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [3]bool
 }
 
 // ScheduleOrErr returns the Schedule value or an error if the edge
@@ -65,6 +70,28 @@ func (e HandoffRecordEdges) ScheduleOrErr() (*OnCallSchedule, error) {
 		return nil, &NotFoundError{label: oncallschedule.Label}
 	}
 	return nil, &NotLoadedError{edge: "schedule"}
+}
+
+// OutgoingUserOrErr returns the OutgoingUser value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e HandoffRecordEdges) OutgoingUserOrErr() (*User, error) {
+	if e.OutgoingUser != nil {
+		return e.OutgoingUser, nil
+	} else if e.loadedTypes[1] {
+		return nil, &NotFoundError{label: user.Label}
+	}
+	return nil, &NotLoadedError{edge: "outgoing_user"}
+}
+
+// IncomingUserOrErr returns the IncomingUser value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e HandoffRecordEdges) IncomingUserOrErr() (*User, error) {
+	if e.IncomingUser != nil {
+		return e.IncomingUser, nil
+	} else if e.loadedTypes[2] {
+		return nil, &NotFoundError{label: user.Label}
+	}
+	return nil, &NotLoadedError{edge: "incoming_user"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -186,6 +213,16 @@ func (_m *HandoffRecord) Value(name string) (ent.Value, error) {
 // QuerySchedule queries the "schedule" edge of the HandoffRecord entity.
 func (_m *HandoffRecord) QuerySchedule() *OnCallScheduleQuery {
 	return NewHandoffRecordClient(_m.config).QuerySchedule(_m)
+}
+
+// QueryOutgoingUser queries the "outgoing_user" edge of the HandoffRecord entity.
+func (_m *HandoffRecord) QueryOutgoingUser() *UserQuery {
+	return NewHandoffRecordClient(_m.config).QueryOutgoingUser(_m)
+}
+
+// QueryIncomingUser queries the "incoming_user" edge of the HandoffRecord entity.
+func (_m *HandoffRecord) QueryIncomingUser() *UserQuery {
+	return NewHandoffRecordClient(_m.config).QueryIncomingUser(_m)
 }
 
 // Update returns a builder for updating this HandoffRecord.

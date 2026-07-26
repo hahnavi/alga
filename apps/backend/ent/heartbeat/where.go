@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -83,16 +84,6 @@ func Enabled(v bool) predicate.Heartbeat {
 // OwnerTeamID applies equality check predicate on the "owner_team_id" field. It's identical to OwnerTeamIDEQ.
 func OwnerTeamID(v uuid.UUID) predicate.Heartbeat {
 	return predicate.Heartbeat(sql.FieldEQ(FieldOwnerTeamID, v))
-}
-
-// Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
-func Status(v string) predicate.Heartbeat {
-	return predicate.Heartbeat(sql.FieldEQ(FieldStatus, v))
-}
-
-// Severity applies equality check predicate on the "severity" field. It's identical to SeverityEQ.
-func Severity(v string) predicate.Heartbeat {
-	return predicate.Heartbeat(sql.FieldEQ(FieldSeverity, v))
 }
 
 // PingTokenHash applies equality check predicate on the "ping_token_hash" field. It's identical to PingTokenHashEQ.
@@ -375,26 +366,6 @@ func OwnerTeamIDNotIn(vs ...uuid.UUID) predicate.Heartbeat {
 	return predicate.Heartbeat(sql.FieldNotIn(FieldOwnerTeamID, vs...))
 }
 
-// OwnerTeamIDGT applies the GT predicate on the "owner_team_id" field.
-func OwnerTeamIDGT(v uuid.UUID) predicate.Heartbeat {
-	return predicate.Heartbeat(sql.FieldGT(FieldOwnerTeamID, v))
-}
-
-// OwnerTeamIDGTE applies the GTE predicate on the "owner_team_id" field.
-func OwnerTeamIDGTE(v uuid.UUID) predicate.Heartbeat {
-	return predicate.Heartbeat(sql.FieldGTE(FieldOwnerTeamID, v))
-}
-
-// OwnerTeamIDLT applies the LT predicate on the "owner_team_id" field.
-func OwnerTeamIDLT(v uuid.UUID) predicate.Heartbeat {
-	return predicate.Heartbeat(sql.FieldLT(FieldOwnerTeamID, v))
-}
-
-// OwnerTeamIDLTE applies the LTE predicate on the "owner_team_id" field.
-func OwnerTeamIDLTE(v uuid.UUID) predicate.Heartbeat {
-	return predicate.Heartbeat(sql.FieldLTE(FieldOwnerTeamID, v))
-}
-
 // OwnerTeamIDIsNil applies the IsNil predicate on the "owner_team_id" field.
 func OwnerTeamIDIsNil() predicate.Heartbeat {
 	return predicate.Heartbeat(sql.FieldIsNull(FieldOwnerTeamID))
@@ -406,133 +377,43 @@ func OwnerTeamIDNotNil() predicate.Heartbeat {
 }
 
 // StatusEQ applies the EQ predicate on the "status" field.
-func StatusEQ(v string) predicate.Heartbeat {
+func StatusEQ(v Status) predicate.Heartbeat {
 	return predicate.Heartbeat(sql.FieldEQ(FieldStatus, v))
 }
 
 // StatusNEQ applies the NEQ predicate on the "status" field.
-func StatusNEQ(v string) predicate.Heartbeat {
+func StatusNEQ(v Status) predicate.Heartbeat {
 	return predicate.Heartbeat(sql.FieldNEQ(FieldStatus, v))
 }
 
 // StatusIn applies the In predicate on the "status" field.
-func StatusIn(vs ...string) predicate.Heartbeat {
+func StatusIn(vs ...Status) predicate.Heartbeat {
 	return predicate.Heartbeat(sql.FieldIn(FieldStatus, vs...))
 }
 
 // StatusNotIn applies the NotIn predicate on the "status" field.
-func StatusNotIn(vs ...string) predicate.Heartbeat {
+func StatusNotIn(vs ...Status) predicate.Heartbeat {
 	return predicate.Heartbeat(sql.FieldNotIn(FieldStatus, vs...))
 }
 
-// StatusGT applies the GT predicate on the "status" field.
-func StatusGT(v string) predicate.Heartbeat {
-	return predicate.Heartbeat(sql.FieldGT(FieldStatus, v))
-}
-
-// StatusGTE applies the GTE predicate on the "status" field.
-func StatusGTE(v string) predicate.Heartbeat {
-	return predicate.Heartbeat(sql.FieldGTE(FieldStatus, v))
-}
-
-// StatusLT applies the LT predicate on the "status" field.
-func StatusLT(v string) predicate.Heartbeat {
-	return predicate.Heartbeat(sql.FieldLT(FieldStatus, v))
-}
-
-// StatusLTE applies the LTE predicate on the "status" field.
-func StatusLTE(v string) predicate.Heartbeat {
-	return predicate.Heartbeat(sql.FieldLTE(FieldStatus, v))
-}
-
-// StatusContains applies the Contains predicate on the "status" field.
-func StatusContains(v string) predicate.Heartbeat {
-	return predicate.Heartbeat(sql.FieldContains(FieldStatus, v))
-}
-
-// StatusHasPrefix applies the HasPrefix predicate on the "status" field.
-func StatusHasPrefix(v string) predicate.Heartbeat {
-	return predicate.Heartbeat(sql.FieldHasPrefix(FieldStatus, v))
-}
-
-// StatusHasSuffix applies the HasSuffix predicate on the "status" field.
-func StatusHasSuffix(v string) predicate.Heartbeat {
-	return predicate.Heartbeat(sql.FieldHasSuffix(FieldStatus, v))
-}
-
-// StatusEqualFold applies the EqualFold predicate on the "status" field.
-func StatusEqualFold(v string) predicate.Heartbeat {
-	return predicate.Heartbeat(sql.FieldEqualFold(FieldStatus, v))
-}
-
-// StatusContainsFold applies the ContainsFold predicate on the "status" field.
-func StatusContainsFold(v string) predicate.Heartbeat {
-	return predicate.Heartbeat(sql.FieldContainsFold(FieldStatus, v))
-}
-
 // SeverityEQ applies the EQ predicate on the "severity" field.
-func SeverityEQ(v string) predicate.Heartbeat {
+func SeverityEQ(v Severity) predicate.Heartbeat {
 	return predicate.Heartbeat(sql.FieldEQ(FieldSeverity, v))
 }
 
 // SeverityNEQ applies the NEQ predicate on the "severity" field.
-func SeverityNEQ(v string) predicate.Heartbeat {
+func SeverityNEQ(v Severity) predicate.Heartbeat {
 	return predicate.Heartbeat(sql.FieldNEQ(FieldSeverity, v))
 }
 
 // SeverityIn applies the In predicate on the "severity" field.
-func SeverityIn(vs ...string) predicate.Heartbeat {
+func SeverityIn(vs ...Severity) predicate.Heartbeat {
 	return predicate.Heartbeat(sql.FieldIn(FieldSeverity, vs...))
 }
 
 // SeverityNotIn applies the NotIn predicate on the "severity" field.
-func SeverityNotIn(vs ...string) predicate.Heartbeat {
+func SeverityNotIn(vs ...Severity) predicate.Heartbeat {
 	return predicate.Heartbeat(sql.FieldNotIn(FieldSeverity, vs...))
-}
-
-// SeverityGT applies the GT predicate on the "severity" field.
-func SeverityGT(v string) predicate.Heartbeat {
-	return predicate.Heartbeat(sql.FieldGT(FieldSeverity, v))
-}
-
-// SeverityGTE applies the GTE predicate on the "severity" field.
-func SeverityGTE(v string) predicate.Heartbeat {
-	return predicate.Heartbeat(sql.FieldGTE(FieldSeverity, v))
-}
-
-// SeverityLT applies the LT predicate on the "severity" field.
-func SeverityLT(v string) predicate.Heartbeat {
-	return predicate.Heartbeat(sql.FieldLT(FieldSeverity, v))
-}
-
-// SeverityLTE applies the LTE predicate on the "severity" field.
-func SeverityLTE(v string) predicate.Heartbeat {
-	return predicate.Heartbeat(sql.FieldLTE(FieldSeverity, v))
-}
-
-// SeverityContains applies the Contains predicate on the "severity" field.
-func SeverityContains(v string) predicate.Heartbeat {
-	return predicate.Heartbeat(sql.FieldContains(FieldSeverity, v))
-}
-
-// SeverityHasPrefix applies the HasPrefix predicate on the "severity" field.
-func SeverityHasPrefix(v string) predicate.Heartbeat {
-	return predicate.Heartbeat(sql.FieldHasPrefix(FieldSeverity, v))
-}
-
-// SeverityHasSuffix applies the HasSuffix predicate on the "severity" field.
-func SeverityHasSuffix(v string) predicate.Heartbeat {
-	return predicate.Heartbeat(sql.FieldHasSuffix(FieldSeverity, v))
-}
-
-// SeverityEqualFold applies the EqualFold predicate on the "severity" field.
-func SeverityEqualFold(v string) predicate.Heartbeat {
-	return predicate.Heartbeat(sql.FieldEqualFold(FieldSeverity, v))
-}
-
-// SeverityContainsFold applies the ContainsFold predicate on the "severity" field.
-func SeverityContainsFold(v string) predicate.Heartbeat {
-	return predicate.Heartbeat(sql.FieldContainsFold(FieldSeverity, v))
 }
 
 // LabelsIsNil applies the IsNil predicate on the "labels" field.
@@ -978,6 +859,29 @@ func UpdatedAtLT(v time.Time) predicate.Heartbeat {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.Heartbeat {
 	return predicate.Heartbeat(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// HasOwnerTeam applies the HasEdge predicate on the "owner_team" edge.
+func HasOwnerTeam() predicate.Heartbeat {
+	return predicate.Heartbeat(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, OwnerTeamTable, OwnerTeamColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasOwnerTeamWith applies the HasEdge predicate on the "owner_team" edge with a given conditions (other predicates).
+func HasOwnerTeamWith(preds ...predicate.Team) predicate.Heartbeat {
+	return predicate.Heartbeat(func(s *sql.Selector) {
+		step := newOwnerTeamStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

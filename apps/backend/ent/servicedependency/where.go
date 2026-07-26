@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -65,11 +66,6 @@ func DependentOnServiceID(v uuid.UUID) predicate.ServiceDependency {
 	return predicate.ServiceDependency(sql.FieldEQ(FieldDependentOnServiceID, v))
 }
 
-// DependencyType applies equality check predicate on the "dependency_type" field. It's identical to DependencyTypeEQ.
-func DependencyType(v string) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldEQ(FieldDependencyType, v))
-}
-
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.ServiceDependency {
 	return predicate.ServiceDependency(sql.FieldEQ(FieldCreatedAt, v))
@@ -95,26 +91,6 @@ func ServiceIDNotIn(vs ...uuid.UUID) predicate.ServiceDependency {
 	return predicate.ServiceDependency(sql.FieldNotIn(FieldServiceID, vs...))
 }
 
-// ServiceIDGT applies the GT predicate on the "service_id" field.
-func ServiceIDGT(v uuid.UUID) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldGT(FieldServiceID, v))
-}
-
-// ServiceIDGTE applies the GTE predicate on the "service_id" field.
-func ServiceIDGTE(v uuid.UUID) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldGTE(FieldServiceID, v))
-}
-
-// ServiceIDLT applies the LT predicate on the "service_id" field.
-func ServiceIDLT(v uuid.UUID) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldLT(FieldServiceID, v))
-}
-
-// ServiceIDLTE applies the LTE predicate on the "service_id" field.
-func ServiceIDLTE(v uuid.UUID) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldLTE(FieldServiceID, v))
-}
-
 // DependentOnServiceIDEQ applies the EQ predicate on the "dependent_on_service_id" field.
 func DependentOnServiceIDEQ(v uuid.UUID) predicate.ServiceDependency {
 	return predicate.ServiceDependency(sql.FieldEQ(FieldDependentOnServiceID, v))
@@ -135,89 +111,24 @@ func DependentOnServiceIDNotIn(vs ...uuid.UUID) predicate.ServiceDependency {
 	return predicate.ServiceDependency(sql.FieldNotIn(FieldDependentOnServiceID, vs...))
 }
 
-// DependentOnServiceIDGT applies the GT predicate on the "dependent_on_service_id" field.
-func DependentOnServiceIDGT(v uuid.UUID) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldGT(FieldDependentOnServiceID, v))
-}
-
-// DependentOnServiceIDGTE applies the GTE predicate on the "dependent_on_service_id" field.
-func DependentOnServiceIDGTE(v uuid.UUID) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldGTE(FieldDependentOnServiceID, v))
-}
-
-// DependentOnServiceIDLT applies the LT predicate on the "dependent_on_service_id" field.
-func DependentOnServiceIDLT(v uuid.UUID) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldLT(FieldDependentOnServiceID, v))
-}
-
-// DependentOnServiceIDLTE applies the LTE predicate on the "dependent_on_service_id" field.
-func DependentOnServiceIDLTE(v uuid.UUID) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldLTE(FieldDependentOnServiceID, v))
-}
-
 // DependencyTypeEQ applies the EQ predicate on the "dependency_type" field.
-func DependencyTypeEQ(v string) predicate.ServiceDependency {
+func DependencyTypeEQ(v DependencyType) predicate.ServiceDependency {
 	return predicate.ServiceDependency(sql.FieldEQ(FieldDependencyType, v))
 }
 
 // DependencyTypeNEQ applies the NEQ predicate on the "dependency_type" field.
-func DependencyTypeNEQ(v string) predicate.ServiceDependency {
+func DependencyTypeNEQ(v DependencyType) predicate.ServiceDependency {
 	return predicate.ServiceDependency(sql.FieldNEQ(FieldDependencyType, v))
 }
 
 // DependencyTypeIn applies the In predicate on the "dependency_type" field.
-func DependencyTypeIn(vs ...string) predicate.ServiceDependency {
+func DependencyTypeIn(vs ...DependencyType) predicate.ServiceDependency {
 	return predicate.ServiceDependency(sql.FieldIn(FieldDependencyType, vs...))
 }
 
 // DependencyTypeNotIn applies the NotIn predicate on the "dependency_type" field.
-func DependencyTypeNotIn(vs ...string) predicate.ServiceDependency {
+func DependencyTypeNotIn(vs ...DependencyType) predicate.ServiceDependency {
 	return predicate.ServiceDependency(sql.FieldNotIn(FieldDependencyType, vs...))
-}
-
-// DependencyTypeGT applies the GT predicate on the "dependency_type" field.
-func DependencyTypeGT(v string) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldGT(FieldDependencyType, v))
-}
-
-// DependencyTypeGTE applies the GTE predicate on the "dependency_type" field.
-func DependencyTypeGTE(v string) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldGTE(FieldDependencyType, v))
-}
-
-// DependencyTypeLT applies the LT predicate on the "dependency_type" field.
-func DependencyTypeLT(v string) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldLT(FieldDependencyType, v))
-}
-
-// DependencyTypeLTE applies the LTE predicate on the "dependency_type" field.
-func DependencyTypeLTE(v string) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldLTE(FieldDependencyType, v))
-}
-
-// DependencyTypeContains applies the Contains predicate on the "dependency_type" field.
-func DependencyTypeContains(v string) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldContains(FieldDependencyType, v))
-}
-
-// DependencyTypeHasPrefix applies the HasPrefix predicate on the "dependency_type" field.
-func DependencyTypeHasPrefix(v string) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldHasPrefix(FieldDependencyType, v))
-}
-
-// DependencyTypeHasSuffix applies the HasSuffix predicate on the "dependency_type" field.
-func DependencyTypeHasSuffix(v string) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldHasSuffix(FieldDependencyType, v))
-}
-
-// DependencyTypeEqualFold applies the EqualFold predicate on the "dependency_type" field.
-func DependencyTypeEqualFold(v string) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldEqualFold(FieldDependencyType, v))
-}
-
-// DependencyTypeContainsFold applies the ContainsFold predicate on the "dependency_type" field.
-func DependencyTypeContainsFold(v string) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldContainsFold(FieldDependencyType, v))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
@@ -258,6 +169,52 @@ func CreatedAtLT(v time.Time) predicate.ServiceDependency {
 // CreatedAtLTE applies the LTE predicate on the "created_at" field.
 func CreatedAtLTE(v time.Time) predicate.ServiceDependency {
 	return predicate.ServiceDependency(sql.FieldLTE(FieldCreatedAt, v))
+}
+
+// HasService applies the HasEdge predicate on the "service" edge.
+func HasService() predicate.ServiceDependency {
+	return predicate.ServiceDependency(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, ServiceTable, ServiceColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasServiceWith applies the HasEdge predicate on the "service" edge with a given conditions (other predicates).
+func HasServiceWith(preds ...predicate.Service) predicate.ServiceDependency {
+	return predicate.ServiceDependency(func(s *sql.Selector) {
+		step := newServiceStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasDependentOnService applies the HasEdge predicate on the "dependent_on_service" edge.
+func HasDependentOnService() predicate.ServiceDependency {
+	return predicate.ServiceDependency(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, DependentOnServiceTable, DependentOnServiceColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasDependentOnServiceWith applies the HasEdge predicate on the "dependent_on_service" edge with a given conditions (other predicates).
+func HasDependentOnServiceWith(preds ...predicate.Service) predicate.ServiceDependency {
+	return predicate.ServiceDependency(func(s *sql.Selector) {
+		step := newDependentOnServiceStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

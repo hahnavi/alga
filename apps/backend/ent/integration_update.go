@@ -505,13 +505,13 @@ func (_u *IntegrationUpdate) ClearTelnyxTtsAPIKeyRef() *IntegrationUpdate {
 }
 
 // SetVoiceProvider sets the "voice_provider" field.
-func (_u *IntegrationUpdate) SetVoiceProvider(v string) *IntegrationUpdate {
+func (_u *IntegrationUpdate) SetVoiceProvider(v integration.VoiceProvider) *IntegrationUpdate {
 	_u.mutation.SetVoiceProvider(v)
 	return _u
 }
 
 // SetNillableVoiceProvider sets the "voice_provider" field if the given value is not nil.
-func (_u *IntegrationUpdate) SetNillableVoiceProvider(v *string) *IntegrationUpdate {
+func (_u *IntegrationUpdate) SetNillableVoiceProvider(v *integration.VoiceProvider) *IntegrationUpdate {
 	if v != nil {
 		_u.SetVoiceProvider(*v)
 	}
@@ -611,7 +611,20 @@ func (_u *IntegrationUpdate) defaults() {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (_u *IntegrationUpdate) check() error {
+	if v, ok := _u.mutation.VoiceProvider(); ok {
+		if err := integration.VoiceProviderValidator(v); err != nil {
+			return &ValidationError{Name: "voice_provider", err: fmt.Errorf(`ent: validator failed for field "Integration.voice_provider": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (_u *IntegrationUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(integration.Table, integration.Columns, sqlgraph.NewFieldSpec(integration.FieldID, field.TypeUUID))
 	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
@@ -759,10 +772,10 @@ func (_u *IntegrationUpdate) sqlSave(ctx context.Context) (_node int, err error)
 		_spec.ClearField(integration.FieldTelnyxTtsAPIKeyRef, field.TypeString)
 	}
 	if value, ok := _u.mutation.VoiceProvider(); ok {
-		_spec.SetField(integration.FieldVoiceProvider, field.TypeString, value)
+		_spec.SetField(integration.FieldVoiceProvider, field.TypeEnum, value)
 	}
 	if _u.mutation.VoiceProviderCleared() {
-		_spec.ClearField(integration.FieldVoiceProvider, field.TypeString)
+		_spec.ClearField(integration.FieldVoiceProvider, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.HermesPlatformURL(); ok {
 		_spec.SetField(integration.FieldHermesPlatformURL, field.TypeString, value)
@@ -1276,13 +1289,13 @@ func (_u *IntegrationUpdateOne) ClearTelnyxTtsAPIKeyRef() *IntegrationUpdateOne 
 }
 
 // SetVoiceProvider sets the "voice_provider" field.
-func (_u *IntegrationUpdateOne) SetVoiceProvider(v string) *IntegrationUpdateOne {
+func (_u *IntegrationUpdateOne) SetVoiceProvider(v integration.VoiceProvider) *IntegrationUpdateOne {
 	_u.mutation.SetVoiceProvider(v)
 	return _u
 }
 
 // SetNillableVoiceProvider sets the "voice_provider" field if the given value is not nil.
-func (_u *IntegrationUpdateOne) SetNillableVoiceProvider(v *string) *IntegrationUpdateOne {
+func (_u *IntegrationUpdateOne) SetNillableVoiceProvider(v *integration.VoiceProvider) *IntegrationUpdateOne {
 	if v != nil {
 		_u.SetVoiceProvider(*v)
 	}
@@ -1395,7 +1408,20 @@ func (_u *IntegrationUpdateOne) defaults() {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (_u *IntegrationUpdateOne) check() error {
+	if v, ok := _u.mutation.VoiceProvider(); ok {
+		if err := integration.VoiceProviderValidator(v); err != nil {
+			return &ValidationError{Name: "voice_provider", err: fmt.Errorf(`ent: validator failed for field "Integration.voice_provider": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (_u *IntegrationUpdateOne) sqlSave(ctx context.Context) (_node *Integration, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(integration.Table, integration.Columns, sqlgraph.NewFieldSpec(integration.FieldID, field.TypeUUID))
 	id, ok := _u.mutation.ID()
 	if !ok {
@@ -1560,10 +1586,10 @@ func (_u *IntegrationUpdateOne) sqlSave(ctx context.Context) (_node *Integration
 		_spec.ClearField(integration.FieldTelnyxTtsAPIKeyRef, field.TypeString)
 	}
 	if value, ok := _u.mutation.VoiceProvider(); ok {
-		_spec.SetField(integration.FieldVoiceProvider, field.TypeString, value)
+		_spec.SetField(integration.FieldVoiceProvider, field.TypeEnum, value)
 	}
 	if _u.mutation.VoiceProviderCleared() {
-		_spec.ClearField(integration.FieldVoiceProvider, field.TypeString)
+		_spec.ClearField(integration.FieldVoiceProvider, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.HermesPlatformURL(); ok {
 		_spec.SetField(integration.FieldHermesPlatformURL, field.TypeString, value)

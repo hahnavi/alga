@@ -132,9 +132,17 @@ func (_u *IncidentTimelineEntryUpdate) SetNillableCreatedAt(v *time.Time) *Incid
 	return _u
 }
 
-// SetIncidentID sets the "incident" edge to the Incident entity by ID.
-func (_u *IncidentTimelineEntryUpdate) SetIncidentID(id uuid.UUID) *IncidentTimelineEntryUpdate {
-	_u.mutation.SetIncidentID(id)
+// SetIncidentID sets the "incident_id" field.
+func (_u *IncidentTimelineEntryUpdate) SetIncidentID(v uuid.UUID) *IncidentTimelineEntryUpdate {
+	_u.mutation.SetIncidentID(v)
+	return _u
+}
+
+// SetNillableIncidentID sets the "incident_id" field if the given value is not nil.
+func (_u *IncidentTimelineEntryUpdate) SetNillableIncidentID(v *uuid.UUID) *IncidentTimelineEntryUpdate {
+	if v != nil {
+		_u.SetIncidentID(*v)
+	}
 	return _u
 }
 
@@ -379,9 +387,17 @@ func (_u *IncidentTimelineEntryUpdateOne) SetNillableCreatedAt(v *time.Time) *In
 	return _u
 }
 
-// SetIncidentID sets the "incident" edge to the Incident entity by ID.
-func (_u *IncidentTimelineEntryUpdateOne) SetIncidentID(id uuid.UUID) *IncidentTimelineEntryUpdateOne {
-	_u.mutation.SetIncidentID(id)
+// SetIncidentID sets the "incident_id" field.
+func (_u *IncidentTimelineEntryUpdateOne) SetIncidentID(v uuid.UUID) *IncidentTimelineEntryUpdateOne {
+	_u.mutation.SetIncidentID(v)
+	return _u
+}
+
+// SetNillableIncidentID sets the "incident_id" field if the given value is not nil.
+func (_u *IncidentTimelineEntryUpdateOne) SetNillableIncidentID(v *uuid.UUID) *IncidentTimelineEntryUpdateOne {
+	if v != nil {
+		_u.SetIncidentID(*v)
+	}
 	return _u
 }
 

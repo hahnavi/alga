@@ -5,6 +5,7 @@ package ent
 import (
 	"alga/ent/knowledgenote"
 	"alga/ent/schema"
+	"alga/ent/user"
 	"context"
 	"errors"
 	"fmt"
@@ -23,7 +24,7 @@ type KnowledgeNoteCreate struct {
 }
 
 // SetKind sets the "kind" field.
-func (_c *KnowledgeNoteCreate) SetKind(v string) *KnowledgeNoteCreate {
+func (_c *KnowledgeNoteCreate) SetKind(v knowledgenote.Kind) *KnowledgeNoteCreate {
 	_c.mutation.SetKind(v)
 	return _c
 }
@@ -67,13 +68,13 @@ func (_c *KnowledgeNoteCreate) SetNillableAuthorID(v *uuid.UUID) *KnowledgeNoteC
 }
 
 // SetAuthorType sets the "author_type" field.
-func (_c *KnowledgeNoteCreate) SetAuthorType(v string) *KnowledgeNoteCreate {
+func (_c *KnowledgeNoteCreate) SetAuthorType(v knowledgenote.AuthorType) *KnowledgeNoteCreate {
 	_c.mutation.SetAuthorType(v)
 	return _c
 }
 
 // SetNillableAuthorType sets the "author_type" field if the given value is not nil.
-func (_c *KnowledgeNoteCreate) SetNillableAuthorType(v *string) *KnowledgeNoteCreate {
+func (_c *KnowledgeNoteCreate) SetNillableAuthorType(v *knowledgenote.AuthorType) *KnowledgeNoteCreate {
 	if v != nil {
 		_c.SetAuthorType(*v)
 	}
@@ -178,6 +179,11 @@ func (_c *KnowledgeNoteCreate) SetNillableID(v *uuid.UUID) *KnowledgeNoteCreate 
 	return _c
 }
 
+// SetAuthor sets the "author" edge to the User entity.
+func (_c *KnowledgeNoteCreate) SetAuthor(v *User) *KnowledgeNoteCreate {
+	return _c.SetAuthorID(v.ID)
+}
+
 // Mutation returns the KnowledgeNoteMutation object of the builder.
 func (_c *KnowledgeNoteCreate) Mutation() *KnowledgeNoteMutation {
 	return _c.mutation
@@ -268,6 +274,11 @@ func (_c *KnowledgeNoteCreate) check() error {
 	if _, ok := _c.mutation.AuthorType(); !ok {
 		return &ValidationError{Name: "author_type", err: errors.New(`ent: missing required field "KnowledgeNote.author_type"`)}
 	}
+	if v, ok := _c.mutation.AuthorType(); ok {
+		if err := knowledgenote.AuthorTypeValidator(v); err != nil {
+			return &ValidationError{Name: "author_type", err: fmt.Errorf(`ent: validator failed for field "KnowledgeNote.author_type": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "KnowledgeNote.created_at"`)}
 	}
@@ -310,7 +321,7 @@ func (_c *KnowledgeNoteCreate) createSpec() (*KnowledgeNote, *sqlgraph.CreateSpe
 		_spec.ID.Value = &id
 	}
 	if value, ok := _c.mutation.Kind(); ok {
-		_spec.SetField(knowledgenote.FieldKind, field.TypeString, value)
+		_spec.SetField(knowledgenote.FieldKind, field.TypeEnum, value)
 		_node.Kind = value
 	}
 	if value, ok := _c.mutation.Title(); ok {
@@ -329,12 +340,8 @@ func (_c *KnowledgeNoteCreate) createSpec() (*KnowledgeNote, *sqlgraph.CreateSpe
 		_spec.SetField(knowledgenote.FieldSelectors, field.TypeJSON, value)
 		_node.Selectors = value
 	}
-	if value, ok := _c.mutation.AuthorID(); ok {
-		_spec.SetField(knowledgenote.FieldAuthorID, field.TypeUUID, value)
-		_node.AuthorID = &value
-	}
 	if value, ok := _c.mutation.AuthorType(); ok {
-		_spec.SetField(knowledgenote.FieldAuthorType, field.TypeString, value)
+		_spec.SetField(knowledgenote.FieldAuthorType, field.TypeEnum, value)
 		_node.AuthorType = value
 	}
 	if value, ok := _c.mutation.AuthorName(); ok {
@@ -360,6 +367,23 @@ func (_c *KnowledgeNoteCreate) createSpec() (*KnowledgeNote, *sqlgraph.CreateSpe
 	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(knowledgenote.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if nodes := _c.mutation.AuthorIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   knowledgenote.AuthorTable,
+			Columns: []string{knowledgenote.AuthorColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.AuthorID = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

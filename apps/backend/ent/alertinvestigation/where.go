@@ -66,11 +66,6 @@ func CorrelationKey(v string) predicate.AlertInvestigation {
 	return predicate.AlertInvestigation(sql.FieldEQ(FieldCorrelationKey, v))
 }
 
-// Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
-func Status(v string) predicate.AlertInvestigation {
-	return predicate.AlertInvestigation(sql.FieldEQ(FieldStatus, v))
-}
-
 // AgentID applies equality check predicate on the "agent_id" field. It's identical to AgentIDEQ.
 func AgentID(v string) predicate.AlertInvestigation {
 	return predicate.AlertInvestigation(sql.FieldEQ(FieldAgentID, v))
@@ -189,11 +184,6 @@ func TriageResultID(v uuid.UUID) predicate.AlertInvestigation {
 // TriageDecision applies equality check predicate on the "triage_decision" field. It's identical to TriageDecisionEQ.
 func TriageDecision(v string) predicate.AlertInvestigation {
 	return predicate.AlertInvestigation(sql.FieldEQ(FieldTriageDecision, v))
-}
-
-// AssigneeType applies equality check predicate on the "assignee_type" field. It's identical to AssigneeTypeEQ.
-func AssigneeType(v string) predicate.AlertInvestigation {
-	return predicate.AlertInvestigation(sql.FieldEQ(FieldAssigneeType, v))
 }
 
 // AssigneeID applies equality check predicate on the "assignee_id" field. It's identical to AssigneeIDEQ.
@@ -342,68 +332,23 @@ func CorrelationKeyContainsFold(v string) predicate.AlertInvestigation {
 }
 
 // StatusEQ applies the EQ predicate on the "status" field.
-func StatusEQ(v string) predicate.AlertInvestigation {
+func StatusEQ(v Status) predicate.AlertInvestigation {
 	return predicate.AlertInvestigation(sql.FieldEQ(FieldStatus, v))
 }
 
 // StatusNEQ applies the NEQ predicate on the "status" field.
-func StatusNEQ(v string) predicate.AlertInvestigation {
+func StatusNEQ(v Status) predicate.AlertInvestigation {
 	return predicate.AlertInvestigation(sql.FieldNEQ(FieldStatus, v))
 }
 
 // StatusIn applies the In predicate on the "status" field.
-func StatusIn(vs ...string) predicate.AlertInvestigation {
+func StatusIn(vs ...Status) predicate.AlertInvestigation {
 	return predicate.AlertInvestigation(sql.FieldIn(FieldStatus, vs...))
 }
 
 // StatusNotIn applies the NotIn predicate on the "status" field.
-func StatusNotIn(vs ...string) predicate.AlertInvestigation {
+func StatusNotIn(vs ...Status) predicate.AlertInvestigation {
 	return predicate.AlertInvestigation(sql.FieldNotIn(FieldStatus, vs...))
-}
-
-// StatusGT applies the GT predicate on the "status" field.
-func StatusGT(v string) predicate.AlertInvestigation {
-	return predicate.AlertInvestigation(sql.FieldGT(FieldStatus, v))
-}
-
-// StatusGTE applies the GTE predicate on the "status" field.
-func StatusGTE(v string) predicate.AlertInvestigation {
-	return predicate.AlertInvestigation(sql.FieldGTE(FieldStatus, v))
-}
-
-// StatusLT applies the LT predicate on the "status" field.
-func StatusLT(v string) predicate.AlertInvestigation {
-	return predicate.AlertInvestigation(sql.FieldLT(FieldStatus, v))
-}
-
-// StatusLTE applies the LTE predicate on the "status" field.
-func StatusLTE(v string) predicate.AlertInvestigation {
-	return predicate.AlertInvestigation(sql.FieldLTE(FieldStatus, v))
-}
-
-// StatusContains applies the Contains predicate on the "status" field.
-func StatusContains(v string) predicate.AlertInvestigation {
-	return predicate.AlertInvestigation(sql.FieldContains(FieldStatus, v))
-}
-
-// StatusHasPrefix applies the HasPrefix predicate on the "status" field.
-func StatusHasPrefix(v string) predicate.AlertInvestigation {
-	return predicate.AlertInvestigation(sql.FieldHasPrefix(FieldStatus, v))
-}
-
-// StatusHasSuffix applies the HasSuffix predicate on the "status" field.
-func StatusHasSuffix(v string) predicate.AlertInvestigation {
-	return predicate.AlertInvestigation(sql.FieldHasSuffix(FieldStatus, v))
-}
-
-// StatusEqualFold applies the EqualFold predicate on the "status" field.
-func StatusEqualFold(v string) predicate.AlertInvestigation {
-	return predicate.AlertInvestigation(sql.FieldEqualFold(FieldStatus, v))
-}
-
-// StatusContainsFold applies the ContainsFold predicate on the "status" field.
-func StatusContainsFold(v string) predicate.AlertInvestigation {
-	return predicate.AlertInvestigation(sql.FieldContainsFold(FieldStatus, v))
 }
 
 // AgentIDEQ applies the EQ predicate on the "agent_id" field.
@@ -1836,26 +1781,6 @@ func TriageResultIDNotIn(vs ...uuid.UUID) predicate.AlertInvestigation {
 	return predicate.AlertInvestigation(sql.FieldNotIn(FieldTriageResultID, vs...))
 }
 
-// TriageResultIDGT applies the GT predicate on the "triage_result_id" field.
-func TriageResultIDGT(v uuid.UUID) predicate.AlertInvestigation {
-	return predicate.AlertInvestigation(sql.FieldGT(FieldTriageResultID, v))
-}
-
-// TriageResultIDGTE applies the GTE predicate on the "triage_result_id" field.
-func TriageResultIDGTE(v uuid.UUID) predicate.AlertInvestigation {
-	return predicate.AlertInvestigation(sql.FieldGTE(FieldTriageResultID, v))
-}
-
-// TriageResultIDLT applies the LT predicate on the "triage_result_id" field.
-func TriageResultIDLT(v uuid.UUID) predicate.AlertInvestigation {
-	return predicate.AlertInvestigation(sql.FieldLT(FieldTriageResultID, v))
-}
-
-// TriageResultIDLTE applies the LTE predicate on the "triage_result_id" field.
-func TriageResultIDLTE(v uuid.UUID) predicate.AlertInvestigation {
-	return predicate.AlertInvestigation(sql.FieldLTE(FieldTriageResultID, v))
-}
-
 // TriageResultIDIsNil applies the IsNil predicate on the "triage_result_id" field.
 func TriageResultIDIsNil() predicate.AlertInvestigation {
 	return predicate.AlertInvestigation(sql.FieldIsNull(FieldTriageResultID))
@@ -1952,68 +1877,23 @@ func TriageEnrichmentNotNil() predicate.AlertInvestigation {
 }
 
 // AssigneeTypeEQ applies the EQ predicate on the "assignee_type" field.
-func AssigneeTypeEQ(v string) predicate.AlertInvestigation {
+func AssigneeTypeEQ(v AssigneeType) predicate.AlertInvestigation {
 	return predicate.AlertInvestigation(sql.FieldEQ(FieldAssigneeType, v))
 }
 
 // AssigneeTypeNEQ applies the NEQ predicate on the "assignee_type" field.
-func AssigneeTypeNEQ(v string) predicate.AlertInvestigation {
+func AssigneeTypeNEQ(v AssigneeType) predicate.AlertInvestigation {
 	return predicate.AlertInvestigation(sql.FieldNEQ(FieldAssigneeType, v))
 }
 
 // AssigneeTypeIn applies the In predicate on the "assignee_type" field.
-func AssigneeTypeIn(vs ...string) predicate.AlertInvestigation {
+func AssigneeTypeIn(vs ...AssigneeType) predicate.AlertInvestigation {
 	return predicate.AlertInvestigation(sql.FieldIn(FieldAssigneeType, vs...))
 }
 
 // AssigneeTypeNotIn applies the NotIn predicate on the "assignee_type" field.
-func AssigneeTypeNotIn(vs ...string) predicate.AlertInvestigation {
+func AssigneeTypeNotIn(vs ...AssigneeType) predicate.AlertInvestigation {
 	return predicate.AlertInvestigation(sql.FieldNotIn(FieldAssigneeType, vs...))
-}
-
-// AssigneeTypeGT applies the GT predicate on the "assignee_type" field.
-func AssigneeTypeGT(v string) predicate.AlertInvestigation {
-	return predicate.AlertInvestigation(sql.FieldGT(FieldAssigneeType, v))
-}
-
-// AssigneeTypeGTE applies the GTE predicate on the "assignee_type" field.
-func AssigneeTypeGTE(v string) predicate.AlertInvestigation {
-	return predicate.AlertInvestigation(sql.FieldGTE(FieldAssigneeType, v))
-}
-
-// AssigneeTypeLT applies the LT predicate on the "assignee_type" field.
-func AssigneeTypeLT(v string) predicate.AlertInvestigation {
-	return predicate.AlertInvestigation(sql.FieldLT(FieldAssigneeType, v))
-}
-
-// AssigneeTypeLTE applies the LTE predicate on the "assignee_type" field.
-func AssigneeTypeLTE(v string) predicate.AlertInvestigation {
-	return predicate.AlertInvestigation(sql.FieldLTE(FieldAssigneeType, v))
-}
-
-// AssigneeTypeContains applies the Contains predicate on the "assignee_type" field.
-func AssigneeTypeContains(v string) predicate.AlertInvestigation {
-	return predicate.AlertInvestigation(sql.FieldContains(FieldAssigneeType, v))
-}
-
-// AssigneeTypeHasPrefix applies the HasPrefix predicate on the "assignee_type" field.
-func AssigneeTypeHasPrefix(v string) predicate.AlertInvestigation {
-	return predicate.AlertInvestigation(sql.FieldHasPrefix(FieldAssigneeType, v))
-}
-
-// AssigneeTypeHasSuffix applies the HasSuffix predicate on the "assignee_type" field.
-func AssigneeTypeHasSuffix(v string) predicate.AlertInvestigation {
-	return predicate.AlertInvestigation(sql.FieldHasSuffix(FieldAssigneeType, v))
-}
-
-// AssigneeTypeEqualFold applies the EqualFold predicate on the "assignee_type" field.
-func AssigneeTypeEqualFold(v string) predicate.AlertInvestigation {
-	return predicate.AlertInvestigation(sql.FieldEqualFold(FieldAssigneeType, v))
-}
-
-// AssigneeTypeContainsFold applies the ContainsFold predicate on the "assignee_type" field.
-func AssigneeTypeContainsFold(v string) predicate.AlertInvestigation {
-	return predicate.AlertInvestigation(sql.FieldContainsFold(FieldAssigneeType, v))
 }
 
 // AssigneeIDEQ applies the EQ predicate on the "assignee_id" field.
@@ -2196,6 +2076,29 @@ func HasPromotedIncidentInvestigation() predicate.AlertInvestigation {
 func HasPromotedIncidentInvestigationWith(preds ...predicate.IncidentInvestigation) predicate.AlertInvestigation {
 	return predicate.AlertInvestigation(func(s *sql.Selector) {
 		step := newPromotedIncidentInvestigationStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasTriageResult applies the HasEdge predicate on the "triage_result" edge.
+func HasTriageResult() predicate.AlertInvestigation {
+	return predicate.AlertInvestigation(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, TriageResultTable, TriageResultColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasTriageResultWith applies the HasEdge predicate on the "triage_result" edge with a given conditions (other predicates).
+func HasTriageResultWith(preds ...predicate.TriageResult) predicate.AlertInvestigation {
+	return predicate.AlertInvestigation(func(s *sql.Selector) {
+		step := newTriageResultStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

@@ -35,6 +35,12 @@ func (a *cascadeFakeAudit) Log(event store.AuditEvent, _ *uuid.UUID, _ string, i
 	a.lastIP = ip
 	a.lastUA = ua
 }
+func (a *cascadeFakeAudit) LogEntity(event store.AuditEvent, _ *uuid.UUID, _ string, ip string, ua string, _ bool, _ map[string]any, _ string, _ *uuid.UUID) {
+	a.count.Add(1)
+	a.last = event
+	a.lastIP = ip
+	a.lastUA = ua
+}
 func (a *cascadeFakeAudit) Query(filter map[string]any) ([]store.AuditRecord, error) { return nil, nil }
 func (a *cascadeFakeAudit) GetRecentEvents(limit int) ([]store.AuditRecord, error)   { return nil, nil }
 

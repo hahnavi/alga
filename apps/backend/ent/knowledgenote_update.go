@@ -6,6 +6,7 @@ import (
 	"alga/ent/knowledgenote"
 	"alga/ent/predicate"
 	"alga/ent/schema"
+	"alga/ent/user"
 	"context"
 	"errors"
 	"fmt"
@@ -32,13 +33,13 @@ func (_u *KnowledgeNoteUpdate) Where(ps ...predicate.KnowledgeNote) *KnowledgeNo
 }
 
 // SetKind sets the "kind" field.
-func (_u *KnowledgeNoteUpdate) SetKind(v string) *KnowledgeNoteUpdate {
+func (_u *KnowledgeNoteUpdate) SetKind(v knowledgenote.Kind) *KnowledgeNoteUpdate {
 	_u.mutation.SetKind(v)
 	return _u
 }
 
 // SetNillableKind sets the "kind" field if the given value is not nil.
-func (_u *KnowledgeNoteUpdate) SetNillableKind(v *string) *KnowledgeNoteUpdate {
+func (_u *KnowledgeNoteUpdate) SetNillableKind(v *knowledgenote.Kind) *KnowledgeNoteUpdate {
 	if v != nil {
 		_u.SetKind(*v)
 	}
@@ -130,13 +131,13 @@ func (_u *KnowledgeNoteUpdate) ClearAuthorID() *KnowledgeNoteUpdate {
 }
 
 // SetAuthorType sets the "author_type" field.
-func (_u *KnowledgeNoteUpdate) SetAuthorType(v string) *KnowledgeNoteUpdate {
+func (_u *KnowledgeNoteUpdate) SetAuthorType(v knowledgenote.AuthorType) *KnowledgeNoteUpdate {
 	_u.mutation.SetAuthorType(v)
 	return _u
 }
 
 // SetNillableAuthorType sets the "author_type" field if the given value is not nil.
-func (_u *KnowledgeNoteUpdate) SetNillableAuthorType(v *string) *KnowledgeNoteUpdate {
+func (_u *KnowledgeNoteUpdate) SetNillableAuthorType(v *knowledgenote.AuthorType) *KnowledgeNoteUpdate {
 	if v != nil {
 		_u.SetAuthorType(*v)
 	}
@@ -250,9 +251,20 @@ func (_u *KnowledgeNoteUpdate) SetUpdatedAt(v time.Time) *KnowledgeNoteUpdate {
 	return _u
 }
 
+// SetAuthor sets the "author" edge to the User entity.
+func (_u *KnowledgeNoteUpdate) SetAuthor(v *User) *KnowledgeNoteUpdate {
+	return _u.SetAuthorID(v.ID)
+}
+
 // Mutation returns the KnowledgeNoteMutation object of the builder.
 func (_u *KnowledgeNoteUpdate) Mutation() *KnowledgeNoteMutation {
 	return _u.mutation
+}
+
+// ClearAuthor clears the "author" edge to the User entity.
+func (_u *KnowledgeNoteUpdate) ClearAuthor() *KnowledgeNoteUpdate {
+	_u.mutation.ClearAuthor()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -308,6 +320,11 @@ func (_u *KnowledgeNoteUpdate) check() error {
 			return &ValidationError{Name: "body_markdown", err: fmt.Errorf(`ent: validator failed for field "KnowledgeNote.body_markdown": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.AuthorType(); ok {
+		if err := knowledgenote.AuthorTypeValidator(v); err != nil {
+			return &ValidationError{Name: "author_type", err: fmt.Errorf(`ent: validator failed for field "KnowledgeNote.author_type": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -324,7 +341,7 @@ func (_u *KnowledgeNoteUpdate) sqlSave(ctx context.Context) (_node int, err erro
 		}
 	}
 	if value, ok := _u.mutation.Kind(); ok {
-		_spec.SetField(knowledgenote.FieldKind, field.TypeString, value)
+		_spec.SetField(knowledgenote.FieldKind, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(knowledgenote.FieldTitle, field.TypeString, value)
@@ -354,14 +371,8 @@ func (_u *KnowledgeNoteUpdate) sqlSave(ctx context.Context) (_node int, err erro
 	if _u.mutation.SelectorsCleared() {
 		_spec.ClearField(knowledgenote.FieldSelectors, field.TypeJSON)
 	}
-	if value, ok := _u.mutation.AuthorID(); ok {
-		_spec.SetField(knowledgenote.FieldAuthorID, field.TypeUUID, value)
-	}
-	if _u.mutation.AuthorIDCleared() {
-		_spec.ClearField(knowledgenote.FieldAuthorID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.AuthorType(); ok {
-		_spec.SetField(knowledgenote.FieldAuthorType, field.TypeString, value)
+		_spec.SetField(knowledgenote.FieldAuthorType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.AuthorName(); ok {
 		_spec.SetField(knowledgenote.FieldAuthorName, field.TypeString, value)
@@ -396,6 +407,35 @@ func (_u *KnowledgeNoteUpdate) sqlSave(ctx context.Context) (_node int, err erro
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(knowledgenote.FieldUpdatedAt, field.TypeTime, value)
 	}
+	if _u.mutation.AuthorCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   knowledgenote.AuthorTable,
+			Columns: []string{knowledgenote.AuthorColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AuthorIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   knowledgenote.AuthorTable,
+			Columns: []string{knowledgenote.AuthorColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{knowledgenote.Label}
@@ -417,13 +457,13 @@ type KnowledgeNoteUpdateOne struct {
 }
 
 // SetKind sets the "kind" field.
-func (_u *KnowledgeNoteUpdateOne) SetKind(v string) *KnowledgeNoteUpdateOne {
+func (_u *KnowledgeNoteUpdateOne) SetKind(v knowledgenote.Kind) *KnowledgeNoteUpdateOne {
 	_u.mutation.SetKind(v)
 	return _u
 }
 
 // SetNillableKind sets the "kind" field if the given value is not nil.
-func (_u *KnowledgeNoteUpdateOne) SetNillableKind(v *string) *KnowledgeNoteUpdateOne {
+func (_u *KnowledgeNoteUpdateOne) SetNillableKind(v *knowledgenote.Kind) *KnowledgeNoteUpdateOne {
 	if v != nil {
 		_u.SetKind(*v)
 	}
@@ -515,13 +555,13 @@ func (_u *KnowledgeNoteUpdateOne) ClearAuthorID() *KnowledgeNoteUpdateOne {
 }
 
 // SetAuthorType sets the "author_type" field.
-func (_u *KnowledgeNoteUpdateOne) SetAuthorType(v string) *KnowledgeNoteUpdateOne {
+func (_u *KnowledgeNoteUpdateOne) SetAuthorType(v knowledgenote.AuthorType) *KnowledgeNoteUpdateOne {
 	_u.mutation.SetAuthorType(v)
 	return _u
 }
 
 // SetNillableAuthorType sets the "author_type" field if the given value is not nil.
-func (_u *KnowledgeNoteUpdateOne) SetNillableAuthorType(v *string) *KnowledgeNoteUpdateOne {
+func (_u *KnowledgeNoteUpdateOne) SetNillableAuthorType(v *knowledgenote.AuthorType) *KnowledgeNoteUpdateOne {
 	if v != nil {
 		_u.SetAuthorType(*v)
 	}
@@ -635,9 +675,20 @@ func (_u *KnowledgeNoteUpdateOne) SetUpdatedAt(v time.Time) *KnowledgeNoteUpdate
 	return _u
 }
 
+// SetAuthor sets the "author" edge to the User entity.
+func (_u *KnowledgeNoteUpdateOne) SetAuthor(v *User) *KnowledgeNoteUpdateOne {
+	return _u.SetAuthorID(v.ID)
+}
+
 // Mutation returns the KnowledgeNoteMutation object of the builder.
 func (_u *KnowledgeNoteUpdateOne) Mutation() *KnowledgeNoteMutation {
 	return _u.mutation
+}
+
+// ClearAuthor clears the "author" edge to the User entity.
+func (_u *KnowledgeNoteUpdateOne) ClearAuthor() *KnowledgeNoteUpdateOne {
+	_u.mutation.ClearAuthor()
+	return _u
 }
 
 // Where appends a list predicates to the KnowledgeNoteUpdate builder.
@@ -706,6 +757,11 @@ func (_u *KnowledgeNoteUpdateOne) check() error {
 			return &ValidationError{Name: "body_markdown", err: fmt.Errorf(`ent: validator failed for field "KnowledgeNote.body_markdown": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.AuthorType(); ok {
+		if err := knowledgenote.AuthorTypeValidator(v); err != nil {
+			return &ValidationError{Name: "author_type", err: fmt.Errorf(`ent: validator failed for field "KnowledgeNote.author_type": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -739,7 +795,7 @@ func (_u *KnowledgeNoteUpdateOne) sqlSave(ctx context.Context) (_node *Knowledge
 		}
 	}
 	if value, ok := _u.mutation.Kind(); ok {
-		_spec.SetField(knowledgenote.FieldKind, field.TypeString, value)
+		_spec.SetField(knowledgenote.FieldKind, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(knowledgenote.FieldTitle, field.TypeString, value)
@@ -769,14 +825,8 @@ func (_u *KnowledgeNoteUpdateOne) sqlSave(ctx context.Context) (_node *Knowledge
 	if _u.mutation.SelectorsCleared() {
 		_spec.ClearField(knowledgenote.FieldSelectors, field.TypeJSON)
 	}
-	if value, ok := _u.mutation.AuthorID(); ok {
-		_spec.SetField(knowledgenote.FieldAuthorID, field.TypeUUID, value)
-	}
-	if _u.mutation.AuthorIDCleared() {
-		_spec.ClearField(knowledgenote.FieldAuthorID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.AuthorType(); ok {
-		_spec.SetField(knowledgenote.FieldAuthorType, field.TypeString, value)
+		_spec.SetField(knowledgenote.FieldAuthorType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.AuthorName(); ok {
 		_spec.SetField(knowledgenote.FieldAuthorName, field.TypeString, value)
@@ -810,6 +860,35 @@ func (_u *KnowledgeNoteUpdateOne) sqlSave(ctx context.Context) (_node *Knowledge
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(knowledgenote.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.AuthorCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   knowledgenote.AuthorTable,
+			Columns: []string{knowledgenote.AuthorColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AuthorIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   knowledgenote.AuthorTable,
+			Columns: []string{knowledgenote.AuthorColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &KnowledgeNote{config: _u.config}
 	_spec.Assign = _node.assignValues

@@ -4,6 +4,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -23,9 +24,9 @@ func (Session) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
 		field.UUID("user_id", uuid.UUID{}),
-		field.String("id_hash").Unique().NotEmpty(),
-		field.String("refresh_token_hash").Optional(),
-		field.JSON("prev_refresh_token_hashes", []string{}).Optional(),
+		field.String("id_hash").Unique().NotEmpty().Sensitive(),
+		field.String("refresh_token_hash").Optional().Sensitive(),
+		field.JSON("prev_refresh_token_hashes", []string{}).Optional().Sensitive(),
 		field.String("family_id").NotEmpty(),
 		field.Time("created_at").Default(timeNow),
 		field.Time("expires_at"),
@@ -36,7 +37,9 @@ func (Session) Fields() []ent.Field {
 }
 
 func (Session) Edges() []ent.Edge {
-	return nil
+	return []ent.Edge{
+		edge.From("user", User.Type).Ref("sessions").Field("user_id").Unique().Required(),
+	}
 }
 
 func (Session) Indexes() []ent.Index {

@@ -11,6 +11,7 @@ import (
 	"alga/ent/incidentinvestigation"
 	"alga/ent/predicate"
 	"alga/ent/schema"
+	"alga/ent/triageresult"
 	"context"
 	"errors"
 	"fmt"
@@ -71,13 +72,13 @@ func (_u *AlertInvestigationUpdate) ClearCorrelationKey() *AlertInvestigationUpd
 }
 
 // SetStatus sets the "status" field.
-func (_u *AlertInvestigationUpdate) SetStatus(v string) *AlertInvestigationUpdate {
+func (_u *AlertInvestigationUpdate) SetStatus(v alertinvestigation.Status) *AlertInvestigationUpdate {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *AlertInvestigationUpdate) SetNillableStatus(v *string) *AlertInvestigationUpdate {
+func (_u *AlertInvestigationUpdate) SetNillableStatus(v *alertinvestigation.Status) *AlertInvestigationUpdate {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -613,13 +614,13 @@ func (_u *AlertInvestigationUpdate) ClearTriageEnrichment() *AlertInvestigationU
 }
 
 // SetAssigneeType sets the "assignee_type" field.
-func (_u *AlertInvestigationUpdate) SetAssigneeType(v string) *AlertInvestigationUpdate {
+func (_u *AlertInvestigationUpdate) SetAssigneeType(v alertinvestigation.AssigneeType) *AlertInvestigationUpdate {
 	_u.mutation.SetAssigneeType(v)
 	return _u
 }
 
 // SetNillableAssigneeType sets the "assignee_type" field if the given value is not nil.
-func (_u *AlertInvestigationUpdate) SetNillableAssigneeType(v *string) *AlertInvestigationUpdate {
+func (_u *AlertInvestigationUpdate) SetNillableAssigneeType(v *alertinvestigation.AssigneeType) *AlertInvestigationUpdate {
 	if v != nil {
 		_u.SetAssigneeType(*v)
 	}
@@ -714,6 +715,11 @@ func (_u *AlertInvestigationUpdate) SetPromotedIncident(v *Incident) *AlertInves
 // SetPromotedIncidentInvestigation sets the "promoted_incident_investigation" edge to the IncidentInvestigation entity.
 func (_u *AlertInvestigationUpdate) SetPromotedIncidentInvestigation(v *IncidentInvestigation) *AlertInvestigationUpdate {
 	return _u.SetPromotedIncidentInvestigationID(v.ID)
+}
+
+// SetTriageResult sets the "triage_result" edge to the TriageResult entity.
+func (_u *AlertInvestigationUpdate) SetTriageResult(v *TriageResult) *AlertInvestigationUpdate {
+	return _u.SetTriageResultID(v.ID)
 }
 
 // Mutation returns the AlertInvestigationMutation object of the builder.
@@ -817,6 +823,12 @@ func (_u *AlertInvestigationUpdate) ClearPromotedIncidentInvestigation() *AlertI
 	return _u
 }
 
+// ClearTriageResult clears the "triage_result" edge to the TriageResult entity.
+func (_u *AlertInvestigationUpdate) ClearTriageResult() *AlertInvestigationUpdate {
+	_u.mutation.ClearTriageResult()
+	return _u
+}
+
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (_u *AlertInvestigationUpdate) Save(ctx context.Context) (int, error) {
 	_u.defaults()
@@ -860,9 +872,19 @@ func (_u *AlertInvestigationUpdate) check() error {
 			return &ValidationError{Name: "alert_investigation_id", err: fmt.Errorf(`ent: validator failed for field "AlertInvestigation.alert_investigation_id": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := alertinvestigation.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "AlertInvestigation.status": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.PrimaryAlertNumber(); ok {
 		if err := alertinvestigation.PrimaryAlertNumberValidator(v); err != nil {
 			return &ValidationError{Name: "primary_alert_number", err: fmt.Errorf(`ent: validator failed for field "AlertInvestigation.primary_alert_number": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.AssigneeType(); ok {
+		if err := alertinvestigation.AssigneeTypeValidator(v); err != nil {
+			return &ValidationError{Name: "assignee_type", err: fmt.Errorf(`ent: validator failed for field "AlertInvestigation.assignee_type": %w`, err)}
 		}
 	}
 	return nil
@@ -890,7 +912,7 @@ func (_u *AlertInvestigationUpdate) sqlSave(ctx context.Context) (_node int, err
 		_spec.ClearField(alertinvestigation.FieldCorrelationKey, field.TypeString)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(alertinvestigation.FieldStatus, field.TypeString, value)
+		_spec.SetField(alertinvestigation.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.AgentID(); ok {
 		_spec.SetField(alertinvestigation.FieldAgentID, field.TypeString, value)
@@ -1037,12 +1059,6 @@ func (_u *AlertInvestigationUpdate) sqlSave(ctx context.Context) (_node int, err
 	if _u.mutation.EscalationLevelCleared() {
 		_spec.ClearField(alertinvestigation.FieldEscalationLevel, field.TypeString)
 	}
-	if value, ok := _u.mutation.TriageResultID(); ok {
-		_spec.SetField(alertinvestigation.FieldTriageResultID, field.TypeUUID, value)
-	}
-	if _u.mutation.TriageResultIDCleared() {
-		_spec.ClearField(alertinvestigation.FieldTriageResultID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.TriageDecision(); ok {
 		_spec.SetField(alertinvestigation.FieldTriageDecision, field.TypeString, value)
 	}
@@ -1056,7 +1072,7 @@ func (_u *AlertInvestigationUpdate) sqlSave(ctx context.Context) (_node int, err
 		_spec.ClearField(alertinvestigation.FieldTriageEnrichment, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.AssigneeType(); ok {
-		_spec.SetField(alertinvestigation.FieldAssigneeType, field.TypeString, value)
+		_spec.SetField(alertinvestigation.FieldAssigneeType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.AssigneeID(); ok {
 		_spec.SetField(alertinvestigation.FieldAssigneeID, field.TypeUUID, value)
@@ -1302,6 +1318,35 @@ func (_u *AlertInvestigationUpdate) sqlSave(ctx context.Context) (_node int, err
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.TriageResultCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   alertinvestigation.TriageResultTable,
+			Columns: []string{alertinvestigation.TriageResultColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(triageresult.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TriageResultIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   alertinvestigation.TriageResultTable,
+			Columns: []string{alertinvestigation.TriageResultColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(triageresult.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{alertinvestigation.Label}
@@ -1357,13 +1402,13 @@ func (_u *AlertInvestigationUpdateOne) ClearCorrelationKey() *AlertInvestigation
 }
 
 // SetStatus sets the "status" field.
-func (_u *AlertInvestigationUpdateOne) SetStatus(v string) *AlertInvestigationUpdateOne {
+func (_u *AlertInvestigationUpdateOne) SetStatus(v alertinvestigation.Status) *AlertInvestigationUpdateOne {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *AlertInvestigationUpdateOne) SetNillableStatus(v *string) *AlertInvestigationUpdateOne {
+func (_u *AlertInvestigationUpdateOne) SetNillableStatus(v *alertinvestigation.Status) *AlertInvestigationUpdateOne {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -1899,13 +1944,13 @@ func (_u *AlertInvestigationUpdateOne) ClearTriageEnrichment() *AlertInvestigati
 }
 
 // SetAssigneeType sets the "assignee_type" field.
-func (_u *AlertInvestigationUpdateOne) SetAssigneeType(v string) *AlertInvestigationUpdateOne {
+func (_u *AlertInvestigationUpdateOne) SetAssigneeType(v alertinvestigation.AssigneeType) *AlertInvestigationUpdateOne {
 	_u.mutation.SetAssigneeType(v)
 	return _u
 }
 
 // SetNillableAssigneeType sets the "assignee_type" field if the given value is not nil.
-func (_u *AlertInvestigationUpdateOne) SetNillableAssigneeType(v *string) *AlertInvestigationUpdateOne {
+func (_u *AlertInvestigationUpdateOne) SetNillableAssigneeType(v *alertinvestigation.AssigneeType) *AlertInvestigationUpdateOne {
 	if v != nil {
 		_u.SetAssigneeType(*v)
 	}
@@ -2000,6 +2045,11 @@ func (_u *AlertInvestigationUpdateOne) SetPromotedIncident(v *Incident) *AlertIn
 // SetPromotedIncidentInvestigation sets the "promoted_incident_investigation" edge to the IncidentInvestigation entity.
 func (_u *AlertInvestigationUpdateOne) SetPromotedIncidentInvestigation(v *IncidentInvestigation) *AlertInvestigationUpdateOne {
 	return _u.SetPromotedIncidentInvestigationID(v.ID)
+}
+
+// SetTriageResult sets the "triage_result" edge to the TriageResult entity.
+func (_u *AlertInvestigationUpdateOne) SetTriageResult(v *TriageResult) *AlertInvestigationUpdateOne {
+	return _u.SetTriageResultID(v.ID)
 }
 
 // Mutation returns the AlertInvestigationMutation object of the builder.
@@ -2103,6 +2153,12 @@ func (_u *AlertInvestigationUpdateOne) ClearPromotedIncidentInvestigation() *Ale
 	return _u
 }
 
+// ClearTriageResult clears the "triage_result" edge to the TriageResult entity.
+func (_u *AlertInvestigationUpdateOne) ClearTriageResult() *AlertInvestigationUpdateOne {
+	_u.mutation.ClearTriageResult()
+	return _u
+}
+
 // Where appends a list predicates to the AlertInvestigationUpdate builder.
 func (_u *AlertInvestigationUpdateOne) Where(ps ...predicate.AlertInvestigation) *AlertInvestigationUpdateOne {
 	_u.mutation.Where(ps...)
@@ -2159,9 +2215,19 @@ func (_u *AlertInvestigationUpdateOne) check() error {
 			return &ValidationError{Name: "alert_investigation_id", err: fmt.Errorf(`ent: validator failed for field "AlertInvestigation.alert_investigation_id": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := alertinvestigation.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "AlertInvestigation.status": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.PrimaryAlertNumber(); ok {
 		if err := alertinvestigation.PrimaryAlertNumberValidator(v); err != nil {
 			return &ValidationError{Name: "primary_alert_number", err: fmt.Errorf(`ent: validator failed for field "AlertInvestigation.primary_alert_number": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.AssigneeType(); ok {
+		if err := alertinvestigation.AssigneeTypeValidator(v); err != nil {
+			return &ValidationError{Name: "assignee_type", err: fmt.Errorf(`ent: validator failed for field "AlertInvestigation.assignee_type": %w`, err)}
 		}
 	}
 	return nil
@@ -2206,7 +2272,7 @@ func (_u *AlertInvestigationUpdateOne) sqlSave(ctx context.Context) (_node *Aler
 		_spec.ClearField(alertinvestigation.FieldCorrelationKey, field.TypeString)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(alertinvestigation.FieldStatus, field.TypeString, value)
+		_spec.SetField(alertinvestigation.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.AgentID(); ok {
 		_spec.SetField(alertinvestigation.FieldAgentID, field.TypeString, value)
@@ -2353,12 +2419,6 @@ func (_u *AlertInvestigationUpdateOne) sqlSave(ctx context.Context) (_node *Aler
 	if _u.mutation.EscalationLevelCleared() {
 		_spec.ClearField(alertinvestigation.FieldEscalationLevel, field.TypeString)
 	}
-	if value, ok := _u.mutation.TriageResultID(); ok {
-		_spec.SetField(alertinvestigation.FieldTriageResultID, field.TypeUUID, value)
-	}
-	if _u.mutation.TriageResultIDCleared() {
-		_spec.ClearField(alertinvestigation.FieldTriageResultID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.TriageDecision(); ok {
 		_spec.SetField(alertinvestigation.FieldTriageDecision, field.TypeString, value)
 	}
@@ -2372,7 +2432,7 @@ func (_u *AlertInvestigationUpdateOne) sqlSave(ctx context.Context) (_node *Aler
 		_spec.ClearField(alertinvestigation.FieldTriageEnrichment, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.AssigneeType(); ok {
-		_spec.SetField(alertinvestigation.FieldAssigneeType, field.TypeString, value)
+		_spec.SetField(alertinvestigation.FieldAssigneeType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.AssigneeID(); ok {
 		_spec.SetField(alertinvestigation.FieldAssigneeID, field.TypeUUID, value)
@@ -2611,6 +2671,35 @@ func (_u *AlertInvestigationUpdateOne) sqlSave(ctx context.Context) (_node *Aler
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(incidentinvestigation.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.TriageResultCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   alertinvestigation.TriageResultTable,
+			Columns: []string{alertinvestigation.TriageResultColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(triageresult.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TriageResultIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   alertinvestigation.TriageResultTable,
+			Columns: []string{alertinvestigation.TriageResultColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(triageresult.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

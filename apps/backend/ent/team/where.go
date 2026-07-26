@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -283,6 +284,121 @@ func UpdatedAtLT(v time.Time) predicate.Team {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.Team {
 	return predicate.Team(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// HasTeamMembers applies the HasEdge predicate on the "team_members" edge.
+func HasTeamMembers() predicate.Team {
+	return predicate.Team(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, TeamMembersTable, TeamMembersColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasTeamMembersWith applies the HasEdge predicate on the "team_members" edge with a given conditions (other predicates).
+func HasTeamMembersWith(preds ...predicate.TeamMember) predicate.Team {
+	return predicate.Team(func(s *sql.Selector) {
+		step := newTeamMembersStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasOwnedServices applies the HasEdge predicate on the "owned_services" edge.
+func HasOwnedServices() predicate.Team {
+	return predicate.Team(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, OwnedServicesTable, OwnedServicesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasOwnedServicesWith applies the HasEdge predicate on the "owned_services" edge with a given conditions (other predicates).
+func HasOwnedServicesWith(preds ...predicate.Service) predicate.Team {
+	return predicate.Team(func(s *sql.Selector) {
+		step := newOwnedServicesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasOwnedStatusPages applies the HasEdge predicate on the "owned_status_pages" edge.
+func HasOwnedStatusPages() predicate.Team {
+	return predicate.Team(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, OwnedStatusPagesTable, OwnedStatusPagesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasOwnedStatusPagesWith applies the HasEdge predicate on the "owned_status_pages" edge with a given conditions (other predicates).
+func HasOwnedStatusPagesWith(preds ...predicate.StatusPage) predicate.Team {
+	return predicate.Team(func(s *sql.Selector) {
+		step := newOwnedStatusPagesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasOnCallSchedule applies the HasEdge predicate on the "on_call_schedule" edge.
+func HasOnCallSchedule() predicate.Team {
+	return predicate.Team(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, OnCallScheduleTable, OnCallScheduleColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasOnCallScheduleWith applies the HasEdge predicate on the "on_call_schedule" edge with a given conditions (other predicates).
+func HasOnCallScheduleWith(preds ...predicate.OnCallSchedule) predicate.Team {
+	return predicate.Team(func(s *sql.Selector) {
+		step := newOnCallScheduleStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasHeartbeats applies the HasEdge predicate on the "heartbeats" edge.
+func HasHeartbeats() predicate.Team {
+	return predicate.Team(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, HeartbeatsTable, HeartbeatsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasHeartbeatsWith applies the HasEdge predicate on the "heartbeats" edge with a given conditions (other predicates).
+func HasHeartbeatsWith(preds ...predicate.Heartbeat) predicate.Team {
+	return predicate.Team(func(s *sql.Selector) {
+		step := newHeartbeatsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

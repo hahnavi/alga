@@ -3,7 +3,9 @@
 package ent
 
 import (
+	"alga/ent/agentask"
 	"alga/ent/agentdmmessage"
+	"alga/ent/agentmemory"
 	"alga/ent/agenttoken"
 	"alga/ent/icsroleassignment"
 	"alga/ent/predicate"
@@ -22,12 +24,16 @@ import (
 // AgentTokenQuery is the builder for querying AgentToken entities.
 type AgentTokenQuery struct {
 	config
-	ctx            *QueryContext
-	order          []agenttoken.OrderOption
-	inters         []Interceptor
-	predicates     []predicate.AgentToken
-	withDmMessages *AgentDMMessageQuery
-	withIcsRoles   *ICSRoleAssignmentQuery
+	ctx              *QueryContext
+	order            []agenttoken.OrderOption
+	inters           []Interceptor
+	predicates       []predicate.AgentToken
+	withDmMessages   *AgentDMMessageQuery
+	withIcsRoles     *ICSRoleAssignmentQuery
+	withMemories     *AgentMemoryQuery
+	withSentAsks     *AgentAskQuery
+	withReceivedAsks *AgentAskQuery
+	withRepliedAsks  *AgentAskQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -101,6 +107,94 @@ func (_q *AgentTokenQuery) QueryIcsRoles() *ICSRoleAssignmentQuery {
 			sqlgraph.From(agenttoken.Table, agenttoken.FieldID, selector),
 			sqlgraph.To(icsroleassignment.Table, icsroleassignment.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, agenttoken.IcsRolesTable, agenttoken.IcsRolesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryMemories chains the current query on the "memories" edge.
+func (_q *AgentTokenQuery) QueryMemories() *AgentMemoryQuery {
+	query := (&AgentMemoryClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(agenttoken.Table, agenttoken.FieldID, selector),
+			sqlgraph.To(agentmemory.Table, agentmemory.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, agenttoken.MemoriesTable, agenttoken.MemoriesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QuerySentAsks chains the current query on the "sent_asks" edge.
+func (_q *AgentTokenQuery) QuerySentAsks() *AgentAskQuery {
+	query := (&AgentAskClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(agenttoken.Table, agenttoken.FieldID, selector),
+			sqlgraph.To(agentask.Table, agentask.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, agenttoken.SentAsksTable, agenttoken.SentAsksColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryReceivedAsks chains the current query on the "received_asks" edge.
+func (_q *AgentTokenQuery) QueryReceivedAsks() *AgentAskQuery {
+	query := (&AgentAskClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(agenttoken.Table, agenttoken.FieldID, selector),
+			sqlgraph.To(agentask.Table, agentask.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, agenttoken.ReceivedAsksTable, agenttoken.ReceivedAsksColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryRepliedAsks chains the current query on the "replied_asks" edge.
+func (_q *AgentTokenQuery) QueryRepliedAsks() *AgentAskQuery {
+	query := (&AgentAskClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(agenttoken.Table, agenttoken.FieldID, selector),
+			sqlgraph.To(agentask.Table, agentask.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, agenttoken.RepliedAsksTable, agenttoken.RepliedAsksColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -295,13 +389,17 @@ func (_q *AgentTokenQuery) Clone() *AgentTokenQuery {
 		return nil
 	}
 	return &AgentTokenQuery{
-		config:         _q.config,
-		ctx:            _q.ctx.Clone(),
-		order:          append([]agenttoken.OrderOption{}, _q.order...),
-		inters:         append([]Interceptor{}, _q.inters...),
-		predicates:     append([]predicate.AgentToken{}, _q.predicates...),
-		withDmMessages: _q.withDmMessages.Clone(),
-		withIcsRoles:   _q.withIcsRoles.Clone(),
+		config:           _q.config,
+		ctx:              _q.ctx.Clone(),
+		order:            append([]agenttoken.OrderOption{}, _q.order...),
+		inters:           append([]Interceptor{}, _q.inters...),
+		predicates:       append([]predicate.AgentToken{}, _q.predicates...),
+		withDmMessages:   _q.withDmMessages.Clone(),
+		withIcsRoles:     _q.withIcsRoles.Clone(),
+		withMemories:     _q.withMemories.Clone(),
+		withSentAsks:     _q.withSentAsks.Clone(),
+		withReceivedAsks: _q.withReceivedAsks.Clone(),
+		withRepliedAsks:  _q.withRepliedAsks.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -327,6 +425,50 @@ func (_q *AgentTokenQuery) WithIcsRoles(opts ...func(*ICSRoleAssignmentQuery)) *
 		opt(query)
 	}
 	_q.withIcsRoles = query
+	return _q
+}
+
+// WithMemories tells the query-builder to eager-load the nodes that are connected to
+// the "memories" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *AgentTokenQuery) WithMemories(opts ...func(*AgentMemoryQuery)) *AgentTokenQuery {
+	query := (&AgentMemoryClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withMemories = query
+	return _q
+}
+
+// WithSentAsks tells the query-builder to eager-load the nodes that are connected to
+// the "sent_asks" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *AgentTokenQuery) WithSentAsks(opts ...func(*AgentAskQuery)) *AgentTokenQuery {
+	query := (&AgentAskClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withSentAsks = query
+	return _q
+}
+
+// WithReceivedAsks tells the query-builder to eager-load the nodes that are connected to
+// the "received_asks" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *AgentTokenQuery) WithReceivedAsks(opts ...func(*AgentAskQuery)) *AgentTokenQuery {
+	query := (&AgentAskClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withReceivedAsks = query
+	return _q
+}
+
+// WithRepliedAsks tells the query-builder to eager-load the nodes that are connected to
+// the "replied_asks" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *AgentTokenQuery) WithRepliedAsks(opts ...func(*AgentAskQuery)) *AgentTokenQuery {
+	query := (&AgentAskClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withRepliedAsks = query
 	return _q
 }
 
@@ -408,9 +550,13 @@ func (_q *AgentTokenQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*A
 	var (
 		nodes       = []*AgentToken{}
 		_spec       = _q.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [6]bool{
 			_q.withDmMessages != nil,
 			_q.withIcsRoles != nil,
+			_q.withMemories != nil,
+			_q.withSentAsks != nil,
+			_q.withReceivedAsks != nil,
+			_q.withRepliedAsks != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -445,6 +591,34 @@ func (_q *AgentTokenQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*A
 			return nil, err
 		}
 	}
+	if query := _q.withMemories; query != nil {
+		if err := _q.loadMemories(ctx, query, nodes,
+			func(n *AgentToken) { n.Edges.Memories = []*AgentMemory{} },
+			func(n *AgentToken, e *AgentMemory) { n.Edges.Memories = append(n.Edges.Memories, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withSentAsks; query != nil {
+		if err := _q.loadSentAsks(ctx, query, nodes,
+			func(n *AgentToken) { n.Edges.SentAsks = []*AgentAsk{} },
+			func(n *AgentToken, e *AgentAsk) { n.Edges.SentAsks = append(n.Edges.SentAsks, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withReceivedAsks; query != nil {
+		if err := _q.loadReceivedAsks(ctx, query, nodes,
+			func(n *AgentToken) { n.Edges.ReceivedAsks = []*AgentAsk{} },
+			func(n *AgentToken, e *AgentAsk) { n.Edges.ReceivedAsks = append(n.Edges.ReceivedAsks, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withRepliedAsks; query != nil {
+		if err := _q.loadRepliedAsks(ctx, query, nodes,
+			func(n *AgentToken) { n.Edges.RepliedAsks = []*AgentAsk{} },
+			func(n *AgentToken, e *AgentAsk) { n.Edges.RepliedAsks = append(n.Edges.RepliedAsks, e) }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
 }
 
@@ -458,7 +632,9 @@ func (_q *AgentTokenQuery) loadDmMessages(ctx context.Context, query *AgentDMMes
 			init(nodes[i])
 		}
 	}
-	query.withFKs = true
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(agentdmmessage.FieldAgentTokenID)
+	}
 	query.Where(predicate.AgentDMMessage(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(agenttoken.DmMessagesColumn), fks...))
 	}))
@@ -467,13 +643,10 @@ func (_q *AgentTokenQuery) loadDmMessages(ctx context.Context, query *AgentDMMes
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.agent_token_dm_messages
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "agent_token_dm_messages" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
+		fk := n.AgentTokenID
+		node, ok := nodeids[fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "agent_token_dm_messages" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "agent_token_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}
@@ -489,7 +662,9 @@ func (_q *AgentTokenQuery) loadIcsRoles(ctx context.Context, query *ICSRoleAssig
 			init(nodes[i])
 		}
 	}
-	query.withFKs = true
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(icsroleassignment.FieldAgentTokenID)
+	}
 	query.Where(predicate.ICSRoleAssignment(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(agenttoken.IcsRolesColumn), fks...))
 	}))
@@ -498,13 +673,142 @@ func (_q *AgentTokenQuery) loadIcsRoles(ctx context.Context, query *ICSRoleAssig
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.agent_token_ics_roles
+		fk := n.AgentTokenID
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "agent_token_ics_roles" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "agent_token_id" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "agent_token_ics_roles" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "agent_token_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *AgentTokenQuery) loadMemories(ctx context.Context, query *AgentMemoryQuery, nodes []*AgentToken, init func(*AgentToken), assign func(*AgentToken, *AgentMemory)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*AgentToken)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(agentmemory.FieldAgentID)
+	}
+	query.Where(predicate.AgentMemory(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(agenttoken.MemoriesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.AgentID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "agent_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "agent_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *AgentTokenQuery) loadSentAsks(ctx context.Context, query *AgentAskQuery, nodes []*AgentToken, init func(*AgentToken), assign func(*AgentToken, *AgentAsk)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*AgentToken)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(agentask.FieldFromAgentID)
+	}
+	query.Where(predicate.AgentAsk(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(agenttoken.SentAsksColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.FromAgentID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "from_agent_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *AgentTokenQuery) loadReceivedAsks(ctx context.Context, query *AgentAskQuery, nodes []*AgentToken, init func(*AgentToken), assign func(*AgentToken, *AgentAsk)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*AgentToken)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(agentask.FieldToAgentID)
+	}
+	query.Where(predicate.AgentAsk(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(agenttoken.ReceivedAsksColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ToAgentID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "to_agent_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "to_agent_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *AgentTokenQuery) loadRepliedAsks(ctx context.Context, query *AgentAskQuery, nodes []*AgentToken, init func(*AgentToken), assign func(*AgentToken, *AgentAsk)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*AgentToken)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(agentask.FieldRepliedByAgentID)
+	}
+	query.Where(predicate.AgentAsk(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(agenttoken.RepliedAsksColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.RepliedByAgentID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "replied_by_agent_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "replied_by_agent_id" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

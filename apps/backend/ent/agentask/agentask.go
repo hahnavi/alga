@@ -3,9 +3,11 @@
 package agentask
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -42,8 +44,35 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldAnsweredAt holds the string denoting the answered_at field in the database.
 	FieldAnsweredAt = "answered_at"
+	// EdgeFromAgent holds the string denoting the from_agent edge name in mutations.
+	EdgeFromAgent = "from_agent"
+	// EdgeToAgent holds the string denoting the to_agent edge name in mutations.
+	EdgeToAgent = "to_agent"
+	// EdgeRepliedByAgent holds the string denoting the replied_by_agent edge name in mutations.
+	EdgeRepliedByAgent = "replied_by_agent"
 	// Table holds the table name of the agentask in the database.
 	Table = "agent_asks"
+	// FromAgentTable is the table that holds the from_agent relation/edge.
+	FromAgentTable = "agent_asks"
+	// FromAgentInverseTable is the table name for the AgentToken entity.
+	// It exists in this package in order to avoid circular dependency with the "agenttoken" package.
+	FromAgentInverseTable = "agent_tokens"
+	// FromAgentColumn is the table column denoting the from_agent relation/edge.
+	FromAgentColumn = "from_agent_id"
+	// ToAgentTable is the table that holds the to_agent relation/edge.
+	ToAgentTable = "agent_asks"
+	// ToAgentInverseTable is the table name for the AgentToken entity.
+	// It exists in this package in order to avoid circular dependency with the "agenttoken" package.
+	ToAgentInverseTable = "agent_tokens"
+	// ToAgentColumn is the table column denoting the to_agent relation/edge.
+	ToAgentColumn = "to_agent_id"
+	// RepliedByAgentTable is the table that holds the replied_by_agent relation/edge.
+	RepliedByAgentTable = "agent_asks"
+	// RepliedByAgentInverseTable is the table name for the AgentToken entity.
+	// It exists in this package in order to avoid circular dependency with the "agenttoken" package.
+	RepliedByAgentInverseTable = "agent_tokens"
+	// RepliedByAgentColumn is the table column denoting the replied_by_agent relation/edge.
+	RepliedByAgentColumn = "replied_by_agent_id"
 )
 
 // Columns holds all SQL columns for agentask fields.
@@ -78,25 +107,98 @@ func ValidColumn(column string) bool {
 var (
 	// FromAgentNameValidator is a validator for the "from_agent_name" field. It is called by the builders before save.
 	FromAgentNameValidator func(string) error
-	// DefaultFromAgentType holds the default value on creation for the "from_agent_type" field.
-	DefaultFromAgentType string
 	// DefaultInvestigationID holds the default value on creation for the "investigation_id" field.
 	DefaultInvestigationID string
-	// DefaultToAgentType holds the default value on creation for the "to_agent_type" field.
-	DefaultToAgentType string
 	// QuestionValidator is a validator for the "question" field. It is called by the builders before save.
 	QuestionValidator func(string) error
 	// DefaultReply holds the default value on creation for the "reply" field.
 	DefaultReply string
 	// DefaultRepliedByAgentName holds the default value on creation for the "replied_by_agent_name" field.
 	DefaultRepliedByAgentName string
-	// DefaultStatus holds the default value on creation for the "status" field.
-	DefaultStatus string
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// FromAgentType defines the type for the "from_agent_type" enum field.
+type FromAgentType string
+
+// FromAgentTypeHermes is the default value of the FromAgentType enum.
+const DefaultFromAgentType = FromAgentTypeHermes
+
+// FromAgentType values.
+const (
+	FromAgentTypeHermes   FromAgentType = "hermes"
+	FromAgentTypeOpenclaw FromAgentType = "openclaw"
+	FromAgentTypeOther    FromAgentType = "other"
+)
+
+func (fat FromAgentType) String() string {
+	return string(fat)
+}
+
+// FromAgentTypeValidator is a validator for the "from_agent_type" field enum values. It is called by the builders before save.
+func FromAgentTypeValidator(fat FromAgentType) error {
+	switch fat {
+	case FromAgentTypeHermes, FromAgentTypeOpenclaw, FromAgentTypeOther:
+		return nil
+	default:
+		return fmt.Errorf("agentask: invalid enum value for from_agent_type field: %q", fat)
+	}
+}
+
+// ToAgentType defines the type for the "to_agent_type" enum field.
+type ToAgentType string
+
+// ToAgentType values.
+const (
+	ToAgentTypeHermes   ToAgentType = "hermes"
+	ToAgentTypeOpenclaw ToAgentType = "openclaw"
+	ToAgentTypeOther    ToAgentType = "other"
+)
+
+func (tat ToAgentType) String() string {
+	return string(tat)
+}
+
+// ToAgentTypeValidator is a validator for the "to_agent_type" field enum values. It is called by the builders before save.
+func ToAgentTypeValidator(tat ToAgentType) error {
+	switch tat {
+	case ToAgentTypeHermes, ToAgentTypeOpenclaw, ToAgentTypeOther:
+		return nil
+	default:
+		return fmt.Errorf("agentask: invalid enum value for to_agent_type field: %q", tat)
+	}
+}
+
+// Status defines the type for the "status" enum field.
+type Status string
+
+// StatusPending is the default value of the Status enum.
+const DefaultStatus = StatusPending
+
+// Status values.
+const (
+	StatusPending   Status = "pending"
+	StatusAnswered  Status = "answered"
+	StatusExpired   Status = "expired"
+	StatusCancelled Status = "cancelled"
+)
+
+func (s Status) String() string {
+	return string(s)
+}
+
+// StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
+func StatusValidator(s Status) error {
+	switch s {
+	case StatusPending, StatusAnswered, StatusExpired, StatusCancelled:
+		return nil
+	default:
+		return fmt.Errorf("agentask: invalid enum value for status field: %q", s)
+	}
+}
 
 // OrderOption defines the ordering options for the AgentAsk queries.
 type OrderOption func(*sql.Selector)
@@ -174,4 +276,46 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByAnsweredAt orders the results by the answered_at field.
 func ByAnsweredAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAnsweredAt, opts...).ToFunc()
+}
+
+// ByFromAgentField orders the results by from_agent field.
+func ByFromAgentField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newFromAgentStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByToAgentField orders the results by to_agent field.
+func ByToAgentField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newToAgentStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByRepliedByAgentField orders the results by replied_by_agent field.
+func ByRepliedByAgentField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newRepliedByAgentStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newFromAgentStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(FromAgentInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, FromAgentTable, FromAgentColumn),
+	)
+}
+func newToAgentStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ToAgentInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, ToAgentTable, ToAgentColumn),
+	)
+}
+func newRepliedByAgentStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(RepliedByAgentInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, RepliedByAgentTable, RepliedByAgentColumn),
+	)
 }

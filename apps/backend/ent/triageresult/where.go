@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -70,44 +71,14 @@ func AlertCount(v int) predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldEQ(FieldAlertCount, v))
 }
 
-// SeverityInput applies equality check predicate on the "severity_input" field. It's identical to SeverityInputEQ.
-func SeverityInput(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldEQ(FieldSeverityInput, v))
-}
-
-// Decision applies equality check predicate on the "decision" field. It's identical to DecisionEQ.
-func Decision(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldEQ(FieldDecision, v))
-}
-
 // Confidence applies equality check predicate on the "confidence" field. It's identical to ConfidenceEQ.
 func Confidence(v float64) predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldEQ(FieldConfidence, v))
 }
 
-// SeverityClassified applies equality check predicate on the "severity_classified" field. It's identical to SeverityClassifiedEQ.
-func SeverityClassified(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldEQ(FieldSeverityClassified, v))
-}
-
-// Category applies equality check predicate on the "category" field. It's identical to CategoryEQ.
-func Category(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldEQ(FieldCategory, v))
-}
-
 // Reasoning applies equality check predicate on the "reasoning" field. It's identical to ReasoningEQ.
 func Reasoning(v string) predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldEQ(FieldReasoning, v))
-}
-
-// Outcome applies equality check predicate on the "outcome" field. It's identical to OutcomeEQ.
-func Outcome(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldEQ(FieldOutcome, v))
-}
-
-// OverriddenTo applies equality check predicate on the "overridden_to" field. It's identical to OverriddenToEQ.
-func OverriddenTo(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldEQ(FieldOverriddenTo, v))
 }
 
 // OverriddenBy applies equality check predicate on the "overridden_by" field. It's identical to OverriddenByEQ.
@@ -311,58 +282,23 @@ func AlertLabelsNotNil() predicate.TriageResult {
 }
 
 // SeverityInputEQ applies the EQ predicate on the "severity_input" field.
-func SeverityInputEQ(v string) predicate.TriageResult {
+func SeverityInputEQ(v SeverityInput) predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldEQ(FieldSeverityInput, v))
 }
 
 // SeverityInputNEQ applies the NEQ predicate on the "severity_input" field.
-func SeverityInputNEQ(v string) predicate.TriageResult {
+func SeverityInputNEQ(v SeverityInput) predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldNEQ(FieldSeverityInput, v))
 }
 
 // SeverityInputIn applies the In predicate on the "severity_input" field.
-func SeverityInputIn(vs ...string) predicate.TriageResult {
+func SeverityInputIn(vs ...SeverityInput) predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldIn(FieldSeverityInput, vs...))
 }
 
 // SeverityInputNotIn applies the NotIn predicate on the "severity_input" field.
-func SeverityInputNotIn(vs ...string) predicate.TriageResult {
+func SeverityInputNotIn(vs ...SeverityInput) predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldNotIn(FieldSeverityInput, vs...))
-}
-
-// SeverityInputGT applies the GT predicate on the "severity_input" field.
-func SeverityInputGT(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldGT(FieldSeverityInput, v))
-}
-
-// SeverityInputGTE applies the GTE predicate on the "severity_input" field.
-func SeverityInputGTE(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldGTE(FieldSeverityInput, v))
-}
-
-// SeverityInputLT applies the LT predicate on the "severity_input" field.
-func SeverityInputLT(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldLT(FieldSeverityInput, v))
-}
-
-// SeverityInputLTE applies the LTE predicate on the "severity_input" field.
-func SeverityInputLTE(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldLTE(FieldSeverityInput, v))
-}
-
-// SeverityInputContains applies the Contains predicate on the "severity_input" field.
-func SeverityInputContains(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldContains(FieldSeverityInput, v))
-}
-
-// SeverityInputHasPrefix applies the HasPrefix predicate on the "severity_input" field.
-func SeverityInputHasPrefix(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldHasPrefix(FieldSeverityInput, v))
-}
-
-// SeverityInputHasSuffix applies the HasSuffix predicate on the "severity_input" field.
-func SeverityInputHasSuffix(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldHasSuffix(FieldSeverityInput, v))
 }
 
 // SeverityInputIsNil applies the IsNil predicate on the "severity_input" field.
@@ -375,79 +311,24 @@ func SeverityInputNotNil() predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldNotNull(FieldSeverityInput))
 }
 
-// SeverityInputEqualFold applies the EqualFold predicate on the "severity_input" field.
-func SeverityInputEqualFold(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldEqualFold(FieldSeverityInput, v))
-}
-
-// SeverityInputContainsFold applies the ContainsFold predicate on the "severity_input" field.
-func SeverityInputContainsFold(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldContainsFold(FieldSeverityInput, v))
-}
-
 // DecisionEQ applies the EQ predicate on the "decision" field.
-func DecisionEQ(v string) predicate.TriageResult {
+func DecisionEQ(v Decision) predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldEQ(FieldDecision, v))
 }
 
 // DecisionNEQ applies the NEQ predicate on the "decision" field.
-func DecisionNEQ(v string) predicate.TriageResult {
+func DecisionNEQ(v Decision) predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldNEQ(FieldDecision, v))
 }
 
 // DecisionIn applies the In predicate on the "decision" field.
-func DecisionIn(vs ...string) predicate.TriageResult {
+func DecisionIn(vs ...Decision) predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldIn(FieldDecision, vs...))
 }
 
 // DecisionNotIn applies the NotIn predicate on the "decision" field.
-func DecisionNotIn(vs ...string) predicate.TriageResult {
+func DecisionNotIn(vs ...Decision) predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldNotIn(FieldDecision, vs...))
-}
-
-// DecisionGT applies the GT predicate on the "decision" field.
-func DecisionGT(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldGT(FieldDecision, v))
-}
-
-// DecisionGTE applies the GTE predicate on the "decision" field.
-func DecisionGTE(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldGTE(FieldDecision, v))
-}
-
-// DecisionLT applies the LT predicate on the "decision" field.
-func DecisionLT(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldLT(FieldDecision, v))
-}
-
-// DecisionLTE applies the LTE predicate on the "decision" field.
-func DecisionLTE(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldLTE(FieldDecision, v))
-}
-
-// DecisionContains applies the Contains predicate on the "decision" field.
-func DecisionContains(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldContains(FieldDecision, v))
-}
-
-// DecisionHasPrefix applies the HasPrefix predicate on the "decision" field.
-func DecisionHasPrefix(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldHasPrefix(FieldDecision, v))
-}
-
-// DecisionHasSuffix applies the HasSuffix predicate on the "decision" field.
-func DecisionHasSuffix(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldHasSuffix(FieldDecision, v))
-}
-
-// DecisionEqualFold applies the EqualFold predicate on the "decision" field.
-func DecisionEqualFold(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldEqualFold(FieldDecision, v))
-}
-
-// DecisionContainsFold applies the ContainsFold predicate on the "decision" field.
-func DecisionContainsFold(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldContainsFold(FieldDecision, v))
 }
 
 // ConfidenceEQ applies the EQ predicate on the "confidence" field.
@@ -491,58 +372,23 @@ func ConfidenceLTE(v float64) predicate.TriageResult {
 }
 
 // SeverityClassifiedEQ applies the EQ predicate on the "severity_classified" field.
-func SeverityClassifiedEQ(v string) predicate.TriageResult {
+func SeverityClassifiedEQ(v SeverityClassified) predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldEQ(FieldSeverityClassified, v))
 }
 
 // SeverityClassifiedNEQ applies the NEQ predicate on the "severity_classified" field.
-func SeverityClassifiedNEQ(v string) predicate.TriageResult {
+func SeverityClassifiedNEQ(v SeverityClassified) predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldNEQ(FieldSeverityClassified, v))
 }
 
 // SeverityClassifiedIn applies the In predicate on the "severity_classified" field.
-func SeverityClassifiedIn(vs ...string) predicate.TriageResult {
+func SeverityClassifiedIn(vs ...SeverityClassified) predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldIn(FieldSeverityClassified, vs...))
 }
 
 // SeverityClassifiedNotIn applies the NotIn predicate on the "severity_classified" field.
-func SeverityClassifiedNotIn(vs ...string) predicate.TriageResult {
+func SeverityClassifiedNotIn(vs ...SeverityClassified) predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldNotIn(FieldSeverityClassified, vs...))
-}
-
-// SeverityClassifiedGT applies the GT predicate on the "severity_classified" field.
-func SeverityClassifiedGT(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldGT(FieldSeverityClassified, v))
-}
-
-// SeverityClassifiedGTE applies the GTE predicate on the "severity_classified" field.
-func SeverityClassifiedGTE(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldGTE(FieldSeverityClassified, v))
-}
-
-// SeverityClassifiedLT applies the LT predicate on the "severity_classified" field.
-func SeverityClassifiedLT(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldLT(FieldSeverityClassified, v))
-}
-
-// SeverityClassifiedLTE applies the LTE predicate on the "severity_classified" field.
-func SeverityClassifiedLTE(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldLTE(FieldSeverityClassified, v))
-}
-
-// SeverityClassifiedContains applies the Contains predicate on the "severity_classified" field.
-func SeverityClassifiedContains(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldContains(FieldSeverityClassified, v))
-}
-
-// SeverityClassifiedHasPrefix applies the HasPrefix predicate on the "severity_classified" field.
-func SeverityClassifiedHasPrefix(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldHasPrefix(FieldSeverityClassified, v))
-}
-
-// SeverityClassifiedHasSuffix applies the HasSuffix predicate on the "severity_classified" field.
-func SeverityClassifiedHasSuffix(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldHasSuffix(FieldSeverityClassified, v))
 }
 
 // SeverityClassifiedIsNil applies the IsNil predicate on the "severity_classified" field.
@@ -555,69 +401,24 @@ func SeverityClassifiedNotNil() predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldNotNull(FieldSeverityClassified))
 }
 
-// SeverityClassifiedEqualFold applies the EqualFold predicate on the "severity_classified" field.
-func SeverityClassifiedEqualFold(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldEqualFold(FieldSeverityClassified, v))
-}
-
-// SeverityClassifiedContainsFold applies the ContainsFold predicate on the "severity_classified" field.
-func SeverityClassifiedContainsFold(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldContainsFold(FieldSeverityClassified, v))
-}
-
 // CategoryEQ applies the EQ predicate on the "category" field.
-func CategoryEQ(v string) predicate.TriageResult {
+func CategoryEQ(v Category) predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldEQ(FieldCategory, v))
 }
 
 // CategoryNEQ applies the NEQ predicate on the "category" field.
-func CategoryNEQ(v string) predicate.TriageResult {
+func CategoryNEQ(v Category) predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldNEQ(FieldCategory, v))
 }
 
 // CategoryIn applies the In predicate on the "category" field.
-func CategoryIn(vs ...string) predicate.TriageResult {
+func CategoryIn(vs ...Category) predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldIn(FieldCategory, vs...))
 }
 
 // CategoryNotIn applies the NotIn predicate on the "category" field.
-func CategoryNotIn(vs ...string) predicate.TriageResult {
+func CategoryNotIn(vs ...Category) predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldNotIn(FieldCategory, vs...))
-}
-
-// CategoryGT applies the GT predicate on the "category" field.
-func CategoryGT(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldGT(FieldCategory, v))
-}
-
-// CategoryGTE applies the GTE predicate on the "category" field.
-func CategoryGTE(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldGTE(FieldCategory, v))
-}
-
-// CategoryLT applies the LT predicate on the "category" field.
-func CategoryLT(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldLT(FieldCategory, v))
-}
-
-// CategoryLTE applies the LTE predicate on the "category" field.
-func CategoryLTE(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldLTE(FieldCategory, v))
-}
-
-// CategoryContains applies the Contains predicate on the "category" field.
-func CategoryContains(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldContains(FieldCategory, v))
-}
-
-// CategoryHasPrefix applies the HasPrefix predicate on the "category" field.
-func CategoryHasPrefix(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldHasPrefix(FieldCategory, v))
-}
-
-// CategoryHasSuffix applies the HasSuffix predicate on the "category" field.
-func CategoryHasSuffix(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldHasSuffix(FieldCategory, v))
 }
 
 // CategoryIsNil applies the IsNil predicate on the "category" field.
@@ -628,16 +429,6 @@ func CategoryIsNil() predicate.TriageResult {
 // CategoryNotNil applies the NotNil predicate on the "category" field.
 func CategoryNotNil() predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldNotNull(FieldCategory))
-}
-
-// CategoryEqualFold applies the EqualFold predicate on the "category" field.
-func CategoryEqualFold(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldEqualFold(FieldCategory, v))
-}
-
-// CategoryContainsFold applies the ContainsFold predicate on the "category" field.
-func CategoryContainsFold(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldContainsFold(FieldCategory, v))
 }
 
 // ReasoningEQ applies the EQ predicate on the "reasoning" field.
@@ -746,123 +537,43 @@ func ContextUsedNotNil() predicate.TriageResult {
 }
 
 // OutcomeEQ applies the EQ predicate on the "outcome" field.
-func OutcomeEQ(v string) predicate.TriageResult {
+func OutcomeEQ(v Outcome) predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldEQ(FieldOutcome, v))
 }
 
 // OutcomeNEQ applies the NEQ predicate on the "outcome" field.
-func OutcomeNEQ(v string) predicate.TriageResult {
+func OutcomeNEQ(v Outcome) predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldNEQ(FieldOutcome, v))
 }
 
 // OutcomeIn applies the In predicate on the "outcome" field.
-func OutcomeIn(vs ...string) predicate.TriageResult {
+func OutcomeIn(vs ...Outcome) predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldIn(FieldOutcome, vs...))
 }
 
 // OutcomeNotIn applies the NotIn predicate on the "outcome" field.
-func OutcomeNotIn(vs ...string) predicate.TriageResult {
+func OutcomeNotIn(vs ...Outcome) predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldNotIn(FieldOutcome, vs...))
 }
 
-// OutcomeGT applies the GT predicate on the "outcome" field.
-func OutcomeGT(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldGT(FieldOutcome, v))
-}
-
-// OutcomeGTE applies the GTE predicate on the "outcome" field.
-func OutcomeGTE(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldGTE(FieldOutcome, v))
-}
-
-// OutcomeLT applies the LT predicate on the "outcome" field.
-func OutcomeLT(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldLT(FieldOutcome, v))
-}
-
-// OutcomeLTE applies the LTE predicate on the "outcome" field.
-func OutcomeLTE(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldLTE(FieldOutcome, v))
-}
-
-// OutcomeContains applies the Contains predicate on the "outcome" field.
-func OutcomeContains(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldContains(FieldOutcome, v))
-}
-
-// OutcomeHasPrefix applies the HasPrefix predicate on the "outcome" field.
-func OutcomeHasPrefix(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldHasPrefix(FieldOutcome, v))
-}
-
-// OutcomeHasSuffix applies the HasSuffix predicate on the "outcome" field.
-func OutcomeHasSuffix(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldHasSuffix(FieldOutcome, v))
-}
-
-// OutcomeEqualFold applies the EqualFold predicate on the "outcome" field.
-func OutcomeEqualFold(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldEqualFold(FieldOutcome, v))
-}
-
-// OutcomeContainsFold applies the ContainsFold predicate on the "outcome" field.
-func OutcomeContainsFold(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldContainsFold(FieldOutcome, v))
-}
-
 // OverriddenToEQ applies the EQ predicate on the "overridden_to" field.
-func OverriddenToEQ(v string) predicate.TriageResult {
+func OverriddenToEQ(v OverriddenTo) predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldEQ(FieldOverriddenTo, v))
 }
 
 // OverriddenToNEQ applies the NEQ predicate on the "overridden_to" field.
-func OverriddenToNEQ(v string) predicate.TriageResult {
+func OverriddenToNEQ(v OverriddenTo) predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldNEQ(FieldOverriddenTo, v))
 }
 
 // OverriddenToIn applies the In predicate on the "overridden_to" field.
-func OverriddenToIn(vs ...string) predicate.TriageResult {
+func OverriddenToIn(vs ...OverriddenTo) predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldIn(FieldOverriddenTo, vs...))
 }
 
 // OverriddenToNotIn applies the NotIn predicate on the "overridden_to" field.
-func OverriddenToNotIn(vs ...string) predicate.TriageResult {
+func OverriddenToNotIn(vs ...OverriddenTo) predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldNotIn(FieldOverriddenTo, vs...))
-}
-
-// OverriddenToGT applies the GT predicate on the "overridden_to" field.
-func OverriddenToGT(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldGT(FieldOverriddenTo, v))
-}
-
-// OverriddenToGTE applies the GTE predicate on the "overridden_to" field.
-func OverriddenToGTE(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldGTE(FieldOverriddenTo, v))
-}
-
-// OverriddenToLT applies the LT predicate on the "overridden_to" field.
-func OverriddenToLT(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldLT(FieldOverriddenTo, v))
-}
-
-// OverriddenToLTE applies the LTE predicate on the "overridden_to" field.
-func OverriddenToLTE(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldLTE(FieldOverriddenTo, v))
-}
-
-// OverriddenToContains applies the Contains predicate on the "overridden_to" field.
-func OverriddenToContains(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldContains(FieldOverriddenTo, v))
-}
-
-// OverriddenToHasPrefix applies the HasPrefix predicate on the "overridden_to" field.
-func OverriddenToHasPrefix(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldHasPrefix(FieldOverriddenTo, v))
-}
-
-// OverriddenToHasSuffix applies the HasSuffix predicate on the "overridden_to" field.
-func OverriddenToHasSuffix(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldHasSuffix(FieldOverriddenTo, v))
 }
 
 // OverriddenToIsNil applies the IsNil predicate on the "overridden_to" field.
@@ -873,16 +584,6 @@ func OverriddenToIsNil() predicate.TriageResult {
 // OverriddenToNotNil applies the NotNil predicate on the "overridden_to" field.
 func OverriddenToNotNil() predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldNotNull(FieldOverriddenTo))
-}
-
-// OverriddenToEqualFold applies the EqualFold predicate on the "overridden_to" field.
-func OverriddenToEqualFold(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldEqualFold(FieldOverriddenTo, v))
-}
-
-// OverriddenToContainsFold applies the ContainsFold predicate on the "overridden_to" field.
-func OverriddenToContainsFold(v string) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldContainsFold(FieldOverriddenTo, v))
 }
 
 // OverriddenByEQ applies the EQ predicate on the "overridden_by" field.
@@ -903,26 +604,6 @@ func OverriddenByIn(vs ...uuid.UUID) predicate.TriageResult {
 // OverriddenByNotIn applies the NotIn predicate on the "overridden_by" field.
 func OverriddenByNotIn(vs ...uuid.UUID) predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldNotIn(FieldOverriddenBy, vs...))
-}
-
-// OverriddenByGT applies the GT predicate on the "overridden_by" field.
-func OverriddenByGT(v uuid.UUID) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldGT(FieldOverriddenBy, v))
-}
-
-// OverriddenByGTE applies the GTE predicate on the "overridden_by" field.
-func OverriddenByGTE(v uuid.UUID) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldGTE(FieldOverriddenBy, v))
-}
-
-// OverriddenByLT applies the LT predicate on the "overridden_by" field.
-func OverriddenByLT(v uuid.UUID) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldLT(FieldOverriddenBy, v))
-}
-
-// OverriddenByLTE applies the LTE predicate on the "overridden_by" field.
-func OverriddenByLTE(v uuid.UUID) predicate.TriageResult {
-	return predicate.TriageResult(sql.FieldLTE(FieldOverriddenBy, v))
 }
 
 // OverriddenByIsNil applies the IsNil predicate on the "overridden_by" field.
@@ -1253,6 +934,75 @@ func UpdatedAtLT(v time.Time) predicate.TriageResult {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.TriageResult {
 	return predicate.TriageResult(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// HasAlerts applies the HasEdge predicate on the "alerts" edge.
+func HasAlerts() predicate.TriageResult {
+	return predicate.TriageResult(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, AlertsTable, AlertsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAlertsWith applies the HasEdge predicate on the "alerts" edge with a given conditions (other predicates).
+func HasAlertsWith(preds ...predicate.Alert) predicate.TriageResult {
+	return predicate.TriageResult(func(s *sql.Selector) {
+		step := newAlertsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasAlertInvestigations applies the HasEdge predicate on the "alert_investigations" edge.
+func HasAlertInvestigations() predicate.TriageResult {
+	return predicate.TriageResult(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, AlertInvestigationsTable, AlertInvestigationsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAlertInvestigationsWith applies the HasEdge predicate on the "alert_investigations" edge with a given conditions (other predicates).
+func HasAlertInvestigationsWith(preds ...predicate.AlertInvestigation) predicate.TriageResult {
+	return predicate.TriageResult(func(s *sql.Selector) {
+		step := newAlertInvestigationsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasOverriddenByUser applies the HasEdge predicate on the "overridden_by_user" edge.
+func HasOverriddenByUser() predicate.TriageResult {
+	return predicate.TriageResult(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, OverriddenByUserTable, OverriddenByUserColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasOverriddenByUserWith applies the HasEdge predicate on the "overridden_by_user" edge with a given conditions (other predicates).
+func HasOverriddenByUserWith(preds ...predicate.User) predicate.TriageResult {
+	return predicate.TriageResult(func(s *sql.Selector) {
+		step := newOverriddenByUserStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

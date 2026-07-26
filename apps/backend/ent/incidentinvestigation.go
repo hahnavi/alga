@@ -27,7 +27,7 @@ type IncidentInvestigation struct {
 	// IncidentID holds the value of the "incident_id" field.
 	IncidentID *uuid.UUID `json:"incident_id,omitempty"`
 	// Status holds the value of the "status" field.
-	Status string `json:"status,omitempty"`
+	Status incidentinvestigation.Status `json:"status,omitempty"`
 	// AgentID holds the value of the "agent_id" field.
 	AgentID string `json:"agent_id,omitempty"`
 	// AgentName holds the value of the "agent_name" field.
@@ -65,7 +65,7 @@ type IncidentInvestigation struct {
 	// ParentInvestigationID holds the value of the "parent_investigation_id" field.
 	ParentInvestigationID *uuid.UUID `json:"parent_investigation_id,omitempty"`
 	// AssigneeType holds the value of the "assignee_type" field.
-	AssigneeType string `json:"assignee_type,omitempty"`
+	AssigneeType incidentinvestigation.AssigneeType `json:"assignee_type,omitempty"`
 	// AssigneeID holds the value of the "assignee_id" field.
 	AssigneeID *uuid.UUID `json:"assignee_id,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -88,9 +88,11 @@ type IncidentInvestigationEdges struct {
 	SourceAlertInvestigation *AlertInvestigation `json:"source_alert_investigation,omitempty"`
 	// ParentInvestigation holds the value of the parent_investigation edge.
 	ParentInvestigation *IncidentInvestigation `json:"parent_investigation,omitempty"`
+	// LinkedCoordinationTasks holds the value of the linked_coordination_tasks edge.
+	LinkedCoordinationTasks []*CoordinationTask `json:"linked_coordination_tasks,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [6]bool
+	loadedTypes [7]bool
 }
 
 // UpdatesOrErr returns the Updates value or an error if the edge
@@ -153,6 +155,15 @@ func (e IncidentInvestigationEdges) ParentInvestigationOrErr() (*IncidentInvesti
 	return nil, &NotLoadedError{edge: "parent_investigation"}
 }
 
+// LinkedCoordinationTasksOrErr returns the LinkedCoordinationTasks value or an error if the edge
+// was not loaded in eager-loading.
+func (e IncidentInvestigationEdges) LinkedCoordinationTasksOrErr() ([]*CoordinationTask, error) {
+	if e.loadedTypes[6] {
+		return e.LinkedCoordinationTasks, nil
+	}
+	return nil, &NotLoadedError{edge: "linked_coordination_tasks"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*IncidentInvestigation) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
@@ -208,7 +219,7 @@ func (_m *IncidentInvestigation) assignValues(columns []string, values []any) er
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
-				_m.Status = value.String
+				_m.Status = incidentinvestigation.Status(value.String)
 			}
 		case incidentinvestigation.FieldAgentID:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -332,7 +343,7 @@ func (_m *IncidentInvestigation) assignValues(columns []string, values []any) er
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field assignee_type", values[i])
 			} else if value.Valid {
-				_m.AssigneeType = value.String
+				_m.AssigneeType = incidentinvestigation.AssigneeType(value.String)
 			}
 		case incidentinvestigation.FieldAssigneeID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -384,6 +395,11 @@ func (_m *IncidentInvestigation) QueryParentInvestigation() *IncidentInvestigati
 	return NewIncidentInvestigationClient(_m.config).QueryParentInvestigation(_m)
 }
 
+// QueryLinkedCoordinationTasks queries the "linked_coordination_tasks" edge of the IncidentInvestigation entity.
+func (_m *IncidentInvestigation) QueryLinkedCoordinationTasks() *CoordinationTaskQuery {
+	return NewIncidentInvestigationClient(_m.config).QueryLinkedCoordinationTasks(_m)
+}
+
 // Update returns a builder for updating this IncidentInvestigation.
 // Note that you need to call IncidentInvestigation.Unwrap() before calling this method if this IncidentInvestigation
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -416,7 +432,7 @@ func (_m *IncidentInvestigation) String() string {
 	}
 	builder.WriteString(", ")
 	builder.WriteString("status=")
-	builder.WriteString(_m.Status)
+	builder.WriteString(fmt.Sprintf("%v", _m.Status))
 	builder.WriteString(", ")
 	builder.WriteString("agent_id=")
 	builder.WriteString(_m.AgentID)
@@ -481,7 +497,7 @@ func (_m *IncidentInvestigation) String() string {
 	}
 	builder.WriteString(", ")
 	builder.WriteString("assignee_type=")
-	builder.WriteString(_m.AssigneeType)
+	builder.WriteString(fmt.Sprintf("%v", _m.AssigneeType))
 	builder.WriteString(", ")
 	if v := _m.AssigneeID; v != nil {
 		builder.WriteString("assignee_id=")

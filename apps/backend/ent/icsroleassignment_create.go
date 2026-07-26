@@ -24,14 +24,62 @@ type ICSRoleAssignmentCreate struct {
 	hooks    []Hook
 }
 
+// SetParentID sets the "parent_id" field.
+func (_c *ICSRoleAssignmentCreate) SetParentID(v uuid.UUID) *ICSRoleAssignmentCreate {
+	_c.mutation.SetParentID(v)
+	return _c
+}
+
+// SetNillableParentID sets the "parent_id" field if the given value is not nil.
+func (_c *ICSRoleAssignmentCreate) SetNillableParentID(v *uuid.UUID) *ICSRoleAssignmentCreate {
+	if v != nil {
+		_c.SetParentID(*v)
+	}
+	return _c
+}
+
+// SetIncidentID sets the "incident_id" field.
+func (_c *ICSRoleAssignmentCreate) SetIncidentID(v uuid.UUID) *ICSRoleAssignmentCreate {
+	_c.mutation.SetIncidentID(v)
+	return _c
+}
+
+// SetUserID sets the "user_id" field.
+func (_c *ICSRoleAssignmentCreate) SetUserID(v uuid.UUID) *ICSRoleAssignmentCreate {
+	_c.mutation.SetUserID(v)
+	return _c
+}
+
+// SetNillableUserID sets the "user_id" field if the given value is not nil.
+func (_c *ICSRoleAssignmentCreate) SetNillableUserID(v *uuid.UUID) *ICSRoleAssignmentCreate {
+	if v != nil {
+		_c.SetUserID(*v)
+	}
+	return _c
+}
+
+// SetAgentTokenID sets the "agent_token_id" field.
+func (_c *ICSRoleAssignmentCreate) SetAgentTokenID(v uuid.UUID) *ICSRoleAssignmentCreate {
+	_c.mutation.SetAgentTokenID(v)
+	return _c
+}
+
+// SetNillableAgentTokenID sets the "agent_token_id" field if the given value is not nil.
+func (_c *ICSRoleAssignmentCreate) SetNillableAgentTokenID(v *uuid.UUID) *ICSRoleAssignmentCreate {
+	if v != nil {
+		_c.SetAgentTokenID(*v)
+	}
+	return _c
+}
+
 // SetRoleType sets the "role_type" field.
-func (_c *ICSRoleAssignmentCreate) SetRoleType(v string) *ICSRoleAssignmentCreate {
+func (_c *ICSRoleAssignmentCreate) SetRoleType(v icsroleassignment.RoleType) *ICSRoleAssignmentCreate {
 	_c.mutation.SetRoleType(v)
 	return _c
 }
 
 // SetNillableRoleType sets the "role_type" field if the given value is not nil.
-func (_c *ICSRoleAssignmentCreate) SetNillableRoleType(v *string) *ICSRoleAssignmentCreate {
+func (_c *ICSRoleAssignmentCreate) SetNillableRoleType(v *icsroleassignment.RoleType) *ICSRoleAssignmentCreate {
 	if v != nil {
 		_c.SetRoleType(*v)
 	}
@@ -39,13 +87,13 @@ func (_c *ICSRoleAssignmentCreate) SetNillableRoleType(v *string) *ICSRoleAssign
 }
 
 // SetStatus sets the "status" field.
-func (_c *ICSRoleAssignmentCreate) SetStatus(v string) *ICSRoleAssignmentCreate {
+func (_c *ICSRoleAssignmentCreate) SetStatus(v icsroleassignment.Status) *ICSRoleAssignmentCreate {
 	_c.mutation.SetStatus(v)
 	return _c
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_c *ICSRoleAssignmentCreate) SetNillableStatus(v *string) *ICSRoleAssignmentCreate {
+func (_c *ICSRoleAssignmentCreate) SetNillableStatus(v *icsroleassignment.Status) *ICSRoleAssignmentCreate {
 	if v != nil {
 		_c.SetStatus(*v)
 	}
@@ -53,13 +101,13 @@ func (_c *ICSRoleAssignmentCreate) SetNillableStatus(v *string) *ICSRoleAssignme
 }
 
 // SetAssigneeType sets the "assignee_type" field.
-func (_c *ICSRoleAssignmentCreate) SetAssigneeType(v string) *ICSRoleAssignmentCreate {
+func (_c *ICSRoleAssignmentCreate) SetAssigneeType(v icsroleassignment.AssigneeType) *ICSRoleAssignmentCreate {
 	_c.mutation.SetAssigneeType(v)
 	return _c
 }
 
 // SetNillableAssigneeType sets the "assignee_type" field if the given value is not nil.
-func (_c *ICSRoleAssignmentCreate) SetNillableAssigneeType(v *string) *ICSRoleAssignmentCreate {
+func (_c *ICSRoleAssignmentCreate) SetNillableAssigneeType(v *icsroleassignment.AssigneeType) *ICSRoleAssignmentCreate {
 	if v != nil {
 		_c.SetAssigneeType(*v)
 	}
@@ -81,13 +129,13 @@ func (_c *ICSRoleAssignmentCreate) SetNillableScopeDescription(v *string) *ICSRo
 }
 
 // SetEndedReason sets the "ended_reason" field.
-func (_c *ICSRoleAssignmentCreate) SetEndedReason(v string) *ICSRoleAssignmentCreate {
+func (_c *ICSRoleAssignmentCreate) SetEndedReason(v icsroleassignment.EndedReason) *ICSRoleAssignmentCreate {
 	_c.mutation.SetEndedReason(v)
 	return _c
 }
 
 // SetNillableEndedReason sets the "ended_reason" field if the given value is not nil.
-func (_c *ICSRoleAssignmentCreate) SetNillableEndedReason(v *string) *ICSRoleAssignmentCreate {
+func (_c *ICSRoleAssignmentCreate) SetNillableEndedReason(v *icsroleassignment.EndedReason) *ICSRoleAssignmentCreate {
 	if v != nil {
 		_c.SetEndedReason(*v)
 	}
@@ -136,29 +184,9 @@ func (_c *ICSRoleAssignmentCreate) SetNillableID(v *uuid.UUID) *ICSRoleAssignmen
 	return _c
 }
 
-// SetIncidentID sets the "incident" edge to the Incident entity by ID.
-func (_c *ICSRoleAssignmentCreate) SetIncidentID(id uuid.UUID) *ICSRoleAssignmentCreate {
-	_c.mutation.SetIncidentID(id)
-	return _c
-}
-
 // SetIncident sets the "incident" edge to the Incident entity.
 func (_c *ICSRoleAssignmentCreate) SetIncident(v *Incident) *ICSRoleAssignmentCreate {
 	return _c.SetIncidentID(v.ID)
-}
-
-// SetUserID sets the "user" edge to the User entity by ID.
-func (_c *ICSRoleAssignmentCreate) SetUserID(id uuid.UUID) *ICSRoleAssignmentCreate {
-	_c.mutation.SetUserID(id)
-	return _c
-}
-
-// SetNillableUserID sets the "user" edge to the User entity by ID if the given value is not nil.
-func (_c *ICSRoleAssignmentCreate) SetNillableUserID(id *uuid.UUID) *ICSRoleAssignmentCreate {
-	if id != nil {
-		_c = _c.SetUserID(*id)
-	}
-	return _c
 }
 
 // SetUser sets the "user" edge to the User entity.
@@ -166,37 +194,24 @@ func (_c *ICSRoleAssignmentCreate) SetUser(v *User) *ICSRoleAssignmentCreate {
 	return _c.SetUserID(v.ID)
 }
 
-// SetAgentTokenID sets the "agent_token" edge to the AgentToken entity by ID.
-func (_c *ICSRoleAssignmentCreate) SetAgentTokenID(id uuid.UUID) *ICSRoleAssignmentCreate {
-	_c.mutation.SetAgentTokenID(id)
-	return _c
-}
-
-// SetNillableAgentTokenID sets the "agent_token" edge to the AgentToken entity by ID if the given value is not nil.
-func (_c *ICSRoleAssignmentCreate) SetNillableAgentTokenID(id *uuid.UUID) *ICSRoleAssignmentCreate {
-	if id != nil {
-		_c = _c.SetAgentTokenID(*id)
-	}
-	return _c
-}
-
 // SetAgentToken sets the "agent_token" edge to the AgentToken entity.
 func (_c *ICSRoleAssignmentCreate) SetAgentToken(v *AgentToken) *ICSRoleAssignmentCreate {
 	return _c.SetAgentTokenID(v.ID)
 }
 
-// SetParentID sets the "parent" edge to the ICSRoleAssignment entity by ID.
-func (_c *ICSRoleAssignmentCreate) SetParentID(id uuid.UUID) *ICSRoleAssignmentCreate {
-	_c.mutation.SetParentID(id)
+// AddChildIDs adds the "children" edge to the ICSRoleAssignment entity by IDs.
+func (_c *ICSRoleAssignmentCreate) AddChildIDs(ids ...uuid.UUID) *ICSRoleAssignmentCreate {
+	_c.mutation.AddChildIDs(ids...)
 	return _c
 }
 
-// SetNillableParentID sets the "parent" edge to the ICSRoleAssignment entity by ID if the given value is not nil.
-func (_c *ICSRoleAssignmentCreate) SetNillableParentID(id *uuid.UUID) *ICSRoleAssignmentCreate {
-	if id != nil {
-		_c = _c.SetParentID(*id)
+// AddChildren adds the "children" edges to the ICSRoleAssignment entity.
+func (_c *ICSRoleAssignmentCreate) AddChildren(v ...*ICSRoleAssignment) *ICSRoleAssignmentCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return _c
+	return _c.AddChildIDs(ids...)
 }
 
 // SetParent sets the "parent" edge to the ICSRoleAssignment entity.
@@ -263,14 +278,37 @@ func (_c *ICSRoleAssignmentCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *ICSRoleAssignmentCreate) check() error {
+	if _, ok := _c.mutation.IncidentID(); !ok {
+		return &ValidationError{Name: "incident_id", err: errors.New(`ent: missing required field "ICSRoleAssignment.incident_id"`)}
+	}
 	if _, ok := _c.mutation.RoleType(); !ok {
 		return &ValidationError{Name: "role_type", err: errors.New(`ent: missing required field "ICSRoleAssignment.role_type"`)}
+	}
+	if v, ok := _c.mutation.RoleType(); ok {
+		if err := icsroleassignment.RoleTypeValidator(v); err != nil {
+			return &ValidationError{Name: "role_type", err: fmt.Errorf(`ent: validator failed for field "ICSRoleAssignment.role_type": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "ICSRoleAssignment.status"`)}
 	}
+	if v, ok := _c.mutation.Status(); ok {
+		if err := icsroleassignment.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "ICSRoleAssignment.status": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.AssigneeType(); !ok {
 		return &ValidationError{Name: "assignee_type", err: errors.New(`ent: missing required field "ICSRoleAssignment.assignee_type"`)}
+	}
+	if v, ok := _c.mutation.AssigneeType(); ok {
+		if err := icsroleassignment.AssigneeTypeValidator(v); err != nil {
+			return &ValidationError{Name: "assignee_type", err: fmt.Errorf(`ent: validator failed for field "ICSRoleAssignment.assignee_type": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.EndedReason(); ok {
+		if err := icsroleassignment.EndedReasonValidator(v); err != nil {
+			return &ValidationError{Name: "ended_reason", err: fmt.Errorf(`ent: validator failed for field "ICSRoleAssignment.ended_reason": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.StartedAt(); !ok {
 		return &ValidationError{Name: "started_at", err: errors.New(`ent: missing required field "ICSRoleAssignment.started_at"`)}
@@ -314,15 +352,15 @@ func (_c *ICSRoleAssignmentCreate) createSpec() (*ICSRoleAssignment, *sqlgraph.C
 		_spec.ID.Value = &id
 	}
 	if value, ok := _c.mutation.RoleType(); ok {
-		_spec.SetField(icsroleassignment.FieldRoleType, field.TypeString, value)
+		_spec.SetField(icsroleassignment.FieldRoleType, field.TypeEnum, value)
 		_node.RoleType = value
 	}
 	if value, ok := _c.mutation.Status(); ok {
-		_spec.SetField(icsroleassignment.FieldStatus, field.TypeString, value)
+		_spec.SetField(icsroleassignment.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
 	}
 	if value, ok := _c.mutation.AssigneeType(); ok {
-		_spec.SetField(icsroleassignment.FieldAssigneeType, field.TypeString, value)
+		_spec.SetField(icsroleassignment.FieldAssigneeType, field.TypeEnum, value)
 		_node.AssigneeType = value
 	}
 	if value, ok := _c.mutation.ScopeDescription(); ok {
@@ -330,7 +368,7 @@ func (_c *ICSRoleAssignmentCreate) createSpec() (*ICSRoleAssignment, *sqlgraph.C
 		_node.ScopeDescription = &value
 	}
 	if value, ok := _c.mutation.EndedReason(); ok {
-		_spec.SetField(icsroleassignment.FieldEndedReason, field.TypeString, value)
+		_spec.SetField(icsroleassignment.FieldEndedReason, field.TypeEnum, value)
 		_node.EndedReason = &value
 	}
 	if value, ok := _c.mutation.StartedAt(); ok {
@@ -355,7 +393,7 @@ func (_c *ICSRoleAssignmentCreate) createSpec() (*ICSRoleAssignment, *sqlgraph.C
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.incident_ics_roles = &nodes[0]
+		_node.IncidentID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.UserIDs(); len(nodes) > 0 {
@@ -372,7 +410,7 @@ func (_c *ICSRoleAssignmentCreate) createSpec() (*ICSRoleAssignment, *sqlgraph.C
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.user_ics_role_assignments = &nodes[0]
+		_node.UserID = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.AgentTokenIDs(); len(nodes) > 0 {
@@ -389,15 +427,15 @@ func (_c *ICSRoleAssignmentCreate) createSpec() (*ICSRoleAssignment, *sqlgraph.C
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.agent_token_ics_roles = &nodes[0]
+		_node.AgentTokenID = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := _c.mutation.ParentIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.ChildrenIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   icsroleassignment.ParentTable,
-			Columns: []string{icsroleassignment.ParentColumn},
+			Table:   icsroleassignment.ChildrenTable,
+			Columns: []string{icsroleassignment.ChildrenColumn},
 			Bidi:    true,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(icsroleassignment.FieldID, field.TypeUUID),
@@ -406,7 +444,23 @@ func (_c *ICSRoleAssignmentCreate) createSpec() (*ICSRoleAssignment, *sqlgraph.C
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.ics_role_assignment_parent = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ParentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   icsroleassignment.ParentTable,
+			Columns: []string{icsroleassignment.ParentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(icsroleassignment.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.ParentID = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

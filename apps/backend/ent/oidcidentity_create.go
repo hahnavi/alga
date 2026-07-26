@@ -4,6 +4,8 @@ package ent
 
 import (
 	"alga/ent/oidcidentity"
+	"alga/ent/oidcprovider"
+	"alga/ent/user"
 	"context"
 	"errors"
 	"fmt"
@@ -109,6 +111,16 @@ func (_c *OIDCIdentityCreate) SetNillableID(v *uuid.UUID) *OIDCIdentityCreate {
 	return _c
 }
 
+// SetUser sets the "user" edge to the User entity.
+func (_c *OIDCIdentityCreate) SetUser(v *User) *OIDCIdentityCreate {
+	return _c.SetUserID(v.ID)
+}
+
+// SetProvider sets the "provider" edge to the OIDCProvider entity.
+func (_c *OIDCIdentityCreate) SetProvider(v *OIDCProvider) *OIDCIdentityCreate {
+	return _c.SetProviderID(v.ID)
+}
+
 // Mutation returns the OIDCIdentityMutation object of the builder.
 func (_c *OIDCIdentityCreate) Mutation() *OIDCIdentityMutation {
 	return _c.mutation
@@ -194,6 +206,12 @@ func (_c *OIDCIdentityCreate) check() error {
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "OIDCIdentity.updated_at"`)}
 	}
+	if len(_c.mutation.UserIDs()) == 0 {
+		return &ValidationError{Name: "user", err: errors.New(`ent: missing required edge "OIDCIdentity.user"`)}
+	}
+	if len(_c.mutation.ProviderIDs()) == 0 {
+		return &ValidationError{Name: "provider", err: errors.New(`ent: missing required edge "OIDCIdentity.provider"`)}
+	}
 	return nil
 }
 
@@ -229,14 +247,6 @@ func (_c *OIDCIdentityCreate) createSpec() (*OIDCIdentity, *sqlgraph.CreateSpec)
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := _c.mutation.UserID(); ok {
-		_spec.SetField(oidcidentity.FieldUserID, field.TypeUUID, value)
-		_node.UserID = value
-	}
-	if value, ok := _c.mutation.ProviderID(); ok {
-		_spec.SetField(oidcidentity.FieldProviderID, field.TypeUUID, value)
-		_node.ProviderID = value
-	}
 	if value, ok := _c.mutation.Subject(); ok {
 		_spec.SetField(oidcidentity.FieldSubject, field.TypeString, value)
 		_node.Subject = value
@@ -256,6 +266,40 @@ func (_c *OIDCIdentityCreate) createSpec() (*OIDCIdentity, *sqlgraph.CreateSpec)
 	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(oidcidentity.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if nodes := _c.mutation.UserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   oidcidentity.UserTable,
+			Columns: []string{oidcidentity.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.UserID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ProviderIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   oidcidentity.ProviderTable,
+			Columns: []string{oidcidentity.ProviderColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oidcprovider.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.ProviderID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

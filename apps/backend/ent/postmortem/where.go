@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -63,11 +64,6 @@ func IncidentID(v uuid.UUID) predicate.PostMortem {
 // Title applies equality check predicate on the "title" field. It's identical to TitleEQ.
 func Title(v string) predicate.PostMortem {
 	return predicate.PostMortem(sql.FieldEQ(FieldTitle, v))
-}
-
-// Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
-func Status(v string) predicate.PostMortem {
-	return predicate.PostMortem(sql.FieldEQ(FieldStatus, v))
 }
 
 // Summary applies equality check predicate on the "summary" field. It's identical to SummaryEQ.
@@ -150,26 +146,6 @@ func IncidentIDNotIn(vs ...uuid.UUID) predicate.PostMortem {
 	return predicate.PostMortem(sql.FieldNotIn(FieldIncidentID, vs...))
 }
 
-// IncidentIDGT applies the GT predicate on the "incident_id" field.
-func IncidentIDGT(v uuid.UUID) predicate.PostMortem {
-	return predicate.PostMortem(sql.FieldGT(FieldIncidentID, v))
-}
-
-// IncidentIDGTE applies the GTE predicate on the "incident_id" field.
-func IncidentIDGTE(v uuid.UUID) predicate.PostMortem {
-	return predicate.PostMortem(sql.FieldGTE(FieldIncidentID, v))
-}
-
-// IncidentIDLT applies the LT predicate on the "incident_id" field.
-func IncidentIDLT(v uuid.UUID) predicate.PostMortem {
-	return predicate.PostMortem(sql.FieldLT(FieldIncidentID, v))
-}
-
-// IncidentIDLTE applies the LTE predicate on the "incident_id" field.
-func IncidentIDLTE(v uuid.UUID) predicate.PostMortem {
-	return predicate.PostMortem(sql.FieldLTE(FieldIncidentID, v))
-}
-
 // TitleEQ applies the EQ predicate on the "title" field.
 func TitleEQ(v string) predicate.PostMortem {
 	return predicate.PostMortem(sql.FieldEQ(FieldTitle, v))
@@ -236,68 +212,23 @@ func TitleContainsFold(v string) predicate.PostMortem {
 }
 
 // StatusEQ applies the EQ predicate on the "status" field.
-func StatusEQ(v string) predicate.PostMortem {
+func StatusEQ(v Status) predicate.PostMortem {
 	return predicate.PostMortem(sql.FieldEQ(FieldStatus, v))
 }
 
 // StatusNEQ applies the NEQ predicate on the "status" field.
-func StatusNEQ(v string) predicate.PostMortem {
+func StatusNEQ(v Status) predicate.PostMortem {
 	return predicate.PostMortem(sql.FieldNEQ(FieldStatus, v))
 }
 
 // StatusIn applies the In predicate on the "status" field.
-func StatusIn(vs ...string) predicate.PostMortem {
+func StatusIn(vs ...Status) predicate.PostMortem {
 	return predicate.PostMortem(sql.FieldIn(FieldStatus, vs...))
 }
 
 // StatusNotIn applies the NotIn predicate on the "status" field.
-func StatusNotIn(vs ...string) predicate.PostMortem {
+func StatusNotIn(vs ...Status) predicate.PostMortem {
 	return predicate.PostMortem(sql.FieldNotIn(FieldStatus, vs...))
-}
-
-// StatusGT applies the GT predicate on the "status" field.
-func StatusGT(v string) predicate.PostMortem {
-	return predicate.PostMortem(sql.FieldGT(FieldStatus, v))
-}
-
-// StatusGTE applies the GTE predicate on the "status" field.
-func StatusGTE(v string) predicate.PostMortem {
-	return predicate.PostMortem(sql.FieldGTE(FieldStatus, v))
-}
-
-// StatusLT applies the LT predicate on the "status" field.
-func StatusLT(v string) predicate.PostMortem {
-	return predicate.PostMortem(sql.FieldLT(FieldStatus, v))
-}
-
-// StatusLTE applies the LTE predicate on the "status" field.
-func StatusLTE(v string) predicate.PostMortem {
-	return predicate.PostMortem(sql.FieldLTE(FieldStatus, v))
-}
-
-// StatusContains applies the Contains predicate on the "status" field.
-func StatusContains(v string) predicate.PostMortem {
-	return predicate.PostMortem(sql.FieldContains(FieldStatus, v))
-}
-
-// StatusHasPrefix applies the HasPrefix predicate on the "status" field.
-func StatusHasPrefix(v string) predicate.PostMortem {
-	return predicate.PostMortem(sql.FieldHasPrefix(FieldStatus, v))
-}
-
-// StatusHasSuffix applies the HasSuffix predicate on the "status" field.
-func StatusHasSuffix(v string) predicate.PostMortem {
-	return predicate.PostMortem(sql.FieldHasSuffix(FieldStatus, v))
-}
-
-// StatusEqualFold applies the EqualFold predicate on the "status" field.
-func StatusEqualFold(v string) predicate.PostMortem {
-	return predicate.PostMortem(sql.FieldEqualFold(FieldStatus, v))
-}
-
-// StatusContainsFold applies the ContainsFold predicate on the "status" field.
-func StatusContainsFold(v string) predicate.PostMortem {
-	return predicate.PostMortem(sql.FieldContainsFold(FieldStatus, v))
 }
 
 // SummaryEQ applies the EQ predicate on the "summary" field.
@@ -805,26 +736,6 @@ func ApprovedByIDNotIn(vs ...uuid.UUID) predicate.PostMortem {
 	return predicate.PostMortem(sql.FieldNotIn(FieldApprovedByID, vs...))
 }
 
-// ApprovedByIDGT applies the GT predicate on the "approved_by_id" field.
-func ApprovedByIDGT(v uuid.UUID) predicate.PostMortem {
-	return predicate.PostMortem(sql.FieldGT(FieldApprovedByID, v))
-}
-
-// ApprovedByIDGTE applies the GTE predicate on the "approved_by_id" field.
-func ApprovedByIDGTE(v uuid.UUID) predicate.PostMortem {
-	return predicate.PostMortem(sql.FieldGTE(FieldApprovedByID, v))
-}
-
-// ApprovedByIDLT applies the LT predicate on the "approved_by_id" field.
-func ApprovedByIDLT(v uuid.UUID) predicate.PostMortem {
-	return predicate.PostMortem(sql.FieldLT(FieldApprovedByID, v))
-}
-
-// ApprovedByIDLTE applies the LTE predicate on the "approved_by_id" field.
-func ApprovedByIDLTE(v uuid.UUID) predicate.PostMortem {
-	return predicate.PostMortem(sql.FieldLTE(FieldApprovedByID, v))
-}
-
 // ApprovedByIDIsNil applies the IsNil predicate on the "approved_by_id" field.
 func ApprovedByIDIsNil() predicate.PostMortem {
 	return predicate.PostMortem(sql.FieldIsNull(FieldApprovedByID))
@@ -963,6 +874,75 @@ func UpdatedAtLT(v time.Time) predicate.PostMortem {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.PostMortem {
 	return predicate.PostMortem(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// HasIncident applies the HasEdge predicate on the "incident" edge.
+func HasIncident() predicate.PostMortem {
+	return predicate.PostMortem(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, IncidentTable, IncidentColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasIncidentWith applies the HasEdge predicate on the "incident" edge with a given conditions (other predicates).
+func HasIncidentWith(preds ...predicate.Incident) predicate.PostMortem {
+	return predicate.PostMortem(func(s *sql.Selector) {
+		step := newIncidentStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasApprovedBy applies the HasEdge predicate on the "approved_by" edge.
+func HasApprovedBy() predicate.PostMortem {
+	return predicate.PostMortem(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, ApprovedByTable, ApprovedByColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasApprovedByWith applies the HasEdge predicate on the "approved_by" edge with a given conditions (other predicates).
+func HasApprovedByWith(preds ...predicate.User) predicate.PostMortem {
+	return predicate.PostMortem(func(s *sql.Selector) {
+		step := newApprovedByStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasActionItems applies the HasEdge predicate on the "action_items" edge.
+func HasActionItems() predicate.PostMortem {
+	return predicate.PostMortem(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ActionItemsTable, ActionItemsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasActionItemsWith applies the HasEdge predicate on the "action_items" edge with a given conditions (other predicates).
+func HasActionItemsWith(preds ...predicate.ActionItem) predicate.PostMortem {
+	return predicate.PostMortem(func(s *sql.Selector) {
+		step := newActionItemsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

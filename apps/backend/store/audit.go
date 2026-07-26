@@ -151,20 +151,23 @@ const (
 )
 
 type AuditRecord struct {
-	ID        uuid.UUID      `json:"id"`
-	Timestamp time.Time      `json:"timestamp"`
-	Event     AuditEvent     `json:"event"`
-	UserID    *uuid.UUID     `json:"user_id,omitempty"`
-	Username  string         `json:"username"`
-	IP        string         `json:"ip"`
-	UserAgent string         `json:"user_agent"`
-	Success   bool           `json:"success"`
-	Details   map[string]any `json:"details,omitempty"`
-	RequestID string         `json:"request_id,omitempty"`
+	ID         uuid.UUID      `json:"id"`
+	Timestamp  time.Time      `json:"timestamp"`
+	Event      AuditEvent     `json:"event"`
+	UserID     *uuid.UUID     `json:"user_id,omitempty"`
+	Username   string         `json:"username"`
+	IP         string         `json:"ip"`
+	UserAgent  string         `json:"user_agent"`
+	Success    bool           `json:"success"`
+	Details    map[string]any `json:"details,omitempty"`
+	RequestID  string         `json:"request_id,omitempty"`
+	EntityType string         `json:"entity_type,omitempty"`
+	EntityID   *uuid.UUID     `json:"entity_id,omitempty"`
 }
 
 type AuditStore interface {
 	Log(event AuditEvent, userID *uuid.UUID, username, ip, userAgent string, success bool, details map[string]any)
+	LogEntity(event AuditEvent, userID *uuid.UUID, username, ip, userAgent string, success bool, details map[string]any, entityType string, entityID *uuid.UUID)
 	Query(filter map[string]any) ([]AuditRecord, error)
 	GetRecentEvents(limit int) ([]AuditRecord, error)
 }
@@ -186,15 +189,21 @@ func newPGAuditStore(client *ent.Client) AuditStore {
 }
 
 func (s *pgAuditStore) Log(event AuditEvent, userID *uuid.UUID, username, ip, userAgent string, success bool, details map[string]any) {
+	s.LogEntity(event, userID, username, ip, userAgent, success, details, "", nil)
+}
+
+func (s *pgAuditStore) LogEntity(event AuditEvent, userID *uuid.UUID, username, ip, userAgent string, success bool, details map[string]any, entityType string, entityID *uuid.UUID) {
 	record := AuditRecord{
-		Timestamp: time.Now().UTC(),
-		Event:     event,
-		UserID:    userID,
-		Username:  username,
-		IP:        ip,
-		UserAgent: userAgent,
-		Success:   success,
-		Details:   details,
+		Timestamp:  time.Now().UTC(),
+		Event:      event,
+		UserID:     userID,
+		Username:   username,
+		IP:         ip,
+		UserAgent:  userAgent,
+		Success:    success,
+		Details:    details,
+		EntityType: entityType,
+		EntityID:   entityID,
 	}
 
 	s.startConsumers()
@@ -224,6 +233,14 @@ func (s *pgAuditStore) persist(rec AuditRecord) {
 
 	if rec.Details != nil {
 		b.SetDetails(rec.Details)
+	}
+
+	if rec.EntityType != "" {
+		b.SetEntityType(rec.EntityType)
+	}
+
+	if rec.EntityID != nil {
+		b.SetEntityID(*rec.EntityID)
 	}
 
 	if _, err := b.Save(ctx); err != nil {
@@ -266,16 +283,18 @@ func pgAuditLogsToRecords(logs []*ent.AuditLog) []AuditRecord {
 	records := make([]AuditRecord, 0, len(logs))
 	for _, l := range logs {
 		records = append(records, AuditRecord{
-			ID:        l.ID,
-			Timestamp: l.Timestamp,
-			Event:     AuditEvent(l.Event),
-			UserID:    l.UserID,
-			Username:  l.Username,
-			IP:        l.IP,
-			UserAgent: l.UserAgent,
-			Success:   l.Success,
-			Details:   l.Details,
-			RequestID: l.RequestID,
+			ID:         l.ID,
+			Timestamp:  l.Timestamp,
+			Event:      AuditEvent(l.Event),
+			UserID:     l.UserID,
+			Username:   l.Username,
+			IP:         l.IP,
+			UserAgent:  l.UserAgent,
+			Success:    l.Success,
+			Details:    l.Details,
+			RequestID:  l.RequestID,
+			EntityType: l.EntityType,
+			EntityID:   l.EntityID,
 		})
 	}
 	return records
@@ -289,6 +308,16 @@ func (s *pgAuditStore) Query(filter map[string]any) ([]AuditRecord, error) {
 
 	if ev, ok := filter["event"].(string); ok {
 		query = query.Where(auditlog.Event(ev))
+	}
+
+	if et, ok := filter["entity_type"].(string); ok && et != "" {
+		query = query.Where(auditlog.EntityType(et))
+	}
+
+	if eid, ok := filter["entity_id"].(string); ok && eid != "" {
+		if u, err := uuid.Parse(eid); err == nil {
+			query = query.Where(auditlog.EntityID(u))
+		}
 	}
 
 	limit, _ := extractLimitSkip(filter, 500)

@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/agentmemory"
+	"alga/ent/agenttoken"
 	"context"
 	"errors"
 	"fmt"
@@ -28,13 +29,13 @@ func (_c *AgentMemoryCreate) SetContent(v string) *AgentMemoryCreate {
 }
 
 // SetMemoryType sets the "memory_type" field.
-func (_c *AgentMemoryCreate) SetMemoryType(v string) *AgentMemoryCreate {
+func (_c *AgentMemoryCreate) SetMemoryType(v agentmemory.MemoryType) *AgentMemoryCreate {
 	_c.mutation.SetMemoryType(v)
 	return _c
 }
 
 // SetNillableMemoryType sets the "memory_type" field if the given value is not nil.
-func (_c *AgentMemoryCreate) SetNillableMemoryType(v *string) *AgentMemoryCreate {
+func (_c *AgentMemoryCreate) SetNillableMemoryType(v *agentmemory.MemoryType) *AgentMemoryCreate {
 	if v != nil {
 		_c.SetMemoryType(*v)
 	}
@@ -225,6 +226,11 @@ func (_c *AgentMemoryCreate) SetNillableID(v *uuid.UUID) *AgentMemoryCreate {
 	return _c
 }
 
+// SetAgent sets the "agent" edge to the AgentToken entity.
+func (_c *AgentMemoryCreate) SetAgent(v *AgentToken) *AgentMemoryCreate {
+	return _c.SetAgentID(v.ID)
+}
+
 // Mutation returns the AgentMemoryMutation object of the builder.
 func (_c *AgentMemoryCreate) Mutation() *AgentMemoryMutation {
 	return _c.mutation
@@ -311,6 +317,11 @@ func (_c *AgentMemoryCreate) check() error {
 	if _, ok := _c.mutation.MemoryType(); !ok {
 		return &ValidationError{Name: "memory_type", err: errors.New(`ent: missing required field "AgentMemory.memory_type"`)}
 	}
+	if v, ok := _c.mutation.MemoryType(); ok {
+		if err := agentmemory.MemoryTypeValidator(v); err != nil {
+			return &ValidationError{Name: "memory_type", err: fmt.Errorf(`ent: validator failed for field "AgentMemory.memory_type": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Hash(); !ok {
 		return &ValidationError{Name: "hash", err: errors.New(`ent: missing required field "AgentMemory.hash"`)}
 	}
@@ -319,8 +330,18 @@ func (_c *AgentMemoryCreate) check() error {
 			return &ValidationError{Name: "hash", err: fmt.Errorf(`ent: validator failed for field "AgentMemory.hash": %w`, err)}
 		}
 	}
+	if v, ok := _c.mutation.Confidence(); ok {
+		if err := agentmemory.ConfidenceValidator(v); err != nil {
+			return &ValidationError{Name: "confidence", err: fmt.Errorf(`ent: validator failed for field "AgentMemory.confidence": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.AccessCount(); !ok {
 		return &ValidationError{Name: "access_count", err: errors.New(`ent: missing required field "AgentMemory.access_count"`)}
+	}
+	if v, ok := _c.mutation.AccessCount(); ok {
+		if err := agentmemory.AccessCountValidator(v); err != nil {
+			return &ValidationError{Name: "access_count", err: fmt.Errorf(`ent: validator failed for field "AgentMemory.access_count": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "AgentMemory.created_at"`)}
@@ -368,7 +389,7 @@ func (_c *AgentMemoryCreate) createSpec() (*AgentMemory, *sqlgraph.CreateSpec) {
 		_node.Content = value
 	}
 	if value, ok := _c.mutation.MemoryType(); ok {
-		_spec.SetField(agentmemory.FieldMemoryType, field.TypeString, value)
+		_spec.SetField(agentmemory.FieldMemoryType, field.TypeEnum, value)
 		_node.MemoryType = value
 	}
 	if value, ok := _c.mutation.Hash(); ok {
@@ -378,10 +399,6 @@ func (_c *AgentMemoryCreate) createSpec() (*AgentMemory, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Embedding(); ok {
 		_spec.SetField(agentmemory.FieldEmbedding, field.TypeJSON, value)
 		_node.Embedding = value
-	}
-	if value, ok := _c.mutation.AgentID(); ok {
-		_spec.SetField(agentmemory.FieldAgentID, field.TypeUUID, value)
-		_node.AgentID = &value
 	}
 	if value, ok := _c.mutation.AgentName(); ok {
 		_spec.SetField(agentmemory.FieldAgentName, field.TypeString, value)
@@ -430,6 +447,23 @@ func (_c *AgentMemoryCreate) createSpec() (*AgentMemory, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(agentmemory.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if nodes := _c.mutation.AgentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   agentmemory.AgentTable,
+			Columns: []string{agentmemory.AgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agenttoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.AgentID = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

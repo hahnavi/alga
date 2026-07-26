@@ -61,11 +61,6 @@ func Name(v string) predicate.AgentToken {
 	return predicate.AgentToken(sql.FieldEQ(FieldName, v))
 }
 
-// AgentType applies equality check predicate on the "agent_type" field. It's identical to AgentTypeEQ.
-func AgentType(v string) predicate.AgentToken {
-	return predicate.AgentToken(sql.FieldEQ(FieldAgentType, v))
-}
-
 // TokenHash applies equality check predicate on the "token_hash" field. It's identical to TokenHashEQ.
 func TokenHash(v string) predicate.AgentToken {
 	return predicate.AgentToken(sql.FieldEQ(FieldTokenHash, v))
@@ -177,68 +172,23 @@ func NameContainsFold(v string) predicate.AgentToken {
 }
 
 // AgentTypeEQ applies the EQ predicate on the "agent_type" field.
-func AgentTypeEQ(v string) predicate.AgentToken {
+func AgentTypeEQ(v AgentType) predicate.AgentToken {
 	return predicate.AgentToken(sql.FieldEQ(FieldAgentType, v))
 }
 
 // AgentTypeNEQ applies the NEQ predicate on the "agent_type" field.
-func AgentTypeNEQ(v string) predicate.AgentToken {
+func AgentTypeNEQ(v AgentType) predicate.AgentToken {
 	return predicate.AgentToken(sql.FieldNEQ(FieldAgentType, v))
 }
 
 // AgentTypeIn applies the In predicate on the "agent_type" field.
-func AgentTypeIn(vs ...string) predicate.AgentToken {
+func AgentTypeIn(vs ...AgentType) predicate.AgentToken {
 	return predicate.AgentToken(sql.FieldIn(FieldAgentType, vs...))
 }
 
 // AgentTypeNotIn applies the NotIn predicate on the "agent_type" field.
-func AgentTypeNotIn(vs ...string) predicate.AgentToken {
+func AgentTypeNotIn(vs ...AgentType) predicate.AgentToken {
 	return predicate.AgentToken(sql.FieldNotIn(FieldAgentType, vs...))
-}
-
-// AgentTypeGT applies the GT predicate on the "agent_type" field.
-func AgentTypeGT(v string) predicate.AgentToken {
-	return predicate.AgentToken(sql.FieldGT(FieldAgentType, v))
-}
-
-// AgentTypeGTE applies the GTE predicate on the "agent_type" field.
-func AgentTypeGTE(v string) predicate.AgentToken {
-	return predicate.AgentToken(sql.FieldGTE(FieldAgentType, v))
-}
-
-// AgentTypeLT applies the LT predicate on the "agent_type" field.
-func AgentTypeLT(v string) predicate.AgentToken {
-	return predicate.AgentToken(sql.FieldLT(FieldAgentType, v))
-}
-
-// AgentTypeLTE applies the LTE predicate on the "agent_type" field.
-func AgentTypeLTE(v string) predicate.AgentToken {
-	return predicate.AgentToken(sql.FieldLTE(FieldAgentType, v))
-}
-
-// AgentTypeContains applies the Contains predicate on the "agent_type" field.
-func AgentTypeContains(v string) predicate.AgentToken {
-	return predicate.AgentToken(sql.FieldContains(FieldAgentType, v))
-}
-
-// AgentTypeHasPrefix applies the HasPrefix predicate on the "agent_type" field.
-func AgentTypeHasPrefix(v string) predicate.AgentToken {
-	return predicate.AgentToken(sql.FieldHasPrefix(FieldAgentType, v))
-}
-
-// AgentTypeHasSuffix applies the HasSuffix predicate on the "agent_type" field.
-func AgentTypeHasSuffix(v string) predicate.AgentToken {
-	return predicate.AgentToken(sql.FieldHasSuffix(FieldAgentType, v))
-}
-
-// AgentTypeEqualFold applies the EqualFold predicate on the "agent_type" field.
-func AgentTypeEqualFold(v string) predicate.AgentToken {
-	return predicate.AgentToken(sql.FieldEqualFold(FieldAgentType, v))
-}
-
-// AgentTypeContainsFold applies the ContainsFold predicate on the "agent_type" field.
-func AgentTypeContainsFold(v string) predicate.AgentToken {
-	return predicate.AgentToken(sql.FieldContainsFold(FieldAgentType, v))
 }
 
 // TokenHashEQ applies the EQ predicate on the "token_hash" field.
@@ -684,6 +634,98 @@ func HasIcsRoles() predicate.AgentToken {
 func HasIcsRolesWith(preds ...predicate.ICSRoleAssignment) predicate.AgentToken {
 	return predicate.AgentToken(func(s *sql.Selector) {
 		step := newIcsRolesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasMemories applies the HasEdge predicate on the "memories" edge.
+func HasMemories() predicate.AgentToken {
+	return predicate.AgentToken(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, MemoriesTable, MemoriesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasMemoriesWith applies the HasEdge predicate on the "memories" edge with a given conditions (other predicates).
+func HasMemoriesWith(preds ...predicate.AgentMemory) predicate.AgentToken {
+	return predicate.AgentToken(func(s *sql.Selector) {
+		step := newMemoriesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasSentAsks applies the HasEdge predicate on the "sent_asks" edge.
+func HasSentAsks() predicate.AgentToken {
+	return predicate.AgentToken(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, SentAsksTable, SentAsksColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasSentAsksWith applies the HasEdge predicate on the "sent_asks" edge with a given conditions (other predicates).
+func HasSentAsksWith(preds ...predicate.AgentAsk) predicate.AgentToken {
+	return predicate.AgentToken(func(s *sql.Selector) {
+		step := newSentAsksStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasReceivedAsks applies the HasEdge predicate on the "received_asks" edge.
+func HasReceivedAsks() predicate.AgentToken {
+	return predicate.AgentToken(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ReceivedAsksTable, ReceivedAsksColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasReceivedAsksWith applies the HasEdge predicate on the "received_asks" edge with a given conditions (other predicates).
+func HasReceivedAsksWith(preds ...predicate.AgentAsk) predicate.AgentToken {
+	return predicate.AgentToken(func(s *sql.Selector) {
+		step := newReceivedAsksStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasRepliedAsks applies the HasEdge predicate on the "replied_asks" edge.
+func HasRepliedAsks() predicate.AgentToken {
+	return predicate.AgentToken(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, RepliedAsksTable, RepliedAsksColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasRepliedAsksWith applies the HasEdge predicate on the "replied_asks" edge with a given conditions (other predicates).
+func HasRepliedAsksWith(preds ...predicate.AgentAsk) predicate.AgentToken {
+	return predicate.AgentToken(func(s *sql.Selector) {
+		step := newRepliedAsksStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

@@ -5,6 +5,7 @@ package ent
 import (
 	"alga/ent/coordinationtask"
 	"alga/ent/incident"
+	"alga/ent/incidentinvestigation"
 	"alga/ent/predicate"
 	"context"
 	"errors"
@@ -71,13 +72,13 @@ func (_u *CoordinationTaskUpdate) ClearParentTaskID() *CoordinationTaskUpdate {
 }
 
 // SetKind sets the "kind" field.
-func (_u *CoordinationTaskUpdate) SetKind(v string) *CoordinationTaskUpdate {
+func (_u *CoordinationTaskUpdate) SetKind(v coordinationtask.Kind) *CoordinationTaskUpdate {
 	_u.mutation.SetKind(v)
 	return _u
 }
 
 // SetNillableKind sets the "kind" field if the given value is not nil.
-func (_u *CoordinationTaskUpdate) SetNillableKind(v *string) *CoordinationTaskUpdate {
+func (_u *CoordinationTaskUpdate) SetNillableKind(v *coordinationtask.Kind) *CoordinationTaskUpdate {
 	if v != nil {
 		_u.SetKind(*v)
 	}
@@ -85,13 +86,13 @@ func (_u *CoordinationTaskUpdate) SetNillableKind(v *string) *CoordinationTaskUp
 }
 
 // SetAssigneeRole sets the "assignee_role" field.
-func (_u *CoordinationTaskUpdate) SetAssigneeRole(v string) *CoordinationTaskUpdate {
+func (_u *CoordinationTaskUpdate) SetAssigneeRole(v coordinationtask.AssigneeRole) *CoordinationTaskUpdate {
 	_u.mutation.SetAssigneeRole(v)
 	return _u
 }
 
 // SetNillableAssigneeRole sets the "assignee_role" field if the given value is not nil.
-func (_u *CoordinationTaskUpdate) SetNillableAssigneeRole(v *string) *CoordinationTaskUpdate {
+func (_u *CoordinationTaskUpdate) SetNillableAssigneeRole(v *coordinationtask.AssigneeRole) *CoordinationTaskUpdate {
 	if v != nil {
 		_u.SetAssigneeRole(*v)
 	}
@@ -203,13 +204,13 @@ func (_u *CoordinationTaskUpdate) ClearLinkedInvestigationID() *CoordinationTask
 }
 
 // SetStatus sets the "status" field.
-func (_u *CoordinationTaskUpdate) SetStatus(v string) *CoordinationTaskUpdate {
+func (_u *CoordinationTaskUpdate) SetStatus(v coordinationtask.Status) *CoordinationTaskUpdate {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *CoordinationTaskUpdate) SetNillableStatus(v *string) *CoordinationTaskUpdate {
+func (_u *CoordinationTaskUpdate) SetNillableStatus(v *coordinationtask.Status) *CoordinationTaskUpdate {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -423,6 +424,11 @@ func (_u *CoordinationTaskUpdate) SetParentTask(v *CoordinationTask) *Coordinati
 	return _u.SetParentTaskID(v.ID)
 }
 
+// SetLinkedInvestigation sets the "linked_investigation" edge to the IncidentInvestigation entity.
+func (_u *CoordinationTaskUpdate) SetLinkedInvestigation(v *IncidentInvestigation) *CoordinationTaskUpdate {
+	return _u.SetLinkedInvestigationID(v.ID)
+}
+
 // Mutation returns the CoordinationTaskMutation object of the builder.
 func (_u *CoordinationTaskUpdate) Mutation() *CoordinationTaskMutation {
 	return _u.mutation
@@ -458,6 +464,12 @@ func (_u *CoordinationTaskUpdate) RemoveChildTasks(v ...*CoordinationTask) *Coor
 // ClearParentTask clears the "parent_task" edge to the CoordinationTask entity.
 func (_u *CoordinationTaskUpdate) ClearParentTask() *CoordinationTaskUpdate {
 	_u.mutation.ClearParentTask()
+	return _u
+}
+
+// ClearLinkedInvestigation clears the "linked_investigation" edge to the IncidentInvestigation entity.
+func (_u *CoordinationTaskUpdate) ClearLinkedInvestigation() *CoordinationTaskUpdate {
+	_u.mutation.ClearLinkedInvestigation()
 	return _u
 }
 
@@ -499,9 +511,34 @@ func (_u *CoordinationTaskUpdate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *CoordinationTaskUpdate) check() error {
+	if v, ok := _u.mutation.Kind(); ok {
+		if err := coordinationtask.KindValidator(v); err != nil {
+			return &ValidationError{Name: "kind", err: fmt.Errorf(`ent: validator failed for field "CoordinationTask.kind": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.AssigneeRole(); ok {
+		if err := coordinationtask.AssigneeRoleValidator(v); err != nil {
+			return &ValidationError{Name: "assignee_role", err: fmt.Errorf(`ent: validator failed for field "CoordinationTask.assignee_role": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Goal(); ok {
 		if err := coordinationtask.GoalValidator(v); err != nil {
 			return &ValidationError{Name: "goal", err: fmt.Errorf(`ent: validator failed for field "CoordinationTask.goal": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := coordinationtask.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "CoordinationTask.status": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Priority(); ok {
+		if err := coordinationtask.PriorityValidator(v); err != nil {
+			return &ValidationError{Name: "priority", err: fmt.Errorf(`ent: validator failed for field "CoordinationTask.priority": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.DispatchAttempts(); ok {
+		if err := coordinationtask.DispatchAttemptsValidator(v); err != nil {
+			return &ValidationError{Name: "dispatch_attempts", err: fmt.Errorf(`ent: validator failed for field "CoordinationTask.dispatch_attempts": %w`, err)}
 		}
 	}
 	return nil
@@ -520,10 +557,10 @@ func (_u *CoordinationTaskUpdate) sqlSave(ctx context.Context) (_node int, err e
 		}
 	}
 	if value, ok := _u.mutation.Kind(); ok {
-		_spec.SetField(coordinationtask.FieldKind, field.TypeString, value)
+		_spec.SetField(coordinationtask.FieldKind, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.AssigneeRole(); ok {
-		_spec.SetField(coordinationtask.FieldAssigneeRole, field.TypeString, value)
+		_spec.SetField(coordinationtask.FieldAssigneeRole, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.AssigneeAgentID(); ok {
 		_spec.SetField(coordinationtask.FieldAssigneeAgentID, field.TypeString, value)
@@ -555,14 +592,8 @@ func (_u *CoordinationTaskUpdate) sqlSave(ctx context.Context) (_node int, err e
 	if _u.mutation.ResultSchemaCleared() {
 		_spec.ClearField(coordinationtask.FieldResultSchema, field.TypeJSON)
 	}
-	if value, ok := _u.mutation.LinkedInvestigationID(); ok {
-		_spec.SetField(coordinationtask.FieldLinkedInvestigationID, field.TypeUUID, value)
-	}
-	if _u.mutation.LinkedInvestigationIDCleared() {
-		_spec.ClearField(coordinationtask.FieldLinkedInvestigationID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(coordinationtask.FieldStatus, field.TypeString, value)
+		_spec.SetField(coordinationtask.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Priority(); ok {
 		_spec.SetField(coordinationtask.FieldPriority, field.TypeInt, value)
@@ -721,6 +752,35 @@ func (_u *CoordinationTaskUpdate) sqlSave(ctx context.Context) (_node int, err e
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.LinkedInvestigationCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   coordinationtask.LinkedInvestigationTable,
+			Columns: []string{coordinationtask.LinkedInvestigationColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incidentinvestigation.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.LinkedInvestigationIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   coordinationtask.LinkedInvestigationTable,
+			Columns: []string{coordinationtask.LinkedInvestigationColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incidentinvestigation.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{coordinationtask.Label}
@@ -782,13 +842,13 @@ func (_u *CoordinationTaskUpdateOne) ClearParentTaskID() *CoordinationTaskUpdate
 }
 
 // SetKind sets the "kind" field.
-func (_u *CoordinationTaskUpdateOne) SetKind(v string) *CoordinationTaskUpdateOne {
+func (_u *CoordinationTaskUpdateOne) SetKind(v coordinationtask.Kind) *CoordinationTaskUpdateOne {
 	_u.mutation.SetKind(v)
 	return _u
 }
 
 // SetNillableKind sets the "kind" field if the given value is not nil.
-func (_u *CoordinationTaskUpdateOne) SetNillableKind(v *string) *CoordinationTaskUpdateOne {
+func (_u *CoordinationTaskUpdateOne) SetNillableKind(v *coordinationtask.Kind) *CoordinationTaskUpdateOne {
 	if v != nil {
 		_u.SetKind(*v)
 	}
@@ -796,13 +856,13 @@ func (_u *CoordinationTaskUpdateOne) SetNillableKind(v *string) *CoordinationTas
 }
 
 // SetAssigneeRole sets the "assignee_role" field.
-func (_u *CoordinationTaskUpdateOne) SetAssigneeRole(v string) *CoordinationTaskUpdateOne {
+func (_u *CoordinationTaskUpdateOne) SetAssigneeRole(v coordinationtask.AssigneeRole) *CoordinationTaskUpdateOne {
 	_u.mutation.SetAssigneeRole(v)
 	return _u
 }
 
 // SetNillableAssigneeRole sets the "assignee_role" field if the given value is not nil.
-func (_u *CoordinationTaskUpdateOne) SetNillableAssigneeRole(v *string) *CoordinationTaskUpdateOne {
+func (_u *CoordinationTaskUpdateOne) SetNillableAssigneeRole(v *coordinationtask.AssigneeRole) *CoordinationTaskUpdateOne {
 	if v != nil {
 		_u.SetAssigneeRole(*v)
 	}
@@ -914,13 +974,13 @@ func (_u *CoordinationTaskUpdateOne) ClearLinkedInvestigationID() *CoordinationT
 }
 
 // SetStatus sets the "status" field.
-func (_u *CoordinationTaskUpdateOne) SetStatus(v string) *CoordinationTaskUpdateOne {
+func (_u *CoordinationTaskUpdateOne) SetStatus(v coordinationtask.Status) *CoordinationTaskUpdateOne {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *CoordinationTaskUpdateOne) SetNillableStatus(v *string) *CoordinationTaskUpdateOne {
+func (_u *CoordinationTaskUpdateOne) SetNillableStatus(v *coordinationtask.Status) *CoordinationTaskUpdateOne {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -1134,6 +1194,11 @@ func (_u *CoordinationTaskUpdateOne) SetParentTask(v *CoordinationTask) *Coordin
 	return _u.SetParentTaskID(v.ID)
 }
 
+// SetLinkedInvestigation sets the "linked_investigation" edge to the IncidentInvestigation entity.
+func (_u *CoordinationTaskUpdateOne) SetLinkedInvestigation(v *IncidentInvestigation) *CoordinationTaskUpdateOne {
+	return _u.SetLinkedInvestigationID(v.ID)
+}
+
 // Mutation returns the CoordinationTaskMutation object of the builder.
 func (_u *CoordinationTaskUpdateOne) Mutation() *CoordinationTaskMutation {
 	return _u.mutation
@@ -1169,6 +1234,12 @@ func (_u *CoordinationTaskUpdateOne) RemoveChildTasks(v ...*CoordinationTask) *C
 // ClearParentTask clears the "parent_task" edge to the CoordinationTask entity.
 func (_u *CoordinationTaskUpdateOne) ClearParentTask() *CoordinationTaskUpdateOne {
 	_u.mutation.ClearParentTask()
+	return _u
+}
+
+// ClearLinkedInvestigation clears the "linked_investigation" edge to the IncidentInvestigation entity.
+func (_u *CoordinationTaskUpdateOne) ClearLinkedInvestigation() *CoordinationTaskUpdateOne {
+	_u.mutation.ClearLinkedInvestigation()
 	return _u
 }
 
@@ -1223,9 +1294,34 @@ func (_u *CoordinationTaskUpdateOne) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *CoordinationTaskUpdateOne) check() error {
+	if v, ok := _u.mutation.Kind(); ok {
+		if err := coordinationtask.KindValidator(v); err != nil {
+			return &ValidationError{Name: "kind", err: fmt.Errorf(`ent: validator failed for field "CoordinationTask.kind": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.AssigneeRole(); ok {
+		if err := coordinationtask.AssigneeRoleValidator(v); err != nil {
+			return &ValidationError{Name: "assignee_role", err: fmt.Errorf(`ent: validator failed for field "CoordinationTask.assignee_role": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Goal(); ok {
 		if err := coordinationtask.GoalValidator(v); err != nil {
 			return &ValidationError{Name: "goal", err: fmt.Errorf(`ent: validator failed for field "CoordinationTask.goal": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := coordinationtask.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "CoordinationTask.status": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Priority(); ok {
+		if err := coordinationtask.PriorityValidator(v); err != nil {
+			return &ValidationError{Name: "priority", err: fmt.Errorf(`ent: validator failed for field "CoordinationTask.priority": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.DispatchAttempts(); ok {
+		if err := coordinationtask.DispatchAttemptsValidator(v); err != nil {
+			return &ValidationError{Name: "dispatch_attempts", err: fmt.Errorf(`ent: validator failed for field "CoordinationTask.dispatch_attempts": %w`, err)}
 		}
 	}
 	return nil
@@ -1261,10 +1357,10 @@ func (_u *CoordinationTaskUpdateOne) sqlSave(ctx context.Context) (_node *Coordi
 		}
 	}
 	if value, ok := _u.mutation.Kind(); ok {
-		_spec.SetField(coordinationtask.FieldKind, field.TypeString, value)
+		_spec.SetField(coordinationtask.FieldKind, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.AssigneeRole(); ok {
-		_spec.SetField(coordinationtask.FieldAssigneeRole, field.TypeString, value)
+		_spec.SetField(coordinationtask.FieldAssigneeRole, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.AssigneeAgentID(); ok {
 		_spec.SetField(coordinationtask.FieldAssigneeAgentID, field.TypeString, value)
@@ -1296,14 +1392,8 @@ func (_u *CoordinationTaskUpdateOne) sqlSave(ctx context.Context) (_node *Coordi
 	if _u.mutation.ResultSchemaCleared() {
 		_spec.ClearField(coordinationtask.FieldResultSchema, field.TypeJSON)
 	}
-	if value, ok := _u.mutation.LinkedInvestigationID(); ok {
-		_spec.SetField(coordinationtask.FieldLinkedInvestigationID, field.TypeUUID, value)
-	}
-	if _u.mutation.LinkedInvestigationIDCleared() {
-		_spec.ClearField(coordinationtask.FieldLinkedInvestigationID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(coordinationtask.FieldStatus, field.TypeString, value)
+		_spec.SetField(coordinationtask.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Priority(); ok {
 		_spec.SetField(coordinationtask.FieldPriority, field.TypeInt, value)
@@ -1455,6 +1545,35 @@ func (_u *CoordinationTaskUpdateOne) sqlSave(ctx context.Context) (_node *Coordi
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(coordinationtask.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.LinkedInvestigationCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   coordinationtask.LinkedInvestigationTable,
+			Columns: []string{coordinationtask.LinkedInvestigationColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incidentinvestigation.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.LinkedInvestigationIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   coordinationtask.LinkedInvestigationTable,
+			Columns: []string{coordinationtask.LinkedInvestigationColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incidentinvestigation.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

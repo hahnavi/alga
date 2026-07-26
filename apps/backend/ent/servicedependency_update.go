@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/predicate"
+	"alga/ent/service"
 	"alga/ent/servicedependency"
 	"context"
 	"errors"
@@ -58,13 +59,13 @@ func (_u *ServiceDependencyUpdate) SetNillableDependentOnServiceID(v *uuid.UUID)
 }
 
 // SetDependencyType sets the "dependency_type" field.
-func (_u *ServiceDependencyUpdate) SetDependencyType(v string) *ServiceDependencyUpdate {
+func (_u *ServiceDependencyUpdate) SetDependencyType(v servicedependency.DependencyType) *ServiceDependencyUpdate {
 	_u.mutation.SetDependencyType(v)
 	return _u
 }
 
 // SetNillableDependencyType sets the "dependency_type" field if the given value is not nil.
-func (_u *ServiceDependencyUpdate) SetNillableDependencyType(v *string) *ServiceDependencyUpdate {
+func (_u *ServiceDependencyUpdate) SetNillableDependencyType(v *servicedependency.DependencyType) *ServiceDependencyUpdate {
 	if v != nil {
 		_u.SetDependencyType(*v)
 	}
@@ -85,9 +86,31 @@ func (_u *ServiceDependencyUpdate) SetNillableCreatedAt(v *time.Time) *ServiceDe
 	return _u
 }
 
+// SetService sets the "service" edge to the Service entity.
+func (_u *ServiceDependencyUpdate) SetService(v *Service) *ServiceDependencyUpdate {
+	return _u.SetServiceID(v.ID)
+}
+
+// SetDependentOnService sets the "dependent_on_service" edge to the Service entity.
+func (_u *ServiceDependencyUpdate) SetDependentOnService(v *Service) *ServiceDependencyUpdate {
+	return _u.SetDependentOnServiceID(v.ID)
+}
+
 // Mutation returns the ServiceDependencyMutation object of the builder.
 func (_u *ServiceDependencyUpdate) Mutation() *ServiceDependencyMutation {
 	return _u.mutation
+}
+
+// ClearService clears the "service" edge to the Service entity.
+func (_u *ServiceDependencyUpdate) ClearService() *ServiceDependencyUpdate {
+	_u.mutation.ClearService()
+	return _u
+}
+
+// ClearDependentOnService clears the "dependent_on_service" edge to the Service entity.
+func (_u *ServiceDependencyUpdate) ClearDependentOnService() *ServiceDependencyUpdate {
+	_u.mutation.ClearDependentOnService()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -117,7 +140,26 @@ func (_u *ServiceDependencyUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (_u *ServiceDependencyUpdate) check() error {
+	if v, ok := _u.mutation.DependencyType(); ok {
+		if err := servicedependency.DependencyTypeValidator(v); err != nil {
+			return &ValidationError{Name: "dependency_type", err: fmt.Errorf(`ent: validator failed for field "ServiceDependency.dependency_type": %w`, err)}
+		}
+	}
+	if _u.mutation.ServiceCleared() && len(_u.mutation.ServiceIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "ServiceDependency.service"`)
+	}
+	if _u.mutation.DependentOnServiceCleared() && len(_u.mutation.DependentOnServiceIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "ServiceDependency.dependent_on_service"`)
+	}
+	return nil
+}
+
 func (_u *ServiceDependencyUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(servicedependency.Table, servicedependency.Columns, sqlgraph.NewFieldSpec(servicedependency.FieldID, field.TypeUUID))
 	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
@@ -126,17 +168,69 @@ func (_u *ServiceDependencyUpdate) sqlSave(ctx context.Context) (_node int, err 
 			}
 		}
 	}
-	if value, ok := _u.mutation.ServiceID(); ok {
-		_spec.SetField(servicedependency.FieldServiceID, field.TypeUUID, value)
-	}
-	if value, ok := _u.mutation.DependentOnServiceID(); ok {
-		_spec.SetField(servicedependency.FieldDependentOnServiceID, field.TypeUUID, value)
-	}
 	if value, ok := _u.mutation.DependencyType(); ok {
-		_spec.SetField(servicedependency.FieldDependencyType, field.TypeString, value)
+		_spec.SetField(servicedependency.FieldDependencyType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.CreatedAt(); ok {
 		_spec.SetField(servicedependency.FieldCreatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.ServiceCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   servicedependency.ServiceTable,
+			Columns: []string{servicedependency.ServiceColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ServiceIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   servicedependency.ServiceTable,
+			Columns: []string{servicedependency.ServiceColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.DependentOnServiceCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   servicedependency.DependentOnServiceTable,
+			Columns: []string{servicedependency.DependentOnServiceColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.DependentOnServiceIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   servicedependency.DependentOnServiceTable,
+			Columns: []string{servicedependency.DependentOnServiceColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -187,13 +281,13 @@ func (_u *ServiceDependencyUpdateOne) SetNillableDependentOnServiceID(v *uuid.UU
 }
 
 // SetDependencyType sets the "dependency_type" field.
-func (_u *ServiceDependencyUpdateOne) SetDependencyType(v string) *ServiceDependencyUpdateOne {
+func (_u *ServiceDependencyUpdateOne) SetDependencyType(v servicedependency.DependencyType) *ServiceDependencyUpdateOne {
 	_u.mutation.SetDependencyType(v)
 	return _u
 }
 
 // SetNillableDependencyType sets the "dependency_type" field if the given value is not nil.
-func (_u *ServiceDependencyUpdateOne) SetNillableDependencyType(v *string) *ServiceDependencyUpdateOne {
+func (_u *ServiceDependencyUpdateOne) SetNillableDependencyType(v *servicedependency.DependencyType) *ServiceDependencyUpdateOne {
 	if v != nil {
 		_u.SetDependencyType(*v)
 	}
@@ -214,9 +308,31 @@ func (_u *ServiceDependencyUpdateOne) SetNillableCreatedAt(v *time.Time) *Servic
 	return _u
 }
 
+// SetService sets the "service" edge to the Service entity.
+func (_u *ServiceDependencyUpdateOne) SetService(v *Service) *ServiceDependencyUpdateOne {
+	return _u.SetServiceID(v.ID)
+}
+
+// SetDependentOnService sets the "dependent_on_service" edge to the Service entity.
+func (_u *ServiceDependencyUpdateOne) SetDependentOnService(v *Service) *ServiceDependencyUpdateOne {
+	return _u.SetDependentOnServiceID(v.ID)
+}
+
 // Mutation returns the ServiceDependencyMutation object of the builder.
 func (_u *ServiceDependencyUpdateOne) Mutation() *ServiceDependencyMutation {
 	return _u.mutation
+}
+
+// ClearService clears the "service" edge to the Service entity.
+func (_u *ServiceDependencyUpdateOne) ClearService() *ServiceDependencyUpdateOne {
+	_u.mutation.ClearService()
+	return _u
+}
+
+// ClearDependentOnService clears the "dependent_on_service" edge to the Service entity.
+func (_u *ServiceDependencyUpdateOne) ClearDependentOnService() *ServiceDependencyUpdateOne {
+	_u.mutation.ClearDependentOnService()
+	return _u
 }
 
 // Where appends a list predicates to the ServiceDependencyUpdate builder.
@@ -259,7 +375,26 @@ func (_u *ServiceDependencyUpdateOne) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (_u *ServiceDependencyUpdateOne) check() error {
+	if v, ok := _u.mutation.DependencyType(); ok {
+		if err := servicedependency.DependencyTypeValidator(v); err != nil {
+			return &ValidationError{Name: "dependency_type", err: fmt.Errorf(`ent: validator failed for field "ServiceDependency.dependency_type": %w`, err)}
+		}
+	}
+	if _u.mutation.ServiceCleared() && len(_u.mutation.ServiceIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "ServiceDependency.service"`)
+	}
+	if _u.mutation.DependentOnServiceCleared() && len(_u.mutation.DependentOnServiceIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "ServiceDependency.dependent_on_service"`)
+	}
+	return nil
+}
+
 func (_u *ServiceDependencyUpdateOne) sqlSave(ctx context.Context) (_node *ServiceDependency, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(servicedependency.Table, servicedependency.Columns, sqlgraph.NewFieldSpec(servicedependency.FieldID, field.TypeUUID))
 	id, ok := _u.mutation.ID()
 	if !ok {
@@ -285,17 +420,69 @@ func (_u *ServiceDependencyUpdateOne) sqlSave(ctx context.Context) (_node *Servi
 			}
 		}
 	}
-	if value, ok := _u.mutation.ServiceID(); ok {
-		_spec.SetField(servicedependency.FieldServiceID, field.TypeUUID, value)
-	}
-	if value, ok := _u.mutation.DependentOnServiceID(); ok {
-		_spec.SetField(servicedependency.FieldDependentOnServiceID, field.TypeUUID, value)
-	}
 	if value, ok := _u.mutation.DependencyType(); ok {
-		_spec.SetField(servicedependency.FieldDependencyType, field.TypeString, value)
+		_spec.SetField(servicedependency.FieldDependencyType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.CreatedAt(); ok {
 		_spec.SetField(servicedependency.FieldCreatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.ServiceCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   servicedependency.ServiceTable,
+			Columns: []string{servicedependency.ServiceColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ServiceIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   servicedependency.ServiceTable,
+			Columns: []string{servicedependency.ServiceColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.DependentOnServiceCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   servicedependency.DependentOnServiceTable,
+			Columns: []string{servicedependency.DependentOnServiceColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.DependentOnServiceIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   servicedependency.DependentOnServiceTable,
+			Columns: []string{servicedependency.DependentOnServiceColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &ServiceDependency{config: _u.config}
 	_spec.Assign = _node.assignValues

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -118,26 +119,6 @@ func ProviderIDIn(vs ...uuid.UUID) predicate.SharedSecret {
 // ProviderIDNotIn applies the NotIn predicate on the "provider_id" field.
 func ProviderIDNotIn(vs ...uuid.UUID) predicate.SharedSecret {
 	return predicate.SharedSecret(sql.FieldNotIn(FieldProviderID, vs...))
-}
-
-// ProviderIDGT applies the GT predicate on the "provider_id" field.
-func ProviderIDGT(v uuid.UUID) predicate.SharedSecret {
-	return predicate.SharedSecret(sql.FieldGT(FieldProviderID, v))
-}
-
-// ProviderIDGTE applies the GTE predicate on the "provider_id" field.
-func ProviderIDGTE(v uuid.UUID) predicate.SharedSecret {
-	return predicate.SharedSecret(sql.FieldGTE(FieldProviderID, v))
-}
-
-// ProviderIDLT applies the LT predicate on the "provider_id" field.
-func ProviderIDLT(v uuid.UUID) predicate.SharedSecret {
-	return predicate.SharedSecret(sql.FieldLT(FieldProviderID, v))
-}
-
-// ProviderIDLTE applies the LTE predicate on the "provider_id" field.
-func ProviderIDLTE(v uuid.UUID) predicate.SharedSecret {
-	return predicate.SharedSecret(sql.FieldLTE(FieldProviderID, v))
 }
 
 // NameEQ applies the EQ predicate on the "name" field.
@@ -563,6 +544,29 @@ func UpdatedAtLT(v time.Time) predicate.SharedSecret {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.SharedSecret {
 	return predicate.SharedSecret(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// HasProvider applies the HasEdge predicate on the "provider" edge.
+func HasProvider() predicate.SharedSecret {
+	return predicate.SharedSecret(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, ProviderTable, ProviderColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasProviderWith applies the HasEdge predicate on the "provider" edge with a given conditions (other predicates).
+func HasProviderWith(preds ...predicate.CredentialProvider) predicate.SharedSecret {
+	return predicate.SharedSecret(func(s *sql.Selector) {
+		step := newProviderStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

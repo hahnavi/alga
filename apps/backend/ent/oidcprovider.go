@@ -26,7 +26,7 @@ type OIDCProvider struct {
 	// ClientID holds the value of the "client_id" field.
 	ClientID string `json:"client_id,omitempty"`
 	// ClientSecretEncrypted holds the value of the "client_secret_encrypted" field.
-	ClientSecretEncrypted string `json:"client_secret_encrypted,omitempty"`
+	ClientSecretEncrypted string `json:"-"`
 	// Scopes holds the value of the "scopes" field.
 	Scopes []string `json:"scopes,omitempty"`
 	// Enabled holds the value of the "enabled" field.
@@ -34,8 +34,29 @@ type OIDCProvider struct {
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt    time.Time `json:"updated_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the OIDCProviderQuery when eager-loading is set.
+	Edges        OIDCProviderEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// OIDCProviderEdges holds the relations/edges for other nodes in the graph.
+type OIDCProviderEdges struct {
+	// OidcIdentities holds the value of the oidc_identities edge.
+	OidcIdentities []*OIDCIdentity `json:"oidc_identities,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// OidcIdentitiesOrErr returns the OidcIdentities value or an error if the edge
+// was not loaded in eager-loading.
+func (e OIDCProviderEdges) OidcIdentitiesOrErr() ([]*OIDCIdentity, error) {
+	if e.loadedTypes[0] {
+		return e.OidcIdentities, nil
+	}
+	return nil, &NotLoadedError{edge: "oidc_identities"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -137,6 +158,11 @@ func (_m *OIDCProvider) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
 }
 
+// QueryOidcIdentities queries the "oidc_identities" edge of the OIDCProvider entity.
+func (_m *OIDCProvider) QueryOidcIdentities() *OIDCIdentityQuery {
+	return NewOIDCProviderClient(_m.config).QueryOidcIdentities(_m)
+}
+
 // Update returns a builder for updating this OIDCProvider.
 // Note that you need to call OIDCProvider.Unwrap() before calling this method if this OIDCProvider
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -169,8 +195,7 @@ func (_m *OIDCProvider) String() string {
 	builder.WriteString("client_id=")
 	builder.WriteString(_m.ClientID)
 	builder.WriteString(", ")
-	builder.WriteString("client_secret_encrypted=")
-	builder.WriteString(_m.ClientSecretEncrypted)
+	builder.WriteString("client_secret_encrypted=<sensitive>")
 	builder.WriteString(", ")
 	builder.WriteString("scopes=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Scopes))

@@ -3,9 +3,11 @@
 package ent
 
 import (
+	"alga/ent/oidcidentity"
 	"alga/ent/oidcprovider"
 	"alga/ent/predicate"
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -19,10 +21,11 @@ import (
 // OIDCProviderQuery is the builder for querying OIDCProvider entities.
 type OIDCProviderQuery struct {
 	config
-	ctx        *QueryContext
-	order      []oidcprovider.OrderOption
-	inters     []Interceptor
-	predicates []predicate.OIDCProvider
+	ctx                *QueryContext
+	order              []oidcprovider.OrderOption
+	inters             []Interceptor
+	predicates         []predicate.OIDCProvider
+	withOidcIdentities *OIDCIdentityQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -57,6 +60,28 @@ func (_q *OIDCProviderQuery) Unique(unique bool) *OIDCProviderQuery {
 func (_q *OIDCProviderQuery) Order(o ...oidcprovider.OrderOption) *OIDCProviderQuery {
 	_q.order = append(_q.order, o...)
 	return _q
+}
+
+// QueryOidcIdentities chains the current query on the "oidc_identities" edge.
+func (_q *OIDCProviderQuery) QueryOidcIdentities() *OIDCIdentityQuery {
+	query := (&OIDCIdentityClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(oidcprovider.Table, oidcprovider.FieldID, selector),
+			sqlgraph.To(oidcidentity.Table, oidcidentity.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, oidcprovider.OidcIdentitiesTable, oidcprovider.OidcIdentitiesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first OIDCProvider entity from the query.
@@ -246,15 +271,27 @@ func (_q *OIDCProviderQuery) Clone() *OIDCProviderQuery {
 		return nil
 	}
 	return &OIDCProviderQuery{
-		config:     _q.config,
-		ctx:        _q.ctx.Clone(),
-		order:      append([]oidcprovider.OrderOption{}, _q.order...),
-		inters:     append([]Interceptor{}, _q.inters...),
-		predicates: append([]predicate.OIDCProvider{}, _q.predicates...),
+		config:             _q.config,
+		ctx:                _q.ctx.Clone(),
+		order:              append([]oidcprovider.OrderOption{}, _q.order...),
+		inters:             append([]Interceptor{}, _q.inters...),
+		predicates:         append([]predicate.OIDCProvider{}, _q.predicates...),
+		withOidcIdentities: _q.withOidcIdentities.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
+}
+
+// WithOidcIdentities tells the query-builder to eager-load the nodes that are connected to
+// the "oidc_identities" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *OIDCProviderQuery) WithOidcIdentities(opts ...func(*OIDCIdentityQuery)) *OIDCProviderQuery {
+	query := (&OIDCIdentityClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withOidcIdentities = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -333,8 +370,11 @@ func (_q *OIDCProviderQuery) prepareQuery(ctx context.Context) error {
 
 func (_q *OIDCProviderQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*OIDCProvider, error) {
 	var (
-		nodes = []*OIDCProvider{}
-		_spec = _q.querySpec()
+		nodes       = []*OIDCProvider{}
+		_spec       = _q.querySpec()
+		loadedTypes = [1]bool{
+			_q.withOidcIdentities != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*OIDCProvider).scanValues(nil, columns)
@@ -342,6 +382,7 @@ func (_q *OIDCProviderQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &OIDCProvider{config: _q.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -353,7 +394,45 @@ func (_q *OIDCProviderQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := _q.withOidcIdentities; query != nil {
+		if err := _q.loadOidcIdentities(ctx, query, nodes,
+			func(n *OIDCProvider) { n.Edges.OidcIdentities = []*OIDCIdentity{} },
+			func(n *OIDCProvider, e *OIDCIdentity) { n.Edges.OidcIdentities = append(n.Edges.OidcIdentities, e) }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (_q *OIDCProviderQuery) loadOidcIdentities(ctx context.Context, query *OIDCIdentityQuery, nodes []*OIDCProvider, init func(*OIDCProvider), assign func(*OIDCProvider, *OIDCIdentity)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*OIDCProvider)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(oidcidentity.FieldProviderID)
+	}
+	query.Where(predicate.OIDCIdentity(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(oidcprovider.OidcIdentitiesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ProviderID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "provider_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
 }
 
 func (_q *OIDCProviderQuery) sqlCount(ctx context.Context) (int, error) {

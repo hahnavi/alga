@@ -3,9 +3,15 @@
 package ent
 
 import (
+	"alga/ent/heartbeat"
+	"alga/ent/oncallschedule"
 	"alga/ent/predicate"
+	"alga/ent/service"
+	"alga/ent/statuspage"
 	"alga/ent/team"
+	"alga/ent/teammember"
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -19,10 +25,15 @@ import (
 // TeamQuery is the builder for querying Team entities.
 type TeamQuery struct {
 	config
-	ctx        *QueryContext
-	order      []team.OrderOption
-	inters     []Interceptor
-	predicates []predicate.Team
+	ctx                  *QueryContext
+	order                []team.OrderOption
+	inters               []Interceptor
+	predicates           []predicate.Team
+	withTeamMembers      *TeamMemberQuery
+	withOwnedServices    *ServiceQuery
+	withOwnedStatusPages *StatusPageQuery
+	withOnCallSchedule   *OnCallScheduleQuery
+	withHeartbeats       *HeartbeatQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -57,6 +68,116 @@ func (_q *TeamQuery) Unique(unique bool) *TeamQuery {
 func (_q *TeamQuery) Order(o ...team.OrderOption) *TeamQuery {
 	_q.order = append(_q.order, o...)
 	return _q
+}
+
+// QueryTeamMembers chains the current query on the "team_members" edge.
+func (_q *TeamQuery) QueryTeamMembers() *TeamMemberQuery {
+	query := (&TeamMemberClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(team.Table, team.FieldID, selector),
+			sqlgraph.To(teammember.Table, teammember.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, team.TeamMembersTable, team.TeamMembersColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryOwnedServices chains the current query on the "owned_services" edge.
+func (_q *TeamQuery) QueryOwnedServices() *ServiceQuery {
+	query := (&ServiceClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(team.Table, team.FieldID, selector),
+			sqlgraph.To(service.Table, service.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, team.OwnedServicesTable, team.OwnedServicesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryOwnedStatusPages chains the current query on the "owned_status_pages" edge.
+func (_q *TeamQuery) QueryOwnedStatusPages() *StatusPageQuery {
+	query := (&StatusPageClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(team.Table, team.FieldID, selector),
+			sqlgraph.To(statuspage.Table, statuspage.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, team.OwnedStatusPagesTable, team.OwnedStatusPagesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryOnCallSchedule chains the current query on the "on_call_schedule" edge.
+func (_q *TeamQuery) QueryOnCallSchedule() *OnCallScheduleQuery {
+	query := (&OnCallScheduleClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(team.Table, team.FieldID, selector),
+			sqlgraph.To(oncallschedule.Table, oncallschedule.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, team.OnCallScheduleTable, team.OnCallScheduleColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryHeartbeats chains the current query on the "heartbeats" edge.
+func (_q *TeamQuery) QueryHeartbeats() *HeartbeatQuery {
+	query := (&HeartbeatClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(team.Table, team.FieldID, selector),
+			sqlgraph.To(heartbeat.Table, heartbeat.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, team.HeartbeatsTable, team.HeartbeatsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first Team entity from the query.
@@ -246,15 +367,75 @@ func (_q *TeamQuery) Clone() *TeamQuery {
 		return nil
 	}
 	return &TeamQuery{
-		config:     _q.config,
-		ctx:        _q.ctx.Clone(),
-		order:      append([]team.OrderOption{}, _q.order...),
-		inters:     append([]Interceptor{}, _q.inters...),
-		predicates: append([]predicate.Team{}, _q.predicates...),
+		config:               _q.config,
+		ctx:                  _q.ctx.Clone(),
+		order:                append([]team.OrderOption{}, _q.order...),
+		inters:               append([]Interceptor{}, _q.inters...),
+		predicates:           append([]predicate.Team{}, _q.predicates...),
+		withTeamMembers:      _q.withTeamMembers.Clone(),
+		withOwnedServices:    _q.withOwnedServices.Clone(),
+		withOwnedStatusPages: _q.withOwnedStatusPages.Clone(),
+		withOnCallSchedule:   _q.withOnCallSchedule.Clone(),
+		withHeartbeats:       _q.withHeartbeats.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
+}
+
+// WithTeamMembers tells the query-builder to eager-load the nodes that are connected to
+// the "team_members" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *TeamQuery) WithTeamMembers(opts ...func(*TeamMemberQuery)) *TeamQuery {
+	query := (&TeamMemberClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withTeamMembers = query
+	return _q
+}
+
+// WithOwnedServices tells the query-builder to eager-load the nodes that are connected to
+// the "owned_services" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *TeamQuery) WithOwnedServices(opts ...func(*ServiceQuery)) *TeamQuery {
+	query := (&ServiceClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withOwnedServices = query
+	return _q
+}
+
+// WithOwnedStatusPages tells the query-builder to eager-load the nodes that are connected to
+// the "owned_status_pages" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *TeamQuery) WithOwnedStatusPages(opts ...func(*StatusPageQuery)) *TeamQuery {
+	query := (&StatusPageClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withOwnedStatusPages = query
+	return _q
+}
+
+// WithOnCallSchedule tells the query-builder to eager-load the nodes that are connected to
+// the "on_call_schedule" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *TeamQuery) WithOnCallSchedule(opts ...func(*OnCallScheduleQuery)) *TeamQuery {
+	query := (&OnCallScheduleClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withOnCallSchedule = query
+	return _q
+}
+
+// WithHeartbeats tells the query-builder to eager-load the nodes that are connected to
+// the "heartbeats" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *TeamQuery) WithHeartbeats(opts ...func(*HeartbeatQuery)) *TeamQuery {
+	query := (&HeartbeatClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withHeartbeats = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -333,8 +514,15 @@ func (_q *TeamQuery) prepareQuery(ctx context.Context) error {
 
 func (_q *TeamQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Team, error) {
 	var (
-		nodes = []*Team{}
-		_spec = _q.querySpec()
+		nodes       = []*Team{}
+		_spec       = _q.querySpec()
+		loadedTypes = [5]bool{
+			_q.withTeamMembers != nil,
+			_q.withOwnedServices != nil,
+			_q.withOwnedStatusPages != nil,
+			_q.withOnCallSchedule != nil,
+			_q.withHeartbeats != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Team).scanValues(nil, columns)
@@ -342,6 +530,7 @@ func (_q *TeamQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Team, e
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Team{config: _q.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -353,7 +542,205 @@ func (_q *TeamQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Team, e
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := _q.withTeamMembers; query != nil {
+		if err := _q.loadTeamMembers(ctx, query, nodes,
+			func(n *Team) { n.Edges.TeamMembers = []*TeamMember{} },
+			func(n *Team, e *TeamMember) { n.Edges.TeamMembers = append(n.Edges.TeamMembers, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withOwnedServices; query != nil {
+		if err := _q.loadOwnedServices(ctx, query, nodes,
+			func(n *Team) { n.Edges.OwnedServices = []*Service{} },
+			func(n *Team, e *Service) { n.Edges.OwnedServices = append(n.Edges.OwnedServices, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withOwnedStatusPages; query != nil {
+		if err := _q.loadOwnedStatusPages(ctx, query, nodes,
+			func(n *Team) { n.Edges.OwnedStatusPages = []*StatusPage{} },
+			func(n *Team, e *StatusPage) { n.Edges.OwnedStatusPages = append(n.Edges.OwnedStatusPages, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withOnCallSchedule; query != nil {
+		if err := _q.loadOnCallSchedule(ctx, query, nodes,
+			func(n *Team) { n.Edges.OnCallSchedule = []*OnCallSchedule{} },
+			func(n *Team, e *OnCallSchedule) { n.Edges.OnCallSchedule = append(n.Edges.OnCallSchedule, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withHeartbeats; query != nil {
+		if err := _q.loadHeartbeats(ctx, query, nodes,
+			func(n *Team) { n.Edges.Heartbeats = []*Heartbeat{} },
+			func(n *Team, e *Heartbeat) { n.Edges.Heartbeats = append(n.Edges.Heartbeats, e) }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (_q *TeamQuery) loadTeamMembers(ctx context.Context, query *TeamMemberQuery, nodes []*Team, init func(*Team), assign func(*Team, *TeamMember)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Team)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(teammember.FieldTeamID)
+	}
+	query.Where(predicate.TeamMember(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(team.TeamMembersColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.TeamID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "team_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *TeamQuery) loadOwnedServices(ctx context.Context, query *ServiceQuery, nodes []*Team, init func(*Team), assign func(*Team, *Service)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Team)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(service.FieldOwnerTeamID)
+	}
+	query.Where(predicate.Service(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(team.OwnedServicesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.OwnerTeamID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "owner_team_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "owner_team_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *TeamQuery) loadOwnedStatusPages(ctx context.Context, query *StatusPageQuery, nodes []*Team, init func(*Team), assign func(*Team, *StatusPage)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Team)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(statuspage.FieldOwnerTeamID)
+	}
+	query.Where(predicate.StatusPage(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(team.OwnedStatusPagesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.OwnerTeamID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "owner_team_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "owner_team_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *TeamQuery) loadOnCallSchedule(ctx context.Context, query *OnCallScheduleQuery, nodes []*Team, init func(*Team), assign func(*Team, *OnCallSchedule)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Team)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(oncallschedule.FieldTeamID)
+	}
+	query.Where(predicate.OnCallSchedule(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(team.OnCallScheduleColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.TeamID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "team_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "team_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *TeamQuery) loadHeartbeats(ctx context.Context, query *HeartbeatQuery, nodes []*Team, init func(*Team), assign func(*Team, *Heartbeat)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Team)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(heartbeat.FieldOwnerTeamID)
+	}
+	query.Where(predicate.Heartbeat(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(team.HeartbeatsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.OwnerTeamID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "owner_team_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "owner_team_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
 }
 
 func (_q *TeamQuery) sqlCount(ctx context.Context) (int, error) {

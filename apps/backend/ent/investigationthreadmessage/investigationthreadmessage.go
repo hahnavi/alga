@@ -15,8 +15,8 @@ const (
 	Label = "investigation_thread_message"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
-	// FieldThreadUUID holds the string denoting the thread_uuid field in the database.
-	FieldThreadUUID = "thread_uuid"
+	// FieldThreadID holds the string denoting the thread_id field in the database.
+	FieldThreadID = "thread_id"
 	// FieldType holds the string denoting the type field in the database.
 	FieldType = "type"
 	// FieldSource holds the string denoting the source field in the database.
@@ -55,13 +55,13 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "investigationthread" package.
 	ThreadInverseTable = "investigation_threads"
 	// ThreadColumn is the table column denoting the thread relation/edge.
-	ThreadColumn = "thread_uuid"
+	ThreadColumn = "thread_id"
 )
 
 // Columns holds all SQL columns for investigationthreadmessage fields.
 var Columns = []string{
 	FieldID,
-	FieldThreadUUID,
+	FieldThreadID,
 	FieldType,
 	FieldSource,
 	FieldMessage,
@@ -129,9 +129,9 @@ func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
 }
 
-// ByThreadUUID orders the results by the thread_uuid field.
-func ByThreadUUID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldThreadUUID, opts...).ToFunc()
+// ByThreadID orders the results by the thread_id field.
+func ByThreadID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldThreadID, opts...).ToFunc()
 }
 
 // ByType orders the results by the type field.

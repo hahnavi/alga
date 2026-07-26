@@ -207,11 +207,11 @@ func (s *pgKnowledgeStore) Create(ctx context.Context, note *KnowledgeNote) (*Kn
 	}
 
 	b := s.client.KnowledgeNote.Create().
-		SetKind(note.Kind).
+		SetKind(knowledgenote.Kind(note.Kind)).
 		SetTitle(note.Title).
 		SetBodyMarkdown(note.BodyMarkdown).
 		SetTags(note.Tags).
-		SetAuthorType(note.AuthorType).
+		SetAuthorType(knowledgenote.AuthorType(note.AuthorType)).
 		SetCreatedAt(now).
 		SetUpdatedAt(now)
 
@@ -259,7 +259,7 @@ func (s *pgKnowledgeStore) Update(ctx context.Context, id string, patch *Knowled
 		if !IsValidKnowledgeKind(patch.Kind) {
 			return nil, fmt.Errorf("invalid kind %q", patch.Kind)
 		}
-		b.SetKind(strings.ToLower(strings.TrimSpace(patch.Kind)))
+		b.SetKind(knowledgenote.Kind(strings.ToLower(strings.TrimSpace(patch.Kind))))
 	}
 	if strings.TrimSpace(patch.Title) != "" {
 		b.SetTitle(strings.TrimSpace(patch.Title))
@@ -333,10 +333,10 @@ func (s *pgKnowledgeStore) List(ctx context.Context, q KnowledgeQuery) ([]Knowle
 	query := s.client.KnowledgeNote.Query()
 
 	if kind := strings.TrimSpace(strings.ToLower(q.Kind)); kind != "" {
-		query = query.Where(knowledgenote.Kind(kind))
+		query = query.Where(knowledgenote.KindEQ(knowledgenote.Kind(kind)))
 	}
 	if at := strings.TrimSpace(strings.ToLower(q.AuthorType)); at != "" {
-		query = query.Where(knowledgenote.AuthorType(at))
+		query = query.Where(knowledgenote.AuthorTypeEQ(knowledgenote.AuthorType(at)))
 	}
 	if text := strings.TrimSpace(q.Text); text != "" {
 		query = query.Where(knowledgenote.Or(
@@ -681,13 +681,13 @@ func pgKnowledgeToRecord(n *ent.KnowledgeNote) *KnowledgeNote {
 
 	return &KnowledgeNote{
 		ID:                    n.ID,
-		Kind:                  n.Kind,
+		Kind:                  string(n.Kind),
 		Title:                 n.Title,
 		BodyMarkdown:          n.BodyMarkdown,
 		Tags:                  tags,
 		Selectors:             selectors,
 		AuthorID:              authorID,
-		AuthorType:            n.AuthorType,
+		AuthorType:            string(n.AuthorType),
 		AuthorName:            n.AuthorName,
 		SourceInvestigationID: n.SourceInvestigationID,
 		Confidence:            n.Confidence,

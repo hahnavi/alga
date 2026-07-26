@@ -5,6 +5,8 @@ package ent
 import (
 	"alga/ent/predicate"
 	"alga/ent/statuspage"
+	"alga/ent/statuspagecomponent"
+	"alga/ent/team"
 	"context"
 	"errors"
 	"fmt"
@@ -72,13 +74,13 @@ func (_u *StatusPageUpdate) SetNillableDescription(v *string) *StatusPageUpdate 
 }
 
 // SetVisibility sets the "visibility" field.
-func (_u *StatusPageUpdate) SetVisibility(v string) *StatusPageUpdate {
+func (_u *StatusPageUpdate) SetVisibility(v statuspage.Visibility) *StatusPageUpdate {
 	_u.mutation.SetVisibility(v)
 	return _u
 }
 
 // SetNillableVisibility sets the "visibility" field if the given value is not nil.
-func (_u *StatusPageUpdate) SetNillableVisibility(v *string) *StatusPageUpdate {
+func (_u *StatusPageUpdate) SetNillableVisibility(v *statuspage.Visibility) *StatusPageUpdate {
 	if v != nil {
 		_u.SetVisibility(*v)
 	}
@@ -139,9 +141,56 @@ func (_u *StatusPageUpdate) SetUpdatedAt(v time.Time) *StatusPageUpdate {
 	return _u
 }
 
+// AddComponentIDs adds the "components" edge to the StatusPageComponent entity by IDs.
+func (_u *StatusPageUpdate) AddComponentIDs(ids ...uuid.UUID) *StatusPageUpdate {
+	_u.mutation.AddComponentIDs(ids...)
+	return _u
+}
+
+// AddComponents adds the "components" edges to the StatusPageComponent entity.
+func (_u *StatusPageUpdate) AddComponents(v ...*StatusPageComponent) *StatusPageUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddComponentIDs(ids...)
+}
+
+// SetOwnerTeam sets the "owner_team" edge to the Team entity.
+func (_u *StatusPageUpdate) SetOwnerTeam(v *Team) *StatusPageUpdate {
+	return _u.SetOwnerTeamID(v.ID)
+}
+
 // Mutation returns the StatusPageMutation object of the builder.
 func (_u *StatusPageUpdate) Mutation() *StatusPageMutation {
 	return _u.mutation
+}
+
+// ClearComponents clears all "components" edges to the StatusPageComponent entity.
+func (_u *StatusPageUpdate) ClearComponents() *StatusPageUpdate {
+	_u.mutation.ClearComponents()
+	return _u
+}
+
+// RemoveComponentIDs removes the "components" edge to StatusPageComponent entities by IDs.
+func (_u *StatusPageUpdate) RemoveComponentIDs(ids ...uuid.UUID) *StatusPageUpdate {
+	_u.mutation.RemoveComponentIDs(ids...)
+	return _u
+}
+
+// RemoveComponents removes "components" edges to StatusPageComponent entities.
+func (_u *StatusPageUpdate) RemoveComponents(v ...*StatusPageComponent) *StatusPageUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveComponentIDs(ids...)
+}
+
+// ClearOwnerTeam clears the "owner_team" edge to the Team entity.
+func (_u *StatusPageUpdate) ClearOwnerTeam() *StatusPageUpdate {
+	_u.mutation.ClearOwnerTeam()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -192,6 +241,11 @@ func (_u *StatusPageUpdate) check() error {
 			return &ValidationError{Name: "slug", err: fmt.Errorf(`ent: validator failed for field "StatusPage.slug": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Visibility(); ok {
+		if err := statuspage.VisibilityValidator(v); err != nil {
+			return &ValidationError{Name: "visibility", err: fmt.Errorf(`ent: validator failed for field "StatusPage.visibility": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -217,22 +271,90 @@ func (_u *StatusPageUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 		_spec.SetField(statuspage.FieldDescription, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Visibility(); ok {
-		_spec.SetField(statuspage.FieldVisibility, field.TypeString, value)
+		_spec.SetField(statuspage.FieldVisibility, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Enabled(); ok {
 		_spec.SetField(statuspage.FieldEnabled, field.TypeBool, value)
-	}
-	if value, ok := _u.mutation.OwnerTeamID(); ok {
-		_spec.SetField(statuspage.FieldOwnerTeamID, field.TypeUUID, value)
-	}
-	if _u.mutation.OwnerTeamIDCleared() {
-		_spec.ClearField(statuspage.FieldOwnerTeamID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.CreatedAt(); ok {
 		_spec.SetField(statuspage.FieldCreatedAt, field.TypeTime, value)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(statuspage.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.ComponentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   statuspage.ComponentsTable,
+			Columns: []string{statuspage.ComponentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(statuspagecomponent.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedComponentsIDs(); len(nodes) > 0 && !_u.mutation.ComponentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   statuspage.ComponentsTable,
+			Columns: []string{statuspage.ComponentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(statuspagecomponent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ComponentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   statuspage.ComponentsTable,
+			Columns: []string{statuspage.ComponentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(statuspagecomponent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.OwnerTeamCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   statuspage.OwnerTeamTable,
+			Columns: []string{statuspage.OwnerTeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OwnerTeamIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   statuspage.OwnerTeamTable,
+			Columns: []string{statuspage.OwnerTeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -297,13 +419,13 @@ func (_u *StatusPageUpdateOne) SetNillableDescription(v *string) *StatusPageUpda
 }
 
 // SetVisibility sets the "visibility" field.
-func (_u *StatusPageUpdateOne) SetVisibility(v string) *StatusPageUpdateOne {
+func (_u *StatusPageUpdateOne) SetVisibility(v statuspage.Visibility) *StatusPageUpdateOne {
 	_u.mutation.SetVisibility(v)
 	return _u
 }
 
 // SetNillableVisibility sets the "visibility" field if the given value is not nil.
-func (_u *StatusPageUpdateOne) SetNillableVisibility(v *string) *StatusPageUpdateOne {
+func (_u *StatusPageUpdateOne) SetNillableVisibility(v *statuspage.Visibility) *StatusPageUpdateOne {
 	if v != nil {
 		_u.SetVisibility(*v)
 	}
@@ -364,9 +486,56 @@ func (_u *StatusPageUpdateOne) SetUpdatedAt(v time.Time) *StatusPageUpdateOne {
 	return _u
 }
 
+// AddComponentIDs adds the "components" edge to the StatusPageComponent entity by IDs.
+func (_u *StatusPageUpdateOne) AddComponentIDs(ids ...uuid.UUID) *StatusPageUpdateOne {
+	_u.mutation.AddComponentIDs(ids...)
+	return _u
+}
+
+// AddComponents adds the "components" edges to the StatusPageComponent entity.
+func (_u *StatusPageUpdateOne) AddComponents(v ...*StatusPageComponent) *StatusPageUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddComponentIDs(ids...)
+}
+
+// SetOwnerTeam sets the "owner_team" edge to the Team entity.
+func (_u *StatusPageUpdateOne) SetOwnerTeam(v *Team) *StatusPageUpdateOne {
+	return _u.SetOwnerTeamID(v.ID)
+}
+
 // Mutation returns the StatusPageMutation object of the builder.
 func (_u *StatusPageUpdateOne) Mutation() *StatusPageMutation {
 	return _u.mutation
+}
+
+// ClearComponents clears all "components" edges to the StatusPageComponent entity.
+func (_u *StatusPageUpdateOne) ClearComponents() *StatusPageUpdateOne {
+	_u.mutation.ClearComponents()
+	return _u
+}
+
+// RemoveComponentIDs removes the "components" edge to StatusPageComponent entities by IDs.
+func (_u *StatusPageUpdateOne) RemoveComponentIDs(ids ...uuid.UUID) *StatusPageUpdateOne {
+	_u.mutation.RemoveComponentIDs(ids...)
+	return _u
+}
+
+// RemoveComponents removes "components" edges to StatusPageComponent entities.
+func (_u *StatusPageUpdateOne) RemoveComponents(v ...*StatusPageComponent) *StatusPageUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveComponentIDs(ids...)
+}
+
+// ClearOwnerTeam clears the "owner_team" edge to the Team entity.
+func (_u *StatusPageUpdateOne) ClearOwnerTeam() *StatusPageUpdateOne {
+	_u.mutation.ClearOwnerTeam()
+	return _u
 }
 
 // Where appends a list predicates to the StatusPageUpdate builder.
@@ -430,6 +599,11 @@ func (_u *StatusPageUpdateOne) check() error {
 			return &ValidationError{Name: "slug", err: fmt.Errorf(`ent: validator failed for field "StatusPage.slug": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Visibility(); ok {
+		if err := statuspage.VisibilityValidator(v); err != nil {
+			return &ValidationError{Name: "visibility", err: fmt.Errorf(`ent: validator failed for field "StatusPage.visibility": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -472,22 +646,90 @@ func (_u *StatusPageUpdateOne) sqlSave(ctx context.Context) (_node *StatusPage, 
 		_spec.SetField(statuspage.FieldDescription, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Visibility(); ok {
-		_spec.SetField(statuspage.FieldVisibility, field.TypeString, value)
+		_spec.SetField(statuspage.FieldVisibility, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Enabled(); ok {
 		_spec.SetField(statuspage.FieldEnabled, field.TypeBool, value)
-	}
-	if value, ok := _u.mutation.OwnerTeamID(); ok {
-		_spec.SetField(statuspage.FieldOwnerTeamID, field.TypeUUID, value)
-	}
-	if _u.mutation.OwnerTeamIDCleared() {
-		_spec.ClearField(statuspage.FieldOwnerTeamID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.CreatedAt(); ok {
 		_spec.SetField(statuspage.FieldCreatedAt, field.TypeTime, value)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(statuspage.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.ComponentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   statuspage.ComponentsTable,
+			Columns: []string{statuspage.ComponentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(statuspagecomponent.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedComponentsIDs(); len(nodes) > 0 && !_u.mutation.ComponentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   statuspage.ComponentsTable,
+			Columns: []string{statuspage.ComponentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(statuspagecomponent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ComponentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   statuspage.ComponentsTable,
+			Columns: []string{statuspage.ComponentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(statuspagecomponent.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.OwnerTeamCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   statuspage.OwnerTeamTable,
+			Columns: []string{statuspage.OwnerTeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OwnerTeamIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   statuspage.OwnerTeamTable,
+			Columns: []string{statuspage.OwnerTeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &StatusPage{config: _u.config}
 	_spec.Assign = _node.assignValues

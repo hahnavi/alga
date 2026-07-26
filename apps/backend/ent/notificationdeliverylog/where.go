@@ -65,21 +65,6 @@ func IncidentID(v uuid.UUID) predicate.NotificationDeliveryLog {
 	return predicate.NotificationDeliveryLog(sql.FieldEQ(FieldIncidentID, v))
 }
 
-// NotificationType applies equality check predicate on the "notification_type" field. It's identical to NotificationTypeEQ.
-func NotificationType(v string) predicate.NotificationDeliveryLog {
-	return predicate.NotificationDeliveryLog(sql.FieldEQ(FieldNotificationType, v))
-}
-
-// Channel applies equality check predicate on the "channel" field. It's identical to ChannelEQ.
-func Channel(v string) predicate.NotificationDeliveryLog {
-	return predicate.NotificationDeliveryLog(sql.FieldEQ(FieldChannel, v))
-}
-
-// Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
-func Status(v string) predicate.NotificationDeliveryLog {
-	return predicate.NotificationDeliveryLog(sql.FieldEQ(FieldStatus, v))
-}
-
 // ErrorMessage applies equality check predicate on the "error_message" field. It's identical to ErrorMessageEQ.
 func ErrorMessage(v string) predicate.NotificationDeliveryLog {
 	return predicate.NotificationDeliveryLog(sql.FieldEQ(FieldErrorMessage, v))
@@ -181,198 +166,63 @@ func IncidentIDNotNil() predicate.NotificationDeliveryLog {
 }
 
 // NotificationTypeEQ applies the EQ predicate on the "notification_type" field.
-func NotificationTypeEQ(v string) predicate.NotificationDeliveryLog {
+func NotificationTypeEQ(v NotificationType) predicate.NotificationDeliveryLog {
 	return predicate.NotificationDeliveryLog(sql.FieldEQ(FieldNotificationType, v))
 }
 
 // NotificationTypeNEQ applies the NEQ predicate on the "notification_type" field.
-func NotificationTypeNEQ(v string) predicate.NotificationDeliveryLog {
+func NotificationTypeNEQ(v NotificationType) predicate.NotificationDeliveryLog {
 	return predicate.NotificationDeliveryLog(sql.FieldNEQ(FieldNotificationType, v))
 }
 
 // NotificationTypeIn applies the In predicate on the "notification_type" field.
-func NotificationTypeIn(vs ...string) predicate.NotificationDeliveryLog {
+func NotificationTypeIn(vs ...NotificationType) predicate.NotificationDeliveryLog {
 	return predicate.NotificationDeliveryLog(sql.FieldIn(FieldNotificationType, vs...))
 }
 
 // NotificationTypeNotIn applies the NotIn predicate on the "notification_type" field.
-func NotificationTypeNotIn(vs ...string) predicate.NotificationDeliveryLog {
+func NotificationTypeNotIn(vs ...NotificationType) predicate.NotificationDeliveryLog {
 	return predicate.NotificationDeliveryLog(sql.FieldNotIn(FieldNotificationType, vs...))
 }
 
-// NotificationTypeGT applies the GT predicate on the "notification_type" field.
-func NotificationTypeGT(v string) predicate.NotificationDeliveryLog {
-	return predicate.NotificationDeliveryLog(sql.FieldGT(FieldNotificationType, v))
-}
-
-// NotificationTypeGTE applies the GTE predicate on the "notification_type" field.
-func NotificationTypeGTE(v string) predicate.NotificationDeliveryLog {
-	return predicate.NotificationDeliveryLog(sql.FieldGTE(FieldNotificationType, v))
-}
-
-// NotificationTypeLT applies the LT predicate on the "notification_type" field.
-func NotificationTypeLT(v string) predicate.NotificationDeliveryLog {
-	return predicate.NotificationDeliveryLog(sql.FieldLT(FieldNotificationType, v))
-}
-
-// NotificationTypeLTE applies the LTE predicate on the "notification_type" field.
-func NotificationTypeLTE(v string) predicate.NotificationDeliveryLog {
-	return predicate.NotificationDeliveryLog(sql.FieldLTE(FieldNotificationType, v))
-}
-
-// NotificationTypeContains applies the Contains predicate on the "notification_type" field.
-func NotificationTypeContains(v string) predicate.NotificationDeliveryLog {
-	return predicate.NotificationDeliveryLog(sql.FieldContains(FieldNotificationType, v))
-}
-
-// NotificationTypeHasPrefix applies the HasPrefix predicate on the "notification_type" field.
-func NotificationTypeHasPrefix(v string) predicate.NotificationDeliveryLog {
-	return predicate.NotificationDeliveryLog(sql.FieldHasPrefix(FieldNotificationType, v))
-}
-
-// NotificationTypeHasSuffix applies the HasSuffix predicate on the "notification_type" field.
-func NotificationTypeHasSuffix(v string) predicate.NotificationDeliveryLog {
-	return predicate.NotificationDeliveryLog(sql.FieldHasSuffix(FieldNotificationType, v))
-}
-
-// NotificationTypeEqualFold applies the EqualFold predicate on the "notification_type" field.
-func NotificationTypeEqualFold(v string) predicate.NotificationDeliveryLog {
-	return predicate.NotificationDeliveryLog(sql.FieldEqualFold(FieldNotificationType, v))
-}
-
-// NotificationTypeContainsFold applies the ContainsFold predicate on the "notification_type" field.
-func NotificationTypeContainsFold(v string) predicate.NotificationDeliveryLog {
-	return predicate.NotificationDeliveryLog(sql.FieldContainsFold(FieldNotificationType, v))
-}
-
 // ChannelEQ applies the EQ predicate on the "channel" field.
-func ChannelEQ(v string) predicate.NotificationDeliveryLog {
+func ChannelEQ(v Channel) predicate.NotificationDeliveryLog {
 	return predicate.NotificationDeliveryLog(sql.FieldEQ(FieldChannel, v))
 }
 
 // ChannelNEQ applies the NEQ predicate on the "channel" field.
-func ChannelNEQ(v string) predicate.NotificationDeliveryLog {
+func ChannelNEQ(v Channel) predicate.NotificationDeliveryLog {
 	return predicate.NotificationDeliveryLog(sql.FieldNEQ(FieldChannel, v))
 }
 
 // ChannelIn applies the In predicate on the "channel" field.
-func ChannelIn(vs ...string) predicate.NotificationDeliveryLog {
+func ChannelIn(vs ...Channel) predicate.NotificationDeliveryLog {
 	return predicate.NotificationDeliveryLog(sql.FieldIn(FieldChannel, vs...))
 }
 
 // ChannelNotIn applies the NotIn predicate on the "channel" field.
-func ChannelNotIn(vs ...string) predicate.NotificationDeliveryLog {
+func ChannelNotIn(vs ...Channel) predicate.NotificationDeliveryLog {
 	return predicate.NotificationDeliveryLog(sql.FieldNotIn(FieldChannel, vs...))
 }
 
-// ChannelGT applies the GT predicate on the "channel" field.
-func ChannelGT(v string) predicate.NotificationDeliveryLog {
-	return predicate.NotificationDeliveryLog(sql.FieldGT(FieldChannel, v))
-}
-
-// ChannelGTE applies the GTE predicate on the "channel" field.
-func ChannelGTE(v string) predicate.NotificationDeliveryLog {
-	return predicate.NotificationDeliveryLog(sql.FieldGTE(FieldChannel, v))
-}
-
-// ChannelLT applies the LT predicate on the "channel" field.
-func ChannelLT(v string) predicate.NotificationDeliveryLog {
-	return predicate.NotificationDeliveryLog(sql.FieldLT(FieldChannel, v))
-}
-
-// ChannelLTE applies the LTE predicate on the "channel" field.
-func ChannelLTE(v string) predicate.NotificationDeliveryLog {
-	return predicate.NotificationDeliveryLog(sql.FieldLTE(FieldChannel, v))
-}
-
-// ChannelContains applies the Contains predicate on the "channel" field.
-func ChannelContains(v string) predicate.NotificationDeliveryLog {
-	return predicate.NotificationDeliveryLog(sql.FieldContains(FieldChannel, v))
-}
-
-// ChannelHasPrefix applies the HasPrefix predicate on the "channel" field.
-func ChannelHasPrefix(v string) predicate.NotificationDeliveryLog {
-	return predicate.NotificationDeliveryLog(sql.FieldHasPrefix(FieldChannel, v))
-}
-
-// ChannelHasSuffix applies the HasSuffix predicate on the "channel" field.
-func ChannelHasSuffix(v string) predicate.NotificationDeliveryLog {
-	return predicate.NotificationDeliveryLog(sql.FieldHasSuffix(FieldChannel, v))
-}
-
-// ChannelEqualFold applies the EqualFold predicate on the "channel" field.
-func ChannelEqualFold(v string) predicate.NotificationDeliveryLog {
-	return predicate.NotificationDeliveryLog(sql.FieldEqualFold(FieldChannel, v))
-}
-
-// ChannelContainsFold applies the ContainsFold predicate on the "channel" field.
-func ChannelContainsFold(v string) predicate.NotificationDeliveryLog {
-	return predicate.NotificationDeliveryLog(sql.FieldContainsFold(FieldChannel, v))
-}
-
 // StatusEQ applies the EQ predicate on the "status" field.
-func StatusEQ(v string) predicate.NotificationDeliveryLog {
+func StatusEQ(v Status) predicate.NotificationDeliveryLog {
 	return predicate.NotificationDeliveryLog(sql.FieldEQ(FieldStatus, v))
 }
 
 // StatusNEQ applies the NEQ predicate on the "status" field.
-func StatusNEQ(v string) predicate.NotificationDeliveryLog {
+func StatusNEQ(v Status) predicate.NotificationDeliveryLog {
 	return predicate.NotificationDeliveryLog(sql.FieldNEQ(FieldStatus, v))
 }
 
 // StatusIn applies the In predicate on the "status" field.
-func StatusIn(vs ...string) predicate.NotificationDeliveryLog {
+func StatusIn(vs ...Status) predicate.NotificationDeliveryLog {
 	return predicate.NotificationDeliveryLog(sql.FieldIn(FieldStatus, vs...))
 }
 
 // StatusNotIn applies the NotIn predicate on the "status" field.
-func StatusNotIn(vs ...string) predicate.NotificationDeliveryLog {
+func StatusNotIn(vs ...Status) predicate.NotificationDeliveryLog {
 	return predicate.NotificationDeliveryLog(sql.FieldNotIn(FieldStatus, vs...))
-}
-
-// StatusGT applies the GT predicate on the "status" field.
-func StatusGT(v string) predicate.NotificationDeliveryLog {
-	return predicate.NotificationDeliveryLog(sql.FieldGT(FieldStatus, v))
-}
-
-// StatusGTE applies the GTE predicate on the "status" field.
-func StatusGTE(v string) predicate.NotificationDeliveryLog {
-	return predicate.NotificationDeliveryLog(sql.FieldGTE(FieldStatus, v))
-}
-
-// StatusLT applies the LT predicate on the "status" field.
-func StatusLT(v string) predicate.NotificationDeliveryLog {
-	return predicate.NotificationDeliveryLog(sql.FieldLT(FieldStatus, v))
-}
-
-// StatusLTE applies the LTE predicate on the "status" field.
-func StatusLTE(v string) predicate.NotificationDeliveryLog {
-	return predicate.NotificationDeliveryLog(sql.FieldLTE(FieldStatus, v))
-}
-
-// StatusContains applies the Contains predicate on the "status" field.
-func StatusContains(v string) predicate.NotificationDeliveryLog {
-	return predicate.NotificationDeliveryLog(sql.FieldContains(FieldStatus, v))
-}
-
-// StatusHasPrefix applies the HasPrefix predicate on the "status" field.
-func StatusHasPrefix(v string) predicate.NotificationDeliveryLog {
-	return predicate.NotificationDeliveryLog(sql.FieldHasPrefix(FieldStatus, v))
-}
-
-// StatusHasSuffix applies the HasSuffix predicate on the "status" field.
-func StatusHasSuffix(v string) predicate.NotificationDeliveryLog {
-	return predicate.NotificationDeliveryLog(sql.FieldHasSuffix(FieldStatus, v))
-}
-
-// StatusEqualFold applies the EqualFold predicate on the "status" field.
-func StatusEqualFold(v string) predicate.NotificationDeliveryLog {
-	return predicate.NotificationDeliveryLog(sql.FieldEqualFold(FieldStatus, v))
-}
-
-// StatusContainsFold applies the ContainsFold predicate on the "status" field.
-func StatusContainsFold(v string) predicate.NotificationDeliveryLog {
-	return predicate.NotificationDeliveryLog(sql.FieldContainsFold(FieldStatus, v))
 }
 
 // ErrorMessageEQ applies the EQ predicate on the "error_message" field.

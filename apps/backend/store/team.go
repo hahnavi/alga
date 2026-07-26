@@ -9,9 +9,6 @@ import (
 	"github.com/google/uuid"
 
 	"alga/ent"
-	entoncallschedule "alga/ent/oncallschedule"
-	entschedulelayer "alga/ent/schedulelayer"
-	entscheduleoverride "alga/ent/scheduleoverride"
 	entteam "alga/ent/team"
 	entteammember "alga/ent/teammember"
 	entuser "alga/ent/user"
@@ -145,46 +142,14 @@ func (s *pgTeamStore) DeleteTeam(ctx context.Context, id uuid.UUID) error {
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	tx, err := s.client.Tx(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to start transaction: %w", err)
-	}
-	defer rollbackTx(tx)
-
-	// Cascade-delete the team's schedule (and its layers/overrides) so a
-	// deleted team never leaves an orphan schedule behind.
-	schedules, err := tx.OnCallSchedule.Query().Where(entoncallschedule.TeamIDEQ(id)).All(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to load team schedules: %w", err)
-	}
-	for _, sched := range schedules {
-		if _, err := tx.ScheduleOverride.Delete().Where(entscheduleoverride.ScheduleIDEQ(sched.ID)).Exec(ctx); err != nil {
-			return fmt.Errorf("failed to delete schedule overrides: %w", err)
-		}
-		if _, err := tx.ScheduleLayer.Delete().Where(entschedulelayer.ScheduleIDEQ(sched.ID)).Exec(ctx); err != nil {
-			return fmt.Errorf("failed to delete schedule layers: %w", err)
-		}
-		if err := tx.OnCallSchedule.DeleteOneID(sched.ID).Exec(ctx); err != nil && !ent.IsNotFound(err) {
-			return fmt.Errorf("failed to delete schedule: %w", err)
-		}
-	}
-
-	_, err = tx.TeamMember.Delete().
-		Where(entteammember.TeamIDEQ(id)).
-		Exec(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to delete team members: %w", err)
-	}
-
-	err = tx.Team.DeleteOneID(id).Exec(ctx)
+	err := s.client.Team.DeleteOneID(id).Exec(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return fmt.Errorf("team not found: %w", ErrNotFound)
 		}
 		return fmt.Errorf("failed to delete team: %w", err)
 	}
-
-	return tx.Commit()
+	return nil
 }
 
 func (s *pgTeamStore) ListTeams(ctx context.Context, limit, skip int) ([]TeamRecord, int64, error) {
@@ -272,7 +237,7 @@ func (s *pgTeamStore) AddMember(ctx context.Context, teamID, userID uuid.UUID, r
 	saved, err := s.client.TeamMember.Create().
 		SetTeamID(teamID).
 		SetUserID(userID).
-		SetRole(role).
+		SetRole(entteammember.Role(role)).
 		SetCreatedAt(time.Now().UTC()).
 		Save(ctx)
 	if err != nil {
@@ -296,7 +261,7 @@ func (s *pgTeamStore) UpdateMemberRole(ctx context.Context, teamID, userID uuid.
 			entteammember.TeamIDEQ(teamID),
 			entteammember.UserIDEQ(userID),
 		).
-		SetRole(role).
+		SetRole(entteammember.Role(role)).
 		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to update member role: %w", err)
@@ -407,7 +372,7 @@ func buildTeamMemberRecord(m *ent.TeamMember, u *ent.User) TeamMemberRecord {
 		ID:        m.ID,
 		TeamID:    m.TeamID,
 		UserID:    m.UserID,
-		Role:      m.Role,
+		Role:      string(m.Role),
 		CreatedAt: m.CreatedAt,
 	}
 	if u != nil {

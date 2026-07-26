@@ -3,6 +3,8 @@
 package ent
 
 import (
+	"alga/ent/service"
+	"alga/ent/statuspage"
 	"alga/ent/statuspagecomponent"
 	"fmt"
 	"strings"
@@ -29,12 +31,48 @@ type StatusPageComponent struct {
 	// DisplayOrder holds the value of the "display_order" field.
 	DisplayOrder int `json:"display_order,omitempty"`
 	// Status holds the value of the "status" field.
-	Status string `json:"status,omitempty"`
+	Status statuspagecomponent.Status `json:"status,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt    time.Time `json:"updated_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the StatusPageComponentQuery when eager-loading is set.
+	Edges        StatusPageComponentEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// StatusPageComponentEdges holds the relations/edges for other nodes in the graph.
+type StatusPageComponentEdges struct {
+	// StatusPage holds the value of the status_page edge.
+	StatusPage *StatusPage `json:"status_page,omitempty"`
+	// Service holds the value of the service edge.
+	Service *Service `json:"service,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [2]bool
+}
+
+// StatusPageOrErr returns the StatusPage value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e StatusPageComponentEdges) StatusPageOrErr() (*StatusPage, error) {
+	if e.StatusPage != nil {
+		return e.StatusPage, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: statuspage.Label}
+	}
+	return nil, &NotLoadedError{edge: "status_page"}
+}
+
+// ServiceOrErr returns the Service value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e StatusPageComponentEdges) ServiceOrErr() (*Service, error) {
+	if e.Service != nil {
+		return e.Service, nil
+	} else if e.loadedTypes[1] {
+		return nil, &NotFoundError{label: service.Label}
+	}
+	return nil, &NotLoadedError{edge: "service"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -108,7 +146,7 @@ func (_m *StatusPageComponent) assignValues(columns []string, values []any) erro
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
-				_m.Status = value.String
+				_m.Status = statuspagecomponent.Status(value.String)
 			}
 		case statuspagecomponent.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -133,6 +171,16 @@ func (_m *StatusPageComponent) assignValues(columns []string, values []any) erro
 // This includes values selected through modifiers, order, etc.
 func (_m *StatusPageComponent) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
+}
+
+// QueryStatusPage queries the "status_page" edge of the StatusPageComponent entity.
+func (_m *StatusPageComponent) QueryStatusPage() *StatusPageQuery {
+	return NewStatusPageComponentClient(_m.config).QueryStatusPage(_m)
+}
+
+// QueryService queries the "service" edge of the StatusPageComponent entity.
+func (_m *StatusPageComponent) QueryService() *ServiceQuery {
+	return NewStatusPageComponentClient(_m.config).QueryService(_m)
 }
 
 // Update returns a builder for updating this StatusPageComponent.
@@ -176,7 +224,7 @@ func (_m *StatusPageComponent) String() string {
 	builder.WriteString(fmt.Sprintf("%v", _m.DisplayOrder))
 	builder.WriteString(", ")
 	builder.WriteString("status=")
-	builder.WriteString(_m.Status)
+	builder.WriteString(fmt.Sprintf("%v", _m.Status))
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

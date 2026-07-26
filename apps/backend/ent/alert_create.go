@@ -8,6 +8,7 @@ import (
 	"alga/ent/alertinvestigationalert"
 	"alga/ent/deliverytarget"
 	"alga/ent/incident"
+	"alga/ent/triageresult"
 	"context"
 	"errors"
 	"fmt"
@@ -32,13 +33,13 @@ func (_c *AlertCreate) SetFingerprint(v string) *AlertCreate {
 }
 
 // SetStatus sets the "status" field.
-func (_c *AlertCreate) SetStatus(v string) *AlertCreate {
+func (_c *AlertCreate) SetStatus(v alert.Status) *AlertCreate {
 	_c.mutation.SetStatus(v)
 	return _c
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_c *AlertCreate) SetNillableStatus(v *string) *AlertCreate {
+func (_c *AlertCreate) SetNillableStatus(v *alert.Status) *AlertCreate {
 	if v != nil {
 		_c.SetStatus(*v)
 	}
@@ -311,6 +312,11 @@ func (_c *AlertCreate) AddDeliveryTargets(v ...*DeliveryTarget) *AlertCreate {
 	return _c.AddDeliveryTargetIDs(ids...)
 }
 
+// SetTriageResult sets the "triage_result" edge to the TriageResult entity.
+func (_c *AlertCreate) SetTriageResult(v *TriageResult) *AlertCreate {
+	return _c.SetTriageResultID(v.ID)
+}
+
 // Mutation returns the AlertMutation object of the builder.
 func (_c *AlertCreate) Mutation() *AlertMutation {
 	return _c.mutation
@@ -409,6 +415,11 @@ func (_c *AlertCreate) check() error {
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "Alert.status"`)}
 	}
+	if v, ok := _c.mutation.Status(); ok {
+		if err := alert.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Alert.status": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Acknowledged(); !ok {
 		return &ValidationError{Name: "acknowledged", err: errors.New(`ent: missing required field "Alert.acknowledged"`)}
 	}
@@ -475,7 +486,7 @@ func (_c *AlertCreate) createSpec() (*Alert, *sqlgraph.CreateSpec) {
 		_node.Fingerprint = value
 	}
 	if value, ok := _c.mutation.Status(); ok {
-		_spec.SetField(alert.FieldStatus, field.TypeString, value)
+		_spec.SetField(alert.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
 	}
 	if value, ok := _c.mutation.Acknowledged(); ok {
@@ -513,10 +524,6 @@ func (_c *AlertCreate) createSpec() (*Alert, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.AlertNumber(); ok {
 		_spec.SetField(alert.FieldAlertNumber, field.TypeInt64, value)
 		_node.AlertNumber = value
-	}
-	if value, ok := _c.mutation.TriageResultID(); ok {
-		_spec.SetField(alert.FieldTriageResultID, field.TypeUUID, value)
-		_node.TriageResultID = &value
 	}
 	if value, ok := _c.mutation.Enrichment(); ok {
 		_spec.SetField(alert.FieldEnrichment, field.TypeJSON, value)
@@ -604,6 +611,23 @@ func (_c *AlertCreate) createSpec() (*Alert, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.TriageResultIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   alert.TriageResultTable,
+			Columns: []string{alert.TriageResultColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(triageresult.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.TriageResultID = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

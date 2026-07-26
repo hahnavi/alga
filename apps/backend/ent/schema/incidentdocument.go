@@ -27,18 +27,21 @@ func (IncidentDocument) Fields() []ent.Field {
 		field.Text("content").Default(""),
 		field.Int("version").Default(1),
 		field.Time("updated_at").Default(timeNow),
+		field.UUID("incident_id", uuid.UUID{}),
+		field.UUID("updated_by_id", uuid.UUID{}).Optional().Nillable(),
 	}
 }
 
 func (IncidentDocument) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.From("incident", Incident.Type).Ref("documents").Unique().Required(),
-		edge.From("updated_by", User.Type).Ref("document_edits").Unique(),
+		edge.From("incident", Incident.Type).Ref("documents").Unique().Required().Field("incident_id"),
+		edge.From("updated_by", User.Type).Ref("document_edits").Unique().Field("updated_by_id"),
 	}
 }
 
 func (IncidentDocument) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("section"),
+		index.Fields("incident_id", "section").Unique(),
+		index.Fields("updated_by_id"),
 	}
 }

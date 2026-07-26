@@ -27,16 +27,16 @@ func (Incident) Fields() []ent.Field {
 		field.String("title").Default(""),
 		field.String("description").Default(""),
 		field.String("summary").Default("").Optional(),
-		field.String("status").Default("detected"),
-		field.String("severity").Default("warning"),
-		field.String("impact_level").Default("medium"),
-		field.String("priority").Default("P4"),
-		field.String("incident_type").Default("real"),
+		field.Enum("status").Values("detected", "triaging", "active", "mitigated", "resolved", "closed", "cancelled").Default("detected"),
+		field.Enum("severity").Values("critical", "high", "warning", "info").Default("warning"),
+		field.Enum("impact_level").Values("high", "medium", "low").Default("medium"),
+		field.Enum("priority").Values("P1", "P2", "P3", "P4", "P5").Default("P4"),
+		field.Enum("incident_type").Values("real", "alert", "degradation").Default("real"),
 		field.UUID("commander_id", uuid.UUID{}).Optional().Nillable(),
 		field.UUID("communicator_id", uuid.UUID{}).Optional().Nillable(),
 		field.UUID("on_call_responder_id", uuid.UUID{}).Optional().Nillable(),
-		field.String("commander_assignee_type").Default("user").Optional(),
-		field.String("communicator_assignee_type").Default("user").Optional(),
+		field.Enum("commander_assignee_type").Values("user", "agent").Default("user").Optional(),
+		field.Enum("communicator_assignee_type").Values("user", "agent").Default("user").Optional(),
 		field.UUID("service_id", uuid.UUID{}).Optional().Nillable(),
 		field.UUID("escalation_policy_id", uuid.UUID{}).Optional().Nillable(),
 		field.String("conference_url").Default(""),
@@ -77,14 +77,31 @@ func (Incident) Edges() []ent.Edge {
 		edge.To("documents", IncidentDocument.Type),
 		edge.To("coordination_messages", IncidentCoordinationMessage.Type),
 		edge.To("coordination_tasks", CoordinationTask.Type),
+		edge.From("commander", User.Type).Ref("commander_incidents").Field("commander_id").Unique(),
+		edge.From("communicator", User.Type).Ref("communicator_incidents").Field("communicator_id").Unique(),
+		edge.From("on_call_responder", User.Type).Ref("responder_incidents").Field("on_call_responder_id").Unique(),
+		edge.From("service", Service.Type).Ref("incidents").Field("service_id").Unique(),
+		edge.From("escalation_policy", EscalationPolicy.Type).Ref("incidents").Field("escalation_policy_id").Unique(),
 	}
 }
 
 func (Incident) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("status"),
-		index.Fields("severity"),
-		index.Fields("priority"),
-		index.Fields("created_at"),
+		index.Fields("status", "created_at").
+			Annotations(entsql.IndexWhere("deleted_at IS NULL")),
+		index.Fields("severity").
+			Annotations(entsql.IndexWhere("deleted_at IS NULL")),
+		index.Fields("priority").
+			Annotations(entsql.IndexWhere("deleted_at IS NULL")),
+		index.Fields("commander_id").
+			Annotations(entsql.IndexWhere("deleted_at IS NULL")),
+		index.Fields("communicator_id").
+			Annotations(entsql.IndexWhere("deleted_at IS NULL")),
+		index.Fields("on_call_responder_id").
+			Annotations(entsql.IndexWhere("deleted_at IS NULL")),
+		index.Fields("service_id").
+			Annotations(entsql.IndexWhere("deleted_at IS NULL")),
+		index.Fields("escalation_policy_id").
+			Annotations(entsql.IndexWhere("deleted_at IS NULL")),
 	}
 }

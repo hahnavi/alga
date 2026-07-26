@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/triagerule"
+	"alga/ent/user"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -26,13 +27,13 @@ type TriageRule struct {
 	// Conditions holds the value of the "conditions" field.
 	Conditions []map[string]interface{} `json:"conditions,omitempty"`
 	// MatchMode holds the value of the "match_mode" field.
-	MatchMode string `json:"match_mode,omitempty"`
+	MatchMode triagerule.MatchMode `json:"match_mode,omitempty"`
 	// Decision holds the value of the "decision" field.
-	Decision string `json:"decision,omitempty"`
+	Decision triagerule.Decision `json:"decision,omitempty"`
 	// Severity holds the value of the "severity" field.
-	Severity string `json:"severity,omitempty"`
+	Severity *triagerule.Severity `json:"severity,omitempty"`
 	// Category holds the value of the "category" field.
-	Category string `json:"category,omitempty"`
+	Category *triagerule.Category `json:"category,omitempty"`
 	// Enrichment holds the value of the "enrichment" field.
 	Enrichment map[string]interface{} `json:"enrichment,omitempty"`
 	// Priority holds the value of the "priority" field.
@@ -44,8 +45,31 @@ type TriageRule struct {
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt    time.Time `json:"updated_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the TriageRuleQuery when eager-loading is set.
+	Edges        TriageRuleEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// TriageRuleEdges holds the relations/edges for other nodes in the graph.
+type TriageRuleEdges struct {
+	// CreatedByUser holds the value of the created_by_user edge.
+	CreatedByUser *User `json:"created_by_user,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// CreatedByUserOrErr returns the CreatedByUser value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e TriageRuleEdges) CreatedByUserOrErr() (*User, error) {
+	if e.CreatedByUser != nil {
+		return e.CreatedByUser, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: user.Label}
+	}
+	return nil, &NotLoadedError{edge: "created_by_user"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -110,25 +134,27 @@ func (_m *TriageRule) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field match_mode", values[i])
 			} else if value.Valid {
-				_m.MatchMode = value.String
+				_m.MatchMode = triagerule.MatchMode(value.String)
 			}
 		case triagerule.FieldDecision:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field decision", values[i])
 			} else if value.Valid {
-				_m.Decision = value.String
+				_m.Decision = triagerule.Decision(value.String)
 			}
 		case triagerule.FieldSeverity:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field severity", values[i])
 			} else if value.Valid {
-				_m.Severity = value.String
+				_m.Severity = new(triagerule.Severity)
+				*_m.Severity = triagerule.Severity(value.String)
 			}
 		case triagerule.FieldCategory:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field category", values[i])
 			} else if value.Valid {
-				_m.Category = value.String
+				_m.Category = new(triagerule.Category)
+				*_m.Category = triagerule.Category(value.String)
 			}
 		case triagerule.FieldEnrichment:
 			if value, ok := values[i].(*[]byte); !ok {
@@ -181,6 +207,11 @@ func (_m *TriageRule) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
 }
 
+// QueryCreatedByUser queries the "created_by_user" edge of the TriageRule entity.
+func (_m *TriageRule) QueryCreatedByUser() *UserQuery {
+	return NewTriageRuleClient(_m.config).QueryCreatedByUser(_m)
+}
+
 // Update returns a builder for updating this TriageRule.
 // Note that you need to call TriageRule.Unwrap() before calling this method if this TriageRule
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -214,16 +245,20 @@ func (_m *TriageRule) String() string {
 	builder.WriteString(fmt.Sprintf("%v", _m.Conditions))
 	builder.WriteString(", ")
 	builder.WriteString("match_mode=")
-	builder.WriteString(_m.MatchMode)
+	builder.WriteString(fmt.Sprintf("%v", _m.MatchMode))
 	builder.WriteString(", ")
 	builder.WriteString("decision=")
-	builder.WriteString(_m.Decision)
+	builder.WriteString(fmt.Sprintf("%v", _m.Decision))
 	builder.WriteString(", ")
-	builder.WriteString("severity=")
-	builder.WriteString(_m.Severity)
+	if v := _m.Severity; v != nil {
+		builder.WriteString("severity=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
-	builder.WriteString("category=")
-	builder.WriteString(_m.Category)
+	if v := _m.Category; v != nil {
+		builder.WriteString("category=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("enrichment=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Enrichment))

@@ -7,6 +7,7 @@ import (
 	"alga/ent/incident"
 	"alga/ent/incidentinvestigation"
 	"alga/ent/schema"
+	"alga/ent/triageresult"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -27,7 +28,7 @@ type AlertInvestigation struct {
 	// CorrelationKey holds the value of the "correlation_key" field.
 	CorrelationKey string `json:"correlation_key,omitempty"`
 	// Status holds the value of the "status" field.
-	Status string `json:"status,omitempty"`
+	Status alertinvestigation.Status `json:"status,omitempty"`
 	// AgentID holds the value of the "agent_id" field.
 	AgentID string `json:"agent_id,omitempty"`
 	// AgentName holds the value of the "agent_name" field.
@@ -85,7 +86,7 @@ type AlertInvestigation struct {
 	// TriageEnrichment holds the value of the "triage_enrichment" field.
 	TriageEnrichment map[string]interface{} `json:"triage_enrichment,omitempty"`
 	// AssigneeType holds the value of the "assignee_type" field.
-	AssigneeType string `json:"assignee_type,omitempty"`
+	AssigneeType alertinvestigation.AssigneeType `json:"assignee_type,omitempty"`
 	// AssigneeID holds the value of the "assignee_id" field.
 	AssigneeID *uuid.UUID `json:"assignee_id,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -108,9 +109,11 @@ type AlertInvestigationEdges struct {
 	PromotedIncident *Incident `json:"promoted_incident,omitempty"`
 	// PromotedIncidentInvestigation holds the value of the promoted_incident_investigation edge.
 	PromotedIncidentInvestigation *IncidentInvestigation `json:"promoted_incident_investigation,omitempty"`
+	// TriageResult holds the value of the triage_result edge.
+	TriageResult *TriageResult `json:"triage_result,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [6]bool
+	loadedTypes [7]bool
 }
 
 // AlertsOrErr returns the Alerts value or an error if the edge
@@ -171,6 +174,17 @@ func (e AlertInvestigationEdges) PromotedIncidentInvestigationOrErr() (*Incident
 	return nil, &NotLoadedError{edge: "promoted_incident_investigation"}
 }
 
+// TriageResultOrErr returns the TriageResult value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e AlertInvestigationEdges) TriageResultOrErr() (*TriageResult, error) {
+	if e.TriageResult != nil {
+		return e.TriageResult, nil
+	} else if e.loadedTypes[6] {
+		return nil, &NotFoundError{label: triageresult.Label}
+	}
+	return nil, &NotLoadedError{edge: "triage_result"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*AlertInvestigation) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
@@ -225,7 +239,7 @@ func (_m *AlertInvestigation) assignValues(columns []string, values []any) error
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
-				_m.Status = value.String
+				_m.Status = alertinvestigation.Status(value.String)
 			}
 		case alertinvestigation.FieldAgentID:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -412,7 +426,7 @@ func (_m *AlertInvestigation) assignValues(columns []string, values []any) error
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field assignee_type", values[i])
 			} else if value.Valid {
-				_m.AssigneeType = value.String
+				_m.AssigneeType = alertinvestigation.AssigneeType(value.String)
 			}
 		case alertinvestigation.FieldAssigneeID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -464,6 +478,11 @@ func (_m *AlertInvestigation) QueryPromotedIncidentInvestigation() *IncidentInve
 	return NewAlertInvestigationClient(_m.config).QueryPromotedIncidentInvestigation(_m)
 }
 
+// QueryTriageResult queries the "triage_result" edge of the AlertInvestigation entity.
+func (_m *AlertInvestigation) QueryTriageResult() *TriageResultQuery {
+	return NewAlertInvestigationClient(_m.config).QueryTriageResult(_m)
+}
+
 // Update returns a builder for updating this AlertInvestigation.
 // Note that you need to call AlertInvestigation.Unwrap() before calling this method if this AlertInvestigation
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -494,7 +513,7 @@ func (_m *AlertInvestigation) String() string {
 	builder.WriteString(_m.CorrelationKey)
 	builder.WriteString(", ")
 	builder.WriteString("status=")
-	builder.WriteString(_m.Status)
+	builder.WriteString(fmt.Sprintf("%v", _m.Status))
 	builder.WriteString(", ")
 	builder.WriteString("agent_id=")
 	builder.WriteString(_m.AgentID)
@@ -591,7 +610,7 @@ func (_m *AlertInvestigation) String() string {
 	builder.WriteString(fmt.Sprintf("%v", _m.TriageEnrichment))
 	builder.WriteString(", ")
 	builder.WriteString("assignee_type=")
-	builder.WriteString(_m.AssigneeType)
+	builder.WriteString(fmt.Sprintf("%v", _m.AssigneeType))
 	builder.WriteString(", ")
 	if v := _m.AssigneeID; v != nil {
 		builder.WriteString("assignee_id=")

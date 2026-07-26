@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/alert"
+	"alga/ent/triageresult"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -22,7 +23,7 @@ type Alert struct {
 	// Fingerprint holds the value of the "fingerprint" field.
 	Fingerprint string `json:"fingerprint,omitempty"`
 	// Status holds the value of the "status" field.
-	Status string `json:"status,omitempty"`
+	Status alert.Status `json:"status,omitempty"`
 	// Acknowledged holds the value of the "acknowledged" field.
 	Acknowledged bool `json:"acknowledged,omitempty"`
 	// Silenced holds the value of the "silenced" field.
@@ -71,9 +72,11 @@ type AlertEdges struct {
 	Events []*AlertEvent `json:"events,omitempty"`
 	// DeliveryTargets holds the value of the delivery_targets edge.
 	DeliveryTargets []*DeliveryTarget `json:"delivery_targets,omitempty"`
+	// TriageResult holds the value of the triage_result edge.
+	TriageResult *TriageResult `json:"triage_result,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [5]bool
 }
 
 // IncidentsOrErr returns the Incidents value or an error if the edge
@@ -110,6 +113,17 @@ func (e AlertEdges) DeliveryTargetsOrErr() ([]*DeliveryTarget, error) {
 		return e.DeliveryTargets, nil
 	}
 	return nil, &NotLoadedError{edge: "delivery_targets"}
+}
+
+// TriageResultOrErr returns the TriageResult value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e AlertEdges) TriageResultOrErr() (*TriageResult, error) {
+	if e.TriageResult != nil {
+		return e.TriageResult, nil
+	} else if e.loadedTypes[4] {
+		return nil, &NotFoundError{label: triageresult.Label}
+	}
+	return nil, &NotLoadedError{edge: "triage_result"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -162,7 +176,7 @@ func (_m *Alert) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
-				_m.Status = value.String
+				_m.Status = alert.Status(value.String)
 			}
 		case alert.FieldAcknowledged:
 			if value, ok := values[i].(*sql.NullBool); !ok {
@@ -304,6 +318,11 @@ func (_m *Alert) QueryDeliveryTargets() *DeliveryTargetQuery {
 	return NewAlertClient(_m.config).QueryDeliveryTargets(_m)
 }
 
+// QueryTriageResult queries the "triage_result" edge of the Alert entity.
+func (_m *Alert) QueryTriageResult() *TriageResultQuery {
+	return NewAlertClient(_m.config).QueryTriageResult(_m)
+}
+
 // Update returns a builder for updating this Alert.
 // Note that you need to call Alert.Unwrap() before calling this method if this Alert
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -331,7 +350,7 @@ func (_m *Alert) String() string {
 	builder.WriteString(_m.Fingerprint)
 	builder.WriteString(", ")
 	builder.WriteString("status=")
-	builder.WriteString(_m.Status)
+	builder.WriteString(fmt.Sprintf("%v", _m.Status))
 	builder.WriteString(", ")
 	builder.WriteString("acknowledged=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Acknowledged))

@@ -3,8 +3,11 @@
 package ent
 
 import (
+	"alga/ent/actionitem"
+	"alga/ent/incident"
 	"alga/ent/postmortem"
 	"alga/ent/predicate"
+	"alga/ent/user"
 	"context"
 	"errors"
 	"fmt"
@@ -59,13 +62,13 @@ func (_u *PostMortemUpdate) SetNillableTitle(v *string) *PostMortemUpdate {
 }
 
 // SetStatus sets the "status" field.
-func (_u *PostMortemUpdate) SetStatus(v string) *PostMortemUpdate {
+func (_u *PostMortemUpdate) SetStatus(v postmortem.Status) *PostMortemUpdate {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *PostMortemUpdate) SetNillableStatus(v *string) *PostMortemUpdate {
+func (_u *PostMortemUpdate) SetNillableStatus(v *postmortem.Status) *PostMortemUpdate {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -280,9 +283,67 @@ func (_u *PostMortemUpdate) SetUpdatedAt(v time.Time) *PostMortemUpdate {
 	return _u
 }
 
+// SetIncident sets the "incident" edge to the Incident entity.
+func (_u *PostMortemUpdate) SetIncident(v *Incident) *PostMortemUpdate {
+	return _u.SetIncidentID(v.ID)
+}
+
+// SetApprovedBy sets the "approved_by" edge to the User entity.
+func (_u *PostMortemUpdate) SetApprovedBy(v *User) *PostMortemUpdate {
+	return _u.SetApprovedByID(v.ID)
+}
+
+// AddActionItemIDs adds the "action_items" edge to the ActionItem entity by IDs.
+func (_u *PostMortemUpdate) AddActionItemIDs(ids ...uuid.UUID) *PostMortemUpdate {
+	_u.mutation.AddActionItemIDs(ids...)
+	return _u
+}
+
+// AddActionItems adds the "action_items" edges to the ActionItem entity.
+func (_u *PostMortemUpdate) AddActionItems(v ...*ActionItem) *PostMortemUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddActionItemIDs(ids...)
+}
+
 // Mutation returns the PostMortemMutation object of the builder.
 func (_u *PostMortemUpdate) Mutation() *PostMortemMutation {
 	return _u.mutation
+}
+
+// ClearIncident clears the "incident" edge to the Incident entity.
+func (_u *PostMortemUpdate) ClearIncident() *PostMortemUpdate {
+	_u.mutation.ClearIncident()
+	return _u
+}
+
+// ClearApprovedBy clears the "approved_by" edge to the User entity.
+func (_u *PostMortemUpdate) ClearApprovedBy() *PostMortemUpdate {
+	_u.mutation.ClearApprovedBy()
+	return _u
+}
+
+// ClearActionItems clears all "action_items" edges to the ActionItem entity.
+func (_u *PostMortemUpdate) ClearActionItems() *PostMortemUpdate {
+	_u.mutation.ClearActionItems()
+	return _u
+}
+
+// RemoveActionItemIDs removes the "action_items" edge to ActionItem entities by IDs.
+func (_u *PostMortemUpdate) RemoveActionItemIDs(ids ...uuid.UUID) *PostMortemUpdate {
+	_u.mutation.RemoveActionItemIDs(ids...)
+	return _u
+}
+
+// RemoveActionItems removes "action_items" edges to ActionItem entities.
+func (_u *PostMortemUpdate) RemoveActionItems(v ...*ActionItem) *PostMortemUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveActionItemIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -321,7 +382,23 @@ func (_u *PostMortemUpdate) defaults() {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (_u *PostMortemUpdate) check() error {
+	if v, ok := _u.mutation.Status(); ok {
+		if err := postmortem.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "PostMortem.status": %w`, err)}
+		}
+	}
+	if _u.mutation.IncidentCleared() && len(_u.mutation.IncidentIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "PostMortem.incident"`)
+	}
+	return nil
+}
+
 func (_u *PostMortemUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(postmortem.Table, postmortem.Columns, sqlgraph.NewFieldSpec(postmortem.FieldID, field.TypeUUID))
 	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
@@ -330,14 +407,11 @@ func (_u *PostMortemUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 			}
 		}
 	}
-	if value, ok := _u.mutation.IncidentID(); ok {
-		_spec.SetField(postmortem.FieldIncidentID, field.TypeUUID, value)
-	}
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(postmortem.FieldTitle, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(postmortem.FieldStatus, field.TypeString, value)
+		_spec.SetField(postmortem.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Summary(); ok {
 		_spec.SetField(postmortem.FieldSummary, field.TypeString, value)
@@ -385,12 +459,6 @@ func (_u *PostMortemUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if value, ok := _u.mutation.BlamelessNotes(); ok {
 		_spec.SetField(postmortem.FieldBlamelessNotes, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.ApprovedByID(); ok {
-		_spec.SetField(postmortem.FieldApprovedByID, field.TypeUUID, value)
-	}
-	if _u.mutation.ApprovedByIDCleared() {
-		_spec.ClearField(postmortem.FieldApprovedByID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.PublishedAt(); ok {
 		_spec.SetField(postmortem.FieldPublishedAt, field.TypeTime, value)
 	}
@@ -402,6 +470,109 @@ func (_u *PostMortemUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(postmortem.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.IncidentCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   postmortem.IncidentTable,
+			Columns: []string{postmortem.IncidentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.IncidentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   postmortem.IncidentTable,
+			Columns: []string{postmortem.IncidentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ApprovedByCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   postmortem.ApprovedByTable,
+			Columns: []string{postmortem.ApprovedByColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ApprovedByIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   postmortem.ApprovedByTable,
+			Columns: []string{postmortem.ApprovedByColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ActionItemsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   postmortem.ActionItemsTable,
+			Columns: []string{postmortem.ActionItemsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(actionitem.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedActionItemsIDs(); len(nodes) > 0 && !_u.mutation.ActionItemsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   postmortem.ActionItemsTable,
+			Columns: []string{postmortem.ActionItemsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(actionitem.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ActionItemsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   postmortem.ActionItemsTable,
+			Columns: []string{postmortem.ActionItemsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(actionitem.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -452,13 +623,13 @@ func (_u *PostMortemUpdateOne) SetNillableTitle(v *string) *PostMortemUpdateOne 
 }
 
 // SetStatus sets the "status" field.
-func (_u *PostMortemUpdateOne) SetStatus(v string) *PostMortemUpdateOne {
+func (_u *PostMortemUpdateOne) SetStatus(v postmortem.Status) *PostMortemUpdateOne {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *PostMortemUpdateOne) SetNillableStatus(v *string) *PostMortemUpdateOne {
+func (_u *PostMortemUpdateOne) SetNillableStatus(v *postmortem.Status) *PostMortemUpdateOne {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -673,9 +844,67 @@ func (_u *PostMortemUpdateOne) SetUpdatedAt(v time.Time) *PostMortemUpdateOne {
 	return _u
 }
 
+// SetIncident sets the "incident" edge to the Incident entity.
+func (_u *PostMortemUpdateOne) SetIncident(v *Incident) *PostMortemUpdateOne {
+	return _u.SetIncidentID(v.ID)
+}
+
+// SetApprovedBy sets the "approved_by" edge to the User entity.
+func (_u *PostMortemUpdateOne) SetApprovedBy(v *User) *PostMortemUpdateOne {
+	return _u.SetApprovedByID(v.ID)
+}
+
+// AddActionItemIDs adds the "action_items" edge to the ActionItem entity by IDs.
+func (_u *PostMortemUpdateOne) AddActionItemIDs(ids ...uuid.UUID) *PostMortemUpdateOne {
+	_u.mutation.AddActionItemIDs(ids...)
+	return _u
+}
+
+// AddActionItems adds the "action_items" edges to the ActionItem entity.
+func (_u *PostMortemUpdateOne) AddActionItems(v ...*ActionItem) *PostMortemUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddActionItemIDs(ids...)
+}
+
 // Mutation returns the PostMortemMutation object of the builder.
 func (_u *PostMortemUpdateOne) Mutation() *PostMortemMutation {
 	return _u.mutation
+}
+
+// ClearIncident clears the "incident" edge to the Incident entity.
+func (_u *PostMortemUpdateOne) ClearIncident() *PostMortemUpdateOne {
+	_u.mutation.ClearIncident()
+	return _u
+}
+
+// ClearApprovedBy clears the "approved_by" edge to the User entity.
+func (_u *PostMortemUpdateOne) ClearApprovedBy() *PostMortemUpdateOne {
+	_u.mutation.ClearApprovedBy()
+	return _u
+}
+
+// ClearActionItems clears all "action_items" edges to the ActionItem entity.
+func (_u *PostMortemUpdateOne) ClearActionItems() *PostMortemUpdateOne {
+	_u.mutation.ClearActionItems()
+	return _u
+}
+
+// RemoveActionItemIDs removes the "action_items" edge to ActionItem entities by IDs.
+func (_u *PostMortemUpdateOne) RemoveActionItemIDs(ids ...uuid.UUID) *PostMortemUpdateOne {
+	_u.mutation.RemoveActionItemIDs(ids...)
+	return _u
+}
+
+// RemoveActionItems removes "action_items" edges to ActionItem entities.
+func (_u *PostMortemUpdateOne) RemoveActionItems(v ...*ActionItem) *PostMortemUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveActionItemIDs(ids...)
 }
 
 // Where appends a list predicates to the PostMortemUpdate builder.
@@ -727,7 +956,23 @@ func (_u *PostMortemUpdateOne) defaults() {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (_u *PostMortemUpdateOne) check() error {
+	if v, ok := _u.mutation.Status(); ok {
+		if err := postmortem.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "PostMortem.status": %w`, err)}
+		}
+	}
+	if _u.mutation.IncidentCleared() && len(_u.mutation.IncidentIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "PostMortem.incident"`)
+	}
+	return nil
+}
+
 func (_u *PostMortemUpdateOne) sqlSave(ctx context.Context) (_node *PostMortem, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(postmortem.Table, postmortem.Columns, sqlgraph.NewFieldSpec(postmortem.FieldID, field.TypeUUID))
 	id, ok := _u.mutation.ID()
 	if !ok {
@@ -753,14 +998,11 @@ func (_u *PostMortemUpdateOne) sqlSave(ctx context.Context) (_node *PostMortem, 
 			}
 		}
 	}
-	if value, ok := _u.mutation.IncidentID(); ok {
-		_spec.SetField(postmortem.FieldIncidentID, field.TypeUUID, value)
-	}
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(postmortem.FieldTitle, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(postmortem.FieldStatus, field.TypeString, value)
+		_spec.SetField(postmortem.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Summary(); ok {
 		_spec.SetField(postmortem.FieldSummary, field.TypeString, value)
@@ -808,12 +1050,6 @@ func (_u *PostMortemUpdateOne) sqlSave(ctx context.Context) (_node *PostMortem, 
 	if value, ok := _u.mutation.BlamelessNotes(); ok {
 		_spec.SetField(postmortem.FieldBlamelessNotes, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.ApprovedByID(); ok {
-		_spec.SetField(postmortem.FieldApprovedByID, field.TypeUUID, value)
-	}
-	if _u.mutation.ApprovedByIDCleared() {
-		_spec.ClearField(postmortem.FieldApprovedByID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.PublishedAt(); ok {
 		_spec.SetField(postmortem.FieldPublishedAt, field.TypeTime, value)
 	}
@@ -825,6 +1061,109 @@ func (_u *PostMortemUpdateOne) sqlSave(ctx context.Context) (_node *PostMortem, 
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(postmortem.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.IncidentCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   postmortem.IncidentTable,
+			Columns: []string{postmortem.IncidentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.IncidentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   postmortem.IncidentTable,
+			Columns: []string{postmortem.IncidentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(incident.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ApprovedByCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   postmortem.ApprovedByTable,
+			Columns: []string{postmortem.ApprovedByColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ApprovedByIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   postmortem.ApprovedByTable,
+			Columns: []string{postmortem.ApprovedByColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ActionItemsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   postmortem.ActionItemsTable,
+			Columns: []string{postmortem.ActionItemsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(actionitem.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedActionItemsIDs(); len(nodes) > 0 && !_u.mutation.ActionItemsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   postmortem.ActionItemsTable,
+			Columns: []string{postmortem.ActionItemsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(actionitem.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ActionItemsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   postmortem.ActionItemsTable,
+			Columns: []string{postmortem.ActionItemsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(actionitem.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &PostMortem{config: _u.config}
 	_spec.Assign = _node.assignValues

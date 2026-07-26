@@ -3,9 +3,11 @@
 package heartbeat
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -48,8 +50,17 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// EdgeOwnerTeam holds the string denoting the owner_team edge name in mutations.
+	EdgeOwnerTeam = "owner_team"
 	// Table holds the table name of the heartbeat in the database.
 	Table = "heartbeats"
+	// OwnerTeamTable is the table that holds the owner_team relation/edge.
+	OwnerTeamTable = "heartbeats"
+	// OwnerTeamInverseTable is the table name for the Team entity.
+	// It exists in this package in order to avoid circular dependency with the "team" package.
+	OwnerTeamInverseTable = "teams"
+	// OwnerTeamColumn is the table column denoting the owner_team relation/edge.
+	OwnerTeamColumn = "owner_team_id"
 )
 
 // Columns holds all SQL columns for heartbeat fields.
@@ -97,10 +108,6 @@ var (
 	GraceSecondsValidator func(int) error
 	// DefaultEnabled holds the default value on creation for the "enabled" field.
 	DefaultEnabled bool
-	// DefaultStatus holds the default value on creation for the "status" field.
-	DefaultStatus string
-	// DefaultSeverity holds the default value on creation for the "severity" field.
-	DefaultSeverity string
 	// PingTokenHashValidator is a validator for the "ping_token_hash" field. It is called by the builders before save.
 	PingTokenHashValidator func(string) error
 	// LookupPrefixValidator is a validator for the "lookup_prefix" field. It is called by the builders before save.
@@ -114,6 +121,59 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// Status defines the type for the "status" enum field.
+type Status string
+
+// StatusHealthy is the default value of the Status enum.
+const DefaultStatus = StatusHealthy
+
+// Status values.
+const (
+	StatusHealthy Status = "healthy"
+	StatusExpired Status = "expired"
+)
+
+func (s Status) String() string {
+	return string(s)
+}
+
+// StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
+func StatusValidator(s Status) error {
+	switch s {
+	case StatusHealthy, StatusExpired:
+		return nil
+	default:
+		return fmt.Errorf("heartbeat: invalid enum value for status field: %q", s)
+	}
+}
+
+// Severity defines the type for the "severity" enum field.
+type Severity string
+
+// SeverityWarning is the default value of the Severity enum.
+const DefaultSeverity = SeverityWarning
+
+// Severity values.
+const (
+	SeverityCritical Severity = "critical"
+	SeverityWarning  Severity = "warning"
+	SeverityInfo     Severity = "info"
+)
+
+func (s Severity) String() string {
+	return string(s)
+}
+
+// SeverityValidator is a validator for the "severity" field enum values. It is called by the builders before save.
+func SeverityValidator(s Severity) error {
+	switch s {
+	case SeverityCritical, SeverityWarning, SeverityInfo:
+		return nil
+	default:
+		return fmt.Errorf("heartbeat: invalid enum value for severity field: %q", s)
+	}
+}
 
 // OrderOption defines the ordering options for the Heartbeat queries.
 type OrderOption func(*sql.Selector)
@@ -201,4 +261,18 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByOwnerTeamField orders the results by owner_team field.
+func ByOwnerTeamField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newOwnerTeamStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newOwnerTeamStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(OwnerTeamInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, OwnerTeamTable, OwnerTeamColumn),
+	)
 }

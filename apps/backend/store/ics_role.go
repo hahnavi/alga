@@ -72,9 +72,9 @@ func (s *pgICSRoleStore) AssignRole(ctx context.Context, incidentNumber int64, r
 	}
 
 	b := s.client.ICSRoleAssignment.Create().
-		SetRoleType(string(roleType)).
-		SetStatus(string(ics.RoleStatusActive)).
-		SetAssigneeType("user").
+		SetRoleType(enticsrole.RoleType(roleType)).
+		SetStatus(enticsrole.StatusActive).
+		SetAssigneeType(enticsrole.AssigneeTypeUser).
 		SetUserID(userID).
 		SetIncidentID(inc.ID).
 		SetStartedAt(time.Now().UTC())
@@ -95,12 +95,12 @@ func (s *pgICSRoleStore) AssignRole(ctx context.Context, incidentNumber int64, r
 	return &ICSRoleRecord{
 		ID:                 saved.ID,
 		IncidentNumber:     incidentNumber,
-		RoleType:           saved.RoleType,
+		RoleType:           string(saved.RoleType),
 		AssigneeType:       "user",
 		UserID:             &uidCopy,
 		ParentAssignmentID: parentAssignmentID,
 		ScopeDescription:   saved.ScopeDescription,
-		Status:             saved.Status,
+		Status:             string(saved.Status),
 		StartedAt:          saved.StartedAt,
 	}, nil
 }
@@ -111,8 +111,8 @@ func (s *pgICSRoleStore) EndRole(ctx context.Context, assignmentID uuid.UUID, re
 
 	now := time.Now().UTC()
 	_, err := s.client.ICSRoleAssignment.UpdateOneID(assignmentID).
-		SetStatus(string(ics.RoleStatusEnded)).
-		SetEndedReason(string(reason)).
+		SetStatus(enticsrole.StatusEnded).
+		SetEndedReason(enticsrole.EndedReason(reason)).
 		SetEndedAt(now).
 		Save(ctx)
 	if err != nil {
@@ -131,7 +131,7 @@ func (s *pgICSRoleStore) GetActiveRoles(ctx context.Context, incidentNumber int6
 	assignments, err := s.client.ICSRoleAssignment.Query().
 		Where(
 			enticsrole.HasIncidentWith(entincident.IncidentNumber(incidentNumber)),
-			enticsrole.StatusEQ(string(ics.RoleStatusActive)),
+			enticsrole.StatusEQ(enticsrole.StatusActive),
 		).
 		WithUser().
 		WithAgentToken().
@@ -155,8 +155,8 @@ func (s *pgICSRoleStore) GetActiveIC(ctx context.Context, incidentNumber int64) 
 	a, err := s.client.ICSRoleAssignment.Query().
 		Where(
 			enticsrole.HasIncidentWith(entincident.IncidentNumber(incidentNumber)),
-			enticsrole.StatusEQ(string(ics.RoleStatusActive)),
-			enticsrole.RoleTypeEQ(string(ics.RoleIncidentCommander)),
+			enticsrole.StatusEQ(enticsrole.StatusActive),
+			enticsrole.RoleTypeEQ(enticsrole.RoleTypeIncidentCommander),
 		).
 		WithUser().
 		WithAgentToken().
@@ -204,10 +204,10 @@ func (s *pgICSRoleStore) EndAllRolesForIncident(ctx context.Context, incidentNum
 	_, err := s.client.ICSRoleAssignment.Update().
 		Where(
 			enticsrole.HasIncidentWith(entincident.IncidentNumber(incidentNumber)),
-			enticsrole.StatusEQ(string(ics.RoleStatusActive)),
+			enticsrole.StatusEQ(enticsrole.StatusActive),
 		).
-		SetStatus(string(ics.RoleStatusEnded)).
-		SetEndedReason(string(reason)).
+		SetStatus(enticsrole.StatusEnded).
+		SetEndedReason(enticsrole.EndedReason(reason)).
 		SetEndedAt(now).
 		Save(ctx)
 	if err != nil {
@@ -249,9 +249,9 @@ func (s *pgICSRoleStore) AssignAgentRole(ctx context.Context, incidentNumber int
 	}
 
 	b := s.client.ICSRoleAssignment.Create().
-		SetRoleType(string(roleType)).
-		SetStatus(string(ics.RoleStatusActive)).
-		SetAssigneeType("agent").
+		SetRoleType(enticsrole.RoleType(roleType)).
+		SetStatus(enticsrole.StatusActive).
+		SetAssigneeType(enticsrole.AssigneeTypeAgent).
 		SetAgentTokenID(agentTokenID).
 		SetIncidentID(inc.ID).
 		SetStartedAt(time.Now().UTC())
@@ -275,9 +275,9 @@ func (s *pgICSRoleStore) AssignAgentRole(ctx context.Context, incidentNumber int
 	if err != nil {
 		atid := agentTokenID
 		return &ICSRoleRecord{
-			ID: saved.ID, IncidentNumber: incidentNumber, RoleType: saved.RoleType,
+			ID: saved.ID, IncidentNumber: incidentNumber, RoleType: string(saved.RoleType),
 			AssigneeType: "agent", AgentTokenID: &atid,
-			Status: saved.Status, StartedAt: saved.StartedAt,
+			Status: string(saved.Status), StartedAt: saved.StartedAt,
 		}, nil
 	}
 
@@ -292,7 +292,7 @@ func (s *pgICSRoleStore) GetActiveRolesForAgent(ctx context.Context, agentTokenI
 	results, err := s.client.ICSRoleAssignment.Query().
 		Where(
 			enticsrole.HasAgentTokenWith(entagenttoken.ID(agentTokenID)),
-			enticsrole.StatusEQ(string(ics.RoleStatusActive)),
+			enticsrole.StatusEQ(enticsrole.StatusActive),
 		).
 		WithIncident().
 		WithAgentToken().
@@ -320,10 +320,10 @@ func (s *pgICSRoleStore) EndRolesForAgent(ctx context.Context, agentTokenID uuid
 	_, err := s.client.ICSRoleAssignment.Update().
 		Where(
 			enticsrole.HasAgentTokenWith(entagenttoken.ID(agentTokenID)),
-			enticsrole.StatusEQ(string(ics.RoleStatusActive)),
+			enticsrole.StatusEQ(enticsrole.StatusActive),
 		).
-		SetStatus(string(ics.RoleStatusEnded)).
-		SetEndedReason(string(reason)).
+		SetStatus(enticsrole.StatusEnded).
+		SetEndedReason(enticsrole.EndedReason(reason)).
 		SetEndedAt(now).
 		Save(ctx)
 	if err != nil {
@@ -333,14 +333,20 @@ func (s *pgICSRoleStore) EndRolesForAgent(ctx context.Context, agentTokenID uuid
 }
 
 func (s *pgICSRoleStore) toICSRoleRecord(a *ent.ICSRoleAssignment, incidentNumber int64) ICSRoleRecord {
+	var endedReason *string
+	if a.EndedReason != nil {
+		r := string(*a.EndedReason)
+		endedReason = &r
+	}
+
 	rec := ICSRoleRecord{
 		ID:               a.ID,
 		IncidentNumber:   incidentNumber,
-		RoleType:         a.RoleType,
-		AssigneeType:     a.AssigneeType,
-		Status:           a.Status,
+		RoleType:         string(a.RoleType),
+		AssigneeType:     string(a.AssigneeType),
+		Status:           string(a.Status),
 		ScopeDescription: a.ScopeDescription,
-		EndedReason:      a.EndedReason,
+		EndedReason:      endedReason,
 		StartedAt:        a.StartedAt,
 		EndedAt:          a.EndedAt,
 	}
@@ -356,7 +362,7 @@ func (s *pgICSRoleStore) toICSRoleRecord(a *ent.ICSRoleAssignment, incidentNumbe
 		atid := at.ID
 		rec.AgentTokenID = &atid
 		rec.AgentName = at.Name
-		rec.AgentType = at.AgentType
+		rec.AgentType = string(at.AgentType)
 		rec.AgentRevoked = at.Revoked
 	}
 

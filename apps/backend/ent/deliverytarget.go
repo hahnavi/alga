@@ -19,18 +19,19 @@ type DeliveryTarget struct {
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
 	// Provider holds the value of the "provider" field.
-	Provider string `json:"provider,omitempty"`
+	Provider deliverytarget.Provider `json:"provider,omitempty"`
 	// Channel holds the value of the "channel" field.
 	Channel string `json:"channel,omitempty"`
 	// ChannelName holds the value of the "channel_name" field.
 	ChannelName string `json:"channel_name,omitempty"`
 	// PostID holds the value of the "post_id" field.
 	PostID string `json:"post_id,omitempty"`
+	// AlertID holds the value of the "alert_id" field.
+	AlertID uuid.UUID `json:"alert_id,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the DeliveryTargetQuery when eager-loading is set.
-	Edges                  DeliveryTargetEdges `json:"edges"`
-	alert_delivery_targets *uuid.UUID
-	selectValues           sql.SelectValues
+	Edges        DeliveryTargetEdges `json:"edges"`
+	selectValues sql.SelectValues
 }
 
 // DeliveryTargetEdges holds the relations/edges for other nodes in the graph.
@@ -60,10 +61,8 @@ func (*DeliveryTarget) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case deliverytarget.FieldProvider, deliverytarget.FieldChannel, deliverytarget.FieldChannelName, deliverytarget.FieldPostID:
 			values[i] = new(sql.NullString)
-		case deliverytarget.FieldID:
+		case deliverytarget.FieldID, deliverytarget.FieldAlertID:
 			values[i] = new(uuid.UUID)
-		case deliverytarget.ForeignKeys[0]: // alert_delivery_targets
-			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -89,7 +88,7 @@ func (_m *DeliveryTarget) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field provider", values[i])
 			} else if value.Valid {
-				_m.Provider = value.String
+				_m.Provider = deliverytarget.Provider(value.String)
 			}
 		case deliverytarget.FieldChannel:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -109,12 +108,11 @@ func (_m *DeliveryTarget) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.PostID = value.String
 			}
-		case deliverytarget.ForeignKeys[0]:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field alert_delivery_targets", values[i])
-			} else if value.Valid {
-				_m.alert_delivery_targets = new(uuid.UUID)
-				*_m.alert_delivery_targets = *value.S.(*uuid.UUID)
+		case deliverytarget.FieldAlertID:
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field alert_id", values[i])
+			} else if value != nil {
+				_m.AlertID = *value
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
@@ -158,7 +156,7 @@ func (_m *DeliveryTarget) String() string {
 	builder.WriteString("DeliveryTarget(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("provider=")
-	builder.WriteString(_m.Provider)
+	builder.WriteString(fmt.Sprintf("%v", _m.Provider))
 	builder.WriteString(", ")
 	builder.WriteString("channel=")
 	builder.WriteString(_m.Channel)
@@ -168,6 +166,9 @@ func (_m *DeliveryTarget) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("post_id=")
 	builder.WriteString(_m.PostID)
+	builder.WriteString(", ")
+	builder.WriteString("alert_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.AlertID))
 	builder.WriteByte(')')
 	return builder.String()
 }

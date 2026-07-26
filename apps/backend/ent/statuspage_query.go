@@ -5,7 +5,10 @@ package ent
 import (
 	"alga/ent/predicate"
 	"alga/ent/statuspage"
+	"alga/ent/statuspagecomponent"
+	"alga/ent/team"
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -19,10 +22,12 @@ import (
 // StatusPageQuery is the builder for querying StatusPage entities.
 type StatusPageQuery struct {
 	config
-	ctx        *QueryContext
-	order      []statuspage.OrderOption
-	inters     []Interceptor
-	predicates []predicate.StatusPage
+	ctx            *QueryContext
+	order          []statuspage.OrderOption
+	inters         []Interceptor
+	predicates     []predicate.StatusPage
+	withComponents *StatusPageComponentQuery
+	withOwnerTeam  *TeamQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -57,6 +62,50 @@ func (_q *StatusPageQuery) Unique(unique bool) *StatusPageQuery {
 func (_q *StatusPageQuery) Order(o ...statuspage.OrderOption) *StatusPageQuery {
 	_q.order = append(_q.order, o...)
 	return _q
+}
+
+// QueryComponents chains the current query on the "components" edge.
+func (_q *StatusPageQuery) QueryComponents() *StatusPageComponentQuery {
+	query := (&StatusPageComponentClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(statuspage.Table, statuspage.FieldID, selector),
+			sqlgraph.To(statuspagecomponent.Table, statuspagecomponent.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, statuspage.ComponentsTable, statuspage.ComponentsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryOwnerTeam chains the current query on the "owner_team" edge.
+func (_q *StatusPageQuery) QueryOwnerTeam() *TeamQuery {
+	query := (&TeamClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(statuspage.Table, statuspage.FieldID, selector),
+			sqlgraph.To(team.Table, team.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, statuspage.OwnerTeamTable, statuspage.OwnerTeamColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first StatusPage entity from the query.
@@ -246,15 +295,39 @@ func (_q *StatusPageQuery) Clone() *StatusPageQuery {
 		return nil
 	}
 	return &StatusPageQuery{
-		config:     _q.config,
-		ctx:        _q.ctx.Clone(),
-		order:      append([]statuspage.OrderOption{}, _q.order...),
-		inters:     append([]Interceptor{}, _q.inters...),
-		predicates: append([]predicate.StatusPage{}, _q.predicates...),
+		config:         _q.config,
+		ctx:            _q.ctx.Clone(),
+		order:          append([]statuspage.OrderOption{}, _q.order...),
+		inters:         append([]Interceptor{}, _q.inters...),
+		predicates:     append([]predicate.StatusPage{}, _q.predicates...),
+		withComponents: _q.withComponents.Clone(),
+		withOwnerTeam:  _q.withOwnerTeam.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
+}
+
+// WithComponents tells the query-builder to eager-load the nodes that are connected to
+// the "components" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *StatusPageQuery) WithComponents(opts ...func(*StatusPageComponentQuery)) *StatusPageQuery {
+	query := (&StatusPageComponentClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withComponents = query
+	return _q
+}
+
+// WithOwnerTeam tells the query-builder to eager-load the nodes that are connected to
+// the "owner_team" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *StatusPageQuery) WithOwnerTeam(opts ...func(*TeamQuery)) *StatusPageQuery {
+	query := (&TeamClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withOwnerTeam = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -333,8 +406,12 @@ func (_q *StatusPageQuery) prepareQuery(ctx context.Context) error {
 
 func (_q *StatusPageQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*StatusPage, error) {
 	var (
-		nodes = []*StatusPage{}
-		_spec = _q.querySpec()
+		nodes       = []*StatusPage{}
+		_spec       = _q.querySpec()
+		loadedTypes = [2]bool{
+			_q.withComponents != nil,
+			_q.withOwnerTeam != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*StatusPage).scanValues(nil, columns)
@@ -342,6 +419,7 @@ func (_q *StatusPageQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*S
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &StatusPage{config: _q.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -353,7 +431,83 @@ func (_q *StatusPageQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*S
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := _q.withComponents; query != nil {
+		if err := _q.loadComponents(ctx, query, nodes,
+			func(n *StatusPage) { n.Edges.Components = []*StatusPageComponent{} },
+			func(n *StatusPage, e *StatusPageComponent) { n.Edges.Components = append(n.Edges.Components, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withOwnerTeam; query != nil {
+		if err := _q.loadOwnerTeam(ctx, query, nodes, nil,
+			func(n *StatusPage, e *Team) { n.Edges.OwnerTeam = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (_q *StatusPageQuery) loadComponents(ctx context.Context, query *StatusPageComponentQuery, nodes []*StatusPage, init func(*StatusPage), assign func(*StatusPage, *StatusPageComponent)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*StatusPage)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(statuspagecomponent.FieldStatusPageID)
+	}
+	query.Where(predicate.StatusPageComponent(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(statuspage.ComponentsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.StatusPageID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "status_page_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *StatusPageQuery) loadOwnerTeam(ctx context.Context, query *TeamQuery, nodes []*StatusPage, init func(*StatusPage), assign func(*StatusPage, *Team)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*StatusPage)
+	for i := range nodes {
+		if nodes[i].OwnerTeamID == nil {
+			continue
+		}
+		fk := *nodes[i].OwnerTeamID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(team.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "owner_team_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
 }
 
 func (_q *StatusPageQuery) sqlCount(ctx context.Context) (int, error) {
@@ -380,6 +534,9 @@ func (_q *StatusPageQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != statuspage.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if _q.withOwnerTeam != nil {
+			_spec.Node.AddColumnOnce(statuspage.FieldOwnerTeamID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

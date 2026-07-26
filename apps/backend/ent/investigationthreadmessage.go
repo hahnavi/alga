@@ -20,8 +20,8 @@ type InvestigationThreadMessage struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
-	// ThreadUUID holds the value of the "thread_uuid" field.
-	ThreadUUID uuid.UUID `json:"thread_uuid,omitempty"`
+	// ThreadID holds the value of the "thread_id" field.
+	ThreadID uuid.UUID `json:"thread_id,omitempty"`
 	// Type holds the value of the "type" field.
 	Type string `json:"type,omitempty"`
 	// Source holds the value of the "source" field.
@@ -89,7 +89,7 @@ func (*InvestigationThreadMessage) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case investigationthreadmessage.FieldCreatedAt, investigationthreadmessage.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
-		case investigationthreadmessage.FieldID, investigationthreadmessage.FieldThreadUUID:
+		case investigationthreadmessage.FieldID, investigationthreadmessage.FieldThreadID:
 			values[i] = new(uuid.UUID)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -112,11 +112,11 @@ func (_m *InvestigationThreadMessage) assignValues(columns []string, values []an
 			} else if value != nil {
 				_m.ID = *value
 			}
-		case investigationthreadmessage.FieldThreadUUID:
+		case investigationthreadmessage.FieldThreadID:
 			if value, ok := values[i].(*uuid.UUID); !ok {
-				return fmt.Errorf("unexpected type %T for field thread_uuid", values[i])
+				return fmt.Errorf("unexpected type %T for field thread_id", values[i])
 			} else if value != nil {
-				_m.ThreadUUID = *value
+				_m.ThreadID = *value
 			}
 		case investigationthreadmessage.FieldType:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -245,8 +245,8 @@ func (_m *InvestigationThreadMessage) String() string {
 	var builder strings.Builder
 	builder.WriteString("InvestigationThreadMessage(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
-	builder.WriteString("thread_uuid=")
-	builder.WriteString(fmt.Sprintf("%v", _m.ThreadUUID))
+	builder.WriteString("thread_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.ThreadID))
 	builder.WriteString(", ")
 	builder.WriteString("type=")
 	builder.WriteString(_m.Type)

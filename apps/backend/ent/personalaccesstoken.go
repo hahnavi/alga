@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/personalaccesstoken"
+	"alga/ent/user"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -24,7 +25,7 @@ type PersonalAccessToken struct {
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty"`
 	// TokenHash holds the value of the "token_hash" field.
-	TokenHash string `json:"token_hash,omitempty"`
+	TokenHash string `json:"-"`
 	// LookupPrefix holds the value of the "lookup_prefix" field.
 	LookupPrefix string `json:"lookup_prefix,omitempty"`
 	// Permissions holds the value of the "permissions" field.
@@ -36,8 +37,31 @@ type PersonalAccessToken struct {
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Revoked holds the value of the "revoked" field.
-	Revoked      bool `json:"revoked,omitempty"`
+	Revoked bool `json:"revoked,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the PersonalAccessTokenQuery when eager-loading is set.
+	Edges        PersonalAccessTokenEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// PersonalAccessTokenEdges holds the relations/edges for other nodes in the graph.
+type PersonalAccessTokenEdges struct {
+	// User holds the value of the user edge.
+	User *User `json:"user,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// UserOrErr returns the User value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e PersonalAccessTokenEdges) UserOrErr() (*User, error) {
+	if e.User != nil {
+		return e.User, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: user.Label}
+	}
+	return nil, &NotLoadedError{edge: "user"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -147,6 +171,11 @@ func (_m *PersonalAccessToken) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
 }
 
+// QueryUser queries the "user" edge of the PersonalAccessToken entity.
+func (_m *PersonalAccessToken) QueryUser() *UserQuery {
+	return NewPersonalAccessTokenClient(_m.config).QueryUser(_m)
+}
+
 // Update returns a builder for updating this PersonalAccessToken.
 // Note that you need to call PersonalAccessToken.Unwrap() before calling this method if this PersonalAccessToken
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -176,8 +205,7 @@ func (_m *PersonalAccessToken) String() string {
 	builder.WriteString("name=")
 	builder.WriteString(_m.Name)
 	builder.WriteString(", ")
-	builder.WriteString("token_hash=")
-	builder.WriteString(_m.TokenHash)
+	builder.WriteString("token_hash=<sensitive>")
 	builder.WriteString(", ")
 	builder.WriteString("lookup_prefix=")
 	builder.WriteString(_m.LookupPrefix)

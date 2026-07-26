@@ -4,6 +4,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -24,15 +25,15 @@ func (AgentAsk) Fields() []ent.Field {
 		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
 		field.UUID("from_agent_id", uuid.UUID{}),
 		field.String("from_agent_name").NotEmpty(),
-		field.String("from_agent_type").Default("hermes"),
+		field.Enum("from_agent_type").Values("hermes", "openclaw", "other").Default("hermes"),
 		field.String("investigation_id").Optional().Default(""),
 		field.UUID("to_agent_id", uuid.UUID{}).Optional().Nillable(),
-		field.String("to_agent_type").Optional().Default(""),
+		field.Enum("to_agent_type").Values("hermes", "openclaw", "other").Optional().Nillable(),
 		field.String("question").NotEmpty(),
 		field.String("reply").Optional().Default(""),
 		field.UUID("replied_by_agent_id", uuid.UUID{}).Optional().Nillable(),
 		field.String("replied_by_agent_name").Optional().Default(""),
-		field.String("status").Default("pending"),
+		field.Enum("status").Values("pending", "answered", "expired", "cancelled").Default("pending"),
 		field.Time("expires_at"),
 		field.Time("created_at").Default(timeNow),
 		field.Time("answered_at").Optional().Nillable(),
@@ -40,7 +41,11 @@ func (AgentAsk) Fields() []ent.Field {
 }
 
 func (AgentAsk) Edges() []ent.Edge {
-	return nil
+	return []ent.Edge{
+		edge.From("from_agent", AgentToken.Type).Ref("sent_asks").Field("from_agent_id").Unique().Required(),
+		edge.From("to_agent", AgentToken.Type).Ref("received_asks").Field("to_agent_id").Unique(),
+		edge.From("replied_by_agent", AgentToken.Type).Ref("replied_asks").Field("replied_by_agent_id").Unique(),
+	}
 }
 
 func (AgentAsk) Indexes() []ent.Index {
@@ -51,5 +56,6 @@ func (AgentAsk) Indexes() []ent.Index {
 		index.Fields("from_agent_id", "created_at"),
 		index.Fields("investigation_id"),
 		index.Fields("expires_at"),
+		index.Fields("replied_by_agent_id"),
 	}
 }

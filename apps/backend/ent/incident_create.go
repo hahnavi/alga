@@ -6,6 +6,7 @@ import (
 	"alga/ent/alert"
 	"alga/ent/alertinvestigation"
 	"alga/ent/coordinationtask"
+	"alga/ent/escalationpolicy"
 	"alga/ent/icsroleassignment"
 	"alga/ent/incident"
 	"alga/ent/incidentcoordinationmessage"
@@ -13,6 +14,8 @@ import (
 	"alga/ent/incidentinvestigation"
 	"alga/ent/incidenttimelineentry"
 	"alga/ent/postmortem"
+	"alga/ent/service"
+	"alga/ent/user"
 	"context"
 	"errors"
 	"fmt"
@@ -79,13 +82,13 @@ func (_c *IncidentCreate) SetNillableSummary(v *string) *IncidentCreate {
 }
 
 // SetStatus sets the "status" field.
-func (_c *IncidentCreate) SetStatus(v string) *IncidentCreate {
+func (_c *IncidentCreate) SetStatus(v incident.Status) *IncidentCreate {
 	_c.mutation.SetStatus(v)
 	return _c
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_c *IncidentCreate) SetNillableStatus(v *string) *IncidentCreate {
+func (_c *IncidentCreate) SetNillableStatus(v *incident.Status) *IncidentCreate {
 	if v != nil {
 		_c.SetStatus(*v)
 	}
@@ -93,13 +96,13 @@ func (_c *IncidentCreate) SetNillableStatus(v *string) *IncidentCreate {
 }
 
 // SetSeverity sets the "severity" field.
-func (_c *IncidentCreate) SetSeverity(v string) *IncidentCreate {
+func (_c *IncidentCreate) SetSeverity(v incident.Severity) *IncidentCreate {
 	_c.mutation.SetSeverity(v)
 	return _c
 }
 
 // SetNillableSeverity sets the "severity" field if the given value is not nil.
-func (_c *IncidentCreate) SetNillableSeverity(v *string) *IncidentCreate {
+func (_c *IncidentCreate) SetNillableSeverity(v *incident.Severity) *IncidentCreate {
 	if v != nil {
 		_c.SetSeverity(*v)
 	}
@@ -107,13 +110,13 @@ func (_c *IncidentCreate) SetNillableSeverity(v *string) *IncidentCreate {
 }
 
 // SetImpactLevel sets the "impact_level" field.
-func (_c *IncidentCreate) SetImpactLevel(v string) *IncidentCreate {
+func (_c *IncidentCreate) SetImpactLevel(v incident.ImpactLevel) *IncidentCreate {
 	_c.mutation.SetImpactLevel(v)
 	return _c
 }
 
 // SetNillableImpactLevel sets the "impact_level" field if the given value is not nil.
-func (_c *IncidentCreate) SetNillableImpactLevel(v *string) *IncidentCreate {
+func (_c *IncidentCreate) SetNillableImpactLevel(v *incident.ImpactLevel) *IncidentCreate {
 	if v != nil {
 		_c.SetImpactLevel(*v)
 	}
@@ -121,13 +124,13 @@ func (_c *IncidentCreate) SetNillableImpactLevel(v *string) *IncidentCreate {
 }
 
 // SetPriority sets the "priority" field.
-func (_c *IncidentCreate) SetPriority(v string) *IncidentCreate {
+func (_c *IncidentCreate) SetPriority(v incident.Priority) *IncidentCreate {
 	_c.mutation.SetPriority(v)
 	return _c
 }
 
 // SetNillablePriority sets the "priority" field if the given value is not nil.
-func (_c *IncidentCreate) SetNillablePriority(v *string) *IncidentCreate {
+func (_c *IncidentCreate) SetNillablePriority(v *incident.Priority) *IncidentCreate {
 	if v != nil {
 		_c.SetPriority(*v)
 	}
@@ -135,13 +138,13 @@ func (_c *IncidentCreate) SetNillablePriority(v *string) *IncidentCreate {
 }
 
 // SetIncidentType sets the "incident_type" field.
-func (_c *IncidentCreate) SetIncidentType(v string) *IncidentCreate {
+func (_c *IncidentCreate) SetIncidentType(v incident.IncidentType) *IncidentCreate {
 	_c.mutation.SetIncidentType(v)
 	return _c
 }
 
 // SetNillableIncidentType sets the "incident_type" field if the given value is not nil.
-func (_c *IncidentCreate) SetNillableIncidentType(v *string) *IncidentCreate {
+func (_c *IncidentCreate) SetNillableIncidentType(v *incident.IncidentType) *IncidentCreate {
 	if v != nil {
 		_c.SetIncidentType(*v)
 	}
@@ -191,13 +194,13 @@ func (_c *IncidentCreate) SetNillableOnCallResponderID(v *uuid.UUID) *IncidentCr
 }
 
 // SetCommanderAssigneeType sets the "commander_assignee_type" field.
-func (_c *IncidentCreate) SetCommanderAssigneeType(v string) *IncidentCreate {
+func (_c *IncidentCreate) SetCommanderAssigneeType(v incident.CommanderAssigneeType) *IncidentCreate {
 	_c.mutation.SetCommanderAssigneeType(v)
 	return _c
 }
 
 // SetNillableCommanderAssigneeType sets the "commander_assignee_type" field if the given value is not nil.
-func (_c *IncidentCreate) SetNillableCommanderAssigneeType(v *string) *IncidentCreate {
+func (_c *IncidentCreate) SetNillableCommanderAssigneeType(v *incident.CommanderAssigneeType) *IncidentCreate {
 	if v != nil {
 		_c.SetCommanderAssigneeType(*v)
 	}
@@ -205,13 +208,13 @@ func (_c *IncidentCreate) SetNillableCommanderAssigneeType(v *string) *IncidentC
 }
 
 // SetCommunicatorAssigneeType sets the "communicator_assignee_type" field.
-func (_c *IncidentCreate) SetCommunicatorAssigneeType(v string) *IncidentCreate {
+func (_c *IncidentCreate) SetCommunicatorAssigneeType(v incident.CommunicatorAssigneeType) *IncidentCreate {
 	_c.mutation.SetCommunicatorAssigneeType(v)
 	return _c
 }
 
 // SetNillableCommunicatorAssigneeType sets the "communicator_assignee_type" field if the given value is not nil.
-func (_c *IncidentCreate) SetNillableCommunicatorAssigneeType(v *string) *IncidentCreate {
+func (_c *IncidentCreate) SetNillableCommunicatorAssigneeType(v *incident.CommunicatorAssigneeType) *IncidentCreate {
 	if v != nil {
 		_c.SetCommunicatorAssigneeType(*v)
 	}
@@ -711,6 +714,31 @@ func (_c *IncidentCreate) AddCoordinationTasks(v ...*CoordinationTask) *Incident
 	return _c.AddCoordinationTaskIDs(ids...)
 }
 
+// SetCommander sets the "commander" edge to the User entity.
+func (_c *IncidentCreate) SetCommander(v *User) *IncidentCreate {
+	return _c.SetCommanderID(v.ID)
+}
+
+// SetCommunicator sets the "communicator" edge to the User entity.
+func (_c *IncidentCreate) SetCommunicator(v *User) *IncidentCreate {
+	return _c.SetCommunicatorID(v.ID)
+}
+
+// SetOnCallResponder sets the "on_call_responder" edge to the User entity.
+func (_c *IncidentCreate) SetOnCallResponder(v *User) *IncidentCreate {
+	return _c.SetOnCallResponderID(v.ID)
+}
+
+// SetService sets the "service" edge to the Service entity.
+func (_c *IncidentCreate) SetService(v *Service) *IncidentCreate {
+	return _c.SetServiceID(v.ID)
+}
+
+// SetEscalationPolicy sets the "escalation_policy" edge to the EscalationPolicy entity.
+func (_c *IncidentCreate) SetEscalationPolicy(v *EscalationPolicy) *IncidentCreate {
+	return _c.SetEscalationPolicyID(v.ID)
+}
+
 // Mutation returns the IncidentMutation object of the builder.
 func (_c *IncidentCreate) Mutation() *IncidentMutation {
 	return _c.mutation
@@ -847,17 +875,52 @@ func (_c *IncidentCreate) check() error {
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "Incident.status"`)}
 	}
+	if v, ok := _c.mutation.Status(); ok {
+		if err := incident.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Incident.status": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Severity(); !ok {
 		return &ValidationError{Name: "severity", err: errors.New(`ent: missing required field "Incident.severity"`)}
+	}
+	if v, ok := _c.mutation.Severity(); ok {
+		if err := incident.SeverityValidator(v); err != nil {
+			return &ValidationError{Name: "severity", err: fmt.Errorf(`ent: validator failed for field "Incident.severity": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.ImpactLevel(); !ok {
 		return &ValidationError{Name: "impact_level", err: errors.New(`ent: missing required field "Incident.impact_level"`)}
 	}
+	if v, ok := _c.mutation.ImpactLevel(); ok {
+		if err := incident.ImpactLevelValidator(v); err != nil {
+			return &ValidationError{Name: "impact_level", err: fmt.Errorf(`ent: validator failed for field "Incident.impact_level": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Priority(); !ok {
 		return &ValidationError{Name: "priority", err: errors.New(`ent: missing required field "Incident.priority"`)}
 	}
+	if v, ok := _c.mutation.Priority(); ok {
+		if err := incident.PriorityValidator(v); err != nil {
+			return &ValidationError{Name: "priority", err: fmt.Errorf(`ent: validator failed for field "Incident.priority": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.IncidentType(); !ok {
 		return &ValidationError{Name: "incident_type", err: errors.New(`ent: missing required field "Incident.incident_type"`)}
+	}
+	if v, ok := _c.mutation.IncidentType(); ok {
+		if err := incident.IncidentTypeValidator(v); err != nil {
+			return &ValidationError{Name: "incident_type", err: fmt.Errorf(`ent: validator failed for field "Incident.incident_type": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.CommanderAssigneeType(); ok {
+		if err := incident.CommanderAssigneeTypeValidator(v); err != nil {
+			return &ValidationError{Name: "commander_assignee_type", err: fmt.Errorf(`ent: validator failed for field "Incident.commander_assignee_type": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.CommunicatorAssigneeType(); ok {
+		if err := incident.CommunicatorAssigneeTypeValidator(v); err != nil {
+			return &ValidationError{Name: "communicator_assignee_type", err: fmt.Errorf(`ent: validator failed for field "Incident.communicator_assignee_type": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.ConferenceURL(); !ok {
 		return &ValidationError{Name: "conference_url", err: errors.New(`ent: missing required field "Incident.conference_url"`)}
@@ -932,52 +995,32 @@ func (_c *IncidentCreate) createSpec() (*Incident, *sqlgraph.CreateSpec) {
 		_node.Summary = value
 	}
 	if value, ok := _c.mutation.Status(); ok {
-		_spec.SetField(incident.FieldStatus, field.TypeString, value)
+		_spec.SetField(incident.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
 	}
 	if value, ok := _c.mutation.Severity(); ok {
-		_spec.SetField(incident.FieldSeverity, field.TypeString, value)
+		_spec.SetField(incident.FieldSeverity, field.TypeEnum, value)
 		_node.Severity = value
 	}
 	if value, ok := _c.mutation.ImpactLevel(); ok {
-		_spec.SetField(incident.FieldImpactLevel, field.TypeString, value)
+		_spec.SetField(incident.FieldImpactLevel, field.TypeEnum, value)
 		_node.ImpactLevel = value
 	}
 	if value, ok := _c.mutation.Priority(); ok {
-		_spec.SetField(incident.FieldPriority, field.TypeString, value)
+		_spec.SetField(incident.FieldPriority, field.TypeEnum, value)
 		_node.Priority = value
 	}
 	if value, ok := _c.mutation.IncidentType(); ok {
-		_spec.SetField(incident.FieldIncidentType, field.TypeString, value)
+		_spec.SetField(incident.FieldIncidentType, field.TypeEnum, value)
 		_node.IncidentType = value
 	}
-	if value, ok := _c.mutation.CommanderID(); ok {
-		_spec.SetField(incident.FieldCommanderID, field.TypeUUID, value)
-		_node.CommanderID = &value
-	}
-	if value, ok := _c.mutation.CommunicatorID(); ok {
-		_spec.SetField(incident.FieldCommunicatorID, field.TypeUUID, value)
-		_node.CommunicatorID = &value
-	}
-	if value, ok := _c.mutation.OnCallResponderID(); ok {
-		_spec.SetField(incident.FieldOnCallResponderID, field.TypeUUID, value)
-		_node.OnCallResponderID = &value
-	}
 	if value, ok := _c.mutation.CommanderAssigneeType(); ok {
-		_spec.SetField(incident.FieldCommanderAssigneeType, field.TypeString, value)
+		_spec.SetField(incident.FieldCommanderAssigneeType, field.TypeEnum, value)
 		_node.CommanderAssigneeType = value
 	}
 	if value, ok := _c.mutation.CommunicatorAssigneeType(); ok {
-		_spec.SetField(incident.FieldCommunicatorAssigneeType, field.TypeString, value)
+		_spec.SetField(incident.FieldCommunicatorAssigneeType, field.TypeEnum, value)
 		_node.CommunicatorAssigneeType = value
-	}
-	if value, ok := _c.mutation.ServiceID(); ok {
-		_spec.SetField(incident.FieldServiceID, field.TypeUUID, value)
-		_node.ServiceID = &value
-	}
-	if value, ok := _c.mutation.EscalationPolicyID(); ok {
-		_spec.SetField(incident.FieldEscalationPolicyID, field.TypeUUID, value)
-		_node.EscalationPolicyID = &value
 	}
 	if value, ok := _c.mutation.ConferenceURL(); ok {
 		_spec.SetField(incident.FieldConferenceURL, field.TypeString, value)
@@ -1141,7 +1184,7 @@ func (_c *IncidentCreate) createSpec() (*Incident, *sqlgraph.CreateSpec) {
 	}
 	if nodes := _c.mutation.PostMortemIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.O2O,
 			Inverse: false,
 			Table:   incident.PostMortemTable,
 			Columns: []string{incident.PostMortemColumn},
@@ -1153,7 +1196,6 @@ func (_c *IncidentCreate) createSpec() (*Incident, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.incident_post_mortem = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.IcsRolesIDs(); len(nodes) > 0 {
@@ -1218,6 +1260,91 @@ func (_c *IncidentCreate) createSpec() (*Incident, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.CommanderIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   incident.CommanderTable,
+			Columns: []string{incident.CommanderColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.CommanderID = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.CommunicatorIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   incident.CommunicatorTable,
+			Columns: []string{incident.CommunicatorColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.CommunicatorID = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.OnCallResponderIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   incident.OnCallResponderTable,
+			Columns: []string{incident.OnCallResponderColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.OnCallResponderID = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ServiceIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   incident.ServiceTable,
+			Columns: []string{incident.ServiceColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(service.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.ServiceID = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.EscalationPolicyIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   incident.EscalationPolicyTable,
+			Columns: []string{incident.EscalationPolicyColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(escalationpolicy.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.EscalationPolicyID = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

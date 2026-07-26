@@ -3,7 +3,9 @@
 package ent
 
 import (
+	"alga/ent/agentask"
 	"alga/ent/agentdmmessage"
+	"alga/ent/agentmemory"
 	"alga/ent/agenttoken"
 	"alga/ent/icsroleassignment"
 	"alga/ent/schema"
@@ -31,13 +33,13 @@ func (_c *AgentTokenCreate) SetName(v string) *AgentTokenCreate {
 }
 
 // SetAgentType sets the "agent_type" field.
-func (_c *AgentTokenCreate) SetAgentType(v string) *AgentTokenCreate {
+func (_c *AgentTokenCreate) SetAgentType(v agenttoken.AgentType) *AgentTokenCreate {
 	_c.mutation.SetAgentType(v)
 	return _c
 }
 
 // SetNillableAgentType sets the "agent_type" field if the given value is not nil.
-func (_c *AgentTokenCreate) SetNillableAgentType(v *string) *AgentTokenCreate {
+func (_c *AgentTokenCreate) SetNillableAgentType(v *agenttoken.AgentType) *AgentTokenCreate {
 	if v != nil {
 		_c.SetAgentType(*v)
 	}
@@ -210,6 +212,66 @@ func (_c *AgentTokenCreate) AddIcsRoles(v ...*ICSRoleAssignment) *AgentTokenCrea
 	return _c.AddIcsRoleIDs(ids...)
 }
 
+// AddMemoryIDs adds the "memories" edge to the AgentMemory entity by IDs.
+func (_c *AgentTokenCreate) AddMemoryIDs(ids ...uuid.UUID) *AgentTokenCreate {
+	_c.mutation.AddMemoryIDs(ids...)
+	return _c
+}
+
+// AddMemories adds the "memories" edges to the AgentMemory entity.
+func (_c *AgentTokenCreate) AddMemories(v ...*AgentMemory) *AgentTokenCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddMemoryIDs(ids...)
+}
+
+// AddSentAskIDs adds the "sent_asks" edge to the AgentAsk entity by IDs.
+func (_c *AgentTokenCreate) AddSentAskIDs(ids ...uuid.UUID) *AgentTokenCreate {
+	_c.mutation.AddSentAskIDs(ids...)
+	return _c
+}
+
+// AddSentAsks adds the "sent_asks" edges to the AgentAsk entity.
+func (_c *AgentTokenCreate) AddSentAsks(v ...*AgentAsk) *AgentTokenCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddSentAskIDs(ids...)
+}
+
+// AddReceivedAskIDs adds the "received_asks" edge to the AgentAsk entity by IDs.
+func (_c *AgentTokenCreate) AddReceivedAskIDs(ids ...uuid.UUID) *AgentTokenCreate {
+	_c.mutation.AddReceivedAskIDs(ids...)
+	return _c
+}
+
+// AddReceivedAsks adds the "received_asks" edges to the AgentAsk entity.
+func (_c *AgentTokenCreate) AddReceivedAsks(v ...*AgentAsk) *AgentTokenCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddReceivedAskIDs(ids...)
+}
+
+// AddRepliedAskIDs adds the "replied_asks" edge to the AgentAsk entity by IDs.
+func (_c *AgentTokenCreate) AddRepliedAskIDs(ids ...uuid.UUID) *AgentTokenCreate {
+	_c.mutation.AddRepliedAskIDs(ids...)
+	return _c
+}
+
+// AddRepliedAsks adds the "replied_asks" edges to the AgentAsk entity.
+func (_c *AgentTokenCreate) AddRepliedAsks(v ...*AgentAsk) *AgentTokenCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddRepliedAskIDs(ids...)
+}
+
 // Mutation returns the AgentTokenMutation object of the builder.
 func (_c *AgentTokenCreate) Mutation() *AgentTokenMutation {
 	return _c.mutation
@@ -292,6 +354,11 @@ func (_c *AgentTokenCreate) check() error {
 	if _, ok := _c.mutation.AgentType(); !ok {
 		return &ValidationError{Name: "agent_type", err: errors.New(`ent: missing required field "AgentToken.agent_type"`)}
 	}
+	if v, ok := _c.mutation.AgentType(); ok {
+		if err := agenttoken.AgentTypeValidator(v); err != nil {
+			return &ValidationError{Name: "agent_type", err: fmt.Errorf(`ent: validator failed for field "AgentToken.agent_type": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.TokenHash(); !ok {
 		return &ValidationError{Name: "token_hash", err: errors.New(`ent: missing required field "AgentToken.token_hash"`)}
 	}
@@ -357,7 +424,7 @@ func (_c *AgentTokenCreate) createSpec() (*AgentToken, *sqlgraph.CreateSpec) {
 		_node.Name = value
 	}
 	if value, ok := _c.mutation.AgentType(); ok {
-		_spec.SetField(agenttoken.FieldAgentType, field.TypeString, value)
+		_spec.SetField(agenttoken.FieldAgentType, field.TypeEnum, value)
 		_node.AgentType = value
 	}
 	if value, ok := _c.mutation.TokenHash(); ok {
@@ -429,6 +496,70 @@ func (_c *AgentTokenCreate) createSpec() (*AgentToken, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(icsroleassignment.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.MemoriesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.MemoriesTable,
+			Columns: []string{agenttoken.MemoriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentmemory.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.SentAsksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.SentAsksTable,
+			Columns: []string{agenttoken.SentAsksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentask.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ReceivedAsksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.ReceivedAsksTable,
+			Columns: []string{agenttoken.ReceivedAsksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentask.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.RepliedAsksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   agenttoken.RepliedAsksTable,
+			Columns: []string{agenttoken.RepliedAsksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agentask.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

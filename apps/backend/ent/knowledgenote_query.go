@@ -5,6 +5,7 @@ package ent
 import (
 	"alga/ent/knowledgenote"
 	"alga/ent/predicate"
+	"alga/ent/user"
 	"context"
 	"fmt"
 	"math"
@@ -23,6 +24,7 @@ type KnowledgeNoteQuery struct {
 	order      []knowledgenote.OrderOption
 	inters     []Interceptor
 	predicates []predicate.KnowledgeNote
+	withAuthor *UserQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -57,6 +59,28 @@ func (_q *KnowledgeNoteQuery) Unique(unique bool) *KnowledgeNoteQuery {
 func (_q *KnowledgeNoteQuery) Order(o ...knowledgenote.OrderOption) *KnowledgeNoteQuery {
 	_q.order = append(_q.order, o...)
 	return _q
+}
+
+// QueryAuthor chains the current query on the "author" edge.
+func (_q *KnowledgeNoteQuery) QueryAuthor() *UserQuery {
+	query := (&UserClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(knowledgenote.Table, knowledgenote.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, knowledgenote.AuthorTable, knowledgenote.AuthorColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first KnowledgeNote entity from the query.
@@ -251,10 +275,22 @@ func (_q *KnowledgeNoteQuery) Clone() *KnowledgeNoteQuery {
 		order:      append([]knowledgenote.OrderOption{}, _q.order...),
 		inters:     append([]Interceptor{}, _q.inters...),
 		predicates: append([]predicate.KnowledgeNote{}, _q.predicates...),
+		withAuthor: _q.withAuthor.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
+}
+
+// WithAuthor tells the query-builder to eager-load the nodes that are connected to
+// the "author" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *KnowledgeNoteQuery) WithAuthor(opts ...func(*UserQuery)) *KnowledgeNoteQuery {
+	query := (&UserClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withAuthor = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -263,7 +299,7 @@ func (_q *KnowledgeNoteQuery) Clone() *KnowledgeNoteQuery {
 // Example:
 //
 //	var v []struct {
-//		Kind string `json:"kind,omitempty"`
+//		Kind knowledgenote.Kind `json:"kind,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
@@ -286,7 +322,7 @@ func (_q *KnowledgeNoteQuery) GroupBy(field string, fields ...string) *Knowledge
 // Example:
 //
 //	var v []struct {
-//		Kind string `json:"kind,omitempty"`
+//		Kind knowledgenote.Kind `json:"kind,omitempty"`
 //	}
 //
 //	client.KnowledgeNote.Query().
@@ -333,8 +369,11 @@ func (_q *KnowledgeNoteQuery) prepareQuery(ctx context.Context) error {
 
 func (_q *KnowledgeNoteQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*KnowledgeNote, error) {
 	var (
-		nodes = []*KnowledgeNote{}
-		_spec = _q.querySpec()
+		nodes       = []*KnowledgeNote{}
+		_spec       = _q.querySpec()
+		loadedTypes = [1]bool{
+			_q.withAuthor != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*KnowledgeNote).scanValues(nil, columns)
@@ -342,6 +381,7 @@ func (_q *KnowledgeNoteQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &KnowledgeNote{config: _q.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -353,7 +393,46 @@ func (_q *KnowledgeNoteQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := _q.withAuthor; query != nil {
+		if err := _q.loadAuthor(ctx, query, nodes, nil,
+			func(n *KnowledgeNote, e *User) { n.Edges.Author = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (_q *KnowledgeNoteQuery) loadAuthor(ctx context.Context, query *UserQuery, nodes []*KnowledgeNote, init func(*KnowledgeNote), assign func(*KnowledgeNote, *User)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*KnowledgeNote)
+	for i := range nodes {
+		if nodes[i].AuthorID == nil {
+			continue
+		}
+		fk := *nodes[i].AuthorID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(user.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "author_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
 }
 
 func (_q *KnowledgeNoteQuery) sqlCount(ctx context.Context) (int, error) {
@@ -380,6 +459,9 @@ func (_q *KnowledgeNoteQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != knowledgenote.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if _q.withAuthor != nil {
+			_spec.Node.AddColumnOnce(knowledgenote.FieldAuthorID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

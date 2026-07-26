@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/agentask"
+	"alga/ent/agenttoken"
 	"fmt"
 	"strings"
 	"time"
@@ -23,13 +24,13 @@ type AgentAsk struct {
 	// FromAgentName holds the value of the "from_agent_name" field.
 	FromAgentName string `json:"from_agent_name,omitempty"`
 	// FromAgentType holds the value of the "from_agent_type" field.
-	FromAgentType string `json:"from_agent_type,omitempty"`
+	FromAgentType agentask.FromAgentType `json:"from_agent_type,omitempty"`
 	// InvestigationID holds the value of the "investigation_id" field.
 	InvestigationID string `json:"investigation_id,omitempty"`
 	// ToAgentID holds the value of the "to_agent_id" field.
 	ToAgentID *uuid.UUID `json:"to_agent_id,omitempty"`
 	// ToAgentType holds the value of the "to_agent_type" field.
-	ToAgentType string `json:"to_agent_type,omitempty"`
+	ToAgentType *agentask.ToAgentType `json:"to_agent_type,omitempty"`
 	// Question holds the value of the "question" field.
 	Question string `json:"question,omitempty"`
 	// Reply holds the value of the "reply" field.
@@ -39,14 +40,63 @@ type AgentAsk struct {
 	// RepliedByAgentName holds the value of the "replied_by_agent_name" field.
 	RepliedByAgentName string `json:"replied_by_agent_name,omitempty"`
 	// Status holds the value of the "status" field.
-	Status string `json:"status,omitempty"`
+	Status agentask.Status `json:"status,omitempty"`
 	// ExpiresAt holds the value of the "expires_at" field.
 	ExpiresAt time.Time `json:"expires_at,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// AnsweredAt holds the value of the "answered_at" field.
-	AnsweredAt   *time.Time `json:"answered_at,omitempty"`
+	AnsweredAt *time.Time `json:"answered_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the AgentAskQuery when eager-loading is set.
+	Edges        AgentAskEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// AgentAskEdges holds the relations/edges for other nodes in the graph.
+type AgentAskEdges struct {
+	// FromAgent holds the value of the from_agent edge.
+	FromAgent *AgentToken `json:"from_agent,omitempty"`
+	// ToAgent holds the value of the to_agent edge.
+	ToAgent *AgentToken `json:"to_agent,omitempty"`
+	// RepliedByAgent holds the value of the replied_by_agent edge.
+	RepliedByAgent *AgentToken `json:"replied_by_agent,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [3]bool
+}
+
+// FromAgentOrErr returns the FromAgent value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e AgentAskEdges) FromAgentOrErr() (*AgentToken, error) {
+	if e.FromAgent != nil {
+		return e.FromAgent, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: agenttoken.Label}
+	}
+	return nil, &NotLoadedError{edge: "from_agent"}
+}
+
+// ToAgentOrErr returns the ToAgent value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e AgentAskEdges) ToAgentOrErr() (*AgentToken, error) {
+	if e.ToAgent != nil {
+		return e.ToAgent, nil
+	} else if e.loadedTypes[1] {
+		return nil, &NotFoundError{label: agenttoken.Label}
+	}
+	return nil, &NotLoadedError{edge: "to_agent"}
+}
+
+// RepliedByAgentOrErr returns the RepliedByAgent value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e AgentAskEdges) RepliedByAgentOrErr() (*AgentToken, error) {
+	if e.RepliedByAgent != nil {
+		return e.RepliedByAgent, nil
+	} else if e.loadedTypes[2] {
+		return nil, &NotFoundError{label: agenttoken.Label}
+	}
+	return nil, &NotLoadedError{edge: "replied_by_agent"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -99,7 +149,7 @@ func (_m *AgentAsk) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field from_agent_type", values[i])
 			} else if value.Valid {
-				_m.FromAgentType = value.String
+				_m.FromAgentType = agentask.FromAgentType(value.String)
 			}
 		case agentask.FieldInvestigationID:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -118,7 +168,8 @@ func (_m *AgentAsk) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field to_agent_type", values[i])
 			} else if value.Valid {
-				_m.ToAgentType = value.String
+				_m.ToAgentType = new(agentask.ToAgentType)
+				*_m.ToAgentType = agentask.ToAgentType(value.String)
 			}
 		case agentask.FieldQuestion:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -149,7 +200,7 @@ func (_m *AgentAsk) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
-				_m.Status = value.String
+				_m.Status = agentask.Status(value.String)
 			}
 		case agentask.FieldExpiresAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -183,6 +234,21 @@ func (_m *AgentAsk) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
 }
 
+// QueryFromAgent queries the "from_agent" edge of the AgentAsk entity.
+func (_m *AgentAsk) QueryFromAgent() *AgentTokenQuery {
+	return NewAgentAskClient(_m.config).QueryFromAgent(_m)
+}
+
+// QueryToAgent queries the "to_agent" edge of the AgentAsk entity.
+func (_m *AgentAsk) QueryToAgent() *AgentTokenQuery {
+	return NewAgentAskClient(_m.config).QueryToAgent(_m)
+}
+
+// QueryRepliedByAgent queries the "replied_by_agent" edge of the AgentAsk entity.
+func (_m *AgentAsk) QueryRepliedByAgent() *AgentTokenQuery {
+	return NewAgentAskClient(_m.config).QueryRepliedByAgent(_m)
+}
+
 // Update returns a builder for updating this AgentAsk.
 // Note that you need to call AgentAsk.Unwrap() before calling this method if this AgentAsk
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -213,7 +279,7 @@ func (_m *AgentAsk) String() string {
 	builder.WriteString(_m.FromAgentName)
 	builder.WriteString(", ")
 	builder.WriteString("from_agent_type=")
-	builder.WriteString(_m.FromAgentType)
+	builder.WriteString(fmt.Sprintf("%v", _m.FromAgentType))
 	builder.WriteString(", ")
 	builder.WriteString("investigation_id=")
 	builder.WriteString(_m.InvestigationID)
@@ -223,8 +289,10 @@ func (_m *AgentAsk) String() string {
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteString(", ")
-	builder.WriteString("to_agent_type=")
-	builder.WriteString(_m.ToAgentType)
+	if v := _m.ToAgentType; v != nil {
+		builder.WriteString("to_agent_type=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("question=")
 	builder.WriteString(_m.Question)
@@ -241,7 +309,7 @@ func (_m *AgentAsk) String() string {
 	builder.WriteString(_m.RepliedByAgentName)
 	builder.WriteString(", ")
 	builder.WriteString("status=")
-	builder.WriteString(_m.Status)
+	builder.WriteString(fmt.Sprintf("%v", _m.Status))
 	builder.WriteString(", ")
 	builder.WriteString("expires_at=")
 	builder.WriteString(_m.ExpiresAt.Format(time.ANSIC))

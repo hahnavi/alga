@@ -86,6 +86,11 @@ func CreatedAt(v time.Time) predicate.IncidentTimelineEntry {
 	return predicate.IncidentTimelineEntry(sql.FieldEQ(FieldCreatedAt, v))
 }
 
+// IncidentID applies equality check predicate on the "incident_id" field. It's identical to IncidentIDEQ.
+func IncidentID(v uuid.UUID) predicate.IncidentTimelineEntry {
+	return predicate.IncidentTimelineEntry(sql.FieldEQ(FieldIncidentID, v))
+}
+
 // EventTypeEQ applies the EQ predicate on the "event_type" field.
 func EventTypeEQ(v string) predicate.IncidentTimelineEntry {
 	return predicate.IncidentTimelineEntry(sql.FieldEQ(FieldEventType, v))
@@ -444,6 +449,26 @@ func CreatedAtLT(v time.Time) predicate.IncidentTimelineEntry {
 // CreatedAtLTE applies the LTE predicate on the "created_at" field.
 func CreatedAtLTE(v time.Time) predicate.IncidentTimelineEntry {
 	return predicate.IncidentTimelineEntry(sql.FieldLTE(FieldCreatedAt, v))
+}
+
+// IncidentIDEQ applies the EQ predicate on the "incident_id" field.
+func IncidentIDEQ(v uuid.UUID) predicate.IncidentTimelineEntry {
+	return predicate.IncidentTimelineEntry(sql.FieldEQ(FieldIncidentID, v))
+}
+
+// IncidentIDNEQ applies the NEQ predicate on the "incident_id" field.
+func IncidentIDNEQ(v uuid.UUID) predicate.IncidentTimelineEntry {
+	return predicate.IncidentTimelineEntry(sql.FieldNEQ(FieldIncidentID, v))
+}
+
+// IncidentIDIn applies the In predicate on the "incident_id" field.
+func IncidentIDIn(vs ...uuid.UUID) predicate.IncidentTimelineEntry {
+	return predicate.IncidentTimelineEntry(sql.FieldIn(FieldIncidentID, vs...))
+}
+
+// IncidentIDNotIn applies the NotIn predicate on the "incident_id" field.
+func IncidentIDNotIn(vs ...uuid.UUID) predicate.IncidentTimelineEntry {
+	return predicate.IncidentTimelineEntry(sql.FieldNotIn(FieldIncidentID, vs...))
 }
 
 // HasIncident applies the HasEdge predicate on the "incident" edge.

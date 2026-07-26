@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -80,11 +81,6 @@ func DisplayOrder(v int) predicate.StatusPageComponent {
 	return predicate.StatusPageComponent(sql.FieldEQ(FieldDisplayOrder, v))
 }
 
-// Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
-func Status(v string) predicate.StatusPageComponent {
-	return predicate.StatusPageComponent(sql.FieldEQ(FieldStatus, v))
-}
-
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.StatusPageComponent {
 	return predicate.StatusPageComponent(sql.FieldEQ(FieldCreatedAt, v))
@@ -113,26 +109,6 @@ func StatusPageIDIn(vs ...uuid.UUID) predicate.StatusPageComponent {
 // StatusPageIDNotIn applies the NotIn predicate on the "status_page_id" field.
 func StatusPageIDNotIn(vs ...uuid.UUID) predicate.StatusPageComponent {
 	return predicate.StatusPageComponent(sql.FieldNotIn(FieldStatusPageID, vs...))
-}
-
-// StatusPageIDGT applies the GT predicate on the "status_page_id" field.
-func StatusPageIDGT(v uuid.UUID) predicate.StatusPageComponent {
-	return predicate.StatusPageComponent(sql.FieldGT(FieldStatusPageID, v))
-}
-
-// StatusPageIDGTE applies the GTE predicate on the "status_page_id" field.
-func StatusPageIDGTE(v uuid.UUID) predicate.StatusPageComponent {
-	return predicate.StatusPageComponent(sql.FieldGTE(FieldStatusPageID, v))
-}
-
-// StatusPageIDLT applies the LT predicate on the "status_page_id" field.
-func StatusPageIDLT(v uuid.UUID) predicate.StatusPageComponent {
-	return predicate.StatusPageComponent(sql.FieldLT(FieldStatusPageID, v))
-}
-
-// StatusPageIDLTE applies the LTE predicate on the "status_page_id" field.
-func StatusPageIDLTE(v uuid.UUID) predicate.StatusPageComponent {
-	return predicate.StatusPageComponent(sql.FieldLTE(FieldStatusPageID, v))
 }
 
 // NameEQ applies the EQ predicate on the "name" field.
@@ -285,26 +261,6 @@ func ServiceIDNotIn(vs ...uuid.UUID) predicate.StatusPageComponent {
 	return predicate.StatusPageComponent(sql.FieldNotIn(FieldServiceID, vs...))
 }
 
-// ServiceIDGT applies the GT predicate on the "service_id" field.
-func ServiceIDGT(v uuid.UUID) predicate.StatusPageComponent {
-	return predicate.StatusPageComponent(sql.FieldGT(FieldServiceID, v))
-}
-
-// ServiceIDGTE applies the GTE predicate on the "service_id" field.
-func ServiceIDGTE(v uuid.UUID) predicate.StatusPageComponent {
-	return predicate.StatusPageComponent(sql.FieldGTE(FieldServiceID, v))
-}
-
-// ServiceIDLT applies the LT predicate on the "service_id" field.
-func ServiceIDLT(v uuid.UUID) predicate.StatusPageComponent {
-	return predicate.StatusPageComponent(sql.FieldLT(FieldServiceID, v))
-}
-
-// ServiceIDLTE applies the LTE predicate on the "service_id" field.
-func ServiceIDLTE(v uuid.UUID) predicate.StatusPageComponent {
-	return predicate.StatusPageComponent(sql.FieldLTE(FieldServiceID, v))
-}
-
 // ServiceIDIsNil applies the IsNil predicate on the "service_id" field.
 func ServiceIDIsNil() predicate.StatusPageComponent {
 	return predicate.StatusPageComponent(sql.FieldIsNull(FieldServiceID))
@@ -356,68 +312,23 @@ func DisplayOrderLTE(v int) predicate.StatusPageComponent {
 }
 
 // StatusEQ applies the EQ predicate on the "status" field.
-func StatusEQ(v string) predicate.StatusPageComponent {
+func StatusEQ(v Status) predicate.StatusPageComponent {
 	return predicate.StatusPageComponent(sql.FieldEQ(FieldStatus, v))
 }
 
 // StatusNEQ applies the NEQ predicate on the "status" field.
-func StatusNEQ(v string) predicate.StatusPageComponent {
+func StatusNEQ(v Status) predicate.StatusPageComponent {
 	return predicate.StatusPageComponent(sql.FieldNEQ(FieldStatus, v))
 }
 
 // StatusIn applies the In predicate on the "status" field.
-func StatusIn(vs ...string) predicate.StatusPageComponent {
+func StatusIn(vs ...Status) predicate.StatusPageComponent {
 	return predicate.StatusPageComponent(sql.FieldIn(FieldStatus, vs...))
 }
 
 // StatusNotIn applies the NotIn predicate on the "status" field.
-func StatusNotIn(vs ...string) predicate.StatusPageComponent {
+func StatusNotIn(vs ...Status) predicate.StatusPageComponent {
 	return predicate.StatusPageComponent(sql.FieldNotIn(FieldStatus, vs...))
-}
-
-// StatusGT applies the GT predicate on the "status" field.
-func StatusGT(v string) predicate.StatusPageComponent {
-	return predicate.StatusPageComponent(sql.FieldGT(FieldStatus, v))
-}
-
-// StatusGTE applies the GTE predicate on the "status" field.
-func StatusGTE(v string) predicate.StatusPageComponent {
-	return predicate.StatusPageComponent(sql.FieldGTE(FieldStatus, v))
-}
-
-// StatusLT applies the LT predicate on the "status" field.
-func StatusLT(v string) predicate.StatusPageComponent {
-	return predicate.StatusPageComponent(sql.FieldLT(FieldStatus, v))
-}
-
-// StatusLTE applies the LTE predicate on the "status" field.
-func StatusLTE(v string) predicate.StatusPageComponent {
-	return predicate.StatusPageComponent(sql.FieldLTE(FieldStatus, v))
-}
-
-// StatusContains applies the Contains predicate on the "status" field.
-func StatusContains(v string) predicate.StatusPageComponent {
-	return predicate.StatusPageComponent(sql.FieldContains(FieldStatus, v))
-}
-
-// StatusHasPrefix applies the HasPrefix predicate on the "status" field.
-func StatusHasPrefix(v string) predicate.StatusPageComponent {
-	return predicate.StatusPageComponent(sql.FieldHasPrefix(FieldStatus, v))
-}
-
-// StatusHasSuffix applies the HasSuffix predicate on the "status" field.
-func StatusHasSuffix(v string) predicate.StatusPageComponent {
-	return predicate.StatusPageComponent(sql.FieldHasSuffix(FieldStatus, v))
-}
-
-// StatusEqualFold applies the EqualFold predicate on the "status" field.
-func StatusEqualFold(v string) predicate.StatusPageComponent {
-	return predicate.StatusPageComponent(sql.FieldEqualFold(FieldStatus, v))
-}
-
-// StatusContainsFold applies the ContainsFold predicate on the "status" field.
-func StatusContainsFold(v string) predicate.StatusPageComponent {
-	return predicate.StatusPageComponent(sql.FieldContainsFold(FieldStatus, v))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
@@ -498,6 +409,52 @@ func UpdatedAtLT(v time.Time) predicate.StatusPageComponent {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.StatusPageComponent {
 	return predicate.StatusPageComponent(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// HasStatusPage applies the HasEdge predicate on the "status_page" edge.
+func HasStatusPage() predicate.StatusPageComponent {
+	return predicate.StatusPageComponent(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, StatusPageTable, StatusPageColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasStatusPageWith applies the HasEdge predicate on the "status_page" edge with a given conditions (other predicates).
+func HasStatusPageWith(preds ...predicate.StatusPage) predicate.StatusPageComponent {
+	return predicate.StatusPageComponent(func(s *sql.Selector) {
+		step := newStatusPageStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasService applies the HasEdge predicate on the "service" edge.
+func HasService() predicate.StatusPageComponent {
+	return predicate.StatusPageComponent(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, ServiceTable, ServiceColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasServiceWith applies the HasEdge predicate on the "service" edge with a given conditions (other predicates).
+func HasServiceWith(preds ...predicate.Service) predicate.StatusPageComponent {
+	return predicate.StatusPageComponent(func(s *sql.Selector) {
+		step := newServiceStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

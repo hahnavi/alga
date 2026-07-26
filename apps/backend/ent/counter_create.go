@@ -85,6 +85,11 @@ func (_c *CounterCreate) check() error {
 	if _, ok := _c.mutation.Seq(); !ok {
 		return &ValidationError{Name: "seq", err: errors.New(`ent: missing required field "Counter.seq"`)}
 	}
+	if v, ok := _c.mutation.Seq(); ok {
+		if err := counter.SeqValidator(v); err != nil {
+			return &ValidationError{Name: "seq", err: fmt.Errorf(`ent: validator failed for field "Counter.seq": %w`, err)}
+		}
+	}
 	if v, ok := _c.mutation.ID(); ok {
 		if err := counter.IDValidator(v); err != nil {
 			return &ValidationError{Name: "id", err: fmt.Errorf(`ent: validator failed for field "Counter.id": %w`, err)}

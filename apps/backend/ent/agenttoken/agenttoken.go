@@ -3,6 +3,7 @@
 package agenttoken
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -45,6 +46,14 @@ const (
 	EdgeDmMessages = "dm_messages"
 	// EdgeIcsRoles holds the string denoting the ics_roles edge name in mutations.
 	EdgeIcsRoles = "ics_roles"
+	// EdgeMemories holds the string denoting the memories edge name in mutations.
+	EdgeMemories = "memories"
+	// EdgeSentAsks holds the string denoting the sent_asks edge name in mutations.
+	EdgeSentAsks = "sent_asks"
+	// EdgeReceivedAsks holds the string denoting the received_asks edge name in mutations.
+	EdgeReceivedAsks = "received_asks"
+	// EdgeRepliedAsks holds the string denoting the replied_asks edge name in mutations.
+	EdgeRepliedAsks = "replied_asks"
 	// Table holds the table name of the agenttoken in the database.
 	Table = "agent_tokens"
 	// DmMessagesTable is the table that holds the dm_messages relation/edge.
@@ -53,14 +62,42 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "agentdmmessage" package.
 	DmMessagesInverseTable = "agent_dm_messages"
 	// DmMessagesColumn is the table column denoting the dm_messages relation/edge.
-	DmMessagesColumn = "agent_token_dm_messages"
+	DmMessagesColumn = "agent_token_id"
 	// IcsRolesTable is the table that holds the ics_roles relation/edge.
 	IcsRolesTable = "ics_role_assignments"
 	// IcsRolesInverseTable is the table name for the ICSRoleAssignment entity.
 	// It exists in this package in order to avoid circular dependency with the "icsroleassignment" package.
 	IcsRolesInverseTable = "ics_role_assignments"
 	// IcsRolesColumn is the table column denoting the ics_roles relation/edge.
-	IcsRolesColumn = "agent_token_ics_roles"
+	IcsRolesColumn = "agent_token_id"
+	// MemoriesTable is the table that holds the memories relation/edge.
+	MemoriesTable = "agent_memories"
+	// MemoriesInverseTable is the table name for the AgentMemory entity.
+	// It exists in this package in order to avoid circular dependency with the "agentmemory" package.
+	MemoriesInverseTable = "agent_memories"
+	// MemoriesColumn is the table column denoting the memories relation/edge.
+	MemoriesColumn = "agent_id"
+	// SentAsksTable is the table that holds the sent_asks relation/edge.
+	SentAsksTable = "agent_asks"
+	// SentAsksInverseTable is the table name for the AgentAsk entity.
+	// It exists in this package in order to avoid circular dependency with the "agentask" package.
+	SentAsksInverseTable = "agent_asks"
+	// SentAsksColumn is the table column denoting the sent_asks relation/edge.
+	SentAsksColumn = "from_agent_id"
+	// ReceivedAsksTable is the table that holds the received_asks relation/edge.
+	ReceivedAsksTable = "agent_asks"
+	// ReceivedAsksInverseTable is the table name for the AgentAsk entity.
+	// It exists in this package in order to avoid circular dependency with the "agentask" package.
+	ReceivedAsksInverseTable = "agent_asks"
+	// ReceivedAsksColumn is the table column denoting the received_asks relation/edge.
+	ReceivedAsksColumn = "to_agent_id"
+	// RepliedAsksTable is the table that holds the replied_asks relation/edge.
+	RepliedAsksTable = "agent_asks"
+	// RepliedAsksInverseTable is the table name for the AgentAsk entity.
+	// It exists in this package in order to avoid circular dependency with the "agentask" package.
+	RepliedAsksInverseTable = "agent_asks"
+	// RepliedAsksColumn is the table column denoting the replied_asks relation/edge.
+	RepliedAsksColumn = "replied_by_agent_id"
 )
 
 // Columns holds all SQL columns for agenttoken fields.
@@ -94,8 +131,6 @@ func ValidColumn(column string) bool {
 var (
 	// NameValidator is a validator for the "name" field. It is called by the builders before save.
 	NameValidator func(string) error
-	// DefaultAgentType holds the default value on creation for the "agent_type" field.
-	DefaultAgentType string
 	// TokenHashValidator is a validator for the "token_hash" field. It is called by the builders before save.
 	TokenHashValidator func(string) error
 	// LookupPrefixValidator is a validator for the "lookup_prefix" field. It is called by the builders before save.
@@ -115,6 +150,33 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// AgentType defines the type for the "agent_type" enum field.
+type AgentType string
+
+// AgentTypeHermes is the default value of the AgentType enum.
+const DefaultAgentType = AgentTypeHermes
+
+// AgentType values.
+const (
+	AgentTypeHermes   AgentType = "hermes"
+	AgentTypeOpenclaw AgentType = "openclaw"
+	AgentTypeOther    AgentType = "other"
+)
+
+func (at AgentType) String() string {
+	return string(at)
+}
+
+// AgentTypeValidator is a validator for the "agent_type" field enum values. It is called by the builders before save.
+func AgentTypeValidator(at AgentType) error {
+	switch at {
+	case AgentTypeHermes, AgentTypeOpenclaw, AgentTypeOther:
+		return nil
+	default:
+		return fmt.Errorf("agenttoken: invalid enum value for agent_type field: %q", at)
+	}
+}
 
 // OrderOption defines the ordering options for the AgentToken queries.
 type OrderOption func(*sql.Selector)
@@ -206,6 +268,62 @@ func ByIcsRoles(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newIcsRolesStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByMemoriesCount orders the results by memories count.
+func ByMemoriesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newMemoriesStep(), opts...)
+	}
+}
+
+// ByMemories orders the results by memories terms.
+func ByMemories(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newMemoriesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// BySentAsksCount orders the results by sent_asks count.
+func BySentAsksCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newSentAsksStep(), opts...)
+	}
+}
+
+// BySentAsks orders the results by sent_asks terms.
+func BySentAsks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newSentAsksStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByReceivedAsksCount orders the results by received_asks count.
+func ByReceivedAsksCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newReceivedAsksStep(), opts...)
+	}
+}
+
+// ByReceivedAsks orders the results by received_asks terms.
+func ByReceivedAsks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newReceivedAsksStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByRepliedAsksCount orders the results by replied_asks count.
+func ByRepliedAsksCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newRepliedAsksStep(), opts...)
+	}
+}
+
+// ByRepliedAsks orders the results by replied_asks terms.
+func ByRepliedAsks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newRepliedAsksStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newDmMessagesStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -218,5 +336,33 @@ func newIcsRolesStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(IcsRolesInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, IcsRolesTable, IcsRolesColumn),
+	)
+}
+func newMemoriesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(MemoriesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, MemoriesTable, MemoriesColumn),
+	)
+}
+func newSentAsksStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(SentAsksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, SentAsksTable, SentAsksColumn),
+	)
+}
+func newReceivedAsksStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ReceivedAsksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ReceivedAsksTable, ReceivedAsksColumn),
+	)
+}
+func newRepliedAsksStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(RepliedAsksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, RepliedAsksTable, RepliedAsksColumn),
 	)
 }

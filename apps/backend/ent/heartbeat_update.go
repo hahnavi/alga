@@ -5,6 +5,7 @@ package ent
 import (
 	"alga/ent/heartbeat"
 	"alga/ent/predicate"
+	"alga/ent/team"
 	"context"
 	"errors"
 	"fmt"
@@ -134,13 +135,13 @@ func (_u *HeartbeatUpdate) ClearOwnerTeamID() *HeartbeatUpdate {
 }
 
 // SetStatus sets the "status" field.
-func (_u *HeartbeatUpdate) SetStatus(v string) *HeartbeatUpdate {
+func (_u *HeartbeatUpdate) SetStatus(v heartbeat.Status) *HeartbeatUpdate {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *HeartbeatUpdate) SetNillableStatus(v *string) *HeartbeatUpdate {
+func (_u *HeartbeatUpdate) SetNillableStatus(v *heartbeat.Status) *HeartbeatUpdate {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -148,13 +149,13 @@ func (_u *HeartbeatUpdate) SetNillableStatus(v *string) *HeartbeatUpdate {
 }
 
 // SetSeverity sets the "severity" field.
-func (_u *HeartbeatUpdate) SetSeverity(v string) *HeartbeatUpdate {
+func (_u *HeartbeatUpdate) SetSeverity(v heartbeat.Severity) *HeartbeatUpdate {
 	_u.mutation.SetSeverity(v)
 	return _u
 }
 
 // SetNillableSeverity sets the "severity" field if the given value is not nil.
-func (_u *HeartbeatUpdate) SetNillableSeverity(v *string) *HeartbeatUpdate {
+func (_u *HeartbeatUpdate) SetNillableSeverity(v *heartbeat.Severity) *HeartbeatUpdate {
 	if v != nil {
 		_u.SetSeverity(*v)
 	}
@@ -301,9 +302,20 @@ func (_u *HeartbeatUpdate) SetUpdatedAt(v time.Time) *HeartbeatUpdate {
 	return _u
 }
 
+// SetOwnerTeam sets the "owner_team" edge to the Team entity.
+func (_u *HeartbeatUpdate) SetOwnerTeam(v *Team) *HeartbeatUpdate {
+	return _u.SetOwnerTeamID(v.ID)
+}
+
 // Mutation returns the HeartbeatMutation object of the builder.
 func (_u *HeartbeatUpdate) Mutation() *HeartbeatMutation {
 	return _u.mutation
+}
+
+// ClearOwnerTeam clears the "owner_team" edge to the Team entity.
+func (_u *HeartbeatUpdate) ClearOwnerTeam() *HeartbeatUpdate {
+	_u.mutation.ClearOwnerTeam()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -359,6 +371,16 @@ func (_u *HeartbeatUpdate) check() error {
 			return &ValidationError{Name: "grace_seconds", err: fmt.Errorf(`ent: validator failed for field "Heartbeat.grace_seconds": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := heartbeat.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Heartbeat.status": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Severity(); ok {
+		if err := heartbeat.SeverityValidator(v); err != nil {
+			return &ValidationError{Name: "severity", err: fmt.Errorf(`ent: validator failed for field "Heartbeat.severity": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.PingTokenHash(); ok {
 		if err := heartbeat.PingTokenHashValidator(v); err != nil {
 			return &ValidationError{Name: "ping_token_hash", err: fmt.Errorf(`ent: validator failed for field "Heartbeat.ping_token_hash": %w`, err)}
@@ -405,17 +427,11 @@ func (_u *HeartbeatUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.Enabled(); ok {
 		_spec.SetField(heartbeat.FieldEnabled, field.TypeBool, value)
 	}
-	if value, ok := _u.mutation.OwnerTeamID(); ok {
-		_spec.SetField(heartbeat.FieldOwnerTeamID, field.TypeUUID, value)
-	}
-	if _u.mutation.OwnerTeamIDCleared() {
-		_spec.ClearField(heartbeat.FieldOwnerTeamID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(heartbeat.FieldStatus, field.TypeString, value)
+		_spec.SetField(heartbeat.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Severity(); ok {
-		_spec.SetField(heartbeat.FieldSeverity, field.TypeString, value)
+		_spec.SetField(heartbeat.FieldSeverity, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Labels(); ok {
 		_spec.SetField(heartbeat.FieldLabels, field.TypeJSON, value)
@@ -458,6 +474,35 @@ func (_u *HeartbeatUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(heartbeat.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.OwnerTeamCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   heartbeat.OwnerTeamTable,
+			Columns: []string{heartbeat.OwnerTeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OwnerTeamIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   heartbeat.OwnerTeamTable,
+			Columns: []string{heartbeat.OwnerTeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -584,13 +629,13 @@ func (_u *HeartbeatUpdateOne) ClearOwnerTeamID() *HeartbeatUpdateOne {
 }
 
 // SetStatus sets the "status" field.
-func (_u *HeartbeatUpdateOne) SetStatus(v string) *HeartbeatUpdateOne {
+func (_u *HeartbeatUpdateOne) SetStatus(v heartbeat.Status) *HeartbeatUpdateOne {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *HeartbeatUpdateOne) SetNillableStatus(v *string) *HeartbeatUpdateOne {
+func (_u *HeartbeatUpdateOne) SetNillableStatus(v *heartbeat.Status) *HeartbeatUpdateOne {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -598,13 +643,13 @@ func (_u *HeartbeatUpdateOne) SetNillableStatus(v *string) *HeartbeatUpdateOne {
 }
 
 // SetSeverity sets the "severity" field.
-func (_u *HeartbeatUpdateOne) SetSeverity(v string) *HeartbeatUpdateOne {
+func (_u *HeartbeatUpdateOne) SetSeverity(v heartbeat.Severity) *HeartbeatUpdateOne {
 	_u.mutation.SetSeverity(v)
 	return _u
 }
 
 // SetNillableSeverity sets the "severity" field if the given value is not nil.
-func (_u *HeartbeatUpdateOne) SetNillableSeverity(v *string) *HeartbeatUpdateOne {
+func (_u *HeartbeatUpdateOne) SetNillableSeverity(v *heartbeat.Severity) *HeartbeatUpdateOne {
 	if v != nil {
 		_u.SetSeverity(*v)
 	}
@@ -751,9 +796,20 @@ func (_u *HeartbeatUpdateOne) SetUpdatedAt(v time.Time) *HeartbeatUpdateOne {
 	return _u
 }
 
+// SetOwnerTeam sets the "owner_team" edge to the Team entity.
+func (_u *HeartbeatUpdateOne) SetOwnerTeam(v *Team) *HeartbeatUpdateOne {
+	return _u.SetOwnerTeamID(v.ID)
+}
+
 // Mutation returns the HeartbeatMutation object of the builder.
 func (_u *HeartbeatUpdateOne) Mutation() *HeartbeatMutation {
 	return _u.mutation
+}
+
+// ClearOwnerTeam clears the "owner_team" edge to the Team entity.
+func (_u *HeartbeatUpdateOne) ClearOwnerTeam() *HeartbeatUpdateOne {
+	_u.mutation.ClearOwnerTeam()
+	return _u
 }
 
 // Where appends a list predicates to the HeartbeatUpdate builder.
@@ -822,6 +878,16 @@ func (_u *HeartbeatUpdateOne) check() error {
 			return &ValidationError{Name: "grace_seconds", err: fmt.Errorf(`ent: validator failed for field "Heartbeat.grace_seconds": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := heartbeat.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Heartbeat.status": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Severity(); ok {
+		if err := heartbeat.SeverityValidator(v); err != nil {
+			return &ValidationError{Name: "severity", err: fmt.Errorf(`ent: validator failed for field "Heartbeat.severity": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.PingTokenHash(); ok {
 		if err := heartbeat.PingTokenHashValidator(v); err != nil {
 			return &ValidationError{Name: "ping_token_hash", err: fmt.Errorf(`ent: validator failed for field "Heartbeat.ping_token_hash": %w`, err)}
@@ -885,17 +951,11 @@ func (_u *HeartbeatUpdateOne) sqlSave(ctx context.Context) (_node *Heartbeat, er
 	if value, ok := _u.mutation.Enabled(); ok {
 		_spec.SetField(heartbeat.FieldEnabled, field.TypeBool, value)
 	}
-	if value, ok := _u.mutation.OwnerTeamID(); ok {
-		_spec.SetField(heartbeat.FieldOwnerTeamID, field.TypeUUID, value)
-	}
-	if _u.mutation.OwnerTeamIDCleared() {
-		_spec.ClearField(heartbeat.FieldOwnerTeamID, field.TypeUUID)
-	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(heartbeat.FieldStatus, field.TypeString, value)
+		_spec.SetField(heartbeat.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Severity(); ok {
-		_spec.SetField(heartbeat.FieldSeverity, field.TypeString, value)
+		_spec.SetField(heartbeat.FieldSeverity, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Labels(); ok {
 		_spec.SetField(heartbeat.FieldLabels, field.TypeJSON, value)
@@ -938,6 +998,35 @@ func (_u *HeartbeatUpdateOne) sqlSave(ctx context.Context) (_node *Heartbeat, er
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(heartbeat.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.OwnerTeamCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   heartbeat.OwnerTeamTable,
+			Columns: []string{heartbeat.OwnerTeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OwnerTeamIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   heartbeat.OwnerTeamTable,
+			Columns: []string{heartbeat.OwnerTeamColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(team.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &Heartbeat{config: _u.config}
 	_spec.Assign = _node.assignValues

@@ -299,12 +299,12 @@ func (_q *AlertInvestigationEventQuery) WithAlertInvestigation(opts ...func(*Ale
 // Example:
 //
 //	var v []struct {
-//		AlertInvestigationUUID uuid.UUID `json:"alert_investigation_uuid,omitempty"`
+//		AlertInvestigationID uuid.UUID `json:"alert_investigation_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.AlertInvestigationEvent.Query().
-//		GroupBy(alertinvestigationevent.FieldAlertInvestigationUUID).
+//		GroupBy(alertinvestigationevent.FieldAlertInvestigationID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *AlertInvestigationEventQuery) GroupBy(field string, fields ...string) *AlertInvestigationEventGroupBy {
@@ -322,11 +322,11 @@ func (_q *AlertInvestigationEventQuery) GroupBy(field string, fields ...string) 
 // Example:
 //
 //	var v []struct {
-//		AlertInvestigationUUID uuid.UUID `json:"alert_investigation_uuid,omitempty"`
+//		AlertInvestigationID uuid.UUID `json:"alert_investigation_id,omitempty"`
 //	}
 //
 //	client.AlertInvestigationEvent.Query().
-//		Select(alertinvestigationevent.FieldAlertInvestigationUUID).
+//		Select(alertinvestigationevent.FieldAlertInvestigationID).
 //		Scan(ctx, &v)
 func (_q *AlertInvestigationEventQuery) Select(fields ...string) *AlertInvestigationEventSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
@@ -406,7 +406,7 @@ func (_q *AlertInvestigationEventQuery) loadAlertInvestigation(ctx context.Conte
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*AlertInvestigationEvent)
 	for i := range nodes {
-		fk := nodes[i].AlertInvestigationUUID
+		fk := nodes[i].AlertInvestigationID
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -423,7 +423,7 @@ func (_q *AlertInvestigationEventQuery) loadAlertInvestigation(ctx context.Conte
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "alert_investigation_uuid" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "alert_investigation_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -458,7 +458,7 @@ func (_q *AlertInvestigationEventQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 		if _q.withAlertInvestigation != nil {
-			_spec.Node.AddColumnOnce(alertinvestigationevent.FieldAlertInvestigationUUID)
+			_spec.Node.AddColumnOnce(alertinvestigationevent.FieldAlertInvestigationID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

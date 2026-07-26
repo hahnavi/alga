@@ -94,29 +94,43 @@ func (_u *IncidentDocumentUpdate) SetNillableUpdatedAt(v *time.Time) *IncidentDo
 	return _u
 }
 
-// SetIncidentID sets the "incident" edge to the Incident entity by ID.
-func (_u *IncidentDocumentUpdate) SetIncidentID(id uuid.UUID) *IncidentDocumentUpdate {
-	_u.mutation.SetIncidentID(id)
+// SetIncidentID sets the "incident_id" field.
+func (_u *IncidentDocumentUpdate) SetIncidentID(v uuid.UUID) *IncidentDocumentUpdate {
+	_u.mutation.SetIncidentID(v)
+	return _u
+}
+
+// SetNillableIncidentID sets the "incident_id" field if the given value is not nil.
+func (_u *IncidentDocumentUpdate) SetNillableIncidentID(v *uuid.UUID) *IncidentDocumentUpdate {
+	if v != nil {
+		_u.SetIncidentID(*v)
+	}
+	return _u
+}
+
+// SetUpdatedByID sets the "updated_by_id" field.
+func (_u *IncidentDocumentUpdate) SetUpdatedByID(v uuid.UUID) *IncidentDocumentUpdate {
+	_u.mutation.SetUpdatedByID(v)
+	return _u
+}
+
+// SetNillableUpdatedByID sets the "updated_by_id" field if the given value is not nil.
+func (_u *IncidentDocumentUpdate) SetNillableUpdatedByID(v *uuid.UUID) *IncidentDocumentUpdate {
+	if v != nil {
+		_u.SetUpdatedByID(*v)
+	}
+	return _u
+}
+
+// ClearUpdatedByID clears the value of the "updated_by_id" field.
+func (_u *IncidentDocumentUpdate) ClearUpdatedByID() *IncidentDocumentUpdate {
+	_u.mutation.ClearUpdatedByID()
 	return _u
 }
 
 // SetIncident sets the "incident" edge to the Incident entity.
 func (_u *IncidentDocumentUpdate) SetIncident(v *Incident) *IncidentDocumentUpdate {
 	return _u.SetIncidentID(v.ID)
-}
-
-// SetUpdatedByID sets the "updated_by" edge to the User entity by ID.
-func (_u *IncidentDocumentUpdate) SetUpdatedByID(id uuid.UUID) *IncidentDocumentUpdate {
-	_u.mutation.SetUpdatedByID(id)
-	return _u
-}
-
-// SetNillableUpdatedByID sets the "updated_by" edge to the User entity by ID if the given value is not nil.
-func (_u *IncidentDocumentUpdate) SetNillableUpdatedByID(id *uuid.UUID) *IncidentDocumentUpdate {
-	if id != nil {
-		_u = _u.SetUpdatedByID(*id)
-	}
-	return _u
 }
 
 // SetUpdatedBy sets the "updated_by" edge to the User entity.
@@ -344,29 +358,43 @@ func (_u *IncidentDocumentUpdateOne) SetNillableUpdatedAt(v *time.Time) *Inciden
 	return _u
 }
 
-// SetIncidentID sets the "incident" edge to the Incident entity by ID.
-func (_u *IncidentDocumentUpdateOne) SetIncidentID(id uuid.UUID) *IncidentDocumentUpdateOne {
-	_u.mutation.SetIncidentID(id)
+// SetIncidentID sets the "incident_id" field.
+func (_u *IncidentDocumentUpdateOne) SetIncidentID(v uuid.UUID) *IncidentDocumentUpdateOne {
+	_u.mutation.SetIncidentID(v)
+	return _u
+}
+
+// SetNillableIncidentID sets the "incident_id" field if the given value is not nil.
+func (_u *IncidentDocumentUpdateOne) SetNillableIncidentID(v *uuid.UUID) *IncidentDocumentUpdateOne {
+	if v != nil {
+		_u.SetIncidentID(*v)
+	}
+	return _u
+}
+
+// SetUpdatedByID sets the "updated_by_id" field.
+func (_u *IncidentDocumentUpdateOne) SetUpdatedByID(v uuid.UUID) *IncidentDocumentUpdateOne {
+	_u.mutation.SetUpdatedByID(v)
+	return _u
+}
+
+// SetNillableUpdatedByID sets the "updated_by_id" field if the given value is not nil.
+func (_u *IncidentDocumentUpdateOne) SetNillableUpdatedByID(v *uuid.UUID) *IncidentDocumentUpdateOne {
+	if v != nil {
+		_u.SetUpdatedByID(*v)
+	}
+	return _u
+}
+
+// ClearUpdatedByID clears the value of the "updated_by_id" field.
+func (_u *IncidentDocumentUpdateOne) ClearUpdatedByID() *IncidentDocumentUpdateOne {
+	_u.mutation.ClearUpdatedByID()
 	return _u
 }
 
 // SetIncident sets the "incident" edge to the Incident entity.
 func (_u *IncidentDocumentUpdateOne) SetIncident(v *Incident) *IncidentDocumentUpdateOne {
 	return _u.SetIncidentID(v.ID)
-}
-
-// SetUpdatedByID sets the "updated_by" edge to the User entity by ID.
-func (_u *IncidentDocumentUpdateOne) SetUpdatedByID(id uuid.UUID) *IncidentDocumentUpdateOne {
-	_u.mutation.SetUpdatedByID(id)
-	return _u
-}
-
-// SetNillableUpdatedByID sets the "updated_by" edge to the User entity by ID if the given value is not nil.
-func (_u *IncidentDocumentUpdateOne) SetNillableUpdatedByID(id *uuid.UUID) *IncidentDocumentUpdateOne {
-	if id != nil {
-		_u = _u.SetUpdatedByID(*id)
-	}
-	return _u
 }
 
 // SetUpdatedBy sets the "updated_by" edge to the User entity.

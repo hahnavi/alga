@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"alga/ent/credentialprovider"
 	"alga/ent/sharedsecret"
 	"context"
 	"errors"
@@ -143,6 +144,11 @@ func (_c *SharedSecretCreate) SetNillableID(v *uuid.UUID) *SharedSecretCreate {
 	return _c
 }
 
+// SetProvider sets the "provider" edge to the CredentialProvider entity.
+func (_c *SharedSecretCreate) SetProvider(v *CredentialProvider) *SharedSecretCreate {
+	return _c.SetProviderID(v.ID)
+}
+
 // Mutation returns the SharedSecretMutation object of the builder.
 func (_c *SharedSecretCreate) Mutation() *SharedSecretMutation {
 	return _c.mutation
@@ -247,6 +253,9 @@ func (_c *SharedSecretCreate) check() error {
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "SharedSecret.updated_at"`)}
 	}
+	if len(_c.mutation.ProviderIDs()) == 0 {
+		return &ValidationError{Name: "provider", err: errors.New(`ent: missing required edge "SharedSecret.provider"`)}
+	}
 	return nil
 }
 
@@ -281,10 +290,6 @@ func (_c *SharedSecretCreate) createSpec() (*SharedSecret, *sqlgraph.CreateSpec)
 	if id, ok := _c.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
-	}
-	if value, ok := _c.mutation.ProviderID(); ok {
-		_spec.SetField(sharedsecret.FieldProviderID, field.TypeUUID, value)
-		_node.ProviderID = value
 	}
 	if value, ok := _c.mutation.Name(); ok {
 		_spec.SetField(sharedsecret.FieldName, field.TypeString, value)
@@ -321,6 +326,23 @@ func (_c *SharedSecretCreate) createSpec() (*SharedSecret, *sqlgraph.CreateSpec)
 	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(sharedsecret.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if nodes := _c.mutation.ProviderIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   sharedsecret.ProviderTable,
+			Columns: []string{sharedsecret.ProviderColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credentialprovider.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.ProviderID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

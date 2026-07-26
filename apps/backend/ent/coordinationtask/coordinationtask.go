@@ -3,6 +3,7 @@
 package coordinationtask
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -65,6 +66,8 @@ const (
 	EdgeChildTasks = "child_tasks"
 	// EdgeParentTask holds the string denoting the parent_task edge name in mutations.
 	EdgeParentTask = "parent_task"
+	// EdgeLinkedInvestigation holds the string denoting the linked_investigation edge name in mutations.
+	EdgeLinkedInvestigation = "linked_investigation"
 	// Table holds the table name of the coordinationtask in the database.
 	Table = "coordination_tasks"
 	// IncidentTable is the table that holds the incident relation/edge.
@@ -82,6 +85,13 @@ const (
 	ParentTaskTable = "coordination_tasks"
 	// ParentTaskColumn is the table column denoting the parent_task relation/edge.
 	ParentTaskColumn = "parent_task_id"
+	// LinkedInvestigationTable is the table that holds the linked_investigation relation/edge.
+	LinkedInvestigationTable = "coordination_tasks"
+	// LinkedInvestigationInverseTable is the table name for the IncidentInvestigation entity.
+	// It exists in this package in order to avoid circular dependency with the "incidentinvestigation" package.
+	LinkedInvestigationInverseTable = "incident_investigations"
+	// LinkedInvestigationColumn is the table column denoting the linked_investigation relation/edge.
+	LinkedInvestigationColumn = "linked_investigation_id"
 )
 
 // Columns holds all SQL columns for coordinationtask fields.
@@ -122,10 +132,6 @@ func ValidColumn(column string) bool {
 }
 
 var (
-	// DefaultKind holds the default value on creation for the "kind" field.
-	DefaultKind string
-	// DefaultAssigneeRole holds the default value on creation for the "assignee_role" field.
-	DefaultAssigneeRole string
 	// DefaultAssigneeAgentID holds the default value on creation for the "assignee_agent_id" field.
 	DefaultAssigneeAgentID string
 	// DefaultAssigneeAgentName holds the default value on creation for the "assignee_agent_name" field.
@@ -134,10 +140,10 @@ var (
 	GoalValidator func(string) error
 	// DefaultInputContext holds the default value on creation for the "input_context" field.
 	DefaultInputContext map[string]interface{}
-	// DefaultStatus holds the default value on creation for the "status" field.
-	DefaultStatus string
 	// DefaultPriority holds the default value on creation for the "priority" field.
 	DefaultPriority int
+	// PriorityValidator is a validator for the "priority" field. It is called by the builders before save.
+	PriorityValidator func(int) error
 	// DefaultCreatedByAgentID holds the default value on creation for the "created_by_agent_id" field.
 	DefaultCreatedByAgentID string
 	// DefaultCreatedByName holds the default value on creation for the "created_by_name" field.
@@ -146,6 +152,8 @@ var (
 	DefaultFailureReason string
 	// DefaultDispatchAttempts holds the default value on creation for the "dispatch_attempts" field.
 	DefaultDispatchAttempts int
+	// DispatchAttemptsValidator is a validator for the "dispatch_attempts" field. It is called by the builders before save.
+	DispatchAttemptsValidator func(int) error
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
@@ -155,6 +163,92 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// Kind defines the type for the "kind" enum field.
+type Kind string
+
+// KindInvestigate is the default value of the Kind enum.
+const DefaultKind = KindInvestigate
+
+// Kind values.
+const (
+	KindInvestigate Kind = "investigate"
+	KindCommunicate Kind = "communicate"
+	KindVerify      Kind = "verify"
+	KindMitigate    Kind = "mitigate"
+	KindSynthesize  Kind = "synthesize"
+)
+
+func (k Kind) String() string {
+	return string(k)
+}
+
+// KindValidator is a validator for the "kind" field enum values. It is called by the builders before save.
+func KindValidator(k Kind) error {
+	switch k {
+	case KindInvestigate, KindCommunicate, KindVerify, KindMitigate, KindSynthesize:
+		return nil
+	default:
+		return fmt.Errorf("coordinationtask: invalid enum value for kind field: %q", k)
+	}
+}
+
+// AssigneeRole defines the type for the "assignee_role" enum field.
+type AssigneeRole string
+
+// AssigneeRoleResponder is the default value of the AssigneeRole enum.
+const DefaultAssigneeRole = AssigneeRoleResponder
+
+// AssigneeRole values.
+const (
+	AssigneeRoleCommander    AssigneeRole = "commander"
+	AssigneeRoleCommunicator AssigneeRole = "communicator"
+	AssigneeRoleResponder    AssigneeRole = "responder"
+)
+
+func (ar AssigneeRole) String() string {
+	return string(ar)
+}
+
+// AssigneeRoleValidator is a validator for the "assignee_role" field enum values. It is called by the builders before save.
+func AssigneeRoleValidator(ar AssigneeRole) error {
+	switch ar {
+	case AssigneeRoleCommander, AssigneeRoleCommunicator, AssigneeRoleResponder:
+		return nil
+	default:
+		return fmt.Errorf("coordinationtask: invalid enum value for assignee_role field: %q", ar)
+	}
+}
+
+// Status defines the type for the "status" enum field.
+type Status string
+
+// StatusPending is the default value of the Status enum.
+const DefaultStatus = StatusPending
+
+// Status values.
+const (
+	StatusPending    Status = "pending"
+	StatusAssigned   Status = "assigned"
+	StatusInProgress Status = "in_progress"
+	StatusComplete   Status = "complete"
+	StatusFailed     Status = "failed"
+	StatusCancelled  Status = "cancelled"
+)
+
+func (s Status) String() string {
+	return string(s)
+}
+
+// StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
+func StatusValidator(s Status) error {
+	switch s {
+	case StatusPending, StatusAssigned, StatusInProgress, StatusComplete, StatusFailed, StatusCancelled:
+		return nil
+	default:
+		return fmt.Errorf("coordinationtask: invalid enum value for status field: %q", s)
+	}
+}
 
 // OrderOption defines the ordering options for the CoordinationTask queries.
 type OrderOption func(*sql.Selector)
@@ -286,6 +380,13 @@ func ByParentTaskField(field string, opts ...sql.OrderTermOption) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newParentTaskStep(), sql.OrderByField(field, opts...))
 	}
 }
+
+// ByLinkedInvestigationField orders the results by linked_investigation field.
+func ByLinkedInvestigationField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newLinkedInvestigationStep(), sql.OrderByField(field, opts...))
+	}
+}
 func newIncidentStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -305,5 +406,12 @@ func newParentTaskStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(Table, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, ParentTaskTable, ParentTaskColumn),
+	)
+}
+func newLinkedInvestigationStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(LinkedInvestigationInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, LinkedInvestigationTable, LinkedInvestigationColumn),
 	)
 }

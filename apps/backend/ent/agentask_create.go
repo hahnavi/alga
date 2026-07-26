@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/agentask"
+	"alga/ent/agenttoken"
 	"context"
 	"errors"
 	"fmt"
@@ -34,13 +35,13 @@ func (_c *AgentAskCreate) SetFromAgentName(v string) *AgentAskCreate {
 }
 
 // SetFromAgentType sets the "from_agent_type" field.
-func (_c *AgentAskCreate) SetFromAgentType(v string) *AgentAskCreate {
+func (_c *AgentAskCreate) SetFromAgentType(v agentask.FromAgentType) *AgentAskCreate {
 	_c.mutation.SetFromAgentType(v)
 	return _c
 }
 
 // SetNillableFromAgentType sets the "from_agent_type" field if the given value is not nil.
-func (_c *AgentAskCreate) SetNillableFromAgentType(v *string) *AgentAskCreate {
+func (_c *AgentAskCreate) SetNillableFromAgentType(v *agentask.FromAgentType) *AgentAskCreate {
 	if v != nil {
 		_c.SetFromAgentType(*v)
 	}
@@ -76,13 +77,13 @@ func (_c *AgentAskCreate) SetNillableToAgentID(v *uuid.UUID) *AgentAskCreate {
 }
 
 // SetToAgentType sets the "to_agent_type" field.
-func (_c *AgentAskCreate) SetToAgentType(v string) *AgentAskCreate {
+func (_c *AgentAskCreate) SetToAgentType(v agentask.ToAgentType) *AgentAskCreate {
 	_c.mutation.SetToAgentType(v)
 	return _c
 }
 
 // SetNillableToAgentType sets the "to_agent_type" field if the given value is not nil.
-func (_c *AgentAskCreate) SetNillableToAgentType(v *string) *AgentAskCreate {
+func (_c *AgentAskCreate) SetNillableToAgentType(v *agentask.ToAgentType) *AgentAskCreate {
 	if v != nil {
 		_c.SetToAgentType(*v)
 	}
@@ -138,13 +139,13 @@ func (_c *AgentAskCreate) SetNillableRepliedByAgentName(v *string) *AgentAskCrea
 }
 
 // SetStatus sets the "status" field.
-func (_c *AgentAskCreate) SetStatus(v string) *AgentAskCreate {
+func (_c *AgentAskCreate) SetStatus(v agentask.Status) *AgentAskCreate {
 	_c.mutation.SetStatus(v)
 	return _c
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_c *AgentAskCreate) SetNillableStatus(v *string) *AgentAskCreate {
+func (_c *AgentAskCreate) SetNillableStatus(v *agentask.Status) *AgentAskCreate {
 	if v != nil {
 		_c.SetStatus(*v)
 	}
@@ -199,6 +200,21 @@ func (_c *AgentAskCreate) SetNillableID(v *uuid.UUID) *AgentAskCreate {
 	return _c
 }
 
+// SetFromAgent sets the "from_agent" edge to the AgentToken entity.
+func (_c *AgentAskCreate) SetFromAgent(v *AgentToken) *AgentAskCreate {
+	return _c.SetFromAgentID(v.ID)
+}
+
+// SetToAgent sets the "to_agent" edge to the AgentToken entity.
+func (_c *AgentAskCreate) SetToAgent(v *AgentToken) *AgentAskCreate {
+	return _c.SetToAgentID(v.ID)
+}
+
+// SetRepliedByAgent sets the "replied_by_agent" edge to the AgentToken entity.
+func (_c *AgentAskCreate) SetRepliedByAgent(v *AgentToken) *AgentAskCreate {
+	return _c.SetRepliedByAgentID(v.ID)
+}
+
 // Mutation returns the AgentAskMutation object of the builder.
 func (_c *AgentAskCreate) Mutation() *AgentAskMutation {
 	return _c.mutation
@@ -242,10 +258,6 @@ func (_c *AgentAskCreate) defaults() {
 		v := agentask.DefaultInvestigationID
 		_c.mutation.SetInvestigationID(v)
 	}
-	if _, ok := _c.mutation.ToAgentType(); !ok {
-		v := agentask.DefaultToAgentType
-		_c.mutation.SetToAgentType(v)
-	}
 	if _, ok := _c.mutation.Reply(); !ok {
 		v := agentask.DefaultReply
 		_c.mutation.SetReply(v)
@@ -284,6 +296,16 @@ func (_c *AgentAskCreate) check() error {
 	if _, ok := _c.mutation.FromAgentType(); !ok {
 		return &ValidationError{Name: "from_agent_type", err: errors.New(`ent: missing required field "AgentAsk.from_agent_type"`)}
 	}
+	if v, ok := _c.mutation.FromAgentType(); ok {
+		if err := agentask.FromAgentTypeValidator(v); err != nil {
+			return &ValidationError{Name: "from_agent_type", err: fmt.Errorf(`ent: validator failed for field "AgentAsk.from_agent_type": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.ToAgentType(); ok {
+		if err := agentask.ToAgentTypeValidator(v); err != nil {
+			return &ValidationError{Name: "to_agent_type", err: fmt.Errorf(`ent: validator failed for field "AgentAsk.to_agent_type": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Question(); !ok {
 		return &ValidationError{Name: "question", err: errors.New(`ent: missing required field "AgentAsk.question"`)}
 	}
@@ -295,11 +317,19 @@ func (_c *AgentAskCreate) check() error {
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "AgentAsk.status"`)}
 	}
+	if v, ok := _c.mutation.Status(); ok {
+		if err := agentask.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "AgentAsk.status": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.ExpiresAt(); !ok {
 		return &ValidationError{Name: "expires_at", err: errors.New(`ent: missing required field "AgentAsk.expires_at"`)}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "AgentAsk.created_at"`)}
+	}
+	if len(_c.mutation.FromAgentIDs()) == 0 {
+		return &ValidationError{Name: "from_agent", err: errors.New(`ent: missing required edge "AgentAsk.from_agent"`)}
 	}
 	return nil
 }
@@ -336,29 +366,21 @@ func (_c *AgentAskCreate) createSpec() (*AgentAsk, *sqlgraph.CreateSpec) {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := _c.mutation.FromAgentID(); ok {
-		_spec.SetField(agentask.FieldFromAgentID, field.TypeUUID, value)
-		_node.FromAgentID = value
-	}
 	if value, ok := _c.mutation.FromAgentName(); ok {
 		_spec.SetField(agentask.FieldFromAgentName, field.TypeString, value)
 		_node.FromAgentName = value
 	}
 	if value, ok := _c.mutation.FromAgentType(); ok {
-		_spec.SetField(agentask.FieldFromAgentType, field.TypeString, value)
+		_spec.SetField(agentask.FieldFromAgentType, field.TypeEnum, value)
 		_node.FromAgentType = value
 	}
 	if value, ok := _c.mutation.InvestigationID(); ok {
 		_spec.SetField(agentask.FieldInvestigationID, field.TypeString, value)
 		_node.InvestigationID = value
 	}
-	if value, ok := _c.mutation.ToAgentID(); ok {
-		_spec.SetField(agentask.FieldToAgentID, field.TypeUUID, value)
-		_node.ToAgentID = &value
-	}
 	if value, ok := _c.mutation.ToAgentType(); ok {
-		_spec.SetField(agentask.FieldToAgentType, field.TypeString, value)
-		_node.ToAgentType = value
+		_spec.SetField(agentask.FieldToAgentType, field.TypeEnum, value)
+		_node.ToAgentType = &value
 	}
 	if value, ok := _c.mutation.Question(); ok {
 		_spec.SetField(agentask.FieldQuestion, field.TypeString, value)
@@ -368,16 +390,12 @@ func (_c *AgentAskCreate) createSpec() (*AgentAsk, *sqlgraph.CreateSpec) {
 		_spec.SetField(agentask.FieldReply, field.TypeString, value)
 		_node.Reply = value
 	}
-	if value, ok := _c.mutation.RepliedByAgentID(); ok {
-		_spec.SetField(agentask.FieldRepliedByAgentID, field.TypeUUID, value)
-		_node.RepliedByAgentID = &value
-	}
 	if value, ok := _c.mutation.RepliedByAgentName(); ok {
 		_spec.SetField(agentask.FieldRepliedByAgentName, field.TypeString, value)
 		_node.RepliedByAgentName = value
 	}
 	if value, ok := _c.mutation.Status(); ok {
-		_spec.SetField(agentask.FieldStatus, field.TypeString, value)
+		_spec.SetField(agentask.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
 	}
 	if value, ok := _c.mutation.ExpiresAt(); ok {
@@ -391,6 +409,57 @@ func (_c *AgentAskCreate) createSpec() (*AgentAsk, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.AnsweredAt(); ok {
 		_spec.SetField(agentask.FieldAnsweredAt, field.TypeTime, value)
 		_node.AnsweredAt = &value
+	}
+	if nodes := _c.mutation.FromAgentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   agentask.FromAgentTable,
+			Columns: []string{agentask.FromAgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agenttoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.FromAgentID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ToAgentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   agentask.ToAgentTable,
+			Columns: []string{agentask.ToAgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agenttoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.ToAgentID = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.RepliedByAgentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   agentask.RepliedByAgentTable,
+			Columns: []string{agentask.RepliedByAgentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(agenttoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.RepliedByAgentID = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

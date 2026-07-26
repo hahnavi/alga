@@ -3,7 +3,9 @@
 package ent
 
 import (
+	"alga/ent/incident"
 	"alga/ent/postmortem"
+	"alga/ent/user"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -24,7 +26,7 @@ type PostMortem struct {
 	// Title holds the value of the "title" field.
 	Title string `json:"title,omitempty"`
 	// Status holds the value of the "status" field.
-	Status string `json:"status,omitempty"`
+	Status postmortem.Status `json:"status,omitempty"`
 	// Summary holds the value of the "summary" field.
 	Summary string `json:"summary,omitempty"`
 	// Timeline holds the value of the "timeline" field.
@@ -52,8 +54,55 @@ type PostMortem struct {
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt    time.Time `json:"updated_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the PostMortemQuery when eager-loading is set.
+	Edges        PostMortemEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// PostMortemEdges holds the relations/edges for other nodes in the graph.
+type PostMortemEdges struct {
+	// Incident holds the value of the incident edge.
+	Incident *Incident `json:"incident,omitempty"`
+	// ApprovedBy holds the value of the approved_by edge.
+	ApprovedBy *User `json:"approved_by,omitempty"`
+	// ActionItems holds the value of the action_items edge.
+	ActionItems []*ActionItem `json:"action_items,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [3]bool
+}
+
+// IncidentOrErr returns the Incident value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e PostMortemEdges) IncidentOrErr() (*Incident, error) {
+	if e.Incident != nil {
+		return e.Incident, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: incident.Label}
+	}
+	return nil, &NotLoadedError{edge: "incident"}
+}
+
+// ApprovedByOrErr returns the ApprovedBy value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e PostMortemEdges) ApprovedByOrErr() (*User, error) {
+	if e.ApprovedBy != nil {
+		return e.ApprovedBy, nil
+	} else if e.loadedTypes[1] {
+		return nil, &NotFoundError{label: user.Label}
+	}
+	return nil, &NotLoadedError{edge: "approved_by"}
+}
+
+// ActionItemsOrErr returns the ActionItems value or an error if the edge
+// was not loaded in eager-loading.
+func (e PostMortemEdges) ActionItemsOrErr() ([]*ActionItem, error) {
+	if e.loadedTypes[2] {
+		return e.ActionItems, nil
+	}
+	return nil, &NotLoadedError{edge: "action_items"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -110,7 +159,7 @@ func (_m *PostMortem) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
-				_m.Status = value.String
+				_m.Status = postmortem.Status(value.String)
 			}
 		case postmortem.FieldSummary:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -215,6 +264,21 @@ func (_m *PostMortem) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
 }
 
+// QueryIncident queries the "incident" edge of the PostMortem entity.
+func (_m *PostMortem) QueryIncident() *IncidentQuery {
+	return NewPostMortemClient(_m.config).QueryIncident(_m)
+}
+
+// QueryApprovedBy queries the "approved_by" edge of the PostMortem entity.
+func (_m *PostMortem) QueryApprovedBy() *UserQuery {
+	return NewPostMortemClient(_m.config).QueryApprovedBy(_m)
+}
+
+// QueryActionItems queries the "action_items" edge of the PostMortem entity.
+func (_m *PostMortem) QueryActionItems() *ActionItemQuery {
+	return NewPostMortemClient(_m.config).QueryActionItems(_m)
+}
+
 // Update returns a builder for updating this PostMortem.
 // Note that you need to call PostMortem.Unwrap() before calling this method if this PostMortem
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -245,7 +309,7 @@ func (_m *PostMortem) String() string {
 	builder.WriteString(_m.Title)
 	builder.WriteString(", ")
 	builder.WriteString("status=")
-	builder.WriteString(_m.Status)
+	builder.WriteString(fmt.Sprintf("%v", _m.Status))
 	builder.WriteString(", ")
 	builder.WriteString("summary=")
 	builder.WriteString(_m.Summary)

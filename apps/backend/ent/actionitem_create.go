@@ -4,6 +4,7 @@ package ent
 
 import (
 	"alga/ent/actionitem"
+	"alga/ent/postmortem"
 	"context"
 	"errors"
 	"fmt"
@@ -34,13 +35,13 @@ func (_c *ActionItemCreate) SetDescription(v string) *ActionItemCreate {
 }
 
 // SetType sets the "type" field.
-func (_c *ActionItemCreate) SetType(v string) *ActionItemCreate {
+func (_c *ActionItemCreate) SetType(v actionitem.Type) *ActionItemCreate {
 	_c.mutation.SetType(v)
 	return _c
 }
 
 // SetNillableType sets the "type" field if the given value is not nil.
-func (_c *ActionItemCreate) SetNillableType(v *string) *ActionItemCreate {
+func (_c *ActionItemCreate) SetNillableType(v *actionitem.Type) *ActionItemCreate {
 	if v != nil {
 		_c.SetType(*v)
 	}
@@ -76,13 +77,13 @@ func (_c *ActionItemCreate) SetNillableAssigneeID(v *uuid.UUID) *ActionItemCreat
 }
 
 // SetStatus sets the "status" field.
-func (_c *ActionItemCreate) SetStatus(v string) *ActionItemCreate {
+func (_c *ActionItemCreate) SetStatus(v actionitem.Status) *ActionItemCreate {
 	_c.mutation.SetStatus(v)
 	return _c
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_c *ActionItemCreate) SetNillableStatus(v *string) *ActionItemCreate {
+func (_c *ActionItemCreate) SetNillableStatus(v *actionitem.Status) *ActionItemCreate {
 	if v != nil {
 		_c.SetStatus(*v)
 	}
@@ -90,13 +91,13 @@ func (_c *ActionItemCreate) SetNillableStatus(v *string) *ActionItemCreate {
 }
 
 // SetPriority sets the "priority" field.
-func (_c *ActionItemCreate) SetPriority(v string) *ActionItemCreate {
+func (_c *ActionItemCreate) SetPriority(v actionitem.Priority) *ActionItemCreate {
 	_c.mutation.SetPriority(v)
 	return _c
 }
 
 // SetNillablePriority sets the "priority" field if the given value is not nil.
-func (_c *ActionItemCreate) SetNillablePriority(v *string) *ActionItemCreate {
+func (_c *ActionItemCreate) SetNillablePriority(v *actionitem.Priority) *ActionItemCreate {
 	if v != nil {
 		_c.SetPriority(*v)
 	}
@@ -157,6 +158,11 @@ func (_c *ActionItemCreate) SetNillableID(v *uuid.UUID) *ActionItemCreate {
 		_c.SetID(*v)
 	}
 	return _c
+}
+
+// SetPostMortem sets the "post_mortem" edge to the PostMortem entity.
+func (_c *ActionItemCreate) SetPostMortem(v *PostMortem) *ActionItemCreate {
+	return _c.SetPostMortemID(v.ID)
 }
 
 // Mutation returns the ActionItemMutation object of the builder.
@@ -240,17 +246,35 @@ func (_c *ActionItemCreate) check() error {
 	if _, ok := _c.mutation.GetType(); !ok {
 		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "ActionItem.type"`)}
 	}
+	if v, ok := _c.mutation.GetType(); ok {
+		if err := actionitem.TypeValidator(v); err != nil {
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "ActionItem.type": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "ActionItem.status"`)}
 	}
+	if v, ok := _c.mutation.Status(); ok {
+		if err := actionitem.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "ActionItem.status": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Priority(); !ok {
 		return &ValidationError{Name: "priority", err: errors.New(`ent: missing required field "ActionItem.priority"`)}
+	}
+	if v, ok := _c.mutation.Priority(); ok {
+		if err := actionitem.PriorityValidator(v); err != nil {
+			return &ValidationError{Name: "priority", err: fmt.Errorf(`ent: validator failed for field "ActionItem.priority": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "ActionItem.created_at"`)}
 	}
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "ActionItem.updated_at"`)}
+	}
+	if len(_c.mutation.PostMortemIDs()) == 0 {
+		return &ValidationError{Name: "post_mortem", err: errors.New(`ent: missing required edge "ActionItem.post_mortem"`)}
 	}
 	return nil
 }
@@ -287,16 +311,12 @@ func (_c *ActionItemCreate) createSpec() (*ActionItem, *sqlgraph.CreateSpec) {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := _c.mutation.PostMortemID(); ok {
-		_spec.SetField(actionitem.FieldPostMortemID, field.TypeUUID, value)
-		_node.PostMortemID = value
-	}
 	if value, ok := _c.mutation.Description(); ok {
 		_spec.SetField(actionitem.FieldDescription, field.TypeString, value)
 		_node.Description = value
 	}
 	if value, ok := _c.mutation.GetType(); ok {
-		_spec.SetField(actionitem.FieldType, field.TypeString, value)
+		_spec.SetField(actionitem.FieldType, field.TypeEnum, value)
 		_node.Type = value
 	}
 	if value, ok := _c.mutation.AssigneeName(); ok {
@@ -308,11 +328,11 @@ func (_c *ActionItemCreate) createSpec() (*ActionItem, *sqlgraph.CreateSpec) {
 		_node.AssigneeID = &value
 	}
 	if value, ok := _c.mutation.Status(); ok {
-		_spec.SetField(actionitem.FieldStatus, field.TypeString, value)
+		_spec.SetField(actionitem.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
 	}
 	if value, ok := _c.mutation.Priority(); ok {
-		_spec.SetField(actionitem.FieldPriority, field.TypeString, value)
+		_spec.SetField(actionitem.FieldPriority, field.TypeEnum, value)
 		_node.Priority = value
 	}
 	if value, ok := _c.mutation.DueDate(); ok {
@@ -326,6 +346,23 @@ func (_c *ActionItemCreate) createSpec() (*ActionItem, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(actionitem.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if nodes := _c.mutation.PostMortemIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   actionitem.PostMortemTable,
+			Columns: []string{actionitem.PostMortemColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(postmortem.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.PostMortemID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

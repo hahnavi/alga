@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"alga/ent/oncallschedule"
 	"alga/ent/predicate"
 	"alga/ent/schedulelayer"
 	"context"
@@ -59,13 +60,13 @@ func (_u *ScheduleLayerUpdate) SetNillableName(v *string) *ScheduleLayerUpdate {
 }
 
 // SetRotationType sets the "rotation_type" field.
-func (_u *ScheduleLayerUpdate) SetRotationType(v string) *ScheduleLayerUpdate {
+func (_u *ScheduleLayerUpdate) SetRotationType(v schedulelayer.RotationType) *ScheduleLayerUpdate {
 	_u.mutation.SetRotationType(v)
 	return _u
 }
 
 // SetNillableRotationType sets the "rotation_type" field if the given value is not nil.
-func (_u *ScheduleLayerUpdate) SetNillableRotationType(v *string) *ScheduleLayerUpdate {
+func (_u *ScheduleLayerUpdate) SetNillableRotationType(v *schedulelayer.RotationType) *ScheduleLayerUpdate {
 	if v != nil {
 		_u.SetRotationType(*v)
 	}
@@ -234,9 +235,20 @@ func (_u *ScheduleLayerUpdate) SetUpdatedAt(v time.Time) *ScheduleLayerUpdate {
 	return _u
 }
 
+// SetSchedule sets the "schedule" edge to the OnCallSchedule entity.
+func (_u *ScheduleLayerUpdate) SetSchedule(v *OnCallSchedule) *ScheduleLayerUpdate {
+	return _u.SetScheduleID(v.ID)
+}
+
 // Mutation returns the ScheduleLayerMutation object of the builder.
 func (_u *ScheduleLayerUpdate) Mutation() *ScheduleLayerMutation {
 	return _u.mutation
+}
+
+// ClearSchedule clears the "schedule" edge to the OnCallSchedule entity.
+func (_u *ScheduleLayerUpdate) ClearSchedule() *ScheduleLayerUpdate {
+	_u.mutation.ClearSchedule()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -275,7 +287,33 @@ func (_u *ScheduleLayerUpdate) defaults() {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (_u *ScheduleLayerUpdate) check() error {
+	if v, ok := _u.mutation.RotationType(); ok {
+		if err := schedulelayer.RotationTypeValidator(v); err != nil {
+			return &ValidationError{Name: "rotation_type", err: fmt.Errorf(`ent: validator failed for field "ScheduleLayer.rotation_type": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.RotationInterval(); ok {
+		if err := schedulelayer.RotationIntervalValidator(v); err != nil {
+			return &ValidationError{Name: "rotation_interval", err: fmt.Errorf(`ent: validator failed for field "ScheduleLayer.rotation_interval": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Priority(); ok {
+		if err := schedulelayer.PriorityValidator(v); err != nil {
+			return &ValidationError{Name: "priority", err: fmt.Errorf(`ent: validator failed for field "ScheduleLayer.priority": %w`, err)}
+		}
+	}
+	if _u.mutation.ScheduleCleared() && len(_u.mutation.ScheduleIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "ScheduleLayer.schedule"`)
+	}
+	return nil
+}
+
 func (_u *ScheduleLayerUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(schedulelayer.Table, schedulelayer.Columns, sqlgraph.NewFieldSpec(schedulelayer.FieldID, field.TypeUUID))
 	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
@@ -284,14 +322,11 @@ func (_u *ScheduleLayerUpdate) sqlSave(ctx context.Context) (_node int, err erro
 			}
 		}
 	}
-	if value, ok := _u.mutation.ScheduleID(); ok {
-		_spec.SetField(schedulelayer.FieldScheduleID, field.TypeUUID, value)
-	}
 	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(schedulelayer.FieldName, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.RotationType(); ok {
-		_spec.SetField(schedulelayer.FieldRotationType, field.TypeString, value)
+		_spec.SetField(schedulelayer.FieldRotationType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.RotationInterval(); ok {
 		_spec.SetField(schedulelayer.FieldRotationInterval, field.TypeInt, value)
@@ -345,6 +380,35 @@ func (_u *ScheduleLayerUpdate) sqlSave(ctx context.Context) (_node int, err erro
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(schedulelayer.FieldUpdatedAt, field.TypeTime, value)
 	}
+	if _u.mutation.ScheduleCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   schedulelayer.ScheduleTable,
+			Columns: []string{schedulelayer.ScheduleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oncallschedule.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ScheduleIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   schedulelayer.ScheduleTable,
+			Columns: []string{schedulelayer.ScheduleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oncallschedule.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{schedulelayer.Label}
@@ -394,13 +458,13 @@ func (_u *ScheduleLayerUpdateOne) SetNillableName(v *string) *ScheduleLayerUpdat
 }
 
 // SetRotationType sets the "rotation_type" field.
-func (_u *ScheduleLayerUpdateOne) SetRotationType(v string) *ScheduleLayerUpdateOne {
+func (_u *ScheduleLayerUpdateOne) SetRotationType(v schedulelayer.RotationType) *ScheduleLayerUpdateOne {
 	_u.mutation.SetRotationType(v)
 	return _u
 }
 
 // SetNillableRotationType sets the "rotation_type" field if the given value is not nil.
-func (_u *ScheduleLayerUpdateOne) SetNillableRotationType(v *string) *ScheduleLayerUpdateOne {
+func (_u *ScheduleLayerUpdateOne) SetNillableRotationType(v *schedulelayer.RotationType) *ScheduleLayerUpdateOne {
 	if v != nil {
 		_u.SetRotationType(*v)
 	}
@@ -569,9 +633,20 @@ func (_u *ScheduleLayerUpdateOne) SetUpdatedAt(v time.Time) *ScheduleLayerUpdate
 	return _u
 }
 
+// SetSchedule sets the "schedule" edge to the OnCallSchedule entity.
+func (_u *ScheduleLayerUpdateOne) SetSchedule(v *OnCallSchedule) *ScheduleLayerUpdateOne {
+	return _u.SetScheduleID(v.ID)
+}
+
 // Mutation returns the ScheduleLayerMutation object of the builder.
 func (_u *ScheduleLayerUpdateOne) Mutation() *ScheduleLayerMutation {
 	return _u.mutation
+}
+
+// ClearSchedule clears the "schedule" edge to the OnCallSchedule entity.
+func (_u *ScheduleLayerUpdateOne) ClearSchedule() *ScheduleLayerUpdateOne {
+	_u.mutation.ClearSchedule()
+	return _u
 }
 
 // Where appends a list predicates to the ScheduleLayerUpdate builder.
@@ -623,7 +698,33 @@ func (_u *ScheduleLayerUpdateOne) defaults() {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (_u *ScheduleLayerUpdateOne) check() error {
+	if v, ok := _u.mutation.RotationType(); ok {
+		if err := schedulelayer.RotationTypeValidator(v); err != nil {
+			return &ValidationError{Name: "rotation_type", err: fmt.Errorf(`ent: validator failed for field "ScheduleLayer.rotation_type": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.RotationInterval(); ok {
+		if err := schedulelayer.RotationIntervalValidator(v); err != nil {
+			return &ValidationError{Name: "rotation_interval", err: fmt.Errorf(`ent: validator failed for field "ScheduleLayer.rotation_interval": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Priority(); ok {
+		if err := schedulelayer.PriorityValidator(v); err != nil {
+			return &ValidationError{Name: "priority", err: fmt.Errorf(`ent: validator failed for field "ScheduleLayer.priority": %w`, err)}
+		}
+	}
+	if _u.mutation.ScheduleCleared() && len(_u.mutation.ScheduleIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "ScheduleLayer.schedule"`)
+	}
+	return nil
+}
+
 func (_u *ScheduleLayerUpdateOne) sqlSave(ctx context.Context) (_node *ScheduleLayer, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(schedulelayer.Table, schedulelayer.Columns, sqlgraph.NewFieldSpec(schedulelayer.FieldID, field.TypeUUID))
 	id, ok := _u.mutation.ID()
 	if !ok {
@@ -649,14 +750,11 @@ func (_u *ScheduleLayerUpdateOne) sqlSave(ctx context.Context) (_node *ScheduleL
 			}
 		}
 	}
-	if value, ok := _u.mutation.ScheduleID(); ok {
-		_spec.SetField(schedulelayer.FieldScheduleID, field.TypeUUID, value)
-	}
 	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(schedulelayer.FieldName, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.RotationType(); ok {
-		_spec.SetField(schedulelayer.FieldRotationType, field.TypeString, value)
+		_spec.SetField(schedulelayer.FieldRotationType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.RotationInterval(); ok {
 		_spec.SetField(schedulelayer.FieldRotationInterval, field.TypeInt, value)
@@ -709,6 +807,35 @@ func (_u *ScheduleLayerUpdateOne) sqlSave(ctx context.Context) (_node *ScheduleL
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(schedulelayer.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.ScheduleCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   schedulelayer.ScheduleTable,
+			Columns: []string{schedulelayer.ScheduleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oncallschedule.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ScheduleIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   schedulelayer.ScheduleTable,
+			Columns: []string{schedulelayer.ScheduleColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oncallschedule.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &ScheduleLayer{config: _u.config}
 	_spec.Assign = _node.assignValues

@@ -151,3 +151,19 @@ func dropTestSchema(baseDSN, schema string) error {
 	}
 	return nil
 }
+
+// mustCreateUser inserts a minimal user row and returns its id, for tests that
+// need a valid FK target now that sessions, oidc identities, password-reset
+// tokens, and personal access tokens carry real foreign keys to users.
+func mustCreateUser(t *testing.T, client *ent.Client) uuid.UUID {
+	t.Helper()
+	u, err := client.User.Create().
+		SetEmail("test-" + uuid.NewString() + "@example.com").
+		SetPassword("x").
+		SetRole("viewer").
+		Save(context.Background())
+	if err != nil {
+		t.Fatalf("create test user: %v", err)
+	}
+	return u.ID
+}

@@ -4,6 +4,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -23,7 +24,7 @@ func (AgentMemory) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
 		field.String("content").NotEmpty(),
-		field.String("memory_type").Default("fact"),
+		field.Enum("memory_type").Values("fact", "pattern", "procedure").Default("fact"),
 		field.String("hash").Unique().NotEmpty(),
 		field.JSON("embedding", []float32{}).Optional(),
 		field.UUID("agent_id", uuid.UUID{}).Optional().Nillable(),
@@ -34,8 +35,8 @@ func (AgentMemory) Fields() []ent.Field {
 		field.JSON("labels", map[string]string{}).Optional(),
 		field.JSON("entities", []string{}).Optional(),
 		field.JSON("metadata", map[string]any{}).Optional(),
-		field.Float("confidence").Optional().Nillable(),
-		field.Int("access_count").Default(0),
+		field.Float("confidence").Optional().Nillable().Min(0).Max(1),
+		field.Int("access_count").Default(0).NonNegative(),
 		field.Time("expires_at").Optional().Nillable(),
 		field.Time("created_at").Default(timeNow),
 		field.Time("updated_at").Default(timeNow).UpdateDefault(timeNow),
@@ -43,12 +44,13 @@ func (AgentMemory) Fields() []ent.Field {
 }
 
 func (AgentMemory) Edges() []ent.Edge {
-	return nil
+	return []ent.Edge{
+		edge.From("agent", AgentToken.Type).Ref("memories").Field("agent_id").Unique(),
+	}
 }
 
 func (AgentMemory) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("hash"),
 		index.Fields("agent_id", "created_at"),
 		index.Fields("investigation_id"),
 		index.Fields("memory_type"),

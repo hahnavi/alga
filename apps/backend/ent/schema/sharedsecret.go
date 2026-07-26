@@ -4,6 +4,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
@@ -38,7 +39,7 @@ func (SharedSecret) Fields() []ent.Field {
 		// path or AWS secret ARN). Empty for internal providers.
 		field.String("remote_ref").Default(""),
 		// value_encrypted holds the AEAD ciphertext for internal secrets.
-		field.String("value_encrypted").Default(""),
+		field.String("value_encrypted").Default("").Sensitive(),
 		// value_configured mirrors whether a plaintext value is stored, so list
 		// views never need to touch the ciphertext to know if it is set.
 		field.Bool("value_configured").Default(false),
@@ -52,12 +53,15 @@ func (SharedSecret) Fields() []ent.Field {
 }
 
 func (SharedSecret) Edges() []ent.Edge {
-	return nil
+	return []ent.Edge{
+		edge.From("provider", CredentialProvider.Type).Ref("shared_secrets").Field("provider_id").Unique().Required(),
+	}
 }
 
 func (SharedSecret) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("secret_id").Unique(),
 		index.Fields("provider_id"),
+		index.Fields("provider_id", "name").Unique(),
 	}
 }

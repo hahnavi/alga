@@ -61,11 +61,6 @@ func ChatID(v string) predicate.AgentDMMessage {
 	return predicate.AgentDMMessage(sql.FieldEQ(FieldChatID, v))
 }
 
-// Role applies equality check predicate on the "role" field. It's identical to RoleEQ.
-func Role(v string) predicate.AgentDMMessage {
-	return predicate.AgentDMMessage(sql.FieldEQ(FieldRole, v))
-}
-
 // Body applies equality check predicate on the "body" field. It's identical to BodyEQ.
 func Body(v string) predicate.AgentDMMessage {
 	return predicate.AgentDMMessage(sql.FieldEQ(FieldBody, v))
@@ -94,6 +89,11 @@ func CreatedAt(v time.Time) predicate.AgentDMMessage {
 // UpdatedAt applies equality check predicate on the "updated_at" field. It's identical to UpdatedAtEQ.
 func UpdatedAt(v time.Time) predicate.AgentDMMessage {
 	return predicate.AgentDMMessage(sql.FieldEQ(FieldUpdatedAt, v))
+}
+
+// AgentTokenID applies equality check predicate on the "agent_token_id" field. It's identical to AgentTokenIDEQ.
+func AgentTokenID(v uuid.UUID) predicate.AgentDMMessage {
+	return predicate.AgentDMMessage(sql.FieldEQ(FieldAgentTokenID, v))
 }
 
 // ChatIDEQ applies the EQ predicate on the "chat_id" field.
@@ -162,68 +162,23 @@ func ChatIDContainsFold(v string) predicate.AgentDMMessage {
 }
 
 // RoleEQ applies the EQ predicate on the "role" field.
-func RoleEQ(v string) predicate.AgentDMMessage {
+func RoleEQ(v Role) predicate.AgentDMMessage {
 	return predicate.AgentDMMessage(sql.FieldEQ(FieldRole, v))
 }
 
 // RoleNEQ applies the NEQ predicate on the "role" field.
-func RoleNEQ(v string) predicate.AgentDMMessage {
+func RoleNEQ(v Role) predicate.AgentDMMessage {
 	return predicate.AgentDMMessage(sql.FieldNEQ(FieldRole, v))
 }
 
 // RoleIn applies the In predicate on the "role" field.
-func RoleIn(vs ...string) predicate.AgentDMMessage {
+func RoleIn(vs ...Role) predicate.AgentDMMessage {
 	return predicate.AgentDMMessage(sql.FieldIn(FieldRole, vs...))
 }
 
 // RoleNotIn applies the NotIn predicate on the "role" field.
-func RoleNotIn(vs ...string) predicate.AgentDMMessage {
+func RoleNotIn(vs ...Role) predicate.AgentDMMessage {
 	return predicate.AgentDMMessage(sql.FieldNotIn(FieldRole, vs...))
-}
-
-// RoleGT applies the GT predicate on the "role" field.
-func RoleGT(v string) predicate.AgentDMMessage {
-	return predicate.AgentDMMessage(sql.FieldGT(FieldRole, v))
-}
-
-// RoleGTE applies the GTE predicate on the "role" field.
-func RoleGTE(v string) predicate.AgentDMMessage {
-	return predicate.AgentDMMessage(sql.FieldGTE(FieldRole, v))
-}
-
-// RoleLT applies the LT predicate on the "role" field.
-func RoleLT(v string) predicate.AgentDMMessage {
-	return predicate.AgentDMMessage(sql.FieldLT(FieldRole, v))
-}
-
-// RoleLTE applies the LTE predicate on the "role" field.
-func RoleLTE(v string) predicate.AgentDMMessage {
-	return predicate.AgentDMMessage(sql.FieldLTE(FieldRole, v))
-}
-
-// RoleContains applies the Contains predicate on the "role" field.
-func RoleContains(v string) predicate.AgentDMMessage {
-	return predicate.AgentDMMessage(sql.FieldContains(FieldRole, v))
-}
-
-// RoleHasPrefix applies the HasPrefix predicate on the "role" field.
-func RoleHasPrefix(v string) predicate.AgentDMMessage {
-	return predicate.AgentDMMessage(sql.FieldHasPrefix(FieldRole, v))
-}
-
-// RoleHasSuffix applies the HasSuffix predicate on the "role" field.
-func RoleHasSuffix(v string) predicate.AgentDMMessage {
-	return predicate.AgentDMMessage(sql.FieldHasSuffix(FieldRole, v))
-}
-
-// RoleEqualFold applies the EqualFold predicate on the "role" field.
-func RoleEqualFold(v string) predicate.AgentDMMessage {
-	return predicate.AgentDMMessage(sql.FieldEqualFold(FieldRole, v))
-}
-
-// RoleContainsFold applies the ContainsFold predicate on the "role" field.
-func RoleContainsFold(v string) predicate.AgentDMMessage {
-	return predicate.AgentDMMessage(sql.FieldContainsFold(FieldRole, v))
 }
 
 // BodyEQ applies the EQ predicate on the "body" field.
@@ -529,6 +484,26 @@ func UpdatedAtLT(v time.Time) predicate.AgentDMMessage {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.AgentDMMessage {
 	return predicate.AgentDMMessage(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// AgentTokenIDEQ applies the EQ predicate on the "agent_token_id" field.
+func AgentTokenIDEQ(v uuid.UUID) predicate.AgentDMMessage {
+	return predicate.AgentDMMessage(sql.FieldEQ(FieldAgentTokenID, v))
+}
+
+// AgentTokenIDNEQ applies the NEQ predicate on the "agent_token_id" field.
+func AgentTokenIDNEQ(v uuid.UUID) predicate.AgentDMMessage {
+	return predicate.AgentDMMessage(sql.FieldNEQ(FieldAgentTokenID, v))
+}
+
+// AgentTokenIDIn applies the In predicate on the "agent_token_id" field.
+func AgentTokenIDIn(vs ...uuid.UUID) predicate.AgentDMMessage {
+	return predicate.AgentDMMessage(sql.FieldIn(FieldAgentTokenID, vs...))
+}
+
+// AgentTokenIDNotIn applies the NotIn predicate on the "agent_token_id" field.
+func AgentTokenIDNotIn(vs ...uuid.UUID) predicate.AgentDMMessage {
+	return predicate.AgentDMMessage(sql.FieldNotIn(FieldAgentTokenID, vs...))
 }
 
 // HasAgentToken applies the HasEdge predicate on the "agent_token" edge.

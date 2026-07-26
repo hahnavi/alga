@@ -51,13 +51,13 @@ SMTP-based email notifications for alert delivery, investigation updates, and pa
 
 Alga uses a central notification dispatcher that resolves per-user preferences and fans out to multiple channels:
 
-| Channel | Delivery | Notes |
-|---------|----------|-------|
-| `in_app` | SSE (real-time browser push) | Always available |
-| `email` | SMTP via `EmailWorker` | Requires `SMTP_HOST` |
-| `slack` | DM to user's linked Slack account | Requires user-level Slack binding |
-| `voice` | Phone call via Twilio or Telnyx | Per-incident-user-level Valkey dedup; users can opt out |
-| `mattermost` | Placeholder | Not yet fully implemented |
+| Channel      | Delivery                          | Notes                                                   |
+| ------------ | --------------------------------- | ------------------------------------------------------- |
+| `in_app`     | SSE (real-time browser push)      | Always available                                        |
+| `email`      | SMTP via `EmailWorker`            | Requires `SMTP_HOST`                                    |
+| `slack`      | DM to user's linked Slack account | Requires user-level Slack binding                       |
+| `voice`      | Phone call via Twilio or Telnyx   | Per-incident-user-level Valkey dedup; users can opt out |
+| `mattermost` | Placeholder                       | Not yet fully implemented                               |
 
 Users configure which channels receive which notification types via **Profile → Notification Preferences**.
 

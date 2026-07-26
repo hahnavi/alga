@@ -1,13 +1,11 @@
-import { defineConfig } from "vitepress"
+import { defineConfig } from "vitepress";
 
 export default defineConfig({
   title: "Alga",
   description: "The open-source, AI-powered incident management platform",
   cleanUrls: true,
   ignoreDeadLinks: ["localhostLinks"],
-  head: [
-    ["link", { rel: "icon", type: "image/svg+xml", href: "/logo.svg" }],
-  ],
+  head: [["link", { rel: "icon", type: "image/svg+xml", href: "/logo.svg" }]],
   lastUpdated: true,
   themeConfig: {
     siteTitle: "Alga",
@@ -107,9 +105,7 @@ export default defineConfig({
       {
         text: "Service Management",
         collapsed: true,
-        items: [
-          { text: "Service Catalog", link: "/service-management/" },
-        ],
+        items: [{ text: "Service Catalog", link: "/service-management/" }],
       },
       {
         text: "On-Call & Escalation",
@@ -138,9 +134,7 @@ export default defineConfig({
       {
         text: "API Reference",
         collapsed: true,
-        items: [
-          { text: "Overview", link: "/api-reference/" },
-        ],
+        items: [{ text: "Overview", link: "/api-reference/" }],
       },
       {
         text: "Resources",
@@ -156,9 +150,7 @@ export default defineConfig({
     search: {
       provider: "local",
     },
-    socialLinks: [
-      { icon: "github", link: "https://github.com/hahnavi/alga" },
-    ],
+    socialLinks: [{ icon: "github", link: "https://github.com/hahnavi/alga" }],
     footer: {
       message: "Released under the MIT License.",
     },
@@ -167,6 +159,6 @@ export default defineConfig({
     server: {
       allowedHosts: true,
       port: 5174,
-    }
+    },
   },
-})
+});

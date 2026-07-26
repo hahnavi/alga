@@ -20,13 +20,13 @@ docker compose up -d
 
 ### Services
 
-| Service | Image | Port | Purpose |
-|---------|-------|------|---------|
-| `postgres` | pgvector/pgvector:pg18 | 5432 | PostgreSQL database (with pgvector) |
-| `valkey` | valkey/valkey:9.1-alpine | 6379 | Sessions, caching, leader election |
-| `rabbitmq` | rabbitmq:4.3.3-management-alpine | 5672, 15672 | Async message queue |
-| `backend` | ghcr.io/hahnavi/alga-backend | 8080 | Go API server |
-| `frontend` | ghcr.io/hahnavi/alga-frontend | 3000 | Vue web UI (nginx) |
+| Service    | Image                            | Port        | Purpose                             |
+| ---------- | -------------------------------- | ----------- | ----------------------------------- |
+| `postgres` | pgvector/pgvector:pg18           | 5432        | PostgreSQL database (with pgvector) |
+| `valkey`   | valkey/valkey:9.1-alpine         | 6379        | Sessions, caching, leader election  |
+| `rabbitmq` | rabbitmq:4.3.3-management-alpine | 5672, 15672 | Async message queue                 |
+| `backend`  | ghcr.io/hahnavi/alga-backend     | 8080        | Go API server                       |
+| `frontend` | ghcr.io/hahnavi/alga-frontend    | 3000        | Vue web UI (nginx)                  |
 
 Pin a specific release by setting `ALGA_VERSION=v1.2.3` in `.env`.
 
@@ -139,6 +139,7 @@ cp apps/backend/.env.example apps/backend/.env
 ```
 
 Edit `apps/backend/.env` and set:
+
 - `POSTGRES_DSN` — your PostgreSQL connection string
 - `ENCRYPTION_KEY` — generate with `openssl rand -base64 32`
 - `SECRET_PEPPER` — generate with `openssl rand -base64 32`
@@ -207,11 +208,11 @@ See [Deployment](/operations/deployment) for Caddy or nginx reverse proxy setup.
 
 ### Resource Recommendations
 
-| Deployment | CPU | Memory | Disk |
-|------------|-----|--------|------|
-| Development | 2 cores | 4 GB | 50 GB |
-| Production (Small) | 4 cores | 8 GB | 100 GB |
-| Production (Medium) | 8 cores | 16 GB | 200 GB |
+| Deployment          | CPU     | Memory | Disk   |
+| ------------------- | ------- | ------ | ------ |
+| Development         | 2 cores | 4 GB   | 50 GB  |
+| Production (Small)  | 4 cores | 8 GB   | 100 GB |
+| Production (Medium) | 8 cores | 16 GB  | 200 GB |
 
 ## Next Steps
 

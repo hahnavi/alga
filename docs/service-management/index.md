@@ -12,21 +12,21 @@ Alga includes a service catalog that tracks service status, dependencies, and in
 Service status is **computed** using a **weighted priority-based scoring system**. Active incidents linked to the service are weighted by severity priority:
 
 | Priority | Weight |
-|----------|--------|
-| P1 | 5 |
-| P2 | 4 |
-| P3 | 3 |
-| P4 | 2 |
-| P5 | 1 |
+| -------- | ------ |
+| P1       | 5      |
+| P2       | 4      |
+| P3       | 3      |
+| P4       | 2      |
+| P5       | 1      |
 
 The total score determines the service status:
 
-| Score | Status | Description |
-|-------|--------|-------------|
-| 0 | `operational` | Fully operational, no active incidents |
-| 1–4 | `degraded` | Partial degradation, some features impacted |
-| 5–9 | `partial_outage` | Significant partial outage |
-| 10+ | `major_outage` | Complete service outage |
+| Score | Status           | Description                                 |
+| ----- | ---------------- | ------------------------------------------- |
+| 0     | `operational`    | Fully operational, no active incidents      |
+| 1–4   | `degraded`       | Partial degradation, some features impacted |
+| 5–9   | `partial_outage` | Significant partial outage                  |
+| 10+   | `major_outage`   | Complete service outage                     |
 
 For example, a single P1 incident (score 5) results in `partial_outage`, while two P1 incidents (score 10) trigger `major_outage`.
 
@@ -34,17 +34,17 @@ Status is recalculated automatically as incidents are created, mitigated, or res
 
 ## Service Fields
 
-| Field | Description |
-|-------|-------------|
-| `name` | Service name (unique) |
-| `display_name` | Human-friendly display name |
-| `description` | Service description |
-| `owner_team_id` | Team responsible for the service |
-| `escalation_policy_id` | Escalation policy for incidents on this service |
-| `label_matchers` | JSON array of label conditions for matching alerts to this service |
-| `sla_response_minutes` | Custom SLA response target in minutes |
-| `sla_resolve_minutes` | Custom SLA resolution target in minutes |
-| `status` | Current computed status (`operational`, `degraded`, `partial_outage`, `major_outage`) |
+| Field                  | Description                                                                           |
+| ---------------------- | ------------------------------------------------------------------------------------- |
+| `name`                 | Service name (unique)                                                                 |
+| `display_name`         | Human-friendly display name                                                           |
+| `description`          | Service description                                                                   |
+| `owner_team_id`        | Team responsible for the service                                                      |
+| `escalation_policy_id` | Escalation policy for incidents on this service                                       |
+| `label_matchers`       | JSON array of label conditions for matching alerts to this service                    |
+| `sla_response_minutes` | Custom SLA response target in minutes                                                 |
+| `sla_resolve_minutes`  | Custom SLA resolution target in minutes                                               |
+| `status`               | Current computed status (`operational`, `degraded`, `partial_outage`, `major_outage`) |
 
 ## Dependencies
 
@@ -64,29 +64,32 @@ Each status change publishes a `service_status_changed` SSE event so the UI upda
 ## API Endpoints
 
 ### Service Management
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `GET` | `/api/v1/services` | Session | `services:read` | List services |
-| `POST` | `/api/v1/services` | Session | `services:write` | Create service |
-| `GET` | `/api/v1/services/{id}` | Session | `services:read` | Get service (includes status, dependencies) |
-| `PATCH` | `/api/v1/services/{id}` | Session | `services:write` | Update service |
-| `DELETE` | `/api/v1/services/{id}` | Session | `services:write` | Delete service |
+
+| Method   | Path                    | Auth    | Permission       | Description                                 |
+| -------- | ----------------------- | ------- | ---------------- | ------------------------------------------- |
+| `GET`    | `/api/v1/services`      | Session | `services:read`  | List services                               |
+| `POST`   | `/api/v1/services`      | Session | `services:write` | Create service                              |
+| `GET`    | `/api/v1/services/{id}` | Session | `services:read`  | Get service (includes status, dependencies) |
+| `PATCH`  | `/api/v1/services/{id}` | Session | `services:write` | Update service                              |
+| `DELETE` | `/api/v1/services/{id}` | Session | `services:write` | Delete service                              |
 
 ### Dependencies
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `GET` | `/api/v1/services/{id}/dependencies` | Session | `services:read` | Get dependency graph |
-| `POST` | `/api/v1/services/{id}/dependencies` | Session | `services:write` | Add dependency |
-| `DELETE` | `/api/v1/services/{id}/dependencies/{targetId}` | Session | `services:write` | Remove dependency |
-| `GET` | `/api/v1/services/{id}/dependents` | Session | `services:read` | List services that depend on this service |
+
+| Method   | Path                                            | Auth    | Permission       | Description                               |
+| -------- | ----------------------------------------------- | ------- | ---------------- | ----------------------------------------- |
+| `GET`    | `/api/v1/services/{id}/dependencies`            | Session | `services:read`  | Get dependency graph                      |
+| `POST`   | `/api/v1/services/{id}/dependencies`            | Session | `services:write` | Add dependency                            |
+| `DELETE` | `/api/v1/services/{id}/dependencies/{targetId}` | Session | `services:write` | Remove dependency                         |
+| `GET`    | `/api/v1/services/{id}/dependents`              | Session | `services:read`  | List services that depend on this service |
 
 ### Incidents
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `GET` | `/api/v1/services/{id}/incidents` | Session | `services:read` | List incidents affecting this service |
+
+| Method | Path                              | Auth    | Permission      | Description                           |
+| ------ | --------------------------------- | ------- | --------------- | ------------------------------------- |
+| `GET`  | `/api/v1/services/{id}/incidents` | Session | `services:read` | List incidents affecting this service |
 
 ## Agent API
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `GET` | `/api/v1/agent/services` | Bearer | List services |
+| Method | Path                     | Auth   | Description   |
+| ------ | ------------------------ | ------ | ------------- |
+| `GET`  | `/api/v1/agent/services` | Bearer | List services |

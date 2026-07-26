@@ -36,6 +36,7 @@ See [Lifecycle & States](/incident-management/lifecycle) for the full state mach
 ## Creating Incidents
 
 Incidents can be created:
+
 1. **Manually** via `POST /api/v1/incidents` or the Incidents page
 2. **By promotion** — `promote` creates an incident from an alert investigation/triage flow
 
@@ -48,99 +49,112 @@ Alga uses the Incident Command System (ICS) for structured incident response —
 Incident routes are addressed by `incident_number` (the human-readable unique number), not the internal UUID.
 
 ### Incident Management
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `GET` | `/api/v1/incidents` | Session | `incidents:read` | List incidents (filters: status, severity, service_id, commander_id, search, dates) |
-| `POST` | `/api/v1/incidents` | Session | `incidents:write` | Create manual incident |
-| `GET` | `/api/v1/incidents/{id}` | Session | `incidents:read` | Get incident with timeline, roles, linked items |
-| `PATCH` | `/api/v1/incidents/{id}` | Session | `incidents:write` | Update (title, description, severity, custom_fields) |
-| `DELETE` | `/api/v1/incidents/{id}` | Session | `incidents:delete` | Soft-delete incident (`deleted_at` tombstone) |
+
+| Method   | Path                     | Auth    | Permission         | Description                                                                         |
+| -------- | ------------------------ | ------- | ------------------ | ----------------------------------------------------------------------------------- |
+| `GET`    | `/api/v1/incidents`      | Session | `incidents:read`   | List incidents (filters: status, severity, service_id, commander_id, search, dates) |
+| `POST`   | `/api/v1/incidents`      | Session | `incidents:write`  | Create manual incident                                                              |
+| `GET`    | `/api/v1/incidents/{id}` | Session | `incidents:read`   | Get incident with timeline, roles, linked items                                     |
+| `PATCH`  | `/api/v1/incidents/{id}` | Session | `incidents:write`  | Update (title, description, severity, custom_fields)                                |
+| `DELETE` | `/api/v1/incidents/{id}` | Session | `incidents:delete` | Soft-delete incident (`deleted_at` tombstone)                                       |
 
 ### Incident Actions
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `POST` | `/api/v1/incidents/{id}/acknowledge` | Session | `incidents:command` | Acknowledge (stops escalation, sets `sla_acknowledged_at`) |
-| `POST` | `/api/v1/incidents/{id}/mitigate` | Session | `incidents:command` | Mark mitigated (sets `mitigated_at`) |
-| `POST` | `/api/v1/incidents/{id}/resolve` | Session | `incidents:command` | Mark resolved (sets `resolved_at`/`sla_resolved_at`, cascades to linked alerts) |
-| `POST` | `/api/v1/incidents/{id}/close` | Session | `incidents:command` | Mark closed (sets `closed_at`) |
-| `POST` | `/api/v1/incidents/{id}/reopen` | Session | `incidents:command` | Reopen a resolved/mitigated/closed incident |
-| `POST` | `/api/v1/incidents/{id}/cancel` | Session | `incidents:command` | Cancel (terminal, false alarm) |
-| `POST` | `/api/v1/incidents/{id}/escalate` | Session | `incidents:command` | Manual escalation trigger |
+
+| Method | Path                                 | Auth    | Permission          | Description                                                                     |
+| ------ | ------------------------------------ | ------- | ------------------- | ------------------------------------------------------------------------------- |
+| `POST` | `/api/v1/incidents/{id}/acknowledge` | Session | `incidents:command` | Acknowledge (stops escalation, sets `sla_acknowledged_at`)                      |
+| `POST` | `/api/v1/incidents/{id}/mitigate`    | Session | `incidents:command` | Mark mitigated (sets `mitigated_at`)                                            |
+| `POST` | `/api/v1/incidents/{id}/resolve`     | Session | `incidents:command` | Mark resolved (sets `resolved_at`/`sla_resolved_at`, cascades to linked alerts) |
+| `POST` | `/api/v1/incidents/{id}/close`       | Session | `incidents:command` | Mark closed (sets `closed_at`)                                                  |
+| `POST` | `/api/v1/incidents/{id}/reopen`      | Session | `incidents:command` | Reopen a resolved/mitigated/closed incident                                     |
+| `POST` | `/api/v1/incidents/{id}/cancel`      | Session | `incidents:command` | Cancel (terminal, false alarm)                                                  |
+| `POST` | `/api/v1/incidents/{id}/escalate`    | Session | `incidents:command` | Manual escalation trigger                                                       |
 
 ### Triage
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `POST` | `/api/v1/incidents/{id}/begin-triage` | Session | `incidents:command` | Begin triage (`detected` → `triaging`) |
-| `POST` | `/api/v1/incidents/{id}/promote` | Session | `incidents:command` | Promote to active (`triaging` → `active`) |
+
+| Method | Path                                  | Auth    | Permission          | Description                               |
+| ------ | ------------------------------------- | ------- | ------------------- | ----------------------------------------- |
+| `POST` | `/api/v1/incidents/{id}/begin-triage` | Session | `incidents:command` | Begin triage (`detected` → `triaging`)    |
+| `POST` | `/api/v1/incidents/{id}/promote`      | Session | `incidents:command` | Promote to active (`triaging` → `active`) |
 
 ### Timeline
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `GET` | `/api/v1/incidents/{id}/timeline` | Session | `incidents:read` | Get structured timeline |
+
+| Method | Path                              | Auth    | Permission        | Description               |
+| ------ | --------------------------------- | ------- | ----------------- | ------------------------- |
+| `GET`  | `/api/v1/incidents/{id}/timeline` | Session | `incidents:read`  | Get structured timeline   |
 | `POST` | `/api/v1/incidents/{id}/timeline` | Session | `incidents:write` | Add manual timeline entry |
 
 Timeline entries carry `event_type`, `actor_id`, `actor_type` (`system`/`user`/`agent`), `message`, `metadata`, and an optional `ics_event_type`.
 
 ### Linked Alerts
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `GET` | `/api/v1/incidents/{id}/alerts` | Session | `incidents:read` | List linked alerts |
-| `POST` | `/api/v1/incidents/{id}/alerts` | Session | `incidents:write` | Link alert |
-| `DELETE` | `/api/v1/incidents/{id}/alerts/{alert_number}` | Session | `incidents:write` | Unlink alert |
+
+| Method   | Path                                           | Auth    | Permission        | Description        |
+| -------- | ---------------------------------------------- | ------- | ----------------- | ------------------ |
+| `GET`    | `/api/v1/incidents/{id}/alerts`                | Session | `incidents:read`  | List linked alerts |
+| `POST`   | `/api/v1/incidents/{id}/alerts`                | Session | `incidents:write` | Link alert         |
+| `DELETE` | `/api/v1/incidents/{id}/alerts/{alert_number}` | Session | `incidents:write` | Unlink alert       |
 
 ### Incident Investigations
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `GET` | `/api/v1/incidents/{id}/investigations` | Session | `incidents:read` | List investigations under incident |
-| `POST` | `/api/v1/incidents/{id}/investigations` | Session | `incidents:write` | Create investigation under incident |
-| `PATCH` | `/api/v1/incident-investigations/{id}/assign` | Session | `incidents:write` | Assign an incident investigation |
+
+| Method  | Path                                          | Auth    | Permission        | Description                         |
+| ------- | --------------------------------------------- | ------- | ----------------- | ----------------------------------- |
+| `GET`   | `/api/v1/incidents/{id}/investigations`       | Session | `incidents:read`  | List investigations under incident  |
+| `POST`  | `/api/v1/incidents/{id}/investigations`       | Session | `incidents:write` | Create investigation under incident |
+| `PATCH` | `/api/v1/incident-investigations/{id}/assign` | Session | `incidents:write` | Assign an incident investigation    |
 
 Incident investigations follow `pending → assigned → investigating → complete/cancelled/paused/coordinating`. Only one active investigation per incident is enforced, and parent/child investigations are supported.
 
 ### Coordination
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `GET` | `/api/v1/incidents/{id}/coordination/messages` | Session | `incidents:read` | List coordination messages |
-| `POST` | `/api/v1/incidents/{id}/coordination/messages` | Session | `incidents:write` | Add coordination message |
-| `GET` | `/api/v1/incidents/{id}/coordination/tasks` | Session | `incidents:read` | List coordination tasks |
-| `POST` | `/api/v1/incidents/{id}/coordination/tasks` | Session | `incidents:write` | Create coordination task |
+
+| Method | Path                                           | Auth    | Permission        | Description                |
+| ------ | ---------------------------------------------- | ------- | ----------------- | -------------------------- |
+| `GET`  | `/api/v1/incidents/{id}/coordination/messages` | Session | `incidents:read`  | List coordination messages |
+| `POST` | `/api/v1/incidents/{id}/coordination/messages` | Session | `incidents:write` | Add coordination message   |
+| `GET`  | `/api/v1/incidents/{id}/coordination/tasks`    | Session | `incidents:read`  | List coordination tasks    |
+| `POST` | `/api/v1/incidents/{id}/coordination/tasks`    | Session | `incidents:write` | Create coordination task   |
 
 ### Status Updates
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `GET` | `/api/v1/incidents/{id}/status-updates` | Session | `incidents:read` | List status updates |
+
+| Method | Path                                    | Auth    | Permission          | Description          |
+| ------ | --------------------------------------- | ------- | ------------------- | -------------------- |
+| `GET`  | `/api/v1/incidents/{id}/status-updates` | Session | `incidents:read`    | List status updates  |
 | `POST` | `/api/v1/incidents/{id}/status-updates` | Session | `incidents:command` | Create status update |
 
 ### Incident Document (ICS)
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `GET` | `/api/v1/incidents/{id}/ics/document` | Session | `incidents:read` | Get all document sections |
-| `PUT` | `/api/v1/incidents/{id}/ics/document/{section}` | Session | `incidents:write` | Update a single section (version-checked) |
+
+| Method | Path                                            | Auth    | Permission        | Description                               |
+| ------ | ----------------------------------------------- | ------- | ----------------- | ----------------------------------------- |
+| `GET`  | `/api/v1/incidents/{id}/ics/document`           | Session | `incidents:read`  | Get all document sections                 |
+| `PUT`  | `/api/v1/incidents/{id}/ics/document/{section}` | Session | `incidents:write` | Update a single section (version-checked) |
 
 ### ICS Roles
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `GET` | `/api/v1/incidents/{id}/ics/roles` | Session | `incidents:read` | List ICS role assignments |
-| `POST` | `/api/v1/incidents/{id}/ics/roles` | Session | `incidents:command` | Assign ICS role |
-| `PATCH` | `/api/v1/incidents/{id}/ics/roles/{roleId}` | Session | `incidents:command` | Update ICS role assignment |
-| `DELETE` | `/api/v1/incidents/{id}/ics/roles/{roleId}` | Session | `incidents:command` | End ICS role assignment |
+
+| Method   | Path                                        | Auth    | Permission          | Description                |
+| -------- | ------------------------------------------- | ------- | ------------------- | -------------------------- |
+| `GET`    | `/api/v1/incidents/{id}/ics/roles`          | Session | `incidents:read`    | List ICS role assignments  |
+| `POST`   | `/api/v1/incidents/{id}/ics/roles`          | Session | `incidents:command` | Assign ICS role            |
+| `PATCH`  | `/api/v1/incidents/{id}/ics/roles/{roleId}` | Session | `incidents:command` | Update ICS role assignment |
+| `DELETE` | `/api/v1/incidents/{id}/ics/roles/{roleId}` | Session | `incidents:command` | End ICS role assignment    |
 
 ### Slack Incident Channels
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `POST` | `/api/v1/incidents/{id}/slack-channel` | Session | `incidents:command` | Create dedicated Slack channel |
-| `DELETE` | `/api/v1/incidents/{id}/slack-channel` | Session | `incidents:command` | Delete/unlink Slack channel |
+
+| Method   | Path                                   | Auth    | Permission          | Description                    |
+| -------- | -------------------------------------- | ------- | ------------------- | ------------------------------ |
+| `POST`   | `/api/v1/incidents/{id}/slack-channel` | Session | `incidents:command` | Create dedicated Slack channel |
+| `DELETE` | `/api/v1/incidents/{id}/slack-channel` | Session | `incidents:command` | Delete/unlink Slack channel    |
 
 ### Google Meet
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `POST` | `/api/v1/incidents/{id}/google-meet` | Session | `incidents:command` | Create Google Meet space |
+
+| Method   | Path                                 | Auth    | Permission          | Description              |
+| -------- | ------------------------------------ | ------- | ------------------- | ------------------------ |
+| `POST`   | `/api/v1/incidents/{id}/google-meet` | Session | `incidents:command` | Create Google Meet space |
 | `DELETE` | `/api/v1/incidents/{id}/google-meet` | Session | `incidents:command` | Unlink Google Meet space |
 
 ### Metrics
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `GET` | `/api/v1/incidents/metrics` | Session | `incidents:read` | Aggregate metrics (MTTA, MTTR, MTTM, SLA compliance) |
+
+| Method | Path                        | Auth    | Permission       | Description                                          |
+| ------ | --------------------------- | ------- | ---------------- | ---------------------------------------------------- |
+| `GET`  | `/api/v1/incidents/metrics` | Session | `incidents:read` | Aggregate metrics (MTTA, MTTR, MTTM, SLA compliance) |
 
 ## SLA Tracking
 
@@ -148,13 +162,13 @@ Alga computes SLA deadlines at creation and a background SLA worker sweeps for b
 
 ## Agent API Endpoints
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `GET` | `/api/v1/agent/incidents/{id}` | Bearer | Get incident context |
-| `GET` | `/api/v1/agent/incidents/{id}/timeline` | Bearer | Get incident timeline |
-| `POST` | `/api/v1/agent/incidents/{id}/timeline` | Bearer | Add timeline entry |
-| `GET` | `/api/v1/agent/incidents/{id}/tasks` | Bearer | List coordination tasks for the agent |
-| `PATCH` | `/api/v1/agent/incidents/{id}` | Bearer | Update incident (requires investigate capability) |
+| Method  | Path                                    | Auth   | Description                                       |
+| ------- | --------------------------------------- | ------ | ------------------------------------------------- |
+| `GET`   | `/api/v1/agent/incidents/{id}`          | Bearer | Get incident context                              |
+| `GET`   | `/api/v1/agent/incidents/{id}/timeline` | Bearer | Get incident timeline                             |
+| `POST`  | `/api/v1/agent/incidents/{id}/timeline` | Bearer | Add timeline entry                                |
+| `GET`   | `/api/v1/agent/incidents/{id}/tasks`    | Bearer | List coordination tasks for the agent             |
+| `PATCH` | `/api/v1/agent/incidents/{id}`          | Bearer | Update incident (requires investigate capability) |
 
 ## See Also
 

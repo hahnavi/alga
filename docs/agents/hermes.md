@@ -99,59 +99,59 @@ The plugin integrates with `hermes gateway setup` — select **"Alga"** from the
 
 ## Configuration Reference
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `ALGA_SERVER_URL` | Yes | Alga backend base URL (no trailing slash), e.g. `http://alga:8080` |
-| `ALGA_AGENT_TOKEN` | Yes | The `alga_agent_...` bearer token from Alga |
-| `ALGA_HOME_CHANNEL` | No | Private operator DM chat ID (default: `alga_dm`) |
-| `ALGA_ALLOWED_USERS` | No | Comma-separated user IDs allowed to use the channel (default: allow all) |
-| `ALGA_ALLOW_ALL_USERS` | No | Set to `true` to allow all users (default) |
+| Variable               | Required | Description                                                              |
+| ---------------------- | -------- | ------------------------------------------------------------------------ |
+| `ALGA_SERVER_URL`      | Yes      | Alga backend base URL (no trailing slash), e.g. `http://alga:8080`       |
+| `ALGA_AGENT_TOKEN`     | Yes      | The `alga_agent_...` bearer token from Alga                              |
+| `ALGA_HOME_CHANNEL`    | No       | Private operator DM chat ID (default: `alga_dm`)                         |
+| `ALGA_ALLOWED_USERS`   | No       | Comma-separated user IDs allowed to use the channel (default: allow all) |
+| `ALGA_ALLOW_ALL_USERS` | No       | Set to `true` to allow all users (default)                               |
 
 ## Backend Configuration (Alga Side)
 
 On the Alga backend, the Hermes integration is configured via:
 
-| Variable | Description |
-|----------|-------------|
-| `HERMES_PLATFORM_URL` | URL of the Hermes platform (stored encrypted at rest in `IntegrationConfig`) |
-| `HERMES_PLATFORM_TOKEN` | Platform token for Hermes (stored encrypted at rest in `IntegrationConfig`) |
+| Variable                | Description                                                                  |
+| ----------------------- | ---------------------------------------------------------------------------- |
+| `HERMES_PLATFORM_URL`   | URL of the Hermes platform (stored encrypted at rest in `IntegrationConfig`) |
+| `HERMES_PLATFORM_TOKEN` | Platform token for Hermes (stored encrypted at rest in `IntegrationConfig`)  |
 
 ### Agent Capabilities
 
 When creating a Hermes agent in Alga, you assign capabilities:
 
-| Capability | Description |
-|------------|-------------|
+| Capability    | Description                                      |
+| ------------- | ------------------------------------------------ |
 | `investigate` | Receive automated alert investigation dispatches |
-| `communicate` | Participate in incident communications |
-| `command` | Take incident commander actions |
+| `communicate` | Participate in incident communications           |
+| `command`     | Take incident commander actions                  |
 
 ### Agent Scope
 
-| Scope | Description |
-|-------|-------------|
-| `all` | Catch-all — eligible for any alert dispatch |
+| Scope             | Description                                            |
+| ----------------- | ------------------------------------------------------ |
+| `all`             | Catch-all — eligible for any alert dispatch            |
 | `label_selectors` | Restricted to alerts matching specific label selectors |
 
 ## What the Plugin Provides
 
-| Component | Description |
-|-----------|-------------|
-| **Platform adapter** | SSE listener + REST sender bridging Hermes to Alga's owner-scoped threads |
-| **31 agent tools** | The full `alga_*` toolset for alert lifecycle, incident management, knowledge, and coordination |
-| **Setup wizard** | Interactive configuration via `hermes gateway setup` |
-| **Platform hint** | Injected into the LLM system prompt with Alga-specific guidance and role instructions |
+| Component            | Description                                                                                     |
+| -------------------- | ----------------------------------------------------------------------------------------------- |
+| **Platform adapter** | SSE listener + REST sender bridging Hermes to Alga's owner-scoped threads                       |
+| **31 agent tools**   | The full `alga_*` toolset for alert lifecycle, incident management, knowledge, and coordination |
+| **Setup wizard**     | Interactive configuration via `hermes gateway setup`                                            |
+| **Platform hint**    | Injected into the LLM system prompt with Alga-specific guidance and role instructions           |
 
 ## Owner-Scoped Threads
 
 Alga dispatches work using owner-scoped chat IDs that the plugin maps to Hermes sessions:
 
-| Chat ID Pattern | Meaning |
-|-----------------|---------|
-| `alert_42` | Alert investigation thread for alert #42 |
+| Chat ID Pattern     | Meaning                                       |
+| ------------------- | --------------------------------------------- |
+| `alert_42`          | Alert investigation thread for alert #42      |
 | `incident_coord_12` | Incident coordination thread for incident #12 |
-| `incident_inv_12` | Incident investigation working thread |
-| `alga_dm` | Private operator DM chat |
+| `incident_inv_12`   | Incident investigation working thread         |
+| `alga_dm`           | Private operator DM chat                      |
 
 ## Message Flow
 
@@ -199,69 +199,69 @@ The plugin registers 31 tools under the `"alga"` toolset. Each tool either sends
 
 ### Alert & Investigation Tools
 
-| Tool | Description |
-|------|-------------|
-| `alga_resolve_alert` | Resolve an alert and close the investigation (optionally record root cause + resolution) |
-| `alga_reopen_alert` | Reopen a resolved alert and resume the investigation |
-| `alga_promote_to_incident` | Promote an alert investigation to a full incident |
-| `alga_set_outcome` | Record root cause and/or resolution without resolving |
-| `alga_cancel_investigation` | Cancel the investigation with a reason |
-| `alga_pause_investigation` | Pause investigation when waiting for external events |
-| `alga_list_alerts` | Query the broader alert landscape (filter by status, severity, search) |
-| `alga_triage_feedback` | Confirm or override a triage decision to improve accuracy |
+| Tool                        | Description                                                                              |
+| --------------------------- | ---------------------------------------------------------------------------------------- |
+| `alga_resolve_alert`        | Resolve an alert and close the investigation (optionally record root cause + resolution) |
+| `alga_reopen_alert`         | Reopen a resolved alert and resume the investigation                                     |
+| `alga_promote_to_incident`  | Promote an alert investigation to a full incident                                        |
+| `alga_set_outcome`          | Record root cause and/or resolution without resolving                                    |
+| `alga_cancel_investigation` | Cancel the investigation with a reason                                                   |
+| `alga_pause_investigation`  | Pause investigation when waiting for external events                                     |
+| `alga_list_alerts`          | Query the broader alert landscape (filter by status, severity, search)                   |
+| `alga_triage_feedback`      | Confirm or override a triage decision to improve accuracy                                |
 
 ### Knowledge Tools
 
-| Tool | Description |
-|------|-------------|
+| Tool                    | Description                                                                                        |
+| ----------------------- | -------------------------------------------------------------------------------------------------- |
 | `alga_search_knowledge` | Search knowledge notes (runbooks, known issues, service owners, facts) — returns 200-char previews |
-| `alga_get_knowledge` | Fetch the full body of a knowledge note by ID |
-| `alga_create_knowledge` | Create a reusable knowledge note from investigation findings |
+| `alga_get_knowledge`    | Fetch the full body of a knowledge note by ID                                                      |
+| `alga_create_knowledge` | Create a reusable knowledge note from investigation findings                                       |
 
 ### Incident Command Tools (Commander-Only)
 
-| Tool | Description |
-|------|-------------|
-| `alga_set_incident_priority` | Set incident priority (P1–P5) |
-| `alga_set_incident_severity` | Set incident severity (critical, high, warning, info) |
-| `alga_trigger_escalation` | Trigger escalation for the incident |
-| `alga_dispatch_task` | Dispatch a typed coordination task to a role (`investigate`, `communicate`, `verify`, `mitigate`) |
-| `alga_complete_task` | Complete a coordination task with a typed result |
-| `alga_list_tasks` | List coordination tasks (commander tracks dispatched progress) |
-| `alga_synthesize_findings` | Synthesize findings from completed child investigations into the incident conclusion |
-| `alga_mitigate_incident` | Mark an incident as mitigated |
-| `alga_resolve_incident` | Resolve an incident (requires all five resolution docs) |
-| `alga_set_incident_resolution_docs` | Stage resolution documents without resolving |
-| `alga_begin_triage` | Move incident to `triaging` status |
-| `alga_promote_incident` | Promote incident from `triaging` to `active` |
-| `alga_assign_incident_role` | Assign ICS command roles to users or agents |
-| `alga_post_handoff` | Final commander handoff only — **warning:** activates other agents, can cause ping-pong |
-| `alga_publish_status_update` | Publish a public status update (`investigating`, `identified`, `monitoring`, `resolved`) |
+| Tool                                | Description                                                                                       |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `alga_set_incident_priority`        | Set incident priority (P1–P5)                                                                     |
+| `alga_set_incident_severity`        | Set incident severity (critical, high, warning, info)                                             |
+| `alga_trigger_escalation`           | Trigger escalation for the incident                                                               |
+| `alga_dispatch_task`                | Dispatch a typed coordination task to a role (`investigate`, `communicate`, `verify`, `mitigate`) |
+| `alga_complete_task`                | Complete a coordination task with a typed result                                                  |
+| `alga_list_tasks`                   | List coordination tasks (commander tracks dispatched progress)                                    |
+| `alga_synthesize_findings`          | Synthesize findings from completed child investigations into the incident conclusion              |
+| `alga_mitigate_incident`            | Mark an incident as mitigated                                                                     |
+| `alga_resolve_incident`             | Resolve an incident (requires all five resolution docs)                                           |
+| `alga_set_incident_resolution_docs` | Stage resolution documents without resolving                                                      |
+| `alga_begin_triage`                 | Move incident to `triaging` status                                                                |
+| `alga_promote_incident`             | Promote incident from `triaging` to `active`                                                      |
+| `alga_assign_incident_role`         | Assign ICS command roles to users or agents                                                       |
+| `alga_post_handoff`                 | Final commander handoff only — **warning:** activates other agents, can cause ping-pong           |
+| `alga_publish_status_update`        | Publish a public status update (`investigating`, `identified`, `monitoring`, `resolved`)          |
 
 ### Incident Query Tools
 
-| Tool | Description |
-|------|-------------|
-| `alga_get_incident_context` | Get full incident context (status, severity, timeline, roles) |
-| `alga_get_incident_timeline` | Get the timeline of events for an incident |
-| `alga_add_incident_timeline` | Log a custom note or status update to the incident timeline |
+| Tool                         | Description                                                   |
+| ---------------------------- | ------------------------------------------------------------- |
+| `alga_get_incident_context`  | Get full incident context (status, severity, timeline, roles) |
+| `alga_get_incident_timeline` | Get the timeline of events for an incident                    |
+| `alga_add_incident_timeline` | Log a custom note or status update to the incident timeline   |
 
 ### Utility Tools
 
-| Tool | Description |
-|------|-------------|
-| `alga_list_services` | List all registered services with current status |
+| Tool                  | Description                                      |
+| --------------------- | ------------------------------------------------ |
+| `alga_list_services`  | List all registered services with current status |
 | `alga_who_is_on_call` | Get the current on-call person for each schedule |
 
 ## Incident Role Boundaries
 
 The Alga backend enforces incident role boundaries server-side. The plugin mirrors these rules in its tool descriptions so the model doesn't waste calls on tools outside its role:
 
-| Active Role | Allowed Actions |
-|-------------|----------------|
-| **Incident Commander** | Priority, escalation, mitigation, resolution, resolution docs, triage/promote, role assignment, task dispatch/track/synthesize |
-| **Responder** | Investigation updates, severity, outcome, pause/cancel, complete investigate/verify/mitigate tasks |
-| **Communications Lead** | Publish public status updates, complete communicate-kind tasks |
+| Active Role             | Allowed Actions                                                                                                                |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Incident Commander**  | Priority, escalation, mitigation, resolution, resolution docs, triage/promote, role assignment, task dispatch/track/synthesize |
+| **Responder**           | Investigation updates, severity, outcome, pause/cancel, complete investigate/verify/mitigate tasks                             |
+| **Communications Lead** | Publish public status updates, complete communicate-kind tasks                                                                 |
 
 ::: warning Resolution Requirements
 Incident resolution requires five structured artifacts: `summary`, `impact_assessment`, `actions_taken`, `root_cause`, and `resolution`. The `root_cause` and `resolution` sections are independently mandatory. A commander supplies them inline to `resolve_incident` or stages them with `set_incident_resolution_docs` first.
@@ -278,10 +278,11 @@ During an incident, multiple Hermes agents (commander, communicator, responder) 
 
 ::: tip Avoiding Coordination Ping-Pong
 Hermes treats new @mentions as **interrupts** — if a teammate mentions an agent that's mid-task, that agent posts `⚡ Interrupting current task...` and switches. To avoid unnecessary interruptions:
+
 - Activate roles with dedicated tools, not extra @mentions
 - Don't ping back for acknowledgements — let published status updates speak for themselves
 - Do **not** set `display.busy_input_mode: queue` — it would also queue `/stop`, making runaway processes hard to abort
-:::
+  :::
 
 ## Heartbeat & Presence
 
@@ -312,6 +313,7 @@ curl -N -H "Authorization: Bearer alga_agent_xxxxxxxxx" \
 ```
 
 Common causes:
+
 - **Agent token not set as default** — only the default agent receives automated dispatch traffic
 - **Agent offline** — check that the Hermes gateway is running and the SSE connection is active
 - **Scope mismatch** — if scope is `labels`, the alert labels must match the configured selectors
@@ -328,14 +330,14 @@ This is by design — the 🔒 prefix marks operator-internal messages that shou
 
 ## Hermes vs OpenClaw
 
-| Aspect | Hermes | OpenClaw |
-|--------|--------|---------|
-| Plugin language | Python | TypeScript/Node.js |
-| Underlying platform | Nous Research Hermes Agent | OpenClaw gateway |
-| Tool count | 31 | 32 (adds memory + peer-ask tools) |
-| Agent type | `hermes` (the default) | `openclaw` |
-| Connection protocol | Same SSE + REST agent API | Same SSE + REST agent API |
-| Backend executor | Same `AgentToolExecutor` | Same `AgentToolExecutor` |
+| Aspect              | Hermes                     | OpenClaw                          |
+| ------------------- | -------------------------- | --------------------------------- |
+| Plugin language     | Python                     | TypeScript/Node.js                |
+| Underlying platform | Nous Research Hermes Agent | OpenClaw gateway                  |
+| Tool count          | 31                         | 32 (adds memory + peer-ask tools) |
+| Agent type          | `hermes` (the default)     | `openclaw`                        |
+| Connection protocol | Same SSE + REST agent API  | Same SSE + REST agent API         |
+| Backend executor    | Same `AgentToolExecutor`   | Same `AgentToolExecutor`          |
 
 Both are first-class peers. The scheduler picks any online agent with matching capabilities and scope — it does not prefer one type over the other. See the [AI Investigation guide](/core-features/investigation) for how the dispatch pipeline works.
 

@@ -19,27 +19,27 @@ Playbooks define repeatable response procedures for common operational scenarios
 
 ## Playbook Fields
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `title` | `string` | Playbook name |
-| `kind` | `string` | `procedure` or `mitigation` |
-| `summary` | `string` | Brief description of the playbook's purpose |
-| `service_id` | `UUID` | Optional linked service for scoping |
-| `label_selectors` | `array` | Flat key→value maps for matching alert labels (exact equality; prefix value with `~` for regex) |
-| `tags` | `array` | Categorization tags for filtering |
-| `steps` | `array` | Ordered list of execution steps |
+| Field             | Type     | Description                                                                                     |
+| ----------------- | -------- | ----------------------------------------------------------------------------------------------- |
+| `title`           | `string` | Playbook name                                                                                   |
+| `kind`            | `string` | `procedure` or `mitigation`                                                                     |
+| `summary`         | `string` | Brief description of the playbook's purpose                                                     |
+| `service_id`      | `UUID`   | Optional linked service for scoping                                                             |
+| `label_selectors` | `array`  | Flat key→value maps for matching alert labels (exact equality; prefix value with `~` for regex) |
+| `tags`            | `array`  | Categorization tags for filtering                                                               |
+| `steps`           | `array`  | Ordered list of execution steps                                                                 |
 
 ## Steps
 
 Each step within a playbook contains:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `step_number` | `int` | Ordering position of the step |
-| `title` | `string` | Step name |
-| `description` | `string` | Detailed instructions |
+| Field               | Type     | Description                               |
+| ------------------- | -------- | ----------------------------------------- |
+| `step_number`       | `int`    | Ordering position of the step             |
+| `title`             | `string` | Step name                                 |
+| `description`       | `string` | Detailed instructions                     |
 | `expected_duration` | `string` | Estimated time to complete (e.g., `"5m"`) |
-| `command` | `string` | Optional shell command to execute |
+| `command`           | `string` | Optional shell command to execute         |
 
 ## Creating Playbooks
 
@@ -82,22 +82,22 @@ curl -X POST http://localhost:8080/api/v1/playbooks \
 
 ### Playbook Management
 
-| Method | Path | Permission | Description |
-|--------|------|------------|-------------|
-| `GET` | `/api/v1/playbooks` | `playbooks:read` | List playbooks (query: `kind`, `service_id`, `tag`, `search`, `limit`, `skip`) |
-| `POST` | `/api/v1/playbooks` | `playbooks:write` | Create playbook |
-| `GET` | `/api/v1/playbooks/{id}` | `playbooks:read` | Get playbook with steps |
-| `PATCH` | `/api/v1/playbooks/{id}` | `playbooks:write` | Update playbook |
-| `DELETE` | `/api/v1/playbooks/{id}` | `playbooks:delete` | Delete playbook |
+| Method   | Path                     | Permission         | Description                                                                    |
+| -------- | ------------------------ | ------------------ | ------------------------------------------------------------------------------ |
+| `GET`    | `/api/v1/playbooks`      | `playbooks:read`   | List playbooks (query: `kind`, `service_id`, `tag`, `search`, `limit`, `skip`) |
+| `POST`   | `/api/v1/playbooks`      | `playbooks:write`  | Create playbook                                                                |
+| `GET`    | `/api/v1/playbooks/{id}` | `playbooks:read`   | Get playbook with steps                                                        |
+| `PATCH`  | `/api/v1/playbooks/{id}` | `playbooks:write`  | Update playbook                                                                |
+| `DELETE` | `/api/v1/playbooks/{id}` | `playbooks:delete` | Delete playbook                                                                |
 
 ### Step Management
 
-| Method | Path | Permission | Description |
-|--------|------|------------|-------------|
-| `POST` | `/api/v1/playbooks/{id}/steps` | `playbooks:write` | Add step |
-| `PATCH` | `/api/v1/playbooks/{id}/steps/{stepId}` | `playbooks:write` | Update step |
-| `DELETE` | `/api/v1/playbooks/{id}/steps/{stepId}` | `playbooks:delete` | Delete step |
-| `PUT` | `/api/v1/playbooks/{id}/steps/reorder` | `playbooks:write` | Reorder steps |
+| Method   | Path                                    | Permission         | Description   |
+| -------- | --------------------------------------- | ------------------ | ------------- |
+| `POST`   | `/api/v1/playbooks/{id}/steps`          | `playbooks:write`  | Add step      |
+| `PATCH`  | `/api/v1/playbooks/{id}/steps/{stepId}` | `playbooks:write`  | Update step   |
+| `DELETE` | `/api/v1/playbooks/{id}/steps/{stepId}` | `playbooks:delete` | Delete step   |
+| `PUT`    | `/api/v1/playbooks/{id}/steps/reorder`  | `playbooks:write`  | Reorder steps |
 
 ## Automatic Matching
 

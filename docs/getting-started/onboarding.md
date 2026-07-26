@@ -76,10 +76,10 @@ The wizard can be completed in sequence or dismissed. After completion, the onbo
 
 ## API Endpoints
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `GET` | `/api/v1/onboarding/status` | Session | Check if onboarding is completed |
-| `POST` | `/api/v1/onboarding/complete` | Session | Mark onboarding as completed |
+| Method | Path                          | Auth    | Description                      |
+| ------ | ----------------------------- | ------- | -------------------------------- |
+| `GET`  | `/api/v1/onboarding/status`   | Session | Check if onboarding is completed |
+| `POST` | `/api/v1/onboarding/complete` | Session | Mark onboarding as completed     |
 
 ### Checking Onboarding Status
 
@@ -100,11 +100,11 @@ Response:
 
 Before running the onboarding wizard, ensure the following infrastructure is running:
 
-| Service | Required | Purpose |
-|---------|----------|---------|
-| PostgreSQL | Yes | Data persistence |
-| Valkey/Redis | No | Sessions, caching, rate limiting, leader election |
-| RabbitMQ | No | Async alert processing and investigation pipeline |
+| Service      | Required | Purpose                                           |
+| ------------ | -------- | ------------------------------------------------- |
+| PostgreSQL   | Yes      | Data persistence                                  |
+| Valkey/Redis | No       | Sessions, caching, rate limiting, leader election |
+| RabbitMQ     | No       | Async alert processing and investigation pipeline |
 
 Start all services with Docker Compose:
 

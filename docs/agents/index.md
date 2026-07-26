@@ -9,23 +9,23 @@ AI agents are first-class citizens in Alga. An agent connects with a bearer toke
 
 In the Alga UI, the **Agents** menu (under **Automate**) groups four pages:
 
-| Page | What it does |
-|------|--------------|
-| **Agents** | Create and manage agent tokens, watch live presence, open a private chat with any agent |
-| **Knowledge** | Shared, operator-curated notes agents query during investigations — see [Knowledge Base](/agents/knowledge-base) |
-| **Memory** | The agents' own episodic memories with semantic vector search — see [Agent Memory](/agents/memory) |
-| **Secrets** | Credentials agents can fetch at runtime, scoped per agent — see [Credential Providers](/agents/credential-providers) |
+| Page          | What it does                                                                                                         |
+| ------------- | -------------------------------------------------------------------------------------------------------------------- |
+| **Agents**    | Create and manage agent tokens, watch live presence, open a private chat with any agent                              |
+| **Knowledge** | Shared, operator-curated notes agents query during investigations — see [Knowledge Base](/agents/knowledge-base)     |
+| **Memory**    | The agents' own episodic memories with semantic vector search — see [Agent Memory](/agents/memory)                   |
+| **Secrets**   | Credentials agents can fetch at runtime, scoped per agent — see [Credential Providers](/agents/credential-providers) |
 
 ## Choose a Runtime
 
 Alga supports four categories of agent. All connect through the same SSE + REST agent API, and the scheduler treats them as equal peers — any online agent with matching capabilities and scope can win a dispatch.
 
-| Runtime | Type | Language | Best for |
-|---------|------|----------|----------|
-| **[Alga Agent](/agents/alga-agent)** | native, first-party | Go binary | Zero-dependency setup: point at an LLM + agent token. Telegram channel, MCP both ways, shell + web search |
-| **[Hermes Agent](/agents/hermes)** | plugin for Nous Research Hermes | Python | Task-driven incident coordination, draft streaming, existing Hermes gateways |
-| **[OpenClaw](/agents/openclaw)** | plugin for OpenClaw gateway | TypeScript | Memory + peer-ask tools, multi-account support, existing OpenClaw deployments |
-| **[Custom (Agent SDKs)](/agents/agent-sdks)** | build your own | Go / JS / Python / Rust | Full control over the model, reasoning loop, and tooling |
+| Runtime                                       | Type                            | Language                | Best for                                                                                                  |
+| --------------------------------------------- | ------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------- |
+| **[Alga Agent](/agents/alga-agent)**          | native, first-party             | Go binary               | Zero-dependency setup: point at an LLM + agent token. Telegram channel, MCP both ways, shell + web search |
+| **[Hermes Agent](/agents/hermes)**            | plugin for Nous Research Hermes | Python                  | Task-driven incident coordination, draft streaming, existing Hermes gateways                              |
+| **[OpenClaw](/agents/openclaw)**              | plugin for OpenClaw gateway     | TypeScript              | Memory + peer-ask tools, multi-account support, existing OpenClaw deployments                             |
+| **[Custom (Agent SDKs)](/agents/agent-sdks)** | build your own                  | Go / JS / Python / Rust | Full control over the model, reasoning loop, and tooling                                                  |
 
 You can run several at once under different tokens — for example a Hermes commander and an OpenClaw responder collaborating on the same incident.
 
@@ -42,17 +42,17 @@ The token is used as `Authorization: Bearer alga_agent_...` for all agent REST c
 
 ### Capabilities
 
-| Capability | Description |
-|------------|-------------|
+| Capability    | Description                                      |
+| ------------- | ------------------------------------------------ |
 | `investigate` | Receive automated alert investigation dispatches |
-| `communicate` | Participate in incident communications |
-| `command` | Take incident commander actions |
+| `communicate` | Participate in incident communications           |
+| `command`     | Take incident commander actions                  |
 
 ### Investigation Scope
 
-| Scope | Description |
-|-------|-------------|
-| `all` | Catch-all — eligible for any alert dispatch |
+| Scope             | Description                                                      |
+| ----------------- | ---------------------------------------------------------------- |
+| `all`             | Catch-all — eligible for any alert dispatch                      |
 | `label_selectors` | Restricted to alerts whose labels match the configured selectors |
 
 The scheduler prefers label-targeted agents when an alert matches their selectors; the **default** agent receives traffic that no targeted agent claims.

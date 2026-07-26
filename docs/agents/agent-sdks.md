@@ -7,21 +7,21 @@ description: Build a custom AI agent against Alga's SSE + REST agent protocol â€
 
 Alga ships **four standalone Agent SDKs** for building custom AI agents that connect to the Alga agent API. Each SDK implements the same client shape: connect over SSE, handle events, call REST methods, and send investigation commands via factory helpers. All four are MIT licensed and include built-in message deduplication.
 
-| SDK | Language | Package | Install |
-|-----|----------|---------|---------|
-| **Go** | Go (stdlib only) | `github.com/alga/agent-sdk-go` | `go get github.com/alga/agent-sdk-go` |
-| **JavaScript** | TypeScript / Node.js 18+ | `@alga/agent-sdk` | `npm install @alga/agent-sdk` |
-| **Python** | Python 3.10+ (async) | `alga-agent-sdk` | `pip install alga-agent-sdk` |
-| **Rust** | Rust (Tokio) | `alga-agent-sdk` | `cargo add alga-agent-sdk` |
+| SDK            | Language                 | Package                        | Install                               |
+| -------------- | ------------------------ | ------------------------------ | ------------------------------------- |
+| **Go**         | Go (stdlib only)         | `github.com/alga/agent-sdk-go` | `go get github.com/alga/agent-sdk-go` |
+| **JavaScript** | TypeScript / Node.js 18+ | `@alga/agent-sdk`              | `npm install @alga/agent-sdk`         |
+| **Python**     | Python 3.10+ (async)     | `alga-agent-sdk`               | `pip install alga-agent-sdk`          |
+| **Rust**       | Rust (Tokio)             | `alga-agent-sdk`               | `cargo add alga-agent-sdk`            |
 
 ## Source Layout
 
-| SDK | Path | Key Files |
-|-----|------|-----------|
-| Go | `integrations/alga-agent-sdk-go` | `client.go`, `commands.go`, `dedup.go`, `errors.go`, `log.go`, `models.go`, `options.go`, `sse.go`, `util.go` + examples |
-| JavaScript | `integrations/alga-agent-sdk-js` | npm package with `src/` + `dist/` |
-| Python | `integrations/alga-agent-sdk-py` | `alga_agent_sdk/` package, `pyproject.toml` |
-| Rust | `integrations/alga-agent-sdk-rs` | `src/` + `tests/`, `Cargo.toml` |
+| SDK        | Path                             | Key Files                                                                                                                |
+| ---------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Go         | `integrations/alga-agent-sdk-go` | `client.go`, `commands.go`, `dedup.go`, `errors.go`, `log.go`, `models.go`, `options.go`, `sse.go`, `util.go` + examples |
+| JavaScript | `integrations/alga-agent-sdk-js` | npm package with `src/` + `dist/`                                                                                        |
+| Python     | `integrations/alga-agent-sdk-py` | `alga_agent_sdk/` package, `pyproject.toml`                                                                              |
+| Rust       | `integrations/alga-agent-sdk-rs` | `src/` + `tests/`, `Cargo.toml`                                                                                          |
 
 All four SDKs implement: SSE client with reconnect, command handling (investigation lifecycle commands), message deduplication, and typed models for events and commands.
 
@@ -82,12 +82,7 @@ Key features: SSE callbacks as struct fields (`OnMessage`, `OnConnected`, â€¦), 
 ## JavaScript / TypeScript
 
 ```typescript
-import {
-  AlgaClient,
-  resolveAlert,
-  setOutcome,
-  completeInvestigation,
-} from "@alga/agent-sdk";
+import { AlgaClient, resolveAlert, setOutcome, completeInvestigation } from "@alga/agent-sdk";
 
 const client = new AlgaClient("https://alga.example.com", process.env.ALGA_AGENT_TOKEN!);
 

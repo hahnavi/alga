@@ -20,11 +20,11 @@ After the initial admin account is created, your first login triggers the [Onboa
 
 ## Next Steps
 
-| Guide | What You'll Learn |
-|-------|-------------------|
-| [Onboarding Wizard](/getting-started/onboarding) | Guided first-run setup for new installations |
-| [Installation & Setup](/getting-started/installation) | Docker Compose, manual install, production setup |
-| [First Steps Guide](/getting-started/first-steps) | Send test alerts, connect Grafana, explore features |
+| Guide                                                 | What You'll Learn                                   |
+| ----------------------------------------------------- | --------------------------------------------------- |
+| [Onboarding Wizard](/getting-started/onboarding)      | Guided first-run setup for new installations        |
+| [Installation & Setup](/getting-started/installation) | Docker Compose, manual install, production setup    |
+| [First Steps Guide](/getting-started/first-steps)     | Send test alerts, connect Grafana, explore features |
 
 ## Key Features to Explore
 

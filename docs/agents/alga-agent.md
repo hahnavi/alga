@@ -83,20 +83,20 @@ go run .
 
 Configuration is loaded from `config.yaml` — resolved from an explicit path, `$ALGA_AGENT_CONFIG`, `./config.yaml`, `$ALGA_AGENT_HOME/config.yaml`, or `$HOME/.alga/config.yaml`. `${VAR}` expansion is supported, and **environment variables always override YAML values** — keep secrets in env vars, structure in YAML.
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `OPENROUTER_API_KEY` | Yes* | LLM API key (default OpenRouter provider) |
-| `OPENAI_API_KEY` | Yes* | LLM API key alias (`OPENROUTER_API_KEY` wins when both set) |
-| Provider keys | No | Per-provider keys used when `model.provider` matches: `OPENCODE_ZEN_API_KEY`, `OPENCODE_GO_API_KEY`, `ZAI_API_KEY`/`GLM_API_KEY`/`Z_AI_API_KEY`, `DASHSCOPE_API_KEY`, `ALIBABA_CODING_PLAN_API_KEY` |
-| `TELEGRAM_BOT_TOKEN` | If Telegram enabled | Telegram bot token from @BotFather |
-| `ALGA_SERVER_URL` | If Alga enabled | Alga server URL |
-| `ALGA_AGENT_TOKEN` | If Alga enabled | The `alga_agent_...` bearer token |
-| `SEARCH_API_KEY` | If Brave/Tavily | Web search API key |
-| `ALGA_AGENT_CONFIG` | No | Path to config.yaml |
-| `ALGA_AGENT_HOME` | No | Data dir (default `~/.alga`) |
-| `ALGA_AGENT_NONINTERACTIVE` | No | Set to `1` to make `setup` refuse to run (non-TTY guard) |
-| `ALGA_TELEGRAM_ENABLED` | No | Enable Telegram channel (`true`/`false`) |
-| `ALGA_ALGA_ENABLED` | No | Enable Alga channel (`true`/`false`) |
+| Variable                    | Required            | Description                                                                                                                                                                                         |
+| --------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OPENROUTER_API_KEY`        | Yes*                | LLM API key (default OpenRouter provider)                                                                                                                                                           |
+| `OPENAI_API_KEY`            | Yes*                | LLM API key alias (`OPENROUTER_API_KEY` wins when both set)                                                                                                                                         |
+| Provider keys               | No                  | Per-provider keys used when `model.provider` matches: `OPENCODE_ZEN_API_KEY`, `OPENCODE_GO_API_KEY`, `ZAI_API_KEY`/`GLM_API_KEY`/`Z_AI_API_KEY`, `DASHSCOPE_API_KEY`, `ALIBABA_CODING_PLAN_API_KEY` |
+| `TELEGRAM_BOT_TOKEN`        | If Telegram enabled | Telegram bot token from @BotFather                                                                                                                                                                  |
+| `ALGA_SERVER_URL`           | If Alga enabled     | Alga server URL                                                                                                                                                                                     |
+| `ALGA_AGENT_TOKEN`          | If Alga enabled     | The `alga_agent_...` bearer token                                                                                                                                                                   |
+| `SEARCH_API_KEY`            | If Brave/Tavily     | Web search API key                                                                                                                                                                                  |
+| `ALGA_AGENT_CONFIG`         | No                  | Path to config.yaml                                                                                                                                                                                 |
+| `ALGA_AGENT_HOME`           | No                  | Data dir (default `~/.alga`)                                                                                                                                                                        |
+| `ALGA_AGENT_NONINTERACTIVE` | No                  | Set to `1` to make `setup` refuse to run (non-TTY guard)                                                                                                                                            |
+| `ALGA_TELEGRAM_ENABLED`     | No                  | Enable Telegram channel (`true`/`false`)                                                                                                                                                            |
+| `ALGA_ALGA_ENABLED`         | No                  | Enable Alga channel (`true`/`false`)                                                                                                                                                                |
 
 \* At least one LLM key is required. The provider field controls which canonical base URL is used when `base_url` is omitted.
 

@@ -63,24 +63,24 @@ Copy the **Signing Secret** from **Basic Information** to `SLACK_SIGNING_SECRET`
 
 Configure these scopes in your Slack App's **OAuth & Permissions** section:
 
-| Scope | Purpose | Required |
-|-------|---------|----------|
-| `chat:write` | Send messages to channels | Yes |
-| `chat:write.public` | Post to public channels without joining | Yes |
-| `channels:join` | Join public channels | Recommended |
-| `channels:read` | Read channel information | Yes |
-| `groups:read` | Read private channels/DMs | Recommended |
-| `im:write` | Send direct messages | Optional |
-| `commands` | Receive slash commands | Optional |
-| `app_mentions:read` | Read app mentions | No |
+| Scope               | Purpose                                 | Required    |
+| ------------------- | --------------------------------------- | ----------- |
+| `chat:write`        | Send messages to channels               | Yes         |
+| `chat:write.public` | Post to public channels without joining | Yes         |
+| `channels:join`     | Join public channels                    | Recommended |
+| `channels:read`     | Read channel information                | Yes         |
+| `groups:read`       | Read private channels/DMs               | Recommended |
+| `im:write`          | Send direct messages                    | Optional    |
+| `commands`          | Receive slash commands                  | Optional    |
+| `app_mentions:read` | Read app mentions                       | No          |
 
 ## Channel Types
 
-| Type | Format | Bot Behavior |
-|------|--------|-------------|
-| Public channels | `#channel-name` | Can post without joining with `chat:write.public` |
-| Private channels | Channel ID (`C0123ABCD`) | Bot must be invited first |
-| Direct messages | User ID (`U0123ABCD`) | Bot can open DM with `im:write` scope |
+| Type             | Format                   | Bot Behavior                                      |
+| ---------------- | ------------------------ | ------------------------------------------------- |
+| Public channels  | `#channel-name`          | Can post without joining with `chat:write.public` |
+| Private channels | Channel ID (`C0123ABCD`) | Bot must be invited first                         |
+| Direct messages  | User ID (`U0123ABCD`)    | Bot can open DM with `im:write` scope             |
 
 ## Message Formatting
 
@@ -107,11 +107,11 @@ Individual users can link their personal Slack account to receive DM notificatio
 
 ### API Endpoints
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `GET` | `/api/v1/users/me/slack/authorize` | Session | Initiate personal Slack account linking |
-| `GET` | `/api/v1/users/me/slack/callback` | Session | OAuth callback for user-level Slack binding |
-| `POST` | `/api/v1/users/me/slack/disconnect` | Session | Disconnect personal Slack account |
+| Method | Path                                | Auth    | Description                                 |
+| ------ | ----------------------------------- | ------- | ------------------------------------------- |
+| `GET`  | `/api/v1/users/me/slack/authorize`  | Session | Initiate personal Slack account linking     |
+| `GET`  | `/api/v1/users/me/slack/callback`   | Session | OAuth callback for user-level Slack binding |
+| `POST` | `/api/v1/users/me/slack/disconnect` | Session | Disconnect personal Slack account           |
 
 ### Setup
 
@@ -127,20 +127,20 @@ When enabled, Alga can automatically create dedicated Slack channels for inciden
 
 Configure via system config (`PUT /api/v1/system/config`):
 
-| Setting | Values | Description |
-|---------|--------|-------------|
-| `slack_incident_channels_enabled` | `true`/`false` | Enable auto-creation |
-| `slack_incident_channel_visibility` | `public`/`private` | Channel visibility |
-| `slack_incident_channel_trigger_status` | `active`/`detected` | When to create the channel |
-| `slack_incident_channel_archive_on_close` | `true`/`false` | Archive on incident close |
+| Setting                                   | Values              | Description                |
+| ----------------------------------------- | ------------------- | -------------------------- |
+| `slack_incident_channels_enabled`         | `true`/`false`      | Enable auto-creation       |
+| `slack_incident_channel_visibility`       | `public`/`private`  | Channel visibility         |
+| `slack_incident_channel_trigger_status`   | `active`/`detected` | When to create the channel |
+| `slack_incident_channel_archive_on_close` | `true`/`false`      | Archive on incident close  |
 
 When `slack_incident_channels_enabled` is `true` and an incident reaches the trigger status, Alga automatically creates a channel named `inc-{incident-number}-{slug}` (for example `inc-1234-database-outage`) and posts the initial incident summary. If the name is already taken in Slack, Alga retries with `-2`, `-3` suffixes.
 
 ### API Endpoints
 
-| Method | Path | Permission | Description |
-|--------|------|------------|-------------|
-| `POST` | `/api/v1/incidents/{id}/slack-channel` | `incidents:command` | Create Slack channel for incident |
+| Method   | Path                                   | Permission          | Description                        |
+| -------- | -------------------------------------- | ------------------- | ---------------------------------- |
+| `POST`   | `/api/v1/incidents/{id}/slack-channel` | `incidents:command` | Create Slack channel for incident  |
 | `DELETE` | `/api/v1/incidents/{id}/slack-channel` | `incidents:command` | Unlink Slack channel from incident |
 
 Channels are automatically archived when incidents are closed (if configured).
@@ -164,40 +164,40 @@ Route alerts to specific Slack channels using routing rules:
 
 The Slack integration exposes these internal methods for sending messages and managing conversations:
 
-| Method | Description |
-|--------|-------------|
-| `PostMessage` | Post a message to a channel (Block Kit formatted) |
-| `PostThreadReply` | Post a threaded reply under an existing message |
-| `OpenConversation` | Open a DM conversation with a user |
-| `GetPermalink` | Get a permanent link to a message |
-| `GetBotUserID` | Resolve the bot's own user ID |
-| `TestConnection` | Verify the bot token is valid and the workspace is reachable |
+| Method             | Description                                                  |
+| ------------------ | ------------------------------------------------------------ |
+| `PostMessage`      | Post a message to a channel (Block Kit formatted)            |
+| `PostThreadReply`  | Post a threaded reply under an existing message              |
+| `OpenConversation` | Open a DM conversation with a user                           |
+| `GetPermalink`     | Get a permanent link to a message                            |
+| `GetBotUserID`     | Resolve the bot's own user ID                                |
+| `TestConnection`   | Verify the bot token is valid and the workspace is reachable |
 
 ## Slack Sign-In
 
 Alga supports signing in with Slack as an authentication method (separate from the workspace-level bot integration and user-level OAuth binding):
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
+| Method | Path                 | Auth   | Description                            |
+| ------ | -------------------- | ------ | -------------------------------------- |
 | `POST` | `/api/v1/auth/slack` | Public | Authenticate a user via Slack identity |
 
 ## API Reference
 
 ### Integration Endpoints
 
-| Method | Path | Permission | Description |
-|--------|------|------------|-------------|
-| `GET` | `/api/v1/integrations` | — | Get integration status |
-| `PUT` | `/api/v1/integrations` | `integrations:write` | Update integration settings |
-| `POST` | `/api/v1/integrations/test` | `integrations:test` | Test Slack connection |
-| `POST` | `/api/v1/integrations/slack/oauth/authorize` | `integrations:write` | Initiate OAuth flow |
-| `GET` | `/api/v1/integrations/slack/oauth/callback` | — | OAuth callback |
-| `POST` | `/api/v1/integrations/slack/disconnect` | `integrations:write` | Disconnect workspace |
+| Method | Path                                         | Permission           | Description                 |
+| ------ | -------------------------------------------- | -------------------- | --------------------------- |
+| `GET`  | `/api/v1/integrations`                       | —                    | Get integration status      |
+| `PUT`  | `/api/v1/integrations`                       | `integrations:write` | Update integration settings |
+| `POST` | `/api/v1/integrations/test`                  | `integrations:test`  | Test Slack connection       |
+| `POST` | `/api/v1/integrations/slack/oauth/authorize` | `integrations:write` | Initiate OAuth flow         |
+| `GET`  | `/api/v1/integrations/slack/oauth/callback`  | —                    | OAuth callback              |
+| `POST` | `/api/v1/integrations/slack/disconnect`      | `integrations:write` | Disconnect workspace        |
 
 ### Webhook Endpoint
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
+| Method | Path              | Auth           | Description              |
+| ------ | ----------------- | -------------- | ------------------------ |
 | `POST` | `/webhooks/slack` | Signing secret | Slack Events API webhook |
 
 ## Troubleshooting

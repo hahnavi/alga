@@ -11,11 +11,11 @@ Alga's knowledge base provides shared notes that help both operators and AI agen
 
 The knowledge system aggregates three sources:
 
-| Source | Description | Storage |
-|--------|-------------|---------|
-| **Episodic** | Similar past investigations | PostgreSQL |
-| **Notes** | Operator-curated notes with tags and TTL | PostgreSQL |
-| **Concurrent** | Currently-running investigations on the same correlation key | Valkey |
+| Source         | Description                                                  | Storage    |
+| -------------- | ------------------------------------------------------------ | ---------- |
+| **Episodic**   | Similar past investigations                                  | PostgreSQL |
+| **Notes**      | Operator-curated notes with tags and TTL                     | PostgreSQL |
+| **Concurrent** | Currently-running investigations on the same correlation key | Valkey     |
 
 Agents access all three sources via `/api/v1/agent/knowledge` during investigations.
 
@@ -38,17 +38,17 @@ curl -b cookies.txt -X POST http://localhost:8080/api/v1/knowledge \
 
 ### Note Fields
 
-| Field | Description |
-|-------|-------------|
-| `kind` | Note category (e.g., operator note vs episodic knowledge) |
-| `title` | Human-readable title |
-| `body_markdown` | Markdown content with details, steps, and context |
-| `tags` | Labels for categorization and search |
-| `selectors` | Array of condition objects (e.g., `[{"field": "namespace", "operator": "exact", "value": "production"}]`) for matching alert labels |
-| `author_id` / `author_type` / `author_name` | Who authored the note (`author_type` is `user` or `agent`) |
-| `source_investigation_id` | Investigation the note was derived from (for agent-authored notes) |
-| `confidence` | Optional confidence score (0–1) for agent-authored notes |
-| `expires_at` | Optional expiry timestamp (RFC3339 format, auto-deletes after this time) |
+| Field                                       | Description                                                                                                                         |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `kind`                                      | Note category (e.g., operator note vs episodic knowledge)                                                                           |
+| `title`                                     | Human-readable title                                                                                                                |
+| `body_markdown`                             | Markdown content with details, steps, and context                                                                                   |
+| `tags`                                      | Labels for categorization and search                                                                                                |
+| `selectors`                                 | Array of condition objects (e.g., `[{"field": "namespace", "operator": "exact", "value": "production"}]`) for matching alert labels |
+| `author_id` / `author_type` / `author_name` | Who authored the note (`author_type` is `user` or `agent`)                                                                          |
+| `source_investigation_id`                   | Investigation the note was derived from (for agent-authored notes)                                                                  |
+| `confidence`                                | Optional confidence score (0–1) for agent-authored notes                                                                            |
+| `expires_at`                                | Optional expiry timestamp (RFC3339 format, auto-deletes after this time)                                                            |
 
 ### Search Notes
 
@@ -65,6 +65,7 @@ For example, a note with selectors `[{"field": "namespace", "operator": "exact",
 ## Episodic Knowledge
 
 Past investigations are automatically indexed by:
+
 - Correlation key (deployment name + alertname)
 - Alert labels and annotations
 - Root cause and resolution text
@@ -75,17 +76,17 @@ Agents query similar past investigations to find patterns and reuse solutions.
 
 All operator endpoints require an authenticated session; the Permission column lists the additional RBAC permission, if any.
 
-| Method | Path | Permission | Description |
-|--------|------|------------|-------------|
-| `GET` | `/api/v1/knowledge` | — | List/search notes |
-| `POST` | `/api/v1/knowledge` | `knowledge:write` | Create note |
-| `GET` | `/api/v1/knowledge/{id}` | — | Get note |
-| `PUT` | `/api/v1/knowledge/{id}` | `knowledge:write` | Update note |
-| `DELETE` | `/api/v1/knowledge/{id}` | `knowledge:delete` | Delete note |
+| Method   | Path                     | Permission         | Description       |
+| -------- | ------------------------ | ------------------ | ----------------- |
+| `GET`    | `/api/v1/knowledge`      | —                  | List/search notes |
+| `POST`   | `/api/v1/knowledge`      | `knowledge:write`  | Create note       |
+| `GET`    | `/api/v1/knowledge/{id}` | —                  | Get note          |
+| `PUT`    | `/api/v1/knowledge/{id}` | `knowledge:write`  | Update note       |
+| `DELETE` | `/api/v1/knowledge/{id}` | `knowledge:delete` | Delete note       |
 
 ### Agent Endpoints
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `GET` | `/api/v1/agent/knowledge` | Bearer | List/search notes (read-only) |
+| Method | Path                      | Auth   | Description                                                              |
+| ------ | ------------------------- | ------ | ------------------------------------------------------------------------ |
+| `GET`  | `/api/v1/agent/knowledge` | Bearer | List/search notes (read-only)                                            |
 | `POST` | `/api/v1/agent/knowledge` | Bearer | Create note (requires `source_investigation_id` and `confidence` fields) |

@@ -19,14 +19,14 @@ A window is active when all of the following hold:
 
 ## Window Fields
 
-| Field | Description |
-|-------|-------------|
-| `name` | Human-readable name (e.g., "Database Migration") |
-| `start_time` | When suppression begins (RFC3339) |
-| `end_time` | When suppression ends (RFC3339); must be after `start_time` |
+| Field            | Description                                                       |
+| ---------------- | ----------------------------------------------------------------- |
+| `name`           | Human-readable name (e.g., "Database Migration")                  |
+| `start_time`     | When suppression begins (RFC3339)                                 |
+| `end_time`       | When suppression ends (RFC3339); must be after `start_time`       |
 | `label_matchers` | Map of label key/value pairs an alert must match to be suppressed |
-| `enabled` | Whether the window is active (default `true`) |
-| `created_by` | Email of the user who created the window |
+| `enabled`        | Whether the window is active (default `true`)                     |
+| `created_by`     | Email of the user who created the window                          |
 
 An empty `label_matchers` map matches every alert during the window.
 
@@ -44,13 +44,13 @@ Maintenance windows are a suppression mechanism alongside [silenced routing rule
 
 ## API Endpoints
 
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `GET` | `/api/v1/maintenance-windows` | Session | `routes:read` | List windows (supports `?enabled=true`) |
-| `POST` | `/api/v1/maintenance-windows` | Session | `routes:write` | Create window |
-| `GET` | `/api/v1/maintenance-windows/{id}` | Session | `routes:read` | Get window |
-| `PUT` | `/api/v1/maintenance-windows/{id}` | Session | `routes:write` | Update window |
-| `DELETE` | `/api/v1/maintenance-windows/{id}` | Session | `routes:write` | Delete window |
+| Method   | Path                               | Auth    | Permission     | Description                             |
+| -------- | ---------------------------------- | ------- | -------------- | --------------------------------------- |
+| `GET`    | `/api/v1/maintenance-windows`      | Session | `routes:read`  | List windows (supports `?enabled=true`) |
+| `POST`   | `/api/v1/maintenance-windows`      | Session | `routes:write` | Create window                           |
+| `GET`    | `/api/v1/maintenance-windows/{id}` | Session | `routes:read`  | Get window                              |
+| `PUT`    | `/api/v1/maintenance-windows/{id}` | Session | `routes:write` | Update window                           |
+| `DELETE` | `/api/v1/maintenance-windows/{id}` | Session | `routes:write` | Delete window                           |
 
 ## See Also
 

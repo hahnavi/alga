@@ -9,10 +9,10 @@ Runtime settings can be managed via the System Configuration API, overriding env
 
 ## API Endpoints
 
-| Method | Path | Permission | Description |
-|--------|------|------------|-------------|
-| `GET` | `/api/v1/system/config` | `system:read` | Get current runtime config |
-| `PUT` | `/api/v1/system/config` | `system:write` | Update config fields |
+| Method | Path                    | Permission     | Description                |
+| ------ | ----------------------- | -------------- | -------------------------- |
+| `GET`  | `/api/v1/system/config` | `system:read`  | Get current runtime config |
+| `PUT`  | `/api/v1/system/config` | `system:write` | Update config fields       |
 
 ## Get Configuration
 
@@ -48,58 +48,58 @@ curl -b cookies.txt -X PUT http://localhost:8080/api/v1/system/config \
 
 ### Core Pipeline
 
-| Field | Type | Constraints | Description |
-|-------|------|-------------|-------------|
-| `log_level` | string | `debug`, `info`, `warn`, `error`, `fatal` | Runtime log level; re-initializes logger immediately |
-| `session_expiry_hours` | int | > 0, <= 720 | Session lifetime in hours |
-| `max_concurrent_investigations` | int | > 0 | Per-agent investigation capacity |
-| `correlation_window` | duration | Go duration string | Alert correlation time window |
-| `correlation_cooldown_ttl` | duration | Go duration string | Cooldown after investigation publish |
-| `investigation_timeout` | duration | Go duration string | Max investigation duration before timeout |
+| Field                           | Type     | Constraints                               | Description                                          |
+| ------------------------------- | -------- | ----------------------------------------- | ---------------------------------------------------- |
+| `log_level`                     | string   | `debug`, `info`, `warn`, `error`, `fatal` | Runtime log level; re-initializes logger immediately |
+| `session_expiry_hours`          | int      | > 0, <= 720                               | Session lifetime in hours                            |
+| `max_concurrent_investigations` | int      | > 0                                       | Per-agent investigation capacity                     |
+| `correlation_window`            | duration | Go duration string                        | Alert correlation time window                        |
+| `correlation_cooldown_ttl`      | duration | Go duration string                        | Cooldown after investigation publish                 |
+| `investigation_timeout`         | duration | Go duration string                        | Max investigation duration before timeout            |
 
 ### Agent & Scheduler
 
-| Field | Type | Constraints | Description |
-|-------|------|-------------|-------------|
-| `agent_presence_ttl` | duration | Go duration string | Agent SSE presence TTL |
+| Field                    | Type     | Constraints        | Description                             |
+| ------------------------ | -------- | ------------------ | --------------------------------------- |
+| `agent_presence_ttl`     | duration | Go duration string | Agent SSE presence TTL                  |
 | `agent_disconnect_grace` | duration | Go duration string | Grace period after agent SSE disconnect |
-| `scheduler_leader_ttl` | duration | Go duration string | Leader lease TTL for scheduler election |
+| `scheduler_leader_ttl`   | duration | Go duration string | Leader lease TTL for scheduler election |
 
 ### Slack Incident Channels
 
-| Field | Type | Constraints | Description |
-|-------|------|-------------|-------------|
-| `slack_incident_channels_enabled` | bool | — | Enable automatic Slack incident channels |
-| `slack_incident_channel_visibility` | string | `public`, `private` | Channel visibility |
-| `slack_incident_channel_trigger_status` | string | `active`, `detected` | Incident status that triggers channel creation |
-| `slack_incident_channel_archive_on_close` | bool | — | Archive channel when incident closes |
+| Field                                     | Type   | Constraints          | Description                                    |
+| ----------------------------------------- | ------ | -------------------- | ---------------------------------------------- |
+| `slack_incident_channels_enabled`         | bool   | —                    | Enable automatic Slack incident channels       |
+| `slack_incident_channel_visibility`       | string | `public`, `private`  | Channel visibility                             |
+| `slack_incident_channel_trigger_status`   | string | `active`, `detected` | Incident status that triggers channel creation |
+| `slack_incident_channel_archive_on_close` | bool   | —                    | Archive channel when incident closes           |
 
 ### Incident Summaries
 
-| Field | Type | Constraints | Description |
-|-------|------|-------------|-------------|
-| `incident_summary_enabled` | bool | — | Enable periodic incident summary generation |
-| `incident_summary_interval` | duration | Go duration string | Default summary cadence |
+| Field                        | Type                  | Constraints               | Description                                                           |
+| ---------------------------- | --------------------- | ------------------------- | --------------------------------------------------------------------- |
+| `incident_summary_enabled`   | bool                  | —                         | Enable periodic incident summary generation                           |
+| `incident_summary_interval`  | duration              | Go duration string        | Default summary cadence                                               |
 | `incident_summary_intervals` | map[severity]duration | Go duration string values | Per-severity cadence overrides (replaces all overrides when provided) |
 
 ### Authentication — Google OAuth
 
-| Field | Type | Constraints | Description |
-|-------|------|-------------|-------------|
-| `google_oauth_enabled` | bool | — | Enable Google Sign-In |
-| `google_client_id` | string | — | Google OAuth client ID |
-| `google_client_secret` | string | Non-empty to update | Google OAuth client secret (never returned on GET) |
-| `google_oauth_redirect_url` | string | — | Override callback URL |
+| Field                       | Type   | Constraints         | Description                                        |
+| --------------------------- | ------ | ------------------- | -------------------------------------------------- |
+| `google_oauth_enabled`      | bool   | —                   | Enable Google Sign-In                              |
+| `google_client_id`          | string | —                   | Google OAuth client ID                             |
+| `google_client_secret`      | string | Non-empty to update | Google OAuth client secret (never returned on GET) |
+| `google_oauth_redirect_url` | string | —                   | Override callback URL                              |
 
 ### Authentication — OIDC
 
-| Field | Type | Constraints | Description |
-|-------|------|-------------|-------------|
-| `oidc_enabled` | bool | — | Enable generic OIDC SSO |
-| `oidc_issuer_url` | string | — | OIDC issuer discovery URL |
-| `oidc_client_id` | string | — | OIDC client ID |
+| Field                | Type   | Constraints         | Description                                |
+| -------------------- | ------ | ------------------- | ------------------------------------------ |
+| `oidc_enabled`       | bool   | —                   | Enable generic OIDC SSO                    |
+| `oidc_issuer_url`    | string | —                   | OIDC issuer discovery URL                  |
+| `oidc_client_id`     | string | —                   | OIDC client ID                             |
 | `oidc_client_secret` | string | Non-empty to update | OIDC client secret (never returned on GET) |
-| `oidc_scopes` | string | — | Space-separated OIDC scopes |
+| `oidc_scopes`        | string | —                   | Space-separated OIDC scopes                |
 
 ## Duration Format
 

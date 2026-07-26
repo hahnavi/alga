@@ -11,12 +11,12 @@ Personal Access Tokens (PATs) provide an alternative to session-based authentica
 
 PATs are long-lived bearer tokens that authenticate as a specific user. The effective permissions are the intersection of the PAT's assigned permissions and the user's role permissions (least privilege).
 
-| Feature | Session Auth | PAT Auth |
-|---------|-------------|----------|
-| Lifetime | 24 hours (configurable) | Until expiry or revocation |
-| CSRF Required | Yes | No |
-| Use Case | Browser sessions | API automation, scripts, CI/CD |
-| Storage | HTTP-only cookie | Bearer token header |
+| Feature       | Session Auth            | PAT Auth                       |
+| ------------- | ----------------------- | ------------------------------ |
+| Lifetime      | 24 hours (configurable) | Until expiry or revocation     |
+| CSRF Required | Yes                     | No                             |
+| Use Case      | Browser sessions        | API automation, scripts, CI/CD |
+| Storage       | HTTP-only cookie        | Bearer token header            |
 
 ## Creating a PAT
 
@@ -84,20 +84,20 @@ curl -H "Authorization: Bearer $ALGA_PAT" \
 
 Manage your own personal access tokens:
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `GET` | `/api/v1/user/tokens` | Session | List your PATs (token values are masked) |
-| `POST` | `/api/v1/user/tokens` | Session | Create a new PAT |
-| `DELETE` | `/api/v1/user/tokens/{id}` | Session | Revoke one of your PATs |
+| Method   | Path                       | Auth    | Description                              |
+| -------- | -------------------------- | ------- | ---------------------------------------- |
+| `GET`    | `/api/v1/user/tokens`      | Session | List your PATs (token values are masked) |
+| `POST`   | `/api/v1/user/tokens`      | Session | Create a new PAT                         |
+| `DELETE` | `/api/v1/user/tokens/{id}` | Session | Revoke one of your PATs                  |
 
 ### Admin Token Management
 
 Administrators can view and revoke any user's PATs:
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `GET` | `/api/v1/admin/tokens` | Session | List all PATs across all users |
-| `DELETE` | `/api/v1/admin/tokens/{id}` | Session | Revoke any PAT |
+| Method   | Path                        | Auth    | Description                    |
+| -------- | --------------------------- | ------- | ------------------------------ |
+| `GET`    | `/api/v1/admin/tokens`      | Session | List all PATs across all users |
+| `DELETE` | `/api/v1/admin/tokens/{id}` | Session | Revoke any PAT                 |
 
 ## Security
 

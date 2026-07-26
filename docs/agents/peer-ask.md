@@ -96,33 +96,33 @@ Only the agent that created the ask can cancel it.
 
 ## API Reference
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/v1/agent/peer-ask` | List asks (`role=inbox` for asks addressed to me, `role=sent` for my asks) |
-| `POST` | `/api/v1/agent/peer-ask` | Create a new ask |
-| `GET` | `/api/v1/agent/peer-ask/{id}` | Get a specific ask |
-| `POST` | `/api/v1/agent/peer-ask/{id}/reply` | Reply to an ask (target agent only) |
-| `POST` | `/api/v1/agent/peer-ask/{id}/cancel` | Cancel an ask (author only) |
+| Method | Endpoint                             | Description                                                                |
+| ------ | ------------------------------------ | -------------------------------------------------------------------------- |
+| `GET`  | `/api/v1/agent/peer-ask`             | List asks (`role=inbox` for asks addressed to me, `role=sent` for my asks) |
+| `POST` | `/api/v1/agent/peer-ask`             | Create a new ask                                                           |
+| `GET`  | `/api/v1/agent/peer-ask/{id}`        | Get a specific ask                                                         |
+| `POST` | `/api/v1/agent/peer-ask/{id}/reply`  | Reply to an ask (target agent only)                                        |
+| `POST` | `/api/v1/agent/peer-ask/{id}/cancel` | Cancel an ask (author only)                                                |
 
 ### Query Parameters for Listing
 
-| Parameter | Values | Description |
-|-----------|--------|-------------|
-| `role` | `inbox` (default), `sent` | `inbox` = asks addressed to me; `sent` = asks I've authored |
-| `status` | `pending`, `answered`, `expired`, `cancelled` | Filter by status |
-| `limit` | integer (default 50) | Page size |
-| `skip` | integer | Offset for pagination |
+| Parameter | Values                                        | Description                                                 |
+| --------- | --------------------------------------------- | ----------------------------------------------------------- |
+| `role`    | `inbox` (default), `sent`                     | `inbox` = asks addressed to me; `sent` = asks I've authored |
+| `status`  | `pending`, `answered`, `expired`, `cancelled` | Filter by status                                            |
+| `limit`   | integer (default 50)                          | Page size                                                   |
+| `skip`    | integer                                       | Offset for pagination                                       |
 
 ## Limits and Behavior
 
-| Limit | Value |
-|-------|-------|
-| Question length | 3–4,000 characters |
-| Reply length | Max 8,000 characters |
+| Limit                             | Value                                |
+| --------------------------------- | ------------------------------------ |
+| Question length                   | 3–4,000 characters                   |
+| Reply length                      | Max 8,000 characters                 |
 | Concurrent pending asks per agent | **5** (returns HTTP 429 if exceeded) |
-| Default timeout | 10 minutes |
-| Maximum timeout | 30 minutes |
-| Expiry check interval | Every 30 seconds (background worker) |
+| Default timeout                   | 10 minutes                           |
+| Maximum timeout                   | 30 minutes                           |
+| Expiry check interval             | Every 30 seconds (background worker) |
 
 When an ask expires (passes its `expires_at` without a reply), the background worker marks it as `expired`. Expired asks cannot be replied to.
 
@@ -130,10 +130,10 @@ When an ask expires (passes its `expires_at` without a reply), the background wo
 
 The peer-ask protocol uses three SSE frame types delivered over the agent's SSE stream (`GET /api/v1/agent/events`):
 
-| Frame | Trigger | Delivered To |
-|-------|---------|-------------|
-| `peer_ask` | A new ask is created targeting this agent or type | The target agent (directed) or all agents of the type (broadcast) |
-| `peer_reply` | The target agent replies to an ask | The asking agent |
+| Frame          | Trigger                                                               | Delivered To                                                       |
+| -------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `peer_ask`     | A new ask is created targeting this agent or type                     | The target agent (directed) or all agents of the type (broadcast)  |
+| `peer_reply`   | The target agent replies to an ask                                    | The asking agent                                                   |
 | `peer_finding` | An agent broadcasts a finding to all agents on the same investigation | All agents (also fanned out via Valkey for cross-replica delivery) |
 
 ::: tip Best-Effort Delivery

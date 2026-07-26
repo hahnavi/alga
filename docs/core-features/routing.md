@@ -14,41 +14,42 @@ When an alert arrives, the routing engine evaluates rules in order. The **first 
 ## Rule Structure
 
 Each rule has:
+
 - **Name** — human-readable identifier
 - **Conditions** — one or more label/field matchers
- - **Destinations** — Slack channels and/or Mattermost channels to notify
+- **Destinations** — Slack channels and/or Mattermost channels to notify
 
 ## Condition Operators
 
-| Operator | Description | Example |
-|----------|-------------|---------|
-| `exact` | Exact string match | `namespace: production` |
-| `contains` | Contains substring | `message: error` |
-| `prefix` | Starts with | `pod: api-` |
-| `suffix` | Ends with | `cluster: -prod` |
-| `wildcard` | Glob pattern (`*` matches any) | `host: web-*.example.com` |
-| `regex` | Regular expression | `pod: api-server-\d+` |
-| `exists` | Label key exists | `namespace` exists |
-| `not_exists` | Label key does not exist | `namespace` does not exist |
+| Operator     | Description                    | Example                    |
+| ------------ | ------------------------------ | -------------------------- |
+| `exact`      | Exact string match             | `namespace: production`    |
+| `contains`   | Contains substring             | `message: error`           |
+| `prefix`     | Starts with                    | `pod: api-`                |
+| `suffix`     | Ends with                      | `cluster: -prod`           |
+| `wildcard`   | Glob pattern (`*` matches any) | `host: web-*.example.com`  |
+| `regex`      | Regular expression             | `pod: api-server-\d+`      |
+| `exists`     | Label key exists               | `namespace` exists         |
+| `not_exists` | Label key does not exist       | `namespace` does not exist |
 
 ## Match Mode
 
 When a rule has multiple conditions, the `match_mode` field controls how they are combined:
 
-| Match Mode | Behavior |
-|------------|----------|
-| `"all"` (default) | ALL conditions must match (AND logic) |
-| `"any"` | At least one condition must match (OR logic) |
+| Match Mode        | Behavior                                     |
+| ----------------- | -------------------------------------------- |
+| `"all"` (default) | ALL conditions must match (AND logic)        |
+| `"any"`           | At least one condition must match (OR logic) |
 
 ## Condition Source
 
 By default, conditions match against alert labels. Use the `source` field to match against other alert attributes:
 
-| Source | Description | Matchable Fields |
-|--------|-------------|------------------|
-| `labels` (default) | Alert labels | Any label key |
-| `annotations` | Alert annotations | Any annotation key |
-| `alert` | Alert fields | `status`, `fingerprint`, `generator_url`, `silence_url`, `dashboard_url`, `panel_url`, `alertname` |
+| Source             | Description       | Matchable Fields                                                                                   |
+| ------------------ | ----------------- | -------------------------------------------------------------------------------------------------- |
+| `labels` (default) | Alert labels      | Any label key                                                                                      |
+| `annotations`      | Alert annotations | Any annotation key                                                                                 |
+| `alert`            | Alert fields      | `status`, `fingerprint`, `generator_url`, `silence_url`, `dashboard_url`, `panel_url`, `alertname` |
 
 ## Silenced Rules
 
@@ -76,6 +77,7 @@ When a rule has multiple conditions, the `match_mode` field controls how they co
 ## Default Destinations
 
 When no rule matches, alerts are sent to the configured default destinations:
+
 - `SLACK_DEFAULT_CHANNEL` for Slack
 - `MATTERMOST_DEFAULT_CHANNEL` for Mattermost
 
@@ -94,13 +96,14 @@ Create maintenance windows to suppress alerts during planned maintenance (see [M
 
 Alga supports severity-based escalation:
 
-| Severity | Behavior |
-|----------|----------|
-| `info` | Notification only |
-| `warning` | Notification + optional investigation |
+| Severity   | Behavior                                           |
+| ---------- | -------------------------------------------------- |
+| `info`     | Notification only                                  |
+| `warning`  | Notification + optional investigation              |
 | `critical` | Notification + investigation + optional voice call |
 
 Configure critical escalation with:
+
 - `CRITICAL_SEVERITY_LABELS` — comma-separated labels that trigger critical escalation
 - `INVESTIGATION_CHANNEL` — Mattermost channel for investigation threads (Slack uses channel routing via rules)
 - Voice call configuration. Voice escalation supports either **Twilio** or **Telnyx**, selected by the `VOICE_PROVIDER` env var (`twilio` or `telnyx`). See the [Twilio integration](/integrations/twilio) docs.

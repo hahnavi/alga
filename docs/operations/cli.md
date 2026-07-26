@@ -110,18 +110,18 @@ Query alerts with flag-based filters. Results are returned as JSON.
 
 #### Flags
 
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--status` | | Filter by status (`firing`, `resolved`) |
-| `--channel` | | Filter by notification channel |
-| `--provider` | | Filter by provider |
-| `--severity` | | Filter by severity |
-| `--search` | | Search in alertname and labels |
-| `--start_date` | | Start date (RFC3339) |
-| `--end_date` | | End date (RFC3339) |
-| `--limit` | `20` | Max results to return |
-| `--skip` | `0` | Skip results (pagination offset) |
-| `--sort` | `-updated_at` | Sort field (prefix with `-` for descending) |
+| Flag           | Default       | Description                                 |
+| -------------- | ------------- | ------------------------------------------- |
+| `--status`     |               | Filter by status (`firing`, `resolved`)     |
+| `--channel`    |               | Filter by notification channel              |
+| `--provider`   |               | Filter by provider                          |
+| `--severity`   |               | Filter by severity                          |
+| `--search`     |               | Search in alertname and labels              |
+| `--start_date` |               | Start date (RFC3339)                        |
+| `--end_date`   |               | End date (RFC3339)                          |
+| `--limit`      | `20`          | Max results to return                       |
+| `--skip`       | `0`           | Skip results (pagination offset)            |
+| `--sort`       | `-updated_at` | Sort field (prefix with `-` for descending) |
 
 #### Examples
 
@@ -173,10 +173,10 @@ alga data prune --dry-run
 
 #### Flags
 
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--dry-run` | `false` | Count matching alerts without deleting them |
-| `--days` | `0` (uses `DATA_RETENTION_DAYS`) | Override the retention period in days |
+| Flag        | Default                          | Description                                 |
+| ----------- | -------------------------------- | ------------------------------------------- |
+| `--dry-run` | `false`                          | Count matching alerts without deleting them |
+| `--days`    | `0` (uses `DATA_RETENTION_DAYS`) | Override the retention period in days       |
 
 When `--days` is not set and `DATA_RETENTION_DAYS` is `0` (or unset), the command errors — you must specify a retention period via one of the two options.
 
@@ -246,9 +246,9 @@ alga user reset-password admin@alga.local --password "NewP@ssw0rd!"
 
 #### Flags
 
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--password` | *(random)* | New password (generates a random 32-character password if omitted) |
+| Flag         | Default    | Description                                                        |
+| ------------ | ---------- | ------------------------------------------------------------------ |
+| `--password` | _(random)_ | New password (generates a random 32-character password if omitted) |
 
 The command also clears any account lockout (`failed_login_attempts` reset, `locked_until` cleared).
 

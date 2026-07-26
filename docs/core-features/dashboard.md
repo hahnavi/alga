@@ -11,12 +11,12 @@ The Alga dashboard provides an at-a-glance view of your operations.
 
 The dashboard shows aggregate counters:
 
-| Stat | Description |
-|------|-------------|
-| **Firing Alerts** | Currently active (unresolved) alerts |
-| **Active Incidents** | Incidents in active/mitigated state |
-| **Pending Investigations** | Investigations waiting for an agent |
-| **Unacknowledged Incidents** | Incidents pending acknowledgement |
+| Stat                         | Description                          |
+| ---------------------------- | ------------------------------------ |
+| **Firing Alerts**            | Currently active (unresolved) alerts |
+| **Active Incidents**         | Incidents in active/mitigated state  |
+| **Pending Investigations**   | Investigations waiting for an agent  |
+| **Unacknowledged Incidents** | Incidents pending acknowledgement    |
 
 ## API Endpoint
 
@@ -25,6 +25,7 @@ curl -b cookies.txt http://localhost:8080/api/v1/dashboard/stats
 ```
 
 Response:
+
 ```json
 {
   "alerts": { "total": 42, "firing": 12, "resolved": 28, "unacknowledged": 3 },
@@ -48,6 +49,7 @@ Dashboard stats update automatically via SSE. No page refresh needed — counter
 ## Charts and Trends
 
 The dashboard includes charts for:
+
 - Alert trend — line chart showing created vs resolved alerts over time
 - Alerts by severity — doughnut chart
 - Investigation completion rate — displayed as a number
@@ -61,9 +63,9 @@ The daily summary provides an LLM-generated Markdown digest of alert and inciden
 
 ### API Endpoint
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `GET` | `/api/v1/dashboard/daily-summary` | Session | Get daily summary report |
+| Method | Path                              | Auth    | Description                        |
+| ------ | --------------------------------- | ------- | ---------------------------------- |
+| `GET`  | `/api/v1/dashboard/daily-summary` | Session | Get daily summary report           |
 | `POST` | `/api/v1/dashboard/daily-summary` | Session | Regenerate daily summary on demand |
 
 ```sh
@@ -71,6 +73,7 @@ curl -b cookies.txt http://localhost:8080/api/v1/dashboard/daily-summary
 ```
 
 Response:
+
 ```json
 {
   "summary": "# Daily Summary\n\n## Alerts\n...\n## Incidents\n...",

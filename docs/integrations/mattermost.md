@@ -39,13 +39,13 @@ MATTERMOST_TEAM=engineering
 MATTERMOST_DEFAULT_CHANNEL=alerts
 ```
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `MATTERMOST_SERVER_URL` | Yes | Base URL of your Mattermost server. Alga appends `/plugins/com.alga.mattermost-plugin` for plugin API calls. |
-| `MATTERMOST_WEBHOOK_SECRET` | Yes | Shared secret used for both inbound webhook authentication and outbound plugin API authentication. Must match the value configured in the plugin settings. |
-| `MATTERMOST_TEAM` | Yes | Mattermost team slug for channel resolution (e.g., `engineering`). |
-| `MATTERMOST_DEFAULT_CHANNEL` | Yes | Channel for alerts that don't match any routing rule (e.g., `alerts`). |
-| `MATTERMOST_DISABLED` | No | Disable Mattermost delivery. Only settable via YAML config or the Integrations API — **not** as an env var. Defaults to `false`. |
+| Variable                     | Required | Description                                                                                                                                                |
+| ---------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MATTERMOST_SERVER_URL`      | Yes      | Base URL of your Mattermost server. Alga appends `/plugins/com.alga.mattermost-plugin` for plugin API calls.                                               |
+| `MATTERMOST_WEBHOOK_SECRET`  | Yes      | Shared secret used for both inbound webhook authentication and outbound plugin API authentication. Must match the value configured in the plugin settings. |
+| `MATTERMOST_TEAM`            | Yes      | Mattermost team slug for channel resolution (e.g., `engineering`).                                                                                         |
+| `MATTERMOST_DEFAULT_CHANNEL` | Yes      | Channel for alerts that don't match any routing rule (e.g., `alerts`).                                                                                     |
+| `MATTERMOST_DISABLED`        | No       | Disable Mattermost delivery. Only settable via YAML config or the Integrations API — **not** as an env var. Defaults to `false`.                           |
 
 ::: tip Generate a strong webhook secret
 Use `openssl rand -base64 32` to generate a secure `MATTERMOST_WEBHOOK_SECRET`. The same value must be entered in both the Alga env config and the Mattermost plugin settings.
@@ -79,12 +79,12 @@ Alerts that don't match any routing rule go to `MATTERMOST_DEFAULT_CHANNEL`.
 
 ### Common Routing Patterns
 
-| Pattern | Example |
-|---------|---------|
+| Pattern        | Example                                    |
+| -------------- | ------------------------------------------ |
 | By environment | `environment: production` → `#prod-alerts` |
-| By severity | `severity: critical` → `#critical-alerts` |
-| By team | `team: payments` → `#payments-oncall` |
-| By service | `service: api-gateway` → `#api-alerts` |
+| By severity    | `severity: critical` → `#critical-alerts`  |
+| By team        | `team: payments` → `#payments-oncall`      |
+| By service     | `service: api-gateway` → `#api-alerts`     |
 
 ## Bidirectional Sync
 
@@ -101,12 +101,12 @@ This means your team can collaborate on an alert entirely from Mattermost, and e
 
 The Mattermost integration exposes these internal methods:
 
-| Method | Description |
-|--------|-------------|
-| `CreatePost` | Post a message to a channel |
-| `ReplyToPost` | Post a threaded reply under an existing post |
+| Method             | Description                                          |
+| ------------------ | ---------------------------------------------------- |
+| `CreatePost`       | Post a message to a channel                          |
+| `ReplyToPost`      | Post a threaded reply under an existing post         |
 | `GetChannelByName` | Resolve a channel by name within the configured team |
-| `TestConnection` | Verify the server URL and webhook secret are valid |
+| `TestConnection`   | Verify the server URL and webhook secret are valid   |
 
 ## Webhook Inbound
 

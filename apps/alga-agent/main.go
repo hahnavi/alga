@@ -29,10 +29,8 @@ import (
 	"alga-agent/internal/service"
 	"alga-agent/internal/setup"
 	"alga-agent/internal/tools"
+	"alga-agent/internal/version"
 )
-
-// version is set at build time via -ldflags.
-var version = "dev"
 
 const usage = `alga-agent — Alga AIOps AI assistant
 
@@ -74,7 +72,7 @@ func main() {
 			}
 			return
 		case "version", "-v", "--version":
-			fmt.Printf("alga-agent %s\n", version)
+			fmt.Printf("alga-agent %s\n", version.Version)
 			return
 		case "help", "-h", "--help":
 			fmt.Print(usage)
@@ -145,7 +143,7 @@ func run() error {
 		}
 	}()
 
-	logger := logging.Logger.With("version", version)
+	logger := logging.Logger.With("version", version.Version)
 	// Route the Alga SDK's log sink through slog.
 	alga.Logf = func(format string, args ...any) {
 		logger.Debug(fmt.Sprintf(format, args...))
@@ -277,7 +275,7 @@ func run() error {
 			mcp.WithServerLogger(logger.With("component", "mcp_server")),
 			mcp.WithServerImplementation(&mcp.Implementation{
 				Name:    cfg.Agent.Name,
-				Version: version,
+				Version: version.Version,
 			}),
 		)
 		go func() {

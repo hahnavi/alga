@@ -70,7 +70,7 @@ alga-agent
 cp config.yaml.example config.yaml
 
 # 2. Set required secrets via env vars.
-export OPENAI_API_KEY="sk-..."
+export OPENROUTER_API_KEY="sk-or-..."    # or OPENAI_API_KEY
 export TELEGRAM_BOT_TOKEN="123:abc..."   # if telegram enabled
 export ALGA_SERVER_URL="http://localhost:8080"
 export ALGA_AGENT_TOKEN="alga_..."
@@ -93,7 +93,9 @@ expansion is supported. **Environment variables always override YAML values**
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `OPENAI_API_KEY` | Yes | LLM API key |
+| `OPENROUTER_API_KEY` | Yes* | LLM API key (default OpenRouter provider) |
+| `OPENAI_API_KEY` | Yes* | LLM API key alias (OPENROUTER_API_KEY wins when both set) |
+| Provider keys | No | Per-provider keys used when `model.provider` matches: `OPENCODE_ZEN_API_KEY`, `OPENCODE_GO_API_KEY`, `ZAI_API_KEY`/`GLM_API_KEY`/`Z_AI_API_KEY`, `DASHSCOPE_API_KEY`, `ALIBABA_CODING_PLAN_API_KEY` |
 | `TELEGRAM_BOT_TOKEN` | If Telegram enabled | Telegram bot token from @BotFather |
 | `ALGA_SERVER_URL` | If Alga enabled | Alga server URL |
 | `ALGA_AGENT_TOKEN` | If Alga enabled | Alga agent authentication token |
@@ -157,7 +159,7 @@ LLM sees them alongside the Alga tools and calls them transparently.
 │ Telegram │  │   Alga   │  │   Agent Core      │
 │ Channel  │  │ Channel  │  │  ┌─────────────┐  │
 │ (polling │  │ (SSE +   │  │  │ LLM Client  │  │
-│  /webhook)│  │  REST)   │  │  │ (OpenAI)    │  │
+│  /webhook)│  │  REST)   │  │  │ (OpenRouter)│  │
 └────┬─────┘  └────┬─────┘  │  └──────┬──────┘  │
      └──────┬───────┘        │  ┌──────▼──────┐  │
             ▼                │  │ Tool Router │  │
@@ -264,7 +266,7 @@ Build from the repository root (the build context needs the local SDK):
 ```bash
 docker build -t alga-agent -f apps/alga-agent/Dockerfile .
 docker run --rm \
-  -e OPENAI_API_KEY="sk-..." \
+  -e OPENROUTER_API_KEY="sk-or-..." \
   -e ALGA_TELEGRAM_ENABLED=true \
   -e TELEGRAM_BOT_TOKEN="..." \
   alga-agent

@@ -11,10 +11,13 @@ agent:
 
 # LLM configuration. Works with any OpenAI-compatible endpoint.
 model:
-  provider: openai          # openai | openrouter | custom
-  base_url: https://api.openai.com/v1
-  api_key: ${OPENAI_API_KEY}
-  model: gpt-4o
+  # Providers: openrouter | openai | opencode-zen | opencode-go | zai |
+  # zai-coding-plan | alibaba | alibaba-coding-plan | custom.
+  # Base URL is filled from the provider automatically when omitted.
+  provider: openrouter
+  base_url: https://openrouter.ai/api/v1
+  api_key: ${OPENROUTER_API_KEY}   # get one at https://openrouter.ai/keys
+  model: openrouter/free
   max_tokens: 4096
   temperature: 0.3
 

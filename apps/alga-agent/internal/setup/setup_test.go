@@ -168,16 +168,25 @@ func runScript(t *testing.T, cfg *config.Config, sections []string, input string
 	return cfg, out.String(), nil
 }
 
+// stubFetchModels replaces the live /models fetch for the duration of a test.
+func stubFetchModels(t *testing.T, ids []string, err error) {
+	t.Helper()
+	orig := fetchModels
+	fetchModels = func(baseURL, apiKey string) ([]string, error) { return ids, err }
+	t.Cleanup(func() { fetchModels = orig })
+}
+
 func TestSetupModel_Scripted(t *testing.T) {
+	stubFetchModels(t, nil, fmt.Errorf("offline"))
 	cfg := config.Default()
 	// Script (each newline = one Enter):
-	//   Provider:          "2" (openrouter) Enter
+	//   Provider:          "1" (openrouter) Enter
 	//   Base URL:          Enter (keep canonical openrouter)
 	//   API key:           sk-test Enter
-	//   Model:             Enter (keep gpt-4o default)
+	//   Model:             Enter (keep openrouter/free default from curated list)
 	//   Max tokens:        Enter (keep 4096)
 	//   Temperature:       0.5 Enter
-	input := "2\n\nsk-test\n\n\n0.5\n"
+	input := "1\n\nsk-test\n\n\n0.5\n"
 	_, _, err := runScript(t, cfg, []string{"model"}, input)
 	if err != nil {
 		t.Fatalf("runScript: %v", err)
@@ -191,20 +200,40 @@ func TestSetupModel_Scripted(t *testing.T) {
 	if cfg.Model.APIKey != "sk-test" {
 		t.Errorf("api_key = %q, want sk-test", cfg.Model.APIKey)
 	}
+	if cfg.Model.Model != "openrouter/free" {
+		t.Errorf("model = %q, want openrouter/free", cfg.Model.Model)
+	}
 	if cfg.Model.Temperature != 0.5 {
 		t.Errorf("temperature = %v, want 0.5", cfg.Model.Temperature)
 	}
 }
 
-func TestSetupModel_CustomProvider(t *testing.T) {
+func TestSetupModel_LiveFetchedModelSelectable(t *testing.T) {
+	stubFetchModels(t, []string{"stub/tool-model"}, nil)
 	cfg := config.Default()
-	//   Provider: "3" (custom) Enter
+	// Provider 1 (openrouter), keep base URL, key, then pick the live model,
+	// which lands right after the curated entries in the merged list.
+	liveIdx := len(curatedOpenRouterModels) + 1
+	input := fmt.Sprintf("1\n\nsk-test\n%d\n\n\n", liveIdx)
+	_, _, err := runScript(t, cfg, []string{"model"}, input)
+	if err != nil {
+		t.Fatalf("runScript: %v", err)
+	}
+	if cfg.Model.Model != "stub/tool-model" {
+		t.Errorf("model = %q, want stub/tool-model", cfg.Model.Model)
+	}
+}
+
+func TestSetupModel_CustomProvider(t *testing.T) {
+	stubFetchModels(t, nil, fmt.Errorf("offline"))
+	cfg := config.Default()
+	//   Provider: "9" (custom) Enter
 	//   Base URL: http://localhost:11434/v1 Enter
 	//   API key:  llama Enter
-	//   Model:    llama3 Enter
+	//   Model:    llama3 Enter (free-text: no curated list, fetch failed)
 	//   Max:      Enter
 	//   Temp:     Enter
-	input := "3\nhttp://localhost:11434/v1\nllama\nllama3\n\n\n"
+	input := "9\nhttp://localhost:11434/v1\nllama\nllama3\n\n\n"
 	_, _, err := runScript(t, cfg, []string{"model"}, input)
 	if err != nil {
 		t.Fatalf("runScript: %v", err)
@@ -217,6 +246,31 @@ func TestSetupModel_CustomProvider(t *testing.T) {
 	}
 	if cfg.Model.Model != "llama3" {
 		t.Errorf("model = %q, want llama3", cfg.Model.Model)
+	}
+}
+
+func TestSetupModel_PresetProvider(t *testing.T) {
+	stubFetchModels(t, nil, fmt.Errorf("offline"))
+	cfg := config.Default()
+	//   Provider: "5" (zai) Enter
+	//   Base URL: Enter (keep canonical z.ai)
+	//   API key:  zk-test Enter
+	//   Model:    Enter (default = first curated zai model)
+	//   Max:      Enter
+	//   Temp:     Enter
+	input := "5\n\nzk-test\n\n\n\n"
+	_, _, err := runScript(t, cfg, []string{"model"}, input)
+	if err != nil {
+		t.Fatalf("runScript: %v", err)
+	}
+	if cfg.Model.Provider != "zai" {
+		t.Errorf("provider = %q, want zai", cfg.Model.Provider)
+	}
+	if cfg.Model.BaseURL != "https://api.z.ai/api/paas/v4" {
+		t.Errorf("base_url = %q, want z.ai canonical", cfg.Model.BaseURL)
+	}
+	if want := providerPresets["zai"].models[0]; cfg.Model.Model != want {
+		t.Errorf("model = %q, want %q (provider switch resets stale model)", cfg.Model.Model, want)
 	}
 }
 
@@ -640,7 +694,7 @@ func TestStatusBadges(t *testing.T) {
 	cfg.Tools.WebSearch.Provider = "brave"
 	cfg.Metrics.Enabled = true
 
-	if got := modelStatus(cfg); !strings.Contains(got, "gpt-4o") {
+	if got := modelStatus(cfg); !strings.Contains(got, "openrouter/free") {
 		t.Errorf("modelStatus = %q", got)
 	}
 	if got := channelStatus(cfg); !strings.Contains(got, "telegram on") || !strings.Contains(got, "alga off") {

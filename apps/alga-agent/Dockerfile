@@ -30,7 +30,7 @@ COPY apps/alga-agent/ apps/alga-agent/
 WORKDIR /src/apps/alga-agent
 ARG VERSION=dev
 RUN CGO_ENABLED=0 GOOS=linux go build \
-    -ldflags="-s -w -X main.version=${VERSION}" \
+    -ldflags="-s -w -X alga-agent/internal/version.Version=${VERSION}" \
     -o /out/alga-agent .
 
 # --- Runtime stage ---

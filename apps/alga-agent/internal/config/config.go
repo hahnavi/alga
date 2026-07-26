@@ -214,6 +214,10 @@ func Load(path string) (*Config, error) {
 	expanded := expandEnv(string(data))
 	dec := yaml.NewDecoder(strings.NewReader(expanded))
 	dec.KnownFields(true)
+	// Default() pre-fills the OpenRouter URL; clear it so applyDefaults can
+	// derive the canonical URL from the YAML provider unless the YAML sets
+	// base_url explicitly.
+	cfg.Model.BaseURL = ""
 	if err := dec.Decode(cfg); err != nil && !errors.Is(err, io.EOF) {
 		return nil, fmt.Errorf("parse config %s: %w", path, err)
 	}
@@ -260,9 +264,9 @@ func Default() *Config {
 			Description: "SRE assistant for the Alga platform",
 		},
 		Model: ModelConfig{
-			Provider:    "openai",
-			BaseURL:     "https://api.openai.com/v1",
-			Model:       "gpt-4o",
+			Provider:    "openrouter",
+			BaseURL:     "https://openrouter.ai/api/v1",
+			Model:       "openrouter/free",
 			MaxTokens:   4096,
 			Temperature: 0.3,
 		},
@@ -295,6 +299,39 @@ func Default() *Config {
 	}
 }
 
+// providerBaseURLs maps known provider ids to their canonical
+// OpenAI-compatible endpoints (hermes-agent provider registry).
+var providerBaseURLs = map[string]string{
+	"openrouter":          "https://openrouter.ai/api/v1",
+	"openai":              "https://api.openai.com/v1",
+	"opencode-zen":        "https://opencode.ai/zen/v1",
+	"opencode-go":         "https://opencode.ai/zen/go/v1",
+	"zai":                 "https://api.z.ai/api/paas/v4",
+	"zai-coding-plan":     "https://api.z.ai/api/coding/paas/v4",
+	"alibaba":             "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+	"alibaba-coding-plan": "https://coding-intl.dashscope.aliyuncs.com/v1",
+}
+
+// BaseURLForProvider returns the canonical endpoint for a known provider id,
+// defaulting to OpenRouter for unknown or custom providers.
+func BaseURLForProvider(provider string) string {
+	if u, ok := providerBaseURLs[provider]; ok {
+		return u
+	}
+	return providerBaseURLs["openrouter"]
+}
+
+// providerKeyEnvVars lists provider-specific API-key env vars (first non-empty
+// wins). OpenRouter/OpenAI keys are handled generically in applyEnvOverrides.
+var providerKeyEnvVars = map[string][]string{
+	"opencode-zen":        {"OPENCODE_ZEN_API_KEY"},
+	"opencode-go":         {"OPENCODE_GO_API_KEY"},
+	"zai":                 {"ZAI_API_KEY", "GLM_API_KEY", "Z_AI_API_KEY"},
+	"zai-coding-plan":     {"ZAI_API_KEY", "GLM_API_KEY", "Z_AI_API_KEY"},
+	"alibaba":             {"DASHSCOPE_API_KEY"},
+	"alibaba-coding-plan": {"ALIBABA_CODING_PLAN_API_KEY", "DASHSCOPE_API_KEY"},
+}
+
 func (c *Config) applyDefaults() {
 	if c.Agent.Name == "" {
 		c.Agent.Name = "Alga Agent"
@@ -303,18 +340,13 @@ func (c *Config) applyDefaults() {
 		c.Agent.Description = "SRE assistant for the Alga platform"
 	}
 	if c.Model.Provider == "" {
-		c.Model.Provider = "openai"
+		c.Model.Provider = "openrouter"
 	}
 	if c.Model.BaseURL == "" {
-		switch c.Model.Provider {
-		case "openrouter":
-			c.Model.BaseURL = "https://openrouter.ai/api/v1"
-		default:
-			c.Model.BaseURL = "https://api.openai.com/v1"
-		}
+		c.Model.BaseURL = BaseURLForProvider(c.Model.Provider)
 	}
 	if c.Model.Model == "" {
-		c.Model.Model = "gpt-4o"
+		c.Model.Model = "openrouter/free"
 	}
 	if c.Model.MaxTokens == 0 {
 		c.Model.MaxTokens = 4096
@@ -378,6 +410,17 @@ func applyEnvOverrides(c *Config) {
 	if v := os.Getenv("OPENAI_API_KEY"); v != "" {
 		c.Model.APIKey = v
 	}
+	// OPENROUTER_API_KEY wins over OPENAI_API_KEY when both are set.
+	if v := os.Getenv("OPENROUTER_API_KEY"); v != "" {
+		c.Model.APIKey = v
+	}
+	// Provider-specific key env vars take precedence for their provider.
+	for _, name := range providerKeyEnvVars[c.Model.Provider] {
+		if v := os.Getenv(name); v != "" {
+			c.Model.APIKey = v
+			break
+		}
+	}
 	if v := os.Getenv("OPENAI_BASE_URL"); v != "" {
 		c.Model.BaseURL = v
 	}
@@ -422,7 +465,7 @@ func (c *Config) Validate() error {
 	var errs []string
 
 	if c.Model.APIKey == "" {
-		errs = append(errs, "model.api_key (or OPENAI_API_KEY) is required")
+		errs = append(errs, "model.api_key (or OPENROUTER_API_KEY / OPENAI_API_KEY) is required")
 	}
 	if c.Model.BaseURL == "" {
 		errs = append(errs, "model.base_url is required")

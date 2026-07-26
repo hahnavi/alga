@@ -42,8 +42,14 @@ telegram:
 	if cfg.AgentBehavior.ToolTimeout != 30*time.Second {
 		t.Errorf("default tool_timeout = %v, want 30s", cfg.AgentBehavior.ToolTimeout)
 	}
-	if cfg.Model.Model != "gpt-4o" {
-		t.Errorf("default model = %q, want gpt-4o", cfg.Model.Model)
+	if cfg.Model.Provider != "openrouter" {
+		t.Errorf("default provider = %q, want openrouter", cfg.Model.Provider)
+	}
+	if cfg.Model.BaseURL != "https://openrouter.ai/api/v1" {
+		t.Errorf("default base_url = %q, want openrouter canonical", cfg.Model.BaseURL)
+	}
+	if cfg.Model.Model != "openrouter/free" {
+		t.Errorf("default model = %q, want openrouter/free", cfg.Model.Model)
 	}
 	if !cfg.Sessions.Persist {
 		t.Error("default sessions.persist should be true")
@@ -99,7 +105,8 @@ func TestValidate_SessionsAndLoggingBounds(t *testing.T) {
 
 func TestLoad_EnvExpansion(t *testing.T) {
 	t.Setenv("MY_TEST_KEY", "expanded-value")
-	os.Unsetenv("OPENAI_API_KEY") // avoid env override clobbering the expansion test
+	os.Unsetenv("OPENAI_API_KEY")     // avoid env override clobbering the expansion test
+	os.Unsetenv("OPENROUTER_API_KEY") // same
 	path := writeTempConfig(t, `
 model:
   api_key: ${MY_TEST_KEY}
@@ -119,6 +126,7 @@ telegram:
 
 func TestLoad_EnvOverridesYAML(t *testing.T) {
 	t.Setenv("OPENAI_API_KEY", "override-key")
+	os.Unsetenv("OPENROUTER_API_KEY") // would win over OPENAI_API_KEY
 	path := writeTempConfig(t, `
 model:
   api_key: "yaml-key"
@@ -133,6 +141,67 @@ telegram:
 	}
 	if cfg.Model.APIKey != "override-key" {
 		t.Errorf("env override api_key = %q, want %q", cfg.Model.APIKey, "override-key")
+	}
+}
+
+func TestLoad_OpenRouterKeyWinsOverOpenAIKey(t *testing.T) {
+	t.Setenv("OPENAI_API_KEY", "openai-key")
+	t.Setenv("OPENROUTER_API_KEY", "openrouter-key")
+	path := writeTempConfig(t, `
+model:
+  api_key: "yaml-key"
+telegram:
+  enabled: true
+  bot_token: "tok"
+`)
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Model.APIKey != "openrouter-key" {
+		t.Errorf("api_key = %q, want openrouter-key", cfg.Model.APIKey)
+	}
+}
+
+func TestLoad_ProviderBaseURLDefault(t *testing.T) {
+	os.Unsetenv("OPENAI_API_KEY")
+	os.Unsetenv("OPENROUTER_API_KEY")
+	path := writeTempConfig(t, `
+model:
+  provider: zai
+  api_key: "zk"
+  model: "glm-5.2"
+telegram:
+  enabled: true
+  bot_token: "tok"
+`)
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Model.BaseURL != "https://api.z.ai/api/paas/v4" {
+		t.Errorf("base_url = %q, want z.ai canonical", cfg.Model.BaseURL)
+	}
+}
+
+func TestLoad_ProviderSpecificEnvKey(t *testing.T) {
+	t.Setenv("OPENROUTER_API_KEY", "or-key")
+	t.Setenv("DASHSCOPE_API_KEY", "ds-key")
+	path := writeTempConfig(t, `
+model:
+  provider: alibaba
+  api_key: "yaml-key"
+  model: "qwen3.7-max"
+telegram:
+  enabled: true
+  bot_token: "tok"
+`)
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Model.APIKey != "ds-key" {
+		t.Errorf("api_key = %q, want provider-specific ds-key", cfg.Model.APIKey)
 	}
 }
 

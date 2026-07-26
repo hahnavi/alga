@@ -20,6 +20,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -350,43 +351,38 @@ func isInteractive() bool {
 
 // --- section flows ---------------------------------------------------------
 
-func baseURLForProvider(provider string) string {
-	switch provider {
-	case "openrouter":
-		return "https://openrouter.ai/api/v1"
-	default:
-		return "https://api.openai.com/v1"
-	}
-}
-
 // setupModel prompts for the LLM provider and model settings, mutating cfg in
 // place. Current values are shown as defaults so re-running is non-destructive.
 func setupModel(cfg *config.Config, r *bufio.Reader, w io.Writer) error {
 	printHeader(w, "Model & Provider")
 	printInfo(w, "Choose how to connect to your chat model (any OpenAI-compatible endpoint).")
 
-	providers := []string{"openai", "openrouter", "custom"}
 	defIdx := 0
-	for i, p := range providers {
+	for i, p := range providerChoices {
 		if p == cfg.Model.Provider {
 			defIdx = i
 		}
 	}
-	idx, err := promptChoice(r, w, "Provider:", providers, defIdx)
+	idx, err := promptChoice(r, w, "Provider:", providerChoices, defIdx)
 	if err != nil {
 		return err
 	}
-	cfg.Model.Provider = providers[idx]
+	prev := cfg.Model.Provider
+	cfg.Model.Provider = providerChoices[idx]
+	if cfg.Model.Provider != prev {
+		// The old model belongs to the previous provider; start fresh.
+		cfg.Model.Model = ""
+	}
 
 	// For known providers suggest the canonical URL as the default (so switching
-	// from openai to openrouter updates the suggestion, rather than clinging to
-	// the stale openai URL). Custom has no canonical default, so start from
+	// from openrouter to openai updates the suggestion, rather than clinging to
+	// the stale openrouter URL). Custom has no canonical default, so start from
 	// whatever is already set.
 	defBase := cfg.Model.BaseURL
 	if cfg.Model.Provider != "custom" {
-		defBase = baseURLForProvider(cfg.Model.Provider)
+		defBase = config.BaseURLForProvider(cfg.Model.Provider)
 	} else if defBase == "" {
-		defBase = baseURLForProvider("openai")
+		defBase = config.BaseURLForProvider("openrouter")
 	}
 	base, err := prompt(r, w, "Base URL", defBase)
 	if err != nil {
@@ -394,13 +390,16 @@ func setupModel(cfg *config.Config, r *bufio.Reader, w io.Writer) error {
 	}
 	cfg.Model.BaseURL = base
 
+	if p, ok := providerPresets[cfg.Model.Provider]; ok && p.keyURL != "" && cfg.Model.APIKey == "" {
+		printInfo(w, "Get an API key at "+p.keyURL)
+	}
 	key, err := promptSecret(r, w, "API key", cfg.Model.APIKey)
 	if err != nil {
 		return err
 	}
 	cfg.Model.APIKey = key
 
-	model, err := prompt(r, w, "Model", orDefault(cfg.Model.Model, "gpt-4o"))
+	model, err := promptModel(cfg, r, w)
 	if err != nil {
 		return err
 	}
@@ -415,6 +414,41 @@ func setupModel(cfg *config.Config, r *bufio.Reader, w io.Writer) error {
 		return err
 	}
 	return nil
+}
+
+// promptModel offers a model picker: live models fetched from the configured
+// endpoint merged with the provider's curated list (curated first), falling
+// back to a free-text prompt when nothing is available. A fetch failure never
+// blocks the wizard.
+func promptModel(cfg *config.Config, r *bufio.Reader, w io.Writer) (string, error) {
+	def := orDefault(cfg.Model.Model, defaultModelForProvider(cfg.Model.Provider))
+
+	live, err := fetchModels(cfg.Model.BaseURL, cfg.Model.APIKey)
+	if err != nil {
+		printWarning(w, "Could not fetch model list; showing suggestions only")
+	}
+	curated := providerPresets[cfg.Model.Provider].models
+	choices := mergeModels(curated, live, maxModelChoices)
+	if len(choices) == 0 {
+		return prompt(r, w, "Model", def)
+	}
+
+	// Keep the current model selectable even when the fetched list omits it.
+	if !slices.Contains(choices, def) {
+		choices = append([]string{def}, choices...)
+	}
+	const customLabel = "custom (type a model name)"
+	choices = append(choices, customLabel)
+
+	defIdx := slices.Index(choices, def)
+	idx, err := promptChoice(r, w, "Model:", choices, defIdx)
+	if err != nil {
+		return "", err
+	}
+	if choices[idx] == customLabel {
+		return prompt(r, w, "Model", def)
+	}
+	return choices[idx], nil
 }
 
 // channelContinueIdx is the index of the "Continue" item in the channel menu.
@@ -1022,7 +1056,7 @@ func printNonInteractiveGuidance(w io.Writer) {
 	fmt.Fprintln(w, color("◆ Alga Agent Setup — non-interactive mode", colorCyan+colorBold))
 	fmt.Fprintln(w)
 	printInfo(w, "The interactive wizard needs a TTY. Configure via environment variables instead:")
-	printInfo(w, "  export OPENAI_API_KEY=\"sk-...\"")
+	printInfo(w, "  export OPENROUTER_API_KEY=\"sk-or-...\"  # or OPENAI_API_KEY")
 	printInfo(w, "  export TELEGRAM_BOT_TOKEN=\"...\"     # if Telegram enabled")
 	printInfo(w, "  export ALGA_TELEGRAM_ENABLED=true")
 	printInfo(w, "Or copy apps/alga-agent/config.yaml.example to "+filepath.Join(config.ResolveDataDir(), "config.yaml")+" and edit it.")

@@ -42,14 +42,71 @@ telegram:
 	if cfg.AgentBehavior.ToolTimeout != 30*time.Second {
 		t.Errorf("default tool_timeout = %v, want 30s", cfg.AgentBehavior.ToolTimeout)
 	}
-	if cfg.Model.Model != "gpt-4o" {
-		t.Errorf("default model = %q, want gpt-4o", cfg.Model.Model)
+	if cfg.Model.Provider != "openrouter" {
+		t.Errorf("default provider = %q, want openrouter", cfg.Model.Provider)
+	}
+	if cfg.Model.BaseURL != "https://openrouter.ai/api/v1" {
+		t.Errorf("default base_url = %q, want openrouter canonical", cfg.Model.BaseURL)
+	}
+	if cfg.Model.Model != "openrouter/free" {
+		t.Errorf("default model = %q, want openrouter/free", cfg.Model.Model)
+	}
+	if !cfg.Sessions.Persist {
+		t.Error("default sessions.persist should be true")
+	}
+	if cfg.Sessions.RetentionDays != 0 {
+		t.Errorf("default sessions.retention_days = %d, want 0", cfg.Sessions.RetentionDays)
+	}
+	if cfg.Logging.MaxSizeMB != 5 {
+		t.Errorf("default logging.max_size_mb = %d, want 5", cfg.Logging.MaxSizeMB)
+	}
+	if cfg.Logging.BackupCount != 3 {
+		t.Errorf("default logging.backup_count = %d, want 3", cfg.Logging.BackupCount)
+	}
+}
+
+func TestLoad_SessionsPersistExplicitFalse(t *testing.T) {
+	path := writeTempConfig(t, `
+model:
+  api_key: "test-key"
+telegram:
+  enabled: true
+  bot_token: "tok"
+sessions:
+  persist: false
+`)
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Sessions.Persist {
+		t.Error("sessions.persist should honor explicit false")
+	}
+}
+
+func TestValidate_SessionsAndLoggingBounds(t *testing.T) {
+	cfg := Default()
+	cfg.Model.APIKey = "k"
+	cfg.Telegram.Enabled = true
+	cfg.Telegram.BotToken = "tok"
+	cfg.Sessions.RetentionDays = -1
+	cfg.Logging.MaxSizeMB = -1
+	cfg.Logging.BackupCount = -1
+	err := cfg.Validate()
+	if err == nil {
+		t.Fatal("expected validation error")
+	}
+	for _, want := range []string{"sessions.retention_days", "logging.max_size_mb", "logging.backup_count"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error should mention %s, got %v", want, err)
+		}
 	}
 }
 
 func TestLoad_EnvExpansion(t *testing.T) {
 	t.Setenv("MY_TEST_KEY", "expanded-value")
-	os.Unsetenv("OPENAI_API_KEY") // avoid env override clobbering the expansion test
+	os.Unsetenv("OPENAI_API_KEY")     // avoid env override clobbering the expansion test
+	os.Unsetenv("OPENROUTER_API_KEY") // same
 	path := writeTempConfig(t, `
 model:
   api_key: ${MY_TEST_KEY}
@@ -69,6 +126,7 @@ telegram:
 
 func TestLoad_EnvOverridesYAML(t *testing.T) {
 	t.Setenv("OPENAI_API_KEY", "override-key")
+	os.Unsetenv("OPENROUTER_API_KEY") // would win over OPENAI_API_KEY
 	path := writeTempConfig(t, `
 model:
   api_key: "yaml-key"
@@ -83,6 +141,107 @@ telegram:
 	}
 	if cfg.Model.APIKey != "override-key" {
 		t.Errorf("env override api_key = %q, want %q", cfg.Model.APIKey, "override-key")
+	}
+}
+
+func TestLoad_OpenRouterKeyWinsOverOpenAIKey(t *testing.T) {
+	t.Setenv("OPENAI_API_KEY", "openai-key")
+	t.Setenv("OPENROUTER_API_KEY", "openrouter-key")
+	path := writeTempConfig(t, `
+model:
+  api_key: "yaml-key"
+telegram:
+  enabled: true
+  bot_token: "tok"
+`)
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Model.APIKey != "openrouter-key" {
+		t.Errorf("api_key = %q, want openrouter-key", cfg.Model.APIKey)
+	}
+}
+
+func TestLoad_ProviderBaseURLDefault(t *testing.T) {
+	os.Unsetenv("OPENAI_API_KEY")
+	os.Unsetenv("OPENROUTER_API_KEY")
+	path := writeTempConfig(t, `
+model:
+  provider: zai
+  api_key: "zk"
+  model: "glm-5.2"
+telegram:
+  enabled: true
+  bot_token: "tok"
+`)
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Model.BaseURL != "https://api.z.ai/api/paas/v4" {
+		t.Errorf("base_url = %q, want z.ai canonical", cfg.Model.BaseURL)
+	}
+}
+
+func TestLoad_ProviderSpecificEnvKey(t *testing.T) {
+	t.Setenv("OPENROUTER_API_KEY", "or-key")
+	t.Setenv("DASHSCOPE_API_KEY", "ds-key")
+	path := writeTempConfig(t, `
+model:
+  provider: alibaba
+  api_key: "yaml-key"
+  model: "qwen3.7-max"
+telegram:
+  enabled: true
+  bot_token: "tok"
+`)
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Model.APIKey != "ds-key" {
+		t.Errorf("api_key = %q, want provider-specific ds-key", cfg.Model.APIKey)
+	}
+}
+
+// A stray generic OPENROUTER_API_KEY must not be picked up for a provider with
+// its own key env vars (e.g. alibaba). Without the provider-specific key set,
+// the api_key stays empty and validation flags it.
+func TestLoad_GenericKeyIgnoredForNonGenericProvider(t *testing.T) {
+	os.Unsetenv("DASHSCOPE_API_KEY")
+	t.Setenv("OPENROUTER_API_KEY", "or-key")
+	path := writeTempConfig(t, `
+model:
+  provider: alibaba
+  model: "qwen3.7-max"
+telegram:
+  enabled: true
+  bot_token: "tok"
+`)
+	_, err := Load(path)
+	if err == nil {
+		t.Fatal("expected validation error for missing alibaba key, got nil")
+	}
+	if !strings.Contains(err.Error(), "DASHSCOPE_API_KEY") {
+		t.Errorf("error should mention DASHSCOPE_API_KEY for alibaba, got: %v", err)
+	}
+	if strings.Contains(err.Error(), "OPENROUTER_API_KEY") {
+		t.Errorf("error should not suggest generic key for alibaba, got: %v", err)
+	}
+}
+
+// The missing-key error surfaces the provider-specific env var so the user
+// knows which one to set for their chosen provider.
+func TestValidate_APIKeyHintPerProvider(t *testing.T) {
+	cfg := Default()
+	cfg.Model.Provider = "alibaba"
+	cfg.Model.APIKey = ""
+	cfg.Telegram.Enabled = true
+	cfg.Telegram.BotToken = "tok"
+	err := cfg.Validate()
+	if err == nil || !strings.Contains(err.Error(), "DASHSCOPE_API_KEY") {
+		t.Fatalf("expected DASHSCOPE_API_KEY hint, got: %v", err)
 	}
 }
 

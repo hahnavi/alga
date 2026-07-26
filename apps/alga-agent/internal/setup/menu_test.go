@@ -50,10 +50,10 @@ func stripANSI(s string) string {
 // confirms, asserting the returned index and that the final visible line is a
 // clean confirmation (menu lines were cleared).
 func TestDriveMenu_ArrowSelectFirst(t *testing.T) {
-	choices := []string{"openai", "openrouter", "custom"}
+	choices := []string{"openrouter", "openai", "custom"}
 	ft := &fakeRawTerminal{keys: []keyEvent{
 		{kind: keyUp},    // already at 0 → stays
-		{kind: keyEnter}, // confirm openai
+		{kind: keyEnter}, // confirm openrouter
 	}}
 	var out bytes.Buffer
 	idx, err := driveMenu(ft, &out, "Provider", choices, 0)
@@ -64,8 +64,8 @@ func TestDriveMenu_ArrowSelectFirst(t *testing.T) {
 		t.Errorf("idx = %d, want 0", idx)
 	}
 	visible := stripANSI(out.String())
-	if !strings.Contains(visible, "✓ Provider  openai") {
-		t.Errorf("expected confirmation line containing '✓ Provider  openai', got:\n%s", visible)
+	if !strings.Contains(visible, "✓ Provider  openrouter") {
+		t.Errorf("expected confirmation line containing '✓ Provider  openrouter', got:\n%s", visible)
 	}
 	// The intermediate menu frame (title + choices + hint) must have been
 	// cleared via cursor-up sequences before the confirmation was printed.
@@ -75,7 +75,7 @@ func TestDriveMenu_ArrowSelectFirst(t *testing.T) {
 }
 
 func TestDriveMenu_ArrowDownThenConfirm(t *testing.T) {
-	choices := []string{"openai", "openrouter", "custom"}
+	choices := []string{"openrouter", "openai", "custom"}
 	ft := &fakeRawTerminal{keys: []keyEvent{
 		{kind: keyDown},
 		{kind: keyDown},
@@ -96,11 +96,11 @@ func TestDriveMenu_ArrowDownThenConfirm(t *testing.T) {
 }
 
 func TestDriveMenu_VimKeys(t *testing.T) {
-	choices := []string{"openai", "openrouter", "custom"}
+	choices := []string{"openrouter", "openai", "custom"}
 	ft := &fakeRawTerminal{keys: []keyEvent{
 		{kind: keyRune, r: 'j'}, // down
 		{kind: keyRune, r: 'j'}, // down → custom
-		{kind: keyRune, r: 'k'}, // up → openrouter
+		{kind: keyRune, r: 'k'}, // up → openai
 		{kind: keyEnter},
 	}}
 	var out bytes.Buffer
@@ -109,11 +109,11 @@ func TestDriveMenu_VimKeys(t *testing.T) {
 		t.Fatalf("driveMenu: %v", err)
 	}
 	if idx != 1 {
-		t.Errorf("idx = %d, want 1 (openrouter)", idx)
+		t.Errorf("idx = %d, want 1 (openai)", idx)
 	}
 	visible := stripANSI(out.String())
-	if !strings.Contains(visible, "✓ openrouter") {
-		t.Errorf("expected '✓ openrouter', got:\n%s", visible)
+	if !strings.Contains(visible, "✓ openai") {
+		t.Errorf("expected '✓ openai', got:\n%s", visible)
 	}
 }
 

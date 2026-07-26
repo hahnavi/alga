@@ -141,7 +141,7 @@ func (a *AgentCore) Process(ctx context.Context, req ProcessRequest) (Result, er
 		// Detect shutdown early so we don't deliver spurious error messages to
 		// users during graceful shutdown (SPEC §9).
 		if err := ctx.Err(); err != nil {
-			a.persistOnExit(session, msgs, userMsg)
+			a.persistOnExit(req.SessionID, session, msgs)
 			result.Latency = time.Since(start)
 			return result, err
 		}
@@ -157,16 +157,16 @@ func (a *AgentCore) Process(ctx context.Context, req ProcessRequest) (Result, er
 			// persist progress and return without wrapping so the router treats
 			// it as a clean exit, not a user-facing error.
 			if ctxErr := ctx.Err(); ctxErr != nil {
-				a.persistOnExit(session, msgs, userMsg)
+				a.persistOnExit(req.SessionID, session, msgs)
 				result.Latency = time.Since(start)
 				return result, ctxErr
 			}
-			a.persistOnExit(session, msgs, userMsg)
+			a.persistOnExit(req.SessionID, session, msgs)
 			result.Latency = time.Since(start)
 			return result, fmt.Errorf("llm iteration %d: %w", iter, err)
 		}
 		if len(resp.Choices) == 0 {
-			a.persistOnExit(session, msgs, userMsg)
+			a.persistOnExit(req.SessionID, session, msgs)
 			result.Latency = time.Since(start)
 			return result, errors.New("llm returned no choices")
 		}
@@ -215,6 +215,7 @@ func (a *AgentCore) Process(ctx context.Context, req ProcessRequest) (Result, er
 		finalMsgs = append(finalMsgs, msgs...)
 		finalMsgs = append(finalMsgs, llm.Message{Role: "assistant", Content: lastAssistantText})
 		session.ReplaceMessages(finalMsgs)
+		a.persistToDisk(req.SessionID)
 
 		result.Text = lastAssistantText
 		result.Latency = time.Since(start)
@@ -223,7 +224,7 @@ func (a *AgentCore) Process(ctx context.Context, req ProcessRequest) (Result, er
 
 	// Max iterations exceeded. Persist the full conversation (including tool
 	// results) and return an error so the router can notify the user.
-	a.persistOnExit(session, msgs, userMsg)
+	a.persistOnExit(req.SessionID, session, msgs)
 	result.Latency = time.Since(start)
 	return result, ErrMaxIterations
 }
@@ -232,11 +233,17 @@ func (a *AgentCore) Process(ctx context.Context, req ProcessRequest) (Result, er
 // early-exit path. It persists the accumulated messages (system + history +
 // user + any assistant/tool turns) so the next turn resumes with full context
 // rather than losing the in-flight tool results.
-func (a *AgentCore) persistOnExit(session *Session, msgs []llm.Message, userMsg llm.Message) {
-	// Ensure the user message is present exactly once at the tail if it isn't
-	// already in msgs (it is, since we appended it before the loop — but guard
-	// against double-append on re-entry).
+func (a *AgentCore) persistOnExit(sessionID string, session *Session, msgs []llm.Message) {
 	session.ReplaceMessages(msgs)
+	a.persistToDisk(sessionID)
+}
+
+// persistToDisk writes the session to disk when persistence is enabled.
+// Fire-and-forget: a failed write must never fail the user's turn.
+func (a *AgentCore) persistToDisk(sessionID string) {
+	if err := a.store.Persist(sessionID); err != nil {
+		a.logger.Warn("session persist failed", "session_id", sessionID, "err", err)
+	}
 }
 
 // streamFinal issues a streaming request for the final no-tool turn. The

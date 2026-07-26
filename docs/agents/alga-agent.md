@@ -12,15 +12,28 @@ Unlike the [Hermes](/agents/hermes) and [OpenClaw](/agents/openclaw) plugins, wh
 ## Features
 
 - **Dual-channel** — Telegram (long polling or webhook) + Alga SSE investigation threads
+- **8 LLM providers** — OpenRouter (default), OpenAI, OpenCode Zen, OpenCode Go, Z.AI, Z.AI Coding Plan, Alibaba (DashScope), Alibaba Coding Plan, plus any custom OpenAI-compatible endpoint
 - **29 Alga tools** — alerts, investigations, incidents, knowledge, memory, services, on-call, and coordination tasks (dispatch/claim/complete/synthesize)
 - **MCP both ways** — expose every agent tool as an MCP server for Claude Desktop, Cursor, and other MCP clients; consume external MCP servers (filesystem, GitHub, database, in-house) as agent tools
 - **Shell tool** — allowlisted command execution (not a sandbox — restrict the list)
 - **Web search** — DuckDuckGo (default), Brave, or Tavily
 - **Streaming** — progressive message edits on Telegram; typing indicators on Alga
+- **Session persistence** — per-chat ring buffer with idle eviction, persisted to disk with rotating logs
 - **Replay-safe mutations** — an `Idempotency-Key` is injected on every state-changing SDK call, so a transient 503 retry never double-fires
+- **systemd service** — install and manage as a user service (`alga-agent service install`)
 - **Prometheus metrics** on `/metrics`, graceful shutdown with a 10s drain
 
 ## Quick Start
+
+### Install
+
+```bash
+# Latest release binary → ~/.local/bin (linux/darwin, amd64/arm64).
+# Verifies the SHA256 checksum and adds ~/.local/bin to PATH for bash/zsh.
+curl -fsSL https://raw.githubusercontent.com/hahnavi/alga/main/scripts/install-agent.sh | bash
+```
+
+Pre-built binaries and Docker images are published on every `agent-v*` tag; see [Releases](https://github.com/hahnavi/alga/releases?q=agent-v).
 
 ### Step 1: Create an Agent Token in Alga
 
@@ -44,6 +57,8 @@ alga-agent setup tools
 
 The arrow-key-driven wizard covers every section of `config.yaml`, shows a live status badge per area (e.g. `telegram on · alga off`), prints a **Review & Save** summary (secrets shown only as `✓ set` / `✗ not set`), and validates the config before writing `~/.alga/config.yaml` (mode 0600). Existing configs are backed up before any change.
 
+The **Model & Provider** step lists 8 known providers with their canonical endpoints — OpenRouter is the default and offers a curated model picker that merges a hand-picked list with a live fetch of the provider's `/models` endpoint (filtered to tool-capable models, with an offline curated fallback). Switching providers resets the model and suggests the canonical base URL, so switching from OpenRouter to Z.AI or Alibaba is one menu pick.
+
 ```bash
 # Run.
 alga-agent
@@ -54,7 +69,7 @@ alga-agent
 ```bash
 cp config.yaml.example config.yaml
 
-export OPENAI_API_KEY="sk-..."
+export OPENROUTER_API_KEY="sk-or-..."    # or OPENAI_API_KEY
 export TELEGRAM_BOT_TOKEN="123:abc..."   # if telegram enabled
 export ALGA_SERVER_URL="http://localhost:8080"
 export ALGA_AGENT_TOKEN="alga_agent_..."
@@ -70,15 +85,20 @@ Configuration is loaded from `config.yaml` — resolved from an explicit path, `
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `OPENAI_API_KEY` | Yes | LLM API key (any OpenAI-compatible endpoint) |
+| `OPENROUTER_API_KEY` | Yes* | LLM API key (default OpenRouter provider) |
+| `OPENAI_API_KEY` | Yes* | LLM API key alias (`OPENROUTER_API_KEY` wins when both set) |
+| Provider keys | No | Per-provider keys used when `model.provider` matches: `OPENCODE_ZEN_API_KEY`, `OPENCODE_GO_API_KEY`, `ZAI_API_KEY`/`GLM_API_KEY`/`Z_AI_API_KEY`, `DASHSCOPE_API_KEY`, `ALIBABA_CODING_PLAN_API_KEY` |
 | `TELEGRAM_BOT_TOKEN` | If Telegram enabled | Telegram bot token from @BotFather |
 | `ALGA_SERVER_URL` | If Alga enabled | Alga server URL |
 | `ALGA_AGENT_TOKEN` | If Alga enabled | The `alga_agent_...` bearer token |
 | `SEARCH_API_KEY` | If Brave/Tavily | Web search API key |
 | `ALGA_AGENT_CONFIG` | No | Path to config.yaml |
 | `ALGA_AGENT_HOME` | No | Data dir (default `~/.alga`) |
+| `ALGA_AGENT_NONINTERACTIVE` | No | Set to `1` to make `setup` refuse to run (non-TTY guard) |
 | `ALGA_TELEGRAM_ENABLED` | No | Enable Telegram channel (`true`/`false`) |
 | `ALGA_ALGA_ENABLED` | No | Enable Alga channel (`true`/`false`) |
+
+\* At least one LLM key is required. The provider field controls which canonical base URL is used when `base_url` is omitted.
 
 See `apps/alga-agent/config.yaml.example` for the full schema.
 
@@ -136,7 +156,7 @@ Build from the repository root (the build context needs the local SDK):
 ```bash
 docker build -t alga-agent -f apps/alga-agent/Dockerfile .
 docker run --rm \
-  -e OPENAI_API_KEY="sk-..." \
+  -e OPENROUTER_API_KEY="sk-or-..." \
   -e ALGA_ALGA_ENABLED=true \
   -e ALGA_SERVER_URL="http://alga:8080" \
   -e ALGA_AGENT_TOKEN="alga_agent_..." \

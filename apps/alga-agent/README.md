@@ -27,6 +27,14 @@ channels — **Telegram** (human interface) and **Alga** (investigation threads)
 
 ## Quick Start
 
+### Install
+
+```bash
+# Latest release binary → ~/.local/bin (linux/darwin, amd64/arm64).
+# Adds ~/.local/bin to PATH for bash/zsh.
+curl -fsSL https://raw.githubusercontent.com/hahnavi/alga/main/scripts/install-agent.sh | bash
+```
+
 ### Option A — Interactive setup (recommended)
 
 ```bash
@@ -70,7 +78,7 @@ alga-agent
 cp config.yaml.example config.yaml
 
 # 2. Set required secrets via env vars.
-export OPENAI_API_KEY="sk-..."
+export OPENROUTER_API_KEY="sk-or-..."    # or OPENAI_API_KEY
 export TELEGRAM_BOT_TOKEN="123:abc..."   # if telegram enabled
 export ALGA_SERVER_URL="http://localhost:8080"
 export ALGA_AGENT_TOKEN="alga_..."
@@ -93,7 +101,9 @@ expansion is supported. **Environment variables always override YAML values**
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `OPENAI_API_KEY` | Yes | LLM API key |
+| `OPENROUTER_API_KEY` | Yes* | LLM API key (default OpenRouter provider) |
+| `OPENAI_API_KEY` | Yes* | LLM API key alias (OPENROUTER_API_KEY wins when both set) |
+| Provider keys | No | Per-provider keys used when `model.provider` matches: `OPENCODE_ZEN_API_KEY`, `OPENCODE_GO_API_KEY`, `ZAI_API_KEY`/`GLM_API_KEY`/`Z_AI_API_KEY`, `DASHSCOPE_API_KEY`, `ALIBABA_CODING_PLAN_API_KEY` |
 | `TELEGRAM_BOT_TOKEN` | If Telegram enabled | Telegram bot token from @BotFather |
 | `ALGA_SERVER_URL` | If Alga enabled | Alga server URL |
 | `ALGA_AGENT_TOKEN` | If Alga enabled | Alga agent authentication token |
@@ -157,7 +167,7 @@ LLM sees them alongside the Alga tools and calls them transparently.
 │ Telegram │  │   Alga   │  │   Agent Core      │
 │ Channel  │  │ Channel  │  │  ┌─────────────┐  │
 │ (polling │  │ (SSE +   │  │  │ LLM Client  │  │
-│  /webhook)│  │  REST)   │  │  │ (OpenAI)    │  │
+│  /webhook)│  │  REST)   │  │  │ (OpenRouter)│  │
 └────┬─────┘  └────┬─────┘  │  └──────┬──────┘  │
      └──────┬───────┘        │  ┌──────▼──────┐  │
             ▼                │  │ Tool Router │  │
@@ -264,11 +274,52 @@ Build from the repository root (the build context needs the local SDK):
 ```bash
 docker build -t alga-agent -f apps/alga-agent/Dockerfile .
 docker run --rm \
-  -e OPENAI_API_KEY="sk-..." \
+  -e OPENROUTER_API_KEY="sk-or-..." \
   -e ALGA_TELEGRAM_ENABLED=true \
   -e TELEGRAM_BOT_TOKEN="..." \
   alga-agent
 ```
+
+## Run as a systemd user service (Linux)
+
+Install the agent as a systemd **user** service so it starts on login and
+restarts on failure:
+
+```bash
+# Build to a stable location first (a /tmp binary is refused).
+go build -o ~/.local/bin/alga-agent .
+
+# Write ~/.config/systemd/user/alga-agent.service, enable, and start it.
+alga-agent service install
+
+# Manage it.
+alga-agent service status
+alga-agent service restart
+alga-agent service stop
+alga-agent service uninstall
+```
+
+`install` also enables lingering (`loginctl enable-linger`) so the service
+keeps running after you log out; if that fails it prints the manual command.
+Flags: `--force` overwrites a differing unit file, `--enable=false` skips
+start-on-login, `--now=false` skips the immediate start.
+
+Logs go to the journal: `journalctl --user -u alga-agent -f`.
+
+## Data Storage
+
+The agent keeps its state under `~/.alga` (override with `ALGA_AGENT_HOME`):
+
+- **Sessions** — `~/.alga/sessions/*.json`, one file per conversation, written
+  after every turn (mode 0600). Conversations survive restarts and idle
+  eviction; they reload lazily on the next message. `/clear` deletes the file.
+  Configure via `sessions:` — `persist: false` disables, `dir` overrides the
+  location, `retention_days: N` prunes files older than N days (0 = keep
+  forever).
+- **Logs** — `~/.alga/logs/agent.log`, size-rotated (default 5 MB × 3 backups
+  via `logging.max_size_mb` / `logging.backup_count`) and tee'd to stderr so
+  journald capture keeps working. Set `logging.file: "stderr"` to disable file
+  logging, or point `logging.file` at a custom path.
 
 ## Security Notes
 

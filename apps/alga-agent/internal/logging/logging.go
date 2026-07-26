@@ -3,34 +3,77 @@
 package logging
 
 import (
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
+
+	"gopkg.in/natefinch/lumberjack.v2"
+
+	"alga-agent/internal/config"
 )
 
 // Logger is the package-level logger used across the agent after Setup.
 var Logger *slog.Logger
 
-// Setup configures the package-level Logger from level and file path.
-// level is one of debug|info|warn|error. file is optional ("" = stderr).
-// If file is set, logs go to that file (opened append-only). The returned
-// closer should be deferred by the caller.
-func Setup(level, file string) (io.Closer, error) {
+// Options configures Setup.
+type Options struct {
+	// Level is one of debug|info|warn|error (unknown = info).
+	Level string
+	// File is the log file path. Empty means the default
+	// <data dir>/logs/agent.log; the literal "stderr" disables file logging.
+	File string
+	// MaxSizeMB is the rotation threshold per file (default 5).
+	MaxSizeMB int
+	// BackupCount is the number of rotated files kept (default 3).
+	BackupCount int
+}
+
+// FileLoggingDisabled is the Options.File value that turns off file logging.
+const FileLoggingDisabled = "stderr"
+
+// DefaultLogFile returns the default log location under the agent data dir.
+func DefaultLogFile() string {
+	return filepath.Join(config.ResolveDataDir(), "logs", "agent.log")
+}
+
+// Setup configures the package-level Logger. Logs always go to stderr (so
+// journald/console capture keeps working under the systemd service) and, by
+// default, additionally to a size-rotated file (hermes convention: 5 MB x 3
+// backups). The returned closer should be deferred by the caller.
+func Setup(opts Options) (io.Closer, error) {
 	var w io.Writer = os.Stderr
 	var closer io.Closer = io.NopCloser(nil)
 
-	if file != "" {
-		f, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
-		if err != nil {
-			return nil, err
+	file := opts.File
+	if file == "" {
+		file = DefaultLogFile()
+	}
+	if file != FileLoggingDisabled {
+		if err := os.MkdirAll(filepath.Dir(file), 0o700); err != nil {
+			return nil, fmt.Errorf("create log dir: %w", err)
 		}
-		w = f
-		closer = f
+		maxSize := opts.MaxSizeMB
+		if maxSize <= 0 {
+			maxSize = 5
+		}
+		backups := opts.BackupCount
+		if backups < 0 {
+			backups = 3
+		}
+		lj := &lumberjack.Logger{
+			Filename:   file,
+			MaxSize:    maxSize,
+			MaxBackups: backups,
+		}
+		w = io.MultiWriter(os.Stderr, lj)
+		closer = lj
 	}
 
-	lvl := ParseLevel(level)
+	lvl := ParseLevel(opts.Level)
 	Logger = slog.New(slog.NewJSONHandler(w, &slog.HandlerOptions{Level: lvl}))
 	slog.SetDefault(Logger)
 	return closer, nil
@@ -60,22 +103,30 @@ func Error(msg string, args ...any) { Logger.Error(msg, args...) }
 const redacted = "[REDACTED]"
 
 var sensitiveKeys = map[string]struct{}{
-	"api_key":            {},
-	"apikey":             {},
-	"key":                {},
-	"token":              {},
-	"bot_token":          {},
-	"agent_token":        {},
-	"authorization":      {},
-	"password":           {},
-	"secret":             {},
-	"pepper":             {},
-	"set-cookie":         {},
-	"cookie":             {},
-	"openai_api_key":     {},
-	"search_api_key":     {},
-	"alga_agent_token":   {},
-	"telegram_bot_token": {},
+	"api_key":                     {},
+	"apikey":                      {},
+	"key":                         {},
+	"token":                       {},
+	"bot_token":                   {},
+	"agent_token":                 {},
+	"authorization":               {},
+	"password":                    {},
+	"secret":                      {},
+	"pepper":                      {},
+	"set-cookie":                  {},
+	"cookie":                      {},
+	"openai_api_key":              {},
+	"openrouter_api_key":          {},
+	"opencode_zen_api_key":        {},
+	"opencode_go_api_key":         {},
+	"zai_api_key":                 {},
+	"glm_api_key":                 {},
+	"z_ai_api_key":                {},
+	"dashscope_api_key":           {},
+	"alibaba_coding_plan_api_key": {},
+	"search_api_key":              {},
+	"alga_agent_token":            {},
+	"telegram_bot_token":          {},
 }
 
 // IsSensitiveKey reports whether k is a known sensitive key.

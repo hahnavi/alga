@@ -24,6 +24,7 @@ type Config struct {
 	Alga          AlgaConfig          `yaml:"alga"`
 	Tools         ToolsConfig         `yaml:"tools"`
 	AgentBehavior AgentBehaviorConfig `yaml:"agent_behavior"`
+	Sessions      SessionsConfig      `yaml:"sessions"`
 	Logging       LoggingConfig       `yaml:"logging"`
 	Metrics       MetricsConfig       `yaml:"metrics"`
 	MCP           MCPConfig           `yaml:"mcp"`
@@ -92,7 +93,24 @@ type AgentBehaviorConfig struct {
 
 type LoggingConfig struct {
 	Level string `yaml:"level"`
-	File  string `yaml:"file"`
+	// File is the log file path. Empty = default <data dir>/logs/agent.log;
+	// the literal "stderr" disables file logging.
+	File string `yaml:"file"`
+	// MaxSizeMB is the per-file rotation threshold in megabytes.
+	MaxSizeMB int `yaml:"max_size_mb"`
+	// BackupCount is the number of rotated log files kept.
+	BackupCount int `yaml:"backup_count"`
+}
+
+// SessionsConfig controls on-disk session memory. When enabled, each
+// conversation is written as a JSON file after every turn and reloaded
+// lazily after restarts or idle eviction.
+type SessionsConfig struct {
+	Persist bool `yaml:"persist"`
+	// Dir overrides the session directory (default <data dir>/sessions).
+	Dir string `yaml:"dir"`
+	// RetentionDays deletes session files older than this. 0 = keep forever.
+	RetentionDays int `yaml:"retention_days"`
 }
 
 type MetricsConfig struct {
@@ -196,6 +214,10 @@ func Load(path string) (*Config, error) {
 	expanded := expandEnv(string(data))
 	dec := yaml.NewDecoder(strings.NewReader(expanded))
 	dec.KnownFields(true)
+	// Default() pre-fills the OpenRouter URL; clear it so applyDefaults can
+	// derive the canonical URL from the YAML provider unless the YAML sets
+	// base_url explicitly.
+	cfg.Model.BaseURL = ""
 	if err := dec.Decode(cfg); err != nil && !errors.Is(err, io.EOF) {
 		return nil, fmt.Errorf("parse config %s: %w", path, err)
 	}
@@ -242,9 +264,9 @@ func Default() *Config {
 			Description: "SRE assistant for the Alga platform",
 		},
 		Model: ModelConfig{
-			Provider:    "openai",
-			BaseURL:     "https://api.openai.com/v1",
-			Model:       "gpt-4o",
+			Provider:    "openrouter",
+			BaseURL:     "https://openrouter.ai/api/v1",
+			Model:       "openrouter/free",
 			MaxTokens:   4096,
 			Temperature: 0.3,
 		},
@@ -271,9 +293,53 @@ func Default() *Config {
 			ToolTimeout:   30 * time.Second,
 			ContextWindow: 20,
 		},
-		Logging: LoggingConfig{Level: "info"},
-		Metrics: MetricsConfig{Enabled: false, Addr: "127.0.0.1:9101"},
+		Sessions: SessionsConfig{Persist: true},
+		Logging:  LoggingConfig{Level: "info", MaxSizeMB: 5, BackupCount: 3},
+		Metrics:  MetricsConfig{Enabled: false, Addr: "127.0.0.1:9101"},
 	}
+}
+
+// providerBaseURLs maps known provider ids to their canonical
+// OpenAI-compatible endpoints (hermes-agent provider registry).
+var providerBaseURLs = map[string]string{
+	"openrouter":          "https://openrouter.ai/api/v1",
+	"openai":              "https://api.openai.com/v1",
+	"opencode-zen":        "https://opencode.ai/zen/v1",
+	"opencode-go":         "https://opencode.ai/zen/go/v1",
+	"zai":                 "https://api.z.ai/api/paas/v4",
+	"zai-coding-plan":     "https://api.z.ai/api/coding/paas/v4",
+	"alibaba":             "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+	"alibaba-coding-plan": "https://coding-intl.dashscope.aliyuncs.com/v1",
+}
+
+// BaseURLForProvider returns the canonical endpoint for a known provider id,
+// defaulting to OpenRouter for unknown or custom providers.
+func BaseURLForProvider(provider string) string {
+	if u, ok := providerBaseURLs[provider]; ok {
+		return u
+	}
+	return providerBaseURLs["openrouter"]
+}
+
+// providerKeyEnvVars lists provider-specific API-key env vars (first non-empty
+// wins). OpenRouter/OpenAI keys are handled generically in applyEnvOverrides.
+var providerKeyEnvVars = map[string][]string{
+	"opencode-zen":        {"OPENCODE_ZEN_API_KEY"},
+	"opencode-go":         {"OPENCODE_GO_API_KEY"},
+	"zai":                 {"ZAI_API_KEY", "GLM_API_KEY", "Z_AI_API_KEY"},
+	"zai-coding-plan":     {"ZAI_API_KEY", "GLM_API_KEY", "Z_AI_API_KEY"},
+	"alibaba":             {"DASHSCOPE_API_KEY"},
+	"alibaba-coding-plan": {"ALIBABA_CODING_PLAN_API_KEY", "DASHSCOPE_API_KEY"},
+}
+
+// apiKeyEnvHint returns the env var name(s) to surface in the missing-key
+// validation error for the given provider, defaulting to the generic
+// OpenRouter/OpenAI keys for providers without specific ones.
+func apiKeyEnvHint(provider string) string {
+	if vars := providerKeyEnvVars[provider]; len(vars) > 0 {
+		return strings.Join(vars, " / ")
+	}
+	return "OPENROUTER_API_KEY / OPENAI_API_KEY"
 }
 
 func (c *Config) applyDefaults() {
@@ -284,18 +350,13 @@ func (c *Config) applyDefaults() {
 		c.Agent.Description = "SRE assistant for the Alga platform"
 	}
 	if c.Model.Provider == "" {
-		c.Model.Provider = "openai"
+		c.Model.Provider = "openrouter"
 	}
 	if c.Model.BaseURL == "" {
-		switch c.Model.Provider {
-		case "openrouter":
-			c.Model.BaseURL = "https://openrouter.ai/api/v1"
-		default:
-			c.Model.BaseURL = "https://api.openai.com/v1"
-		}
+		c.Model.BaseURL = BaseURLForProvider(c.Model.Provider)
 	}
 	if c.Model.Model == "" {
-		c.Model.Model = "gpt-4o"
+		c.Model.Model = "openrouter/free"
 	}
 	if c.Model.MaxTokens == 0 {
 		c.Model.MaxTokens = 4096
@@ -327,6 +388,12 @@ func (c *Config) applyDefaults() {
 	if c.Logging.Level == "" {
 		c.Logging.Level = "info"
 	}
+	if c.Logging.MaxSizeMB == 0 {
+		c.Logging.MaxSizeMB = 5
+	}
+	if c.Logging.BackupCount == 0 {
+		c.Logging.BackupCount = 3
+	}
 	if c.Metrics.Addr == "" {
 		c.Metrics.Addr = "127.0.0.1:9101"
 	}
@@ -350,8 +417,24 @@ func (c *Config) applyDefaults() {
 // applyEnvOverrides applies environment variables over YAML values, per SPEC §8.2.
 // Environment variables always win, allowing secrets management out-of-band.
 func applyEnvOverrides(c *Config) {
-	if v := os.Getenv("OPENAI_API_KEY"); v != "" {
-		c.Model.APIKey = v
+	// Generic OpenAI/OpenRouter keys only apply to the generic providers so a
+	// stray OPENROUTER_API_KEY is never used for, say, the alibaba provider.
+	switch c.Model.Provider {
+	case "", "openai", "openrouter":
+		if v := os.Getenv("OPENAI_API_KEY"); v != "" {
+			c.Model.APIKey = v
+		}
+		// OPENROUTER_API_KEY wins over OPENAI_API_KEY when both are set.
+		if v := os.Getenv("OPENROUTER_API_KEY"); v != "" {
+			c.Model.APIKey = v
+		}
+	}
+	// Provider-specific key env vars take precedence for their provider.
+	for _, name := range providerKeyEnvVars[c.Model.Provider] {
+		if v := os.Getenv(name); v != "" {
+			c.Model.APIKey = v
+			break
+		}
 	}
 	if v := os.Getenv("OPENAI_BASE_URL"); v != "" {
 		c.Model.BaseURL = v
@@ -397,7 +480,7 @@ func (c *Config) Validate() error {
 	var errs []string
 
 	if c.Model.APIKey == "" {
-		errs = append(errs, "model.api_key (or OPENAI_API_KEY) is required")
+		errs = append(errs, fmt.Sprintf("model.api_key (or %s) is required", apiKeyEnvHint(c.Model.Provider)))
 	}
 	if c.Model.BaseURL == "" {
 		errs = append(errs, "model.base_url is required")
@@ -451,6 +534,16 @@ func (c *Config) Validate() error {
 		if (c.Tools.WebSearch.Provider == "brave" || c.Tools.WebSearch.Provider == "tavily") && c.Tools.WebSearch.APIKey == "" {
 			errs = append(errs, "tools.web_search.api_key (or SEARCH_API_KEY) is required for "+c.Tools.WebSearch.Provider)
 		}
+	}
+
+	if c.Sessions.RetentionDays < 0 {
+		errs = append(errs, "sessions.retention_days must be >= 0")
+	}
+	if c.Logging.MaxSizeMB < 0 {
+		errs = append(errs, "logging.max_size_mb must be >= 0")
+	}
+	if c.Logging.BackupCount < 0 {
+		errs = append(errs, "logging.backup_count must be >= 0")
 	}
 
 	if c.Metrics.Enabled && c.Metrics.Addr == "" {

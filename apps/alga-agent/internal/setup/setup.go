@@ -664,7 +664,7 @@ func setupLogging(cfg *config.Config, r *bufio.Reader, w io.Writer) error {
 	}
 	cfg.Logging.Level = levels[idx]
 
-	logFile, err := prompt(r, w, "Log file (empty = stderr only)", cfg.Logging.File)
+	logFile, err := prompt(r, w, "Log file (empty = ~/.alga/logs/agent.log, \"stderr\" = no file)", cfg.Logging.File)
 	if err != nil {
 		return err
 	}
@@ -971,7 +971,7 @@ func printReview(w io.Writer, cfg *config.Config) {
 	if cfg.Metrics.Enabled {
 		metrics = "on (" + cfg.Metrics.Addr + ")"
 	}
-	printInfo(w, "Log level:   "+cfg.Logging.Level+"  (file: "+orDefault(cfg.Logging.File, "stderr")+")")
+	printInfo(w, "Log level:   "+cfg.Logging.Level+"  (file: "+orDefault(cfg.Logging.File, "~/.alga/logs/agent.log")+")")
 	printInfo(w, "Metrics:     "+metrics)
 }
 
@@ -988,7 +988,7 @@ func printBanner(w io.Writer) {
 	border := "┌─────────────────────────────────────────────────────────┐"
 	closeB := "└─────────────────────────────────────────────────────────┘"
 	fmt.Fprintln(w, color(border, colorMag))
-	fmt.Fprintln(w, color("│             ⚕ Alga Agent Setup                          │", colorMag))
+	fmt.Fprintln(w, color("│             ◆ Alga Agent Setup                          │", colorMag))
 	fmt.Fprintln(w, color("├─────────────────────────────────────────────────────────┤", colorMag))
 	fmt.Fprintln(w, color("│  Configure model, channels, tools, and behavior.        │", colorMag))
 	fmt.Fprintln(w, color("│  Press Enter to keep the [default]; Ctrl+C to exit.     │", colorMag))
@@ -1000,7 +1000,7 @@ func printSectionBanner(w io.Writer, label string) {
 	border := "┌─────────────────────────────────────────────────────────┐"
 	closeB := "└─────────────────────────────────────────────────────────┘"
 	fmt.Fprintln(w, color(border, colorMag))
-	fmt.Fprintln(w, color(padLine("│     ⚕ Alga Agent Setup — "+label), colorMag))
+	fmt.Fprintln(w, color(padLine("│     ◆ Alga Agent Setup — "+label), colorMag))
 	fmt.Fprintln(w, color(closeB, colorMag))
 }
 
@@ -1019,7 +1019,7 @@ func padLine(s string) string {
 
 func printNonInteractiveGuidance(w io.Writer) {
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, color("⚕ Alga Agent Setup — non-interactive mode", colorCyan+colorBold))
+	fmt.Fprintln(w, color("◆ Alga Agent Setup — non-interactive mode", colorCyan+colorBold))
 	fmt.Fprintln(w)
 	printInfo(w, "The interactive wizard needs a TTY. Configure via environment variables instead:")
 	printInfo(w, "  export OPENAI_API_KEY=\"sk-...\"")

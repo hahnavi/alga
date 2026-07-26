@@ -14,11 +14,11 @@ import (
 // so it can resolve IDs and inject context into the system prompt. Populated by
 // the Alga channel; empty for Telegram-initiated requests.
 type AlgaContext struct {
-	InvestigationID     string
-	IncidentID          string
-	AlertFingerprints   []string
-	InvestigationStatus string
-	Severity            string
+	InvestigationID     string   `json:"investigation_id,omitempty"`
+	IncidentID          string   `json:"incident_id,omitempty"`
+	AlertFingerprints   []string `json:"alert_fingerprints,omitempty"`
+	InvestigationStatus string   `json:"investigation_status,omitempty"`
+	Severity            string   `json:"severity,omitempty"`
 }
 
 // Session is a single conversation. Each session has its own message history
@@ -131,6 +131,8 @@ type SessionStore struct {
 	mu       sync.Mutex
 	sessions map[string]*Session
 	maxTurns int
+	// persistDir, when non-empty, enables JSON-file persistence (persist.go).
+	persistDir string
 }
 
 // NewSessionStore returns a session store that retains up to maxTurns messages
@@ -145,16 +147,20 @@ func NewSessionStore(maxTurns int) *SessionStore {
 	}
 }
 
-// Get returns the session for id, creating it if missing.
+// Get returns the session for id, creating it if missing. With persistence
+// enabled, a missing session is first reloaded from disk (resume after
+// restart or idle eviction) before falling back to a fresh one.
 func (ss *SessionStore) Get(id string) *Session {
 	ss.mu.Lock()
 	defer ss.mu.Unlock()
 	s, ok := ss.sessions[id]
 	if !ok {
-		s = &Session{
-			maxTurns:   ss.maxTurns,
-			created:    time.Now(),
-			lastActive: time.Now(),
+		if s = ss.loadSession(id); s == nil {
+			s = &Session{
+				maxTurns:   ss.maxTurns,
+				created:    time.Now(),
+				lastActive: time.Now(),
+			}
 		}
 		ss.sessions[id] = s
 	}
@@ -169,11 +175,13 @@ func (ss *SessionStore) Has(id string) bool {
 	return ok
 }
 
-// Clear removes the session for id (e.g. on /clear command).
+// Clear removes the session for id (e.g. on /clear command), including its
+// persisted file — clearing means the conversation is forgotten.
 func (ss *SessionStore) Clear(id string) {
 	ss.mu.Lock()
 	defer ss.mu.Unlock()
 	delete(ss.sessions, id)
+	ss.removeSessionFile(id)
 }
 
 // Size returns the number of active sessions.

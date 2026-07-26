@@ -270,6 +270,47 @@ docker run --rm \
   alga-agent
 ```
 
+## Run as a systemd user service (Linux)
+
+Install the agent as a systemd **user** service so it starts on login and
+restarts on failure:
+
+```bash
+# Build to a stable location first (a /tmp binary is refused).
+go build -o ~/.local/bin/alga-agent .
+
+# Write ~/.config/systemd/user/alga-agent.service, enable, and start it.
+alga-agent service install
+
+# Manage it.
+alga-agent service status
+alga-agent service restart
+alga-agent service stop
+alga-agent service uninstall
+```
+
+`install` also enables lingering (`loginctl enable-linger`) so the service
+keeps running after you log out; if that fails it prints the manual command.
+Flags: `--force` overwrites a differing unit file, `--enable=false` skips
+start-on-login, `--now=false` skips the immediate start.
+
+Logs go to the journal: `journalctl --user -u alga-agent -f`.
+
+## Data Storage
+
+The agent keeps its state under `~/.alga` (override with `ALGA_AGENT_HOME`):
+
+- **Sessions** — `~/.alga/sessions/*.json`, one file per conversation, written
+  after every turn (mode 0600). Conversations survive restarts and idle
+  eviction; they reload lazily on the next message. `/clear` deletes the file.
+  Configure via `sessions:` — `persist: false` disables, `dir` overrides the
+  location, `retention_days: N` prunes files older than N days (0 = keep
+  forever).
+- **Logs** — `~/.alga/logs/agent.log`, size-rotated (default 5 MB × 3 backups
+  via `logging.max_size_mb` / `logging.backup_count`) and tee'd to stderr so
+  journald capture keeps working. Set `logging.file: "stderr"` to disable file
+  logging, or point `logging.file` at a custom path.
+
 ## Security Notes
 
 - The **shell tool is not a sandbox**. Commands run with the agent's process

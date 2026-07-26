@@ -6,11 +6,13 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"sync"
 	"syscall"
 	"time"
@@ -24,6 +26,7 @@ import (
 	"alga-agent/internal/logging"
 	"alga-agent/internal/mcp"
 	agentmetrics "alga-agent/internal/metrics"
+	"alga-agent/internal/service"
 	"alga-agent/internal/setup"
 	"alga-agent/internal/tools"
 )
@@ -31,28 +34,93 @@ import (
 // version is set at build time via -ldflags.
 var version = "dev"
 
+const usage = `alga-agent — Alga AIOps AI assistant
+
+Usage:
+  alga-agent [command]
+
+Commands:
+  (none)           run the agent
+  setup [section]  run the interactive configuration wizard
+  service <verb>   manage the systemd user service
+                   verbs: install [--force] [--enable=false] [--now=false],
+                          uninstall, start, stop, restart, status
+  version          print the version
+  help             show this help
+`
+
 func main() {
-	// Subcommand dispatch. The default (no subcommand) runs the agent;
-	// `setup [section]` runs the interactive configuration wizard.
-	if len(os.Args) >= 2 && os.Args[1] == "setup" {
-		section := ""
-		if len(os.Args) >= 3 {
-			section = os.Args[2]
-		}
-		if err := setup.Run(section); err != nil {
-			if errors.Is(err, setup.ErrAbort) {
-				// User cancelled — not a failure worth a non-zero exit.
-				return
+	// Subcommand dispatch. The default (no subcommand) runs the agent.
+	if len(os.Args) >= 2 {
+		switch os.Args[1] {
+		case "setup":
+			section := ""
+			if len(os.Args) >= 3 {
+				section = os.Args[2]
 			}
-			fmt.Fprintf(os.Stderr, "alga-agent: %v\n", err)
+			if err := setup.Run(section); err != nil {
+				if errors.Is(err, setup.ErrAbort) {
+					// User cancelled — not a failure worth a non-zero exit.
+					return
+				}
+				fmt.Fprintf(os.Stderr, "alga-agent: %v\n", err)
+				os.Exit(1)
+			}
+			return
+		case "service":
+			if err := runService(os.Args[2:]); err != nil {
+				fmt.Fprintf(os.Stderr, "alga-agent: %v\n", err)
+				os.Exit(1)
+			}
+			return
+		case "version", "-v", "--version":
+			fmt.Printf("alga-agent %s\n", version)
+			return
+		case "help", "-h", "--help":
+			fmt.Print(usage)
+			return
+		default:
+			fmt.Fprintf(os.Stderr, "alga-agent: unknown command %q\n\n%s", os.Args[1], usage)
 			os.Exit(1)
 		}
-		return
 	}
 
 	if err := run(); err != nil {
 		fmt.Fprintf(os.Stderr, "alga-agent: %v\n", err)
 		os.Exit(1)
+	}
+}
+
+// runService dispatches `alga-agent service <verb>` to the systemd user
+// service manager.
+func runService(args []string) error {
+	if len(args) == 0 {
+		return errors.New("service: missing verb (install|uninstall|start|stop|restart|status)")
+	}
+	verb, rest := args[0], args[1:]
+	w := os.Stdout
+	switch verb {
+	case "install":
+		fs := flag.NewFlagSet("service install", flag.ContinueOnError)
+		force := fs.Bool("force", false, "overwrite an existing, different unit file")
+		enable := fs.Bool("enable", true, "enable the service (start on login)")
+		now := fs.Bool("now", true, "start the service immediately")
+		if err := fs.Parse(rest); err != nil {
+			return err
+		}
+		return service.Install(w, service.InstallOptions{Force: *force, Enable: *enable, Now: *now})
+	case "uninstall":
+		return service.Uninstall(w)
+	case "start":
+		return service.Start(w)
+	case "stop":
+		return service.Stop(w)
+	case "restart":
+		return service.Restart(w)
+	case "status":
+		return service.Status(w)
+	default:
+		return fmt.Errorf("service: unknown verb %q (install|uninstall|start|stop|restart|status)", verb)
 	}
 }
 
@@ -62,7 +130,12 @@ func run() error {
 		return err
 	}
 
-	logCloser, err := logging.Setup(cfg.Logging.Level, cfg.Logging.File)
+	logCloser, err := logging.Setup(logging.Options{
+		Level:       cfg.Logging.Level,
+		File:        cfg.Logging.File,
+		MaxSizeMB:   cfg.Logging.MaxSizeMB,
+		BackupCount: cfg.Logging.BackupCount,
+	})
 	if err != nil {
 		return fmt.Errorf("logging setup: %w", err)
 	}
@@ -151,6 +224,19 @@ func run() error {
 		PromptFile: cfg.AgentBehavior.SystemPromptFile,
 		Logger:     logger.With("component", "agent"),
 	})
+
+	// --- Session persistence ---
+	if cfg.Sessions.Persist {
+		sessDir := cfg.Sessions.Dir
+		if sessDir == "" {
+			sessDir = filepath.Join(config.ResolveDataDir(), "sessions")
+		}
+		if err := os.MkdirAll(sessDir, 0o700); err != nil {
+			return fmt.Errorf("create sessions dir %s: %w", sessDir, err)
+		}
+		core.Store().EnablePersistence(sessDir)
+		logger.Info("session persistence enabled", "dir", sessDir)
+	}
 
 	// --- Metrics ---
 	mtr := agentmetrics.NewStandard()
@@ -254,6 +340,15 @@ func run() error {
 				if n > 0 {
 					logger.Info("evicted idle sessions", "count", n)
 					mtr.ActiveSessions.Set(uint64(core.Store().Size()))
+				}
+				if cfg.Sessions.Persist && cfg.Sessions.RetentionDays > 0 {
+					retention := time.Duration(cfg.Sessions.RetentionDays) * 24 * time.Hour
+					pruned, err := core.Store().PruneFiles(retention)
+					if err != nil {
+						logger.Warn("session retention sweep failed", "err", err)
+					} else if pruned > 0 {
+						logger.Info("pruned expired session files", "count", pruned)
+					}
 				}
 			}
 		}

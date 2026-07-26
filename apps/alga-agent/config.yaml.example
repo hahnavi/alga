@@ -68,10 +68,20 @@ agent_behavior:
   context_window: 20         # max messages retained per session
   system_prompt_file: ""     # optional: path to custom base prompt
 
-# Logging.
+# Session memory persistence. Conversations are saved as JSON files after
+# each turn and reloaded after restarts or idle eviction.
+sessions:
+  persist: true              # false = in-memory only (lost on restart)
+  dir: ""                    # empty = <data dir>/sessions (~/.alga/sessions)
+  retention_days: 0          # delete session files older than N days; 0 = keep forever
+
+# Logging. Logs always go to stderr; by default they are also written to a
+# size-rotated file under the data dir.
 logging:
   level: info                # debug | info | warn | error
-  file: ""                   # empty = stderr only
+  file: ""                   # empty = <data dir>/logs/agent.log; "stderr" = no file
+  max_size_mb: 5             # rotate when the file exceeds this size
+  backup_count: 3            # rotated files kept
 
 # Optional Prometheus metrics endpoint.
 metrics:

@@ -24,6 +24,7 @@ type Config struct {
 	Alga          AlgaConfig          `yaml:"alga"`
 	Tools         ToolsConfig         `yaml:"tools"`
 	AgentBehavior AgentBehaviorConfig `yaml:"agent_behavior"`
+	Sessions      SessionsConfig      `yaml:"sessions"`
 	Logging       LoggingConfig       `yaml:"logging"`
 	Metrics       MetricsConfig       `yaml:"metrics"`
 	MCP           MCPConfig           `yaml:"mcp"`
@@ -92,7 +93,24 @@ type AgentBehaviorConfig struct {
 
 type LoggingConfig struct {
 	Level string `yaml:"level"`
-	File  string `yaml:"file"`
+	// File is the log file path. Empty = default <data dir>/logs/agent.log;
+	// the literal "stderr" disables file logging.
+	File string `yaml:"file"`
+	// MaxSizeMB is the per-file rotation threshold in megabytes.
+	MaxSizeMB int `yaml:"max_size_mb"`
+	// BackupCount is the number of rotated log files kept.
+	BackupCount int `yaml:"backup_count"`
+}
+
+// SessionsConfig controls on-disk session memory. When enabled, each
+// conversation is written as a JSON file after every turn and reloaded
+// lazily after restarts or idle eviction.
+type SessionsConfig struct {
+	Persist bool `yaml:"persist"`
+	// Dir overrides the session directory (default <data dir>/sessions).
+	Dir string `yaml:"dir"`
+	// RetentionDays deletes session files older than this. 0 = keep forever.
+	RetentionDays int `yaml:"retention_days"`
 }
 
 type MetricsConfig struct {
@@ -271,8 +289,9 @@ func Default() *Config {
 			ToolTimeout:   30 * time.Second,
 			ContextWindow: 20,
 		},
-		Logging: LoggingConfig{Level: "info"},
-		Metrics: MetricsConfig{Enabled: false, Addr: "127.0.0.1:9101"},
+		Sessions: SessionsConfig{Persist: true},
+		Logging:  LoggingConfig{Level: "info", MaxSizeMB: 5, BackupCount: 3},
+		Metrics:  MetricsConfig{Enabled: false, Addr: "127.0.0.1:9101"},
 	}
 }
 
@@ -326,6 +345,12 @@ func (c *Config) applyDefaults() {
 	}
 	if c.Logging.Level == "" {
 		c.Logging.Level = "info"
+	}
+	if c.Logging.MaxSizeMB == 0 {
+		c.Logging.MaxSizeMB = 5
+	}
+	if c.Logging.BackupCount == 0 {
+		c.Logging.BackupCount = 3
 	}
 	if c.Metrics.Addr == "" {
 		c.Metrics.Addr = "127.0.0.1:9101"
@@ -451,6 +476,16 @@ func (c *Config) Validate() error {
 		if (c.Tools.WebSearch.Provider == "brave" || c.Tools.WebSearch.Provider == "tavily") && c.Tools.WebSearch.APIKey == "" {
 			errs = append(errs, "tools.web_search.api_key (or SEARCH_API_KEY) is required for "+c.Tools.WebSearch.Provider)
 		}
+	}
+
+	if c.Sessions.RetentionDays < 0 {
+		errs = append(errs, "sessions.retention_days must be >= 0")
+	}
+	if c.Logging.MaxSizeMB < 0 {
+		errs = append(errs, "logging.max_size_mb must be >= 0")
+	}
+	if c.Logging.BackupCount < 0 {
+		errs = append(errs, "logging.backup_count must be >= 0")
 	}
 
 	if c.Metrics.Enabled && c.Metrics.Addr == "" {

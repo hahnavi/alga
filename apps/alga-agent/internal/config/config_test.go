@@ -45,6 +45,56 @@ telegram:
 	if cfg.Model.Model != "gpt-4o" {
 		t.Errorf("default model = %q, want gpt-4o", cfg.Model.Model)
 	}
+	if !cfg.Sessions.Persist {
+		t.Error("default sessions.persist should be true")
+	}
+	if cfg.Sessions.RetentionDays != 0 {
+		t.Errorf("default sessions.retention_days = %d, want 0", cfg.Sessions.RetentionDays)
+	}
+	if cfg.Logging.MaxSizeMB != 5 {
+		t.Errorf("default logging.max_size_mb = %d, want 5", cfg.Logging.MaxSizeMB)
+	}
+	if cfg.Logging.BackupCount != 3 {
+		t.Errorf("default logging.backup_count = %d, want 3", cfg.Logging.BackupCount)
+	}
+}
+
+func TestLoad_SessionsPersistExplicitFalse(t *testing.T) {
+	path := writeTempConfig(t, `
+model:
+  api_key: "test-key"
+telegram:
+  enabled: true
+  bot_token: "tok"
+sessions:
+  persist: false
+`)
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Sessions.Persist {
+		t.Error("sessions.persist should honor explicit false")
+	}
+}
+
+func TestValidate_SessionsAndLoggingBounds(t *testing.T) {
+	cfg := Default()
+	cfg.Model.APIKey = "k"
+	cfg.Telegram.Enabled = true
+	cfg.Telegram.BotToken = "tok"
+	cfg.Sessions.RetentionDays = -1
+	cfg.Logging.MaxSizeMB = -1
+	cfg.Logging.BackupCount = -1
+	err := cfg.Validate()
+	if err == nil {
+		t.Fatal("expected validation error")
+	}
+	for _, want := range []string{"sessions.retention_days", "logging.max_size_mb", "logging.backup_count"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error should mention %s, got %v", want, err)
+		}
+	}
 }
 
 func TestLoad_EnvExpansion(t *testing.T) {

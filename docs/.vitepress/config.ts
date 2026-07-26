@@ -76,9 +76,10 @@ export default defineConfig({
       },
       {
         text: "Agents",
-        collapsed: false,
+        collapsed: true,
         items: [
           { text: "Overview", link: "/agents/" },
+          { text: "Agent API & Tools", link: "/agents/agent-api" },
           { text: "Alga Agent", link: "/agents/alga-agent" },
           { text: "Hermes Agent", link: "/agents/hermes" },
           { text: "OpenClaw", link: "/agents/openclaw" },

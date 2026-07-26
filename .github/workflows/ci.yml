@@ -71,7 +71,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       - name: Detect changed paths
         id: filter
-        uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590  # v3.0.3
+        uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706  # v4.0.2
         with:
           # Shared infra paths (CI config, compose, deploy, scripts) are
           # inlined into backend AND frontend so that infra changes trigger
@@ -426,6 +426,7 @@ jobs:
         with:
           go-version-input: ${{ env.GO_VERSION }}
           work-dir: ./apps/backend
+          cache-dependency-path: apps/backend/go.sum
 
       # ── gosec: Go static analysis security scanner ──
       # Ent-generated code is excluded. Fail on High/Critical; surface

@@ -7,7 +7,7 @@ description: Connect an OpenClaw agent gateway to Alga for autonomous AI investi
 
 [OpenClaw](https://openclaw.ai) is an autonomous AI agent gateway that connects to Alga via a self-contained TypeScript channel plugin, allowing OpenClaw-powered agents to act as AI SRE investigators — receiving alert dispatches over SSE, reasoning about root causes, and taking lifecycle actions (resolve, escalate, promote to incident) through 32 `alga_*` tools.
 
-OpenClaw and [Hermes](/integrations/hermes) are **alternative, peer agent runtimes** — both plug into the same Alga agent API. You can run either one, or both as different agent tokens. The scheduler is agent-type-agnostic: any online agent with the right capabilities and scope can win a dispatch.
+OpenClaw and [Hermes](/agents/hermes) are **alternative, peer agent runtimes** — both plug into the same Alga agent API. You can run either one, or both as different agent tokens. The scheduler is agent-type-agnostic: any online agent with the right capabilities and scope can win a dispatch.
 
 ## How It Works
 
@@ -44,7 +44,7 @@ The plugin maintains agent presence by sending a heartbeat (`POST /api/v1/agent/
 
 ### Step 1: Create an Agent Token in Alga
 
-1. In the Alga web UI, go to **Integrations → Agents → Add agent**
+1. In the Alga web UI, go to **Agents → Add agent**
 2. Choose **OpenClaw** as the agent type
 3. Select the capabilities you need (at minimum: `investigate`)
 4. Set the scope (`all` for catch-all, or `labels` to restrict to specific alert labels)
@@ -115,7 +115,7 @@ On startup, the plugin automatically verifies that all 32 `alga_*` tools are in 
 
 ### Step 5: Verify
 
-Create a test notification from your Grafana or webhook source, or use Alga's **Create Alert** button. The OpenClaw agent should appear online (**Integrations → Agents** shows a green dot) and begin working the investigation.
+Create a test notification from your Grafana or webhook source, or use Alga's **Create Alert** button. The OpenClaw agent should appear online (**Agents** shows a green dot) and begin working the investigation.
 
 ### Interactive Setup (Alternative)
 
@@ -233,7 +233,7 @@ These tools are unique to OpenClaw — Hermes does not expose them. They give th
 | `alga_create_memory` | Create an agent memory for future investigations — persist useful findings, fixes, and insights. |
 
 ::: tip Memory vs Knowledge — what's the difference?
-`alga_search_knowledge` queries the **shared, operator-curated knowledge base** (runbooks, known issues, service owner contacts). `alga_search_memories` queries the **agent's own episodic memories** — things it learned during past investigations and saved for itself. See [Agent Memory](/core-features/agent-memory) for the backend system.
+`alga_search_knowledge` queries the **shared, operator-curated knowledge base** (runbooks, known issues, service owner contacts). `alga_search_memories` queries the **agent's own episodic memories** — things it learned during past investigations and saved for itself. See [Agent Memory](/agents/memory) for the backend system.
 :::
 
 ### Peer Collaboration Tools (OpenClaw-exclusive)
@@ -242,7 +242,7 @@ These tools are unique to OpenClaw — Hermes does not expose them. They give th
 |------|-------------|
 | `alga_peer_ask` | Ask another agent for help — useful when you need expertise from a specialized agent. Creates a peer-ask request that the target agent receives over SSE. Discovers online agents of either type (hermes or openclaw). |
 
-See [Peer Ask](/core-features/peer-ask) for the full agent-to-agent collaboration protocol, SSE frame types, and limits.
+See [Peer Ask](/agents/peer-ask) for the full agent-to-agent collaboration protocol, SSE frame types, and limits.
 
 ### Incident Command Tools (Commander-Only)
 
@@ -370,7 +370,7 @@ curl -N -H "Authorization: Bearer alga_agent_xxxxxxxxx" \
 ```
 
 Common causes:
-- **Agent not online** — verify the OpenClaw gateway is running and the SSE connection is active (**Integrations → Agents** should show a green dot)
+- **Agent not online** — verify the OpenClaw gateway is running and the SSE connection is active (**Agents** should show a green dot)
 - **Agent token not set as default** — only the default agent receives automated dispatch traffic
 - **Tools not in allowlist** — ensure all 32 `alga_*` tools are in `tools.alsoAllow` (the plugin auto-merges on startup, but a restart may be needed)
 - **Scope mismatch** — if scope is `labels`, the alert labels must match the configured selectors
@@ -433,7 +433,7 @@ Both are first-class peers. The scheduler picks any online agent with matching c
 ## See Also
 
 - [AI Investigation](/core-features/investigation) — the full investigation pipeline and scheduler
-- [Hermes Agent](/integrations/hermes) — the alternative agent runtime
-- [Agent SDKs](/integrations/agent-sdks) — build a fully custom agent
-- [Agent Memory](/core-features/agent-memory) — vector-searched agent memories
-- [Peer Ask](/core-features/peer-ask) — agent-to-agent collaboration
+- [Hermes Agent](/agents/hermes) — the alternative agent runtime
+- [Agent SDKs](/agents/agent-sdks) — build a fully custom agent
+- [Agent Memory](/agents/memory) — vector-searched agent memories
+- [Peer Ask](/agents/peer-ask) — agent-to-agent collaboration

@@ -7,7 +7,7 @@ description: Connect a Nous Research Hermes Agent to Alga for autonomous AI aler
 
 [Hermes Agent](https://github.com/nousresearch/hermes-agent) is an autonomous AI agent platform by Nous Research. Alga connects to a Hermes gateway via a self-contained Python plugin, allowing Hermes to act as an AI SRE investigator — receiving alert dispatches over SSE, reasoning about root causes, and taking lifecycle actions (resolve, escalate, promote to incident) through 31 `alga_*` tools.
 
-Hermes and [OpenClaw](/integrations/openclaw) are **alternative, peer agent runtimes** — both plug into the same Alga agent API. You can run either one, or both as different agent tokens. The scheduler is agent-type-agnostic: any online agent with the right capabilities and scope can win a dispatch.
+Hermes and [OpenClaw](/agents/openclaw) are **alternative, peer agent runtimes** — both plug into the same Alga agent API. You can run either one, or both as different agent tokens. The scheduler is agent-type-agnostic: any online agent with the right capabilities and scope can win a dispatch.
 
 ## How It Works
 
@@ -42,7 +42,7 @@ Hermes and [OpenClaw](/integrations/openclaw) are **alternative, peer agent runt
 
 ### Step 1: Create an Agent Token in Alga
 
-1. In the Alga web UI, go to **Integrations → Agents → Add agent**
+1. In the Alga web UI, go to **Agents → Add agent**
 2. Choose **Hermes Agent** as the agent type
 3. Select the capabilities you need (at minimum: `investigate`)
 4. Set the scope (`all` for catch-all, or `labels` to restrict to specific alert labels)
@@ -341,8 +341,10 @@ Both are first-class peers. The scheduler picks any online agent with matching c
 
 ## See Also
 
+- [Agents Overview](/agents/) — agent tokens, capabilities, and runtime options
 - [AI Investigation](/core-features/investigation) — the full investigation pipeline and scheduler
-- [OpenClaw](/integrations/openclaw) — the alternative agent runtime
-- [Agent SDKs](/integrations/agent-sdks) — build a fully custom agent
-- [Agent Memory](/core-features/agent-memory) — vector-searched agent memories
-- [Peer Ask](/core-features/peer-ask) — agent-to-agent collaboration
+- [Alga Agent](/agents/alga-agent) — the native first-party agent
+- [OpenClaw](/agents/openclaw) — the alternative agent runtime
+- [Agent SDKs](/agents/agent-sdks) — build a fully custom agent
+- [Agent Memory](/agents/memory) — vector-searched agent memories
+- [Peer Ask](/agents/peer-ask) — agent-to-agent collaboration

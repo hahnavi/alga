@@ -67,6 +67,8 @@ Response (value shown only here, at fetch time):
 
 ## API
 
+All admin endpoints require an authenticated session; the Permission column lists the additional RBAC permission required.
+
 ### Credential Providers (admin)
 
 | Method | Path | Permission | Description |

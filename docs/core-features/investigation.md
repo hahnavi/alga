@@ -1,6 +1,6 @@
 ---
 title: AI Investigation
-description: How Alga's scheduler dispatches alerts to autonomous SRE agents (Hermes or OpenClaw) for root-cause analysis, the investigation lifecycle, and agent configuration.
+description: How Alga's scheduler dispatches alerts to autonomous SRE agents (Alga Agent, Hermes, OpenClaw, or custom) for root-cause analysis, the investigation lifecycle, and agent configuration.
 ---
 
 # AI Investigation
@@ -25,19 +25,20 @@ Alert → Correlator → Triage → Scheduler → Agent (SSE dispatch)
 2. **Triage** evaluates the group — rules first (deterministic), then LLM — and decides what to do (investigate, auto-resolve, suppress, escalate)
 3. **Scheduler** picks the best online agent by capability match, label scope, load, and health
 4. **Agent** receives the investigation via SSE, reasons about root cause using its tools, and reports back
-5. **Results** are posted to the investigation thread, forwarded to Mattermost/Slack, and stored as [agent memories](/core-features/agent-memory) for future recall
+5. **Results** are posted to the investigation thread, forwarded to Mattermost/Slack, and stored as [agent memories](/agents/memory) for future recall
 
 ## Choosing an Agent Runtime
 
-Alga supports three categories of AI agent:
+Alga supports four categories of AI agent:
 
 | Option | Best For | Setup |
 |--------|----------|-------|
-| **[Hermes](/integrations/hermes)** | Teams using Nous Research's Hermes Agent platform | Install the Python plugin, configure SSE + REST |
-| **[OpenClaw](/integrations/openclaw)** | Teams using the OpenClaw personal AI assistant | Install the TypeScript channel plugin |
-| **[Custom SDK](/integrations/agent-sdks)** | Full control — build your own agent in Go, JS, Python, or Rust | Use the SSE + REST agent API directly |
+| **[Alga Agent](/agents/alga-agent)** | The native first-party agent — no external gateway, MCP both ways, Telegram channel | Run the Go binary with an LLM key and agent token |
+| **[Hermes](/agents/hermes)** | Teams using Nous Research's Hermes Agent platform | Install the Python plugin, configure SSE + REST |
+| **[OpenClaw](/agents/openclaw)** | Teams using the OpenClaw personal AI assistant | Install the TypeScript channel plugin |
+| **[Custom SDK](/agents/agent-sdks)** | Full control — build your own agent in Go, JS, Python, or Rust | Use the SSE + REST agent API directly |
 
-Hermes and OpenClaw are **peer alternatives** — both connect to the same agent API and have access to the same backend toolset. The scheduler is agent-type-agnostic: it picks whichever online agent has the right capabilities and scope.
+All runtimes are **peer alternatives** — they connect to the same agent API and have access to the same backend toolset. The scheduler is agent-type-agnostic: it picks whichever online agent has the right capabilities and scope. See the [Agents section](/agents/) for a full comparison.
 
 ::: tip Running multiple agents
 You can register multiple agents with different scopes. For example, one agent scoped to `labels.team=dba` for database expertise, and another catch-all (`scope=all`) for everything else. The scheduler prefers label-specific agents over catch-all.
@@ -49,7 +50,7 @@ You can register multiple agents with different scopes. For example, one agent s
 
 Regardless of which runtime you choose, every agent needs a token:
 
-1. In the Alga web UI, go to **Integrations → Agents → Add agent**
+1. In the Alga web UI, go to **Automate → Agents → Add agent**
 2. Choose the **agent type** (`hermes`, `openclaw`, or `other`)
 3. Select **capabilities** (at minimum: `investigate`)
 4. Set the **scope** — `all` (default) or `labels` with label selectors
@@ -58,11 +59,12 @@ Regardless of which runtime you choose, every agent needs a token:
 
 ### Connecting a Runtime
 
-For detailed setup instructions, see the integration guide for your chosen runtime:
+For detailed setup instructions, see the guide for your chosen runtime:
 
-- **[Hermes setup →](/integrations/hermes#setup-guide)**
-- **[OpenClaw setup →](/integrations/openclaw)**
-- **[Custom SDK setup →](/integrations/agent-sdks)**
+- **[Alga Agent setup →](/agents/alga-agent#quick-start)**
+- **[Hermes setup →](/agents/hermes#setup-guide)**
+- **[OpenClaw setup →](/agents/openclaw)**
+- **[Custom SDK setup →](/agents/agent-sdks)**
 
 ## Agent Types
 
@@ -70,7 +72,7 @@ For detailed setup instructions, see the integration guide for your chosen runti
 |------|-------------|
 | `hermes` | Hermes agent via the Alga platform adapter plugin (the default type) |
 | `openclaw` | OpenClaw channel plugin agent |
-| `other` | Custom agent using the SSE + REST API |
+| `other` | The native [Alga Agent](/agents/alga-agent) or a custom agent using the SSE + REST API |
 
 The agent type is used for display (avatar icon, status string) and is informational. Capabilities and scope are what actually gate agent behavior.
 
@@ -210,10 +212,10 @@ When the scheduler dispatches an investigation, it builds a rich prompt containi
 - **Alert details** — name, labels, annotations, severity, summary, description
 - **Correlation key** and primary alert fingerprint
 - **Triage enrichment** — the triage decision and reasoning
-- **Shared knowledge** — matching [knowledge notes](/core-features/knowledge-base) (previews)
+- **Shared knowledge** — matching [knowledge notes](/agents/knowledge-base) (previews)
 - **Playbook steps** — matched by label selectors
 - **Episodic memory** — past investigations with the same correlation key
-- **Agent memories** — [semantically-relevant memories](/core-features/agent-memory) from past investigations
+- **Agent memories** — [semantically-relevant memories](/agents/memory) from past investigations
 - **Ops team context** — who is on call, escalation contacts
 - **Role-specific instructions** — commander/responder/communicator behavioral contracts
 
@@ -237,7 +239,7 @@ Both plugins share the same backend executor (`AgentToolExecutor`). Tools fall i
 | Memory (OpenClaw) | `alga_search_memories`, `alga_create_memory` |
 | Peer collaboration (OpenClaw) | `alga_peer_ask` |
 
-See the [Hermes](/integrations/hermes#the-31-agent-tools) or [OpenClaw](/integrations/openclaw) integration guide for the complete tool reference.
+See the [Hermes](/agents/hermes#the-31-agent-tools) or [OpenClaw](/agents/openclaw) integration guide for the complete tool reference.
 
 ### Incident Role Boundaries
 
@@ -267,7 +269,7 @@ All agent API endpoints require the agent bearer token and are rate-limited per-
 | `GET/POST /api/v1/agent/alerts` | Alert queries and actions |
 | `GET /api/v1/agent/alerts/{fp}` | Get a specific alert by fingerprint |
 | `GET/POST /api/v1/agent/memories` | Agent memory CRUD |
-| `GET /api/v1/agent/peer-ask` | [Peer ask](/core-features/peer-ask) — agent-to-agent questions |
+| `GET /api/v1/agent/peer-ask` | [Peer ask](/agents/peer-ask) — agent-to-agent questions |
 | `GET /api/v1/agent/incidents/{id}` | Get incident context |
 | `PATCH /api/v1/agent/incidents/{id}` | Update incident |
 | `GET /api/v1/agent/incidents/{id}/timeline` | Get incident timeline |
@@ -347,11 +349,13 @@ With Valkey/Redis configured:
 
 ## See Also
 
-- [Hermes Integration](/integrations/hermes) — Hermes agent setup and 31-tool reference
-- [OpenClaw Integration](/integrations/openclaw) — OpenClaw agent setup
-- [Agent SDKs](/integrations/agent-sdks) — build a custom agent
-- [Agent Memory](/core-features/agent-memory) — vector-searched agent memories
-- [Peer Ask](/core-features/peer-ask) — agent-to-agent collaboration
-- [Knowledge Base](/core-features/knowledge-base) — operator-authored notes for agents
+- [Agents Overview](/agents/) — agent tokens, capabilities, and runtime comparison
+- [Alga Agent](/agents/alga-agent) — the native first-party agent
+- [Hermes Integration](/agents/hermes) — Hermes agent setup and 31-tool reference
+- [OpenClaw Integration](/agents/openclaw) — OpenClaw agent setup
+- [Agent SDKs](/agents/agent-sdks) — build a custom agent
+- [Agent Memory](/agents/memory) — vector-searched agent memories
+- [Peer Ask](/agents/peer-ask) — agent-to-agent collaboration
+- [Knowledge Base](/agents/knowledge-base) — operator-authored notes for agents
 - [Triage](/core-features/triage) — how alerts are classified before investigation
 - [Playbooks](/core-features/playbooks) — enrich investigations with runbook steps

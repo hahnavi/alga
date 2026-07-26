@@ -7,7 +7,7 @@ description: How Alga agents persist and semantically recall episodic memories u
 
 Agent Memory is Alga's long-term learning system. When an agent investigates an alert and finds a root cause, that knowledge is extracted into structured memory entries, embedded as vectors, and recalled during future investigations — so the platform gets better at resolving incidents over time.
 
-Memory is agent-agnostic: it works identically whether you use Hermes, OpenClaw, or a custom agent.
+Memory is agent-agnostic: it works identically whether you use the native Alga Agent, Hermes, OpenClaw, or a custom agent.
 
 ## How It Works
 
@@ -153,6 +153,6 @@ Agents interact with memories through their own bearer-scoped endpoints:
 ## See Also
 
 - [AI Investigation](/core-features/investigation) — how memories are injected into dispatch prompts
-- [Knowledge Base](/core-features/knowledge-base) — operator-authored notes (complementary to agent-extracted memories)
-- [Peer Ask](/core-features/peer-ask) — agent-to-agent knowledge sharing
+- [Knowledge Base](/agents/knowledge-base) — operator-authored notes (complementary to agent-extracted memories)
+- [Peer Ask](/agents/peer-ask) — agent-to-agent knowledge sharing
 - [Environment Variables](/configuration/environment-variables) — full `MEMORY_*` configuration

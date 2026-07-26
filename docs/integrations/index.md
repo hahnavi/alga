@@ -1,21 +1,15 @@
 ---
 title: Integrations
-description: Connect Alga to AI agents (Hermes, OpenClaw, custom SDKs), chat platforms (Slack, Mattermost), voice escalation (Twilio, Telnyx), email, and OIDC SSO.
+description: Connect Alga to chat platforms (Slack, Mattermost), voice escalation (Twilio, Telnyx), email, and OIDC SSO. AI agents have their own dedicated section.
 ---
 
 # Integrations
 
-Alga integrates with your existing communication, monitoring, and identity tools. This section covers everything from AI investigation agents to chat platforms, voice escalation, email, and single sign-on.
+Alga integrates with your existing communication, monitoring, and identity tools. This section covers chat platforms, voice escalation, email, and single sign-on.
 
 ## AI Agents
 
-Alga connects to autonomous AI SRE agents for automated alert investigation and root cause analysis. Agents connect via SSE, receive investigation dispatches, reason about the problem using built-in tools, and report findings back through the REST API. The scheduler is agent-type-agnostic — any online agent with the right capabilities and scope can win a dispatch.
-
-| Integration | Language | Tools | Description |
-|-------------|----------|-------|-------------|
-| [Hermes Agent](/integrations/hermes) | Python | 31 | Nous Research's autonomous agent platform — the default agent type in Alga |
-| [OpenClaw](/integrations/openclaw) | TypeScript | 32 | Alternative agent runtime with built-in memory and peer-ask tools |
-| [Agent SDKs](/integrations/agent-sdks) | Go, JS, Python, Rust | — | Build a fully custom agent against the SSE + REST protocol |
+AI agents are first-class in Alga and have a dedicated **[Agents section](/agents/)** covering the native [Alga Agent](/agents/alga-agent), the [Hermes](/agents/hermes) and [OpenClaw](/agents/openclaw) plugins, the [Agent SDKs](/agents/agent-sdks), plus [Agent Memory](/agents/memory), [Peer Ask](/agents/peer-ask), [Knowledge Base](/agents/knowledge-base), and [Credential Providers](/agents/credential-providers).
 
 → See [AI Investigation](/core-features/investigation) for how the dispatch pipeline works end-to-end.
 

@@ -615,7 +615,7 @@ These endpoints are called by agents using their bearer token.
 | `GET` | `/api/v1/agent/secrets/{id}` | Fetch a shared secret the agent is authorized to read |
 
 ::: tip Agent tools via messages
-Agent capabilities like assigning roles, triggering escalation, publishing status updates, and promoting incidents are invoked by posting to `/api/v1/agent/messages` with `kind: "inv_tool"`. See the [Agent SDKs](/integrations/agent-sdks) for the command factory helpers.
+Agent capabilities like assigning roles, triggering escalation, publishing status updates, and promoting incidents are invoked by posting to `/api/v1/agent/messages` with `kind: "inv_tool"`. See the [Agent SDKs](/agents/agent-sdks) for the command factory helpers.
 :::
 
 ---

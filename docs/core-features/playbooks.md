@@ -123,5 +123,5 @@ A selector matches when **all** of its key/value pairs match the alert's labels.
 ## See Also
 
 - [AI Investigation](/core-features/investigation) — investigation lifecycle and agent communication
-- [Knowledge Base](/core-features/knowledge-base) — operator-curated notes for agents
+- [Knowledge Base](/agents/knowledge-base) — operator-curated notes for agents
 - [Incident Lifecycle](/incident-management/lifecycle) — incident state machine and transitions

@@ -31,7 +31,7 @@ features:
       src: /icons/investigation.svg
       alt: ""
     title: Autonomous AI Investigation
-    details: Built-in SRE agents (Hermes or OpenClaw) investigate every alert — querying knowledge, correlating signals, and producing structured root-cause analyses in parallel with human oversight.
+    details: Built-in SRE agents — the native Alga Agent, Hermes, or OpenClaw — investigate every alert, querying knowledge, correlating signals, and producing structured root-cause analyses in parallel with human oversight.
     link: /core-features/investigation
     linkText: How investigation works →
   - icon:
@@ -53,7 +53,7 @@ features:
       alt: ""
     title: Agent Memory & Knowledge
     details: A pgvector-backed memory system extracts learnings from completed investigations. Agents recall past solutions via semantic search. Knowledge compounds over time — every incident makes the next one faster.
-    link: /core-features/agent-memory
+    link: /agents/memory
     linkText: How memory works →
   - icon:
       src: /icons/triage.svg
@@ -90,7 +90,7 @@ Alga combines four traditionally separate tools into a single platform:
 Ingest alerts from any webhook source (Grafana, Prometheus, custom scripts). Automatic fingerprint-based deduplication ensures you never get paged twice for the same issue. Alerts are correlated by deployment events and alertname within configurable time windows, then routed to the right destination via first-match rules.
 
 ### 2. AI Investigation
-Every alert can trigger an autonomous investigation. Alga's scheduler atomically assigns work to an online agent (Hermes or OpenClaw), which receives the full alert context, queries the knowledge base, searches its own memories of past incidents, and produces a structured root-cause analysis — all visible to operators in real time through investigation threads.
+Every alert can trigger an autonomous investigation. Alga's scheduler atomically assigns work to an online agent (the native Alga Agent, Hermes, or OpenClaw), which receives the full alert context, queries the knowledge base, searches its own memories of past incidents, and produces a structured root-cause analysis — all visible to operators in real time through investigation threads.
 
 ### 3. Incident Response
 When an alert warrants it, the agent or an operator promotes it to an incident. Incidents follow a formal lifecycle (`detected → triaging → active → mitigated → resolved → closed`) with ICS command roles (Incident Commander, Communications Lead, Responder), SLA tracking, automated escalation, Google Meet war rooms, and structured post-mortems.
@@ -126,10 +126,10 @@ Open `http://localhost:3000` and complete the setup wizard to create the initial
 |---|---|
 | Understand how Alga works | [Core Concepts](/getting-started/concepts) |
 | Get started fast | [Quick Start](/getting-started/) → [First Steps](/getting-started/first-steps) |
-| Connect an AI agent | [Hermes](/integrations/hermes) · [OpenClaw](/integrations/openclaw) · [Agent SDKs](/integrations/agent-sdks) |
+| Connect an AI agent | [Agents Overview](/agents/) · [Alga Agent](/agents/alga-agent) · [Hermes](/agents/hermes) · [OpenClaw](/agents/openclaw) |
 | Configure alert routing | [Routing](/core-features/routing) · [Alerts](/core-features/alerts) |
 | Set up on-call | [Schedules](/on-call/schedules) · [Escalation Policies](/on-call/escalation-policies) |
 | Understand incidents | [Incident Management](/incident-management/) · [ICS Roles](/incident-management/ics-roles) |
 | Deploy to production | [Deployment](/operations/deployment) · [Architecture](/operations/architecture) |
 | Secure your instance | [Security & Auth](/configuration/security) · [Environment Variables](/configuration/environment-variables) |
-| Build a custom integration | [Agent SDKs](/integrations/agent-sdks) · [API Reference](/api-reference/) |
+| Build a custom integration | [Agent SDKs](/agents/agent-sdks) · [API Reference](/api-reference/) |

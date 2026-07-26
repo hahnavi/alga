@@ -159,6 +159,6 @@ The OpenClaw plugin exposes peer-ask as the `alga_peer_ask` tool, making it dire
 ## See Also
 
 - [AI Investigation](/core-features/investigation) — the investigation pipeline and agent dispatch
-- [Agent Memory](/core-features/agent-memory) — shared long-term memory across investigations
+- [Agent Memory](/agents/memory) — shared long-term memory across investigations
 - [Coordination](/incident-management/coordination) — multi-agent incident coordination streams
-- [Hermes](/integrations/hermes) and [OpenClaw](/integrations/openclaw) — agent runtime integrations
+- [Hermes](/agents/hermes) and [OpenClaw](/agents/openclaw) — agent runtime integrations

@@ -35,7 +35,13 @@ Bump `version` in `Chart.yaml` based on what changed under `deploy/charts/alga/`
 
 ### appVersion
 
-`appVersion` tracks the default application image version the chart deploys. Update it when a new app release should become the chart's default, then cut at least a **patch** chart release. Do not override `appVersion` at package time — `Chart.yaml` is the source of truth.
+`appVersion` must always equal the latest app release tag **including the `v` prefix** (e.g. `"v0.0.2"`). Determine it with:
+
+```bash
+git tag --list 'v*' --sort=-v:refname | head -1
+```
+
+Every chart release PR must set `appVersion` in `Chart.yaml` to this value, even if the app version hasn't changed since the last chart release — treat it as a mandatory sync step, not an optional update. Do not override `appVersion` at package time — `Chart.yaml` is the source of truth.
 
 ### Tag Format Constraints
 
@@ -60,15 +66,16 @@ Run all of these before tagging. Stop and report if any fail.
 1. **Clean working tree** — `git status --porcelain` is empty.
 2. **On `main` and synced** — `git fetch origin && git status -uno` shows nothing to pull/push.
 3. **`Chart.yaml` version matches the tag you intend to push** — the workflow hard-fails on mismatch, leaving a dangling tag.
-4. **Chart lints and packages locally**:
+4. **`appVersion` equals the latest app tag** — `git tag --list 'v*' --sort=-v:refname | head -1` must match `appVersion` in `Chart.yaml` (including the `v` prefix).
+5. **Chart lints and packages locally**:
    ```bash
    helm lint deploy/charts/alga
    helm package deploy/charts/alga -d /tmp && rm /tmp/alga-*.tgz
    ```
    The "missing required values" warnings for `postgresql`/`valkey`/`rabbitmq` passwords are expected.
-5. **Tag does not already exist** — `git tag --list 'chart-v*'`.
-6. **Docs are synced** — `grep -rn 'charts/alga\|helm install' docs/` shows no stale version pin or values reference (see Docs Sync).
-7. **CI is green on the commit you'll tag** — `gh run list --branch main --limit 3`.
+6. **Tag does not already exist** — `git tag --list 'chart-v*'`.
+7. **Docs are synced** — `grep -rn 'charts/alga\|helm install' docs/` shows no stale version pin or values reference (see Docs Sync).
+8. **CI is green on the commit you'll tag** — `gh run list --branch main --limit 3`.
 
 ## Execute the Release
 

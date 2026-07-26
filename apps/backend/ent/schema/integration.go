@@ -65,7 +65,7 @@ func (Integration) Fields() []ent.Field {
 		// prefix is "ElevenLabs."; otherwise ignored. Stored plaintext because
 		// it is an identifier, not the secret itself.
 		field.String("telnyx_tts_api_key_ref").Optional().Default(""),
-		field.String("voice_provider").Optional().Default("twilio"),
+		field.Enum("voice_provider").Values("twilio", "telnyx").Optional().Default("twilio"),
 		field.String("hermes_platform_url").Optional().Default(""),
 		field.String("hermes_platform_token").Optional().Default("").Sensitive(),
 		field.Time("updated_at").Default(timeNow).UpdateDefault(timeNow),

@@ -66,11 +66,6 @@ func IncidentID(v uuid.UUID) predicate.IncidentInvestigation {
 	return predicate.IncidentInvestigation(sql.FieldEQ(FieldIncidentID, v))
 }
 
-// Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
-func Status(v string) predicate.IncidentInvestigation {
-	return predicate.IncidentInvestigation(sql.FieldEQ(FieldStatus, v))
-}
-
 // AgentID applies equality check predicate on the "agent_id" field. It's identical to AgentIDEQ.
 func AgentID(v string) predicate.IncidentInvestigation {
 	return predicate.IncidentInvestigation(sql.FieldEQ(FieldAgentID, v))
@@ -144,11 +139,6 @@ func InvestigatingDurationMs(v int64) predicate.IncidentInvestigation {
 // ParentInvestigationID applies equality check predicate on the "parent_investigation_id" field. It's identical to ParentInvestigationIDEQ.
 func ParentInvestigationID(v uuid.UUID) predicate.IncidentInvestigation {
 	return predicate.IncidentInvestigation(sql.FieldEQ(FieldParentInvestigationID, v))
-}
-
-// AssigneeType applies equality check predicate on the "assignee_type" field. It's identical to AssigneeTypeEQ.
-func AssigneeType(v string) predicate.IncidentInvestigation {
-	return predicate.IncidentInvestigation(sql.FieldEQ(FieldAssigneeType, v))
 }
 
 // AssigneeID applies equality check predicate on the "assignee_id" field. It's identical to AssigneeIDEQ.
@@ -252,68 +242,23 @@ func IncidentIDNotNil() predicate.IncidentInvestigation {
 }
 
 // StatusEQ applies the EQ predicate on the "status" field.
-func StatusEQ(v string) predicate.IncidentInvestigation {
+func StatusEQ(v Status) predicate.IncidentInvestigation {
 	return predicate.IncidentInvestigation(sql.FieldEQ(FieldStatus, v))
 }
 
 // StatusNEQ applies the NEQ predicate on the "status" field.
-func StatusNEQ(v string) predicate.IncidentInvestigation {
+func StatusNEQ(v Status) predicate.IncidentInvestigation {
 	return predicate.IncidentInvestigation(sql.FieldNEQ(FieldStatus, v))
 }
 
 // StatusIn applies the In predicate on the "status" field.
-func StatusIn(vs ...string) predicate.IncidentInvestigation {
+func StatusIn(vs ...Status) predicate.IncidentInvestigation {
 	return predicate.IncidentInvestigation(sql.FieldIn(FieldStatus, vs...))
 }
 
 // StatusNotIn applies the NotIn predicate on the "status" field.
-func StatusNotIn(vs ...string) predicate.IncidentInvestigation {
+func StatusNotIn(vs ...Status) predicate.IncidentInvestigation {
 	return predicate.IncidentInvestigation(sql.FieldNotIn(FieldStatus, vs...))
-}
-
-// StatusGT applies the GT predicate on the "status" field.
-func StatusGT(v string) predicate.IncidentInvestigation {
-	return predicate.IncidentInvestigation(sql.FieldGT(FieldStatus, v))
-}
-
-// StatusGTE applies the GTE predicate on the "status" field.
-func StatusGTE(v string) predicate.IncidentInvestigation {
-	return predicate.IncidentInvestigation(sql.FieldGTE(FieldStatus, v))
-}
-
-// StatusLT applies the LT predicate on the "status" field.
-func StatusLT(v string) predicate.IncidentInvestigation {
-	return predicate.IncidentInvestigation(sql.FieldLT(FieldStatus, v))
-}
-
-// StatusLTE applies the LTE predicate on the "status" field.
-func StatusLTE(v string) predicate.IncidentInvestigation {
-	return predicate.IncidentInvestigation(sql.FieldLTE(FieldStatus, v))
-}
-
-// StatusContains applies the Contains predicate on the "status" field.
-func StatusContains(v string) predicate.IncidentInvestigation {
-	return predicate.IncidentInvestigation(sql.FieldContains(FieldStatus, v))
-}
-
-// StatusHasPrefix applies the HasPrefix predicate on the "status" field.
-func StatusHasPrefix(v string) predicate.IncidentInvestigation {
-	return predicate.IncidentInvestigation(sql.FieldHasPrefix(FieldStatus, v))
-}
-
-// StatusHasSuffix applies the HasSuffix predicate on the "status" field.
-func StatusHasSuffix(v string) predicate.IncidentInvestigation {
-	return predicate.IncidentInvestigation(sql.FieldHasSuffix(FieldStatus, v))
-}
-
-// StatusEqualFold applies the EqualFold predicate on the "status" field.
-func StatusEqualFold(v string) predicate.IncidentInvestigation {
-	return predicate.IncidentInvestigation(sql.FieldEqualFold(FieldStatus, v))
-}
-
-// StatusContainsFold applies the ContainsFold predicate on the "status" field.
-func StatusContainsFold(v string) predicate.IncidentInvestigation {
-	return predicate.IncidentInvestigation(sql.FieldContainsFold(FieldStatus, v))
 }
 
 // AgentIDEQ applies the EQ predicate on the "agent_id" field.
@@ -1237,68 +1182,23 @@ func ParentInvestigationIDNotNil() predicate.IncidentInvestigation {
 }
 
 // AssigneeTypeEQ applies the EQ predicate on the "assignee_type" field.
-func AssigneeTypeEQ(v string) predicate.IncidentInvestigation {
+func AssigneeTypeEQ(v AssigneeType) predicate.IncidentInvestigation {
 	return predicate.IncidentInvestigation(sql.FieldEQ(FieldAssigneeType, v))
 }
 
 // AssigneeTypeNEQ applies the NEQ predicate on the "assignee_type" field.
-func AssigneeTypeNEQ(v string) predicate.IncidentInvestigation {
+func AssigneeTypeNEQ(v AssigneeType) predicate.IncidentInvestigation {
 	return predicate.IncidentInvestigation(sql.FieldNEQ(FieldAssigneeType, v))
 }
 
 // AssigneeTypeIn applies the In predicate on the "assignee_type" field.
-func AssigneeTypeIn(vs ...string) predicate.IncidentInvestigation {
+func AssigneeTypeIn(vs ...AssigneeType) predicate.IncidentInvestigation {
 	return predicate.IncidentInvestigation(sql.FieldIn(FieldAssigneeType, vs...))
 }
 
 // AssigneeTypeNotIn applies the NotIn predicate on the "assignee_type" field.
-func AssigneeTypeNotIn(vs ...string) predicate.IncidentInvestigation {
+func AssigneeTypeNotIn(vs ...AssigneeType) predicate.IncidentInvestigation {
 	return predicate.IncidentInvestigation(sql.FieldNotIn(FieldAssigneeType, vs...))
-}
-
-// AssigneeTypeGT applies the GT predicate on the "assignee_type" field.
-func AssigneeTypeGT(v string) predicate.IncidentInvestigation {
-	return predicate.IncidentInvestigation(sql.FieldGT(FieldAssigneeType, v))
-}
-
-// AssigneeTypeGTE applies the GTE predicate on the "assignee_type" field.
-func AssigneeTypeGTE(v string) predicate.IncidentInvestigation {
-	return predicate.IncidentInvestigation(sql.FieldGTE(FieldAssigneeType, v))
-}
-
-// AssigneeTypeLT applies the LT predicate on the "assignee_type" field.
-func AssigneeTypeLT(v string) predicate.IncidentInvestigation {
-	return predicate.IncidentInvestigation(sql.FieldLT(FieldAssigneeType, v))
-}
-
-// AssigneeTypeLTE applies the LTE predicate on the "assignee_type" field.
-func AssigneeTypeLTE(v string) predicate.IncidentInvestigation {
-	return predicate.IncidentInvestigation(sql.FieldLTE(FieldAssigneeType, v))
-}
-
-// AssigneeTypeContains applies the Contains predicate on the "assignee_type" field.
-func AssigneeTypeContains(v string) predicate.IncidentInvestigation {
-	return predicate.IncidentInvestigation(sql.FieldContains(FieldAssigneeType, v))
-}
-
-// AssigneeTypeHasPrefix applies the HasPrefix predicate on the "assignee_type" field.
-func AssigneeTypeHasPrefix(v string) predicate.IncidentInvestigation {
-	return predicate.IncidentInvestigation(sql.FieldHasPrefix(FieldAssigneeType, v))
-}
-
-// AssigneeTypeHasSuffix applies the HasSuffix predicate on the "assignee_type" field.
-func AssigneeTypeHasSuffix(v string) predicate.IncidentInvestigation {
-	return predicate.IncidentInvestigation(sql.FieldHasSuffix(FieldAssigneeType, v))
-}
-
-// AssigneeTypeEqualFold applies the EqualFold predicate on the "assignee_type" field.
-func AssigneeTypeEqualFold(v string) predicate.IncidentInvestigation {
-	return predicate.IncidentInvestigation(sql.FieldEqualFold(FieldAssigneeType, v))
-}
-
-// AssigneeTypeContainsFold applies the ContainsFold predicate on the "assignee_type" field.
-func AssigneeTypeContainsFold(v string) predicate.IncidentInvestigation {
-	return predicate.IncidentInvestigation(sql.FieldContainsFold(FieldAssigneeType, v))
 }
 
 // AssigneeIDEQ applies the EQ predicate on the "assignee_id" field.

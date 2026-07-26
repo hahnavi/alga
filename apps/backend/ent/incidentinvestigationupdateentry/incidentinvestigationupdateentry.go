@@ -15,8 +15,8 @@ const (
 	Label = "incident_investigation_update_entry"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
-	// FieldIncidentInvestigationUUID holds the string denoting the incident_investigation_uuid field in the database.
-	FieldIncidentInvestigationUUID = "incident_investigation_uuid"
+	// FieldIncidentInvestigationID holds the string denoting the incident_investigation_id field in the database.
+	FieldIncidentInvestigationID = "incident_investigation_id"
 	// FieldType holds the string denoting the type field in the database.
 	FieldType = "type"
 	// FieldMessage holds the string denoting the message field in the database.
@@ -51,13 +51,13 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "incidentinvestigation" package.
 	IncidentInvestigationInverseTable = "incident_investigations"
 	// IncidentInvestigationColumn is the table column denoting the incident_investigation relation/edge.
-	IncidentInvestigationColumn = "incident_investigation_uuid"
+	IncidentInvestigationColumn = "incident_investigation_id"
 )
 
 // Columns holds all SQL columns for incidentinvestigationupdateentry fields.
 var Columns = []string{
 	FieldID,
-	FieldIncidentInvestigationUUID,
+	FieldIncidentInvestigationID,
 	FieldType,
 	FieldMessage,
 	FieldSource,
@@ -111,9 +111,9 @@ func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
 }
 
-// ByIncidentInvestigationUUID orders the results by the incident_investigation_uuid field.
-func ByIncidentInvestigationUUID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldIncidentInvestigationUUID, opts...).ToFunc()
+// ByIncidentInvestigationID orders the results by the incident_investigation_id field.
+func ByIncidentInvestigationID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIncidentInvestigationID, opts...).ToFunc()
 }
 
 // ByType orders the results by the type field.

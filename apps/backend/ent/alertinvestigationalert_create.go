@@ -23,9 +23,9 @@ type AlertInvestigationAlertCreate struct {
 	hooks    []Hook
 }
 
-// SetAlertInvestigationUUID sets the "alert_investigation_uuid" field.
-func (_c *AlertInvestigationAlertCreate) SetAlertInvestigationUUID(v uuid.UUID) *AlertInvestigationAlertCreate {
-	_c.mutation.SetAlertInvestigationUUID(v)
+// SetAlertInvestigationID sets the "alert_investigation_id" field.
+func (_c *AlertInvestigationAlertCreate) SetAlertInvestigationID(v uuid.UUID) *AlertInvestigationAlertCreate {
+	_c.mutation.SetAlertInvestigationID(v)
 	return _c
 }
 
@@ -201,12 +201,6 @@ func (_c *AlertInvestigationAlertCreate) SetNillableID(v *uuid.UUID) *AlertInves
 	return _c
 }
 
-// SetAlertInvestigationID sets the "alert_investigation" edge to the AlertInvestigation entity by ID.
-func (_c *AlertInvestigationAlertCreate) SetAlertInvestigationID(id uuid.UUID) *AlertInvestigationAlertCreate {
-	_c.mutation.SetAlertInvestigationID(id)
-	return _c
-}
-
 // SetAlertInvestigation sets the "alert_investigation" edge to the AlertInvestigation entity.
 func (_c *AlertInvestigationAlertCreate) SetAlertInvestigation(v *AlertInvestigation) *AlertInvestigationAlertCreate {
 	return _c.SetAlertInvestigationID(v.ID)
@@ -284,8 +278,8 @@ func (_c *AlertInvestigationAlertCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *AlertInvestigationAlertCreate) check() error {
-	if _, ok := _c.mutation.AlertInvestigationUUID(); !ok {
-		return &ValidationError{Name: "alert_investigation_uuid", err: errors.New(`ent: missing required field "AlertInvestigationAlert.alert_investigation_uuid"`)}
+	if _, ok := _c.mutation.AlertInvestigationID(); !ok {
+		return &ValidationError{Name: "alert_investigation_id", err: errors.New(`ent: missing required field "AlertInvestigationAlert.alert_investigation_id"`)}
 	}
 	if _, ok := _c.mutation.Fingerprint(); !ok {
 		return &ValidationError{Name: "fingerprint", err: errors.New(`ent: missing required field "AlertInvestigationAlert.fingerprint"`)}
@@ -403,7 +397,7 @@ func (_c *AlertInvestigationAlertCreate) createSpec() (*AlertInvestigationAlert,
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.AlertInvestigationUUID = nodes[0]
+		_node.AlertInvestigationID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.AlertIDs(); len(nodes) > 0 {

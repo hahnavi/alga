@@ -22,7 +22,7 @@ type DeliveryTargetCreate struct {
 }
 
 // SetProvider sets the "provider" field.
-func (_c *DeliveryTargetCreate) SetProvider(v string) *DeliveryTargetCreate {
+func (_c *DeliveryTargetCreate) SetProvider(v deliverytarget.Provider) *DeliveryTargetCreate {
 	_c.mutation.SetProvider(v)
 	return _c
 }
@@ -195,7 +195,7 @@ func (_c *DeliveryTargetCreate) createSpec() (*DeliveryTarget, *sqlgraph.CreateS
 		_spec.ID.Value = &id
 	}
 	if value, ok := _c.mutation.Provider(); ok {
-		_spec.SetField(deliverytarget.FieldProvider, field.TypeString, value)
+		_spec.SetField(deliverytarget.FieldProvider, field.TypeEnum, value)
 		_node.Provider = value
 	}
 	if value, ok := _c.mutation.Channel(); ok {

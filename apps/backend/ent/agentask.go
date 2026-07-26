@@ -24,13 +24,13 @@ type AgentAsk struct {
 	// FromAgentName holds the value of the "from_agent_name" field.
 	FromAgentName string `json:"from_agent_name,omitempty"`
 	// FromAgentType holds the value of the "from_agent_type" field.
-	FromAgentType string `json:"from_agent_type,omitempty"`
+	FromAgentType agentask.FromAgentType `json:"from_agent_type,omitempty"`
 	// InvestigationID holds the value of the "investigation_id" field.
 	InvestigationID string `json:"investigation_id,omitempty"`
 	// ToAgentID holds the value of the "to_agent_id" field.
 	ToAgentID *uuid.UUID `json:"to_agent_id,omitempty"`
 	// ToAgentType holds the value of the "to_agent_type" field.
-	ToAgentType string `json:"to_agent_type,omitempty"`
+	ToAgentType *agentask.ToAgentType `json:"to_agent_type,omitempty"`
 	// Question holds the value of the "question" field.
 	Question string `json:"question,omitempty"`
 	// Reply holds the value of the "reply" field.
@@ -40,7 +40,7 @@ type AgentAsk struct {
 	// RepliedByAgentName holds the value of the "replied_by_agent_name" field.
 	RepliedByAgentName string `json:"replied_by_agent_name,omitempty"`
 	// Status holds the value of the "status" field.
-	Status string `json:"status,omitempty"`
+	Status agentask.Status `json:"status,omitempty"`
 	// ExpiresAt holds the value of the "expires_at" field.
 	ExpiresAt time.Time `json:"expires_at,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -149,7 +149,7 @@ func (_m *AgentAsk) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field from_agent_type", values[i])
 			} else if value.Valid {
-				_m.FromAgentType = value.String
+				_m.FromAgentType = agentask.FromAgentType(value.String)
 			}
 		case agentask.FieldInvestigationID:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -168,7 +168,8 @@ func (_m *AgentAsk) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field to_agent_type", values[i])
 			} else if value.Valid {
-				_m.ToAgentType = value.String
+				_m.ToAgentType = new(agentask.ToAgentType)
+				*_m.ToAgentType = agentask.ToAgentType(value.String)
 			}
 		case agentask.FieldQuestion:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -199,7 +200,7 @@ func (_m *AgentAsk) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
-				_m.Status = value.String
+				_m.Status = agentask.Status(value.String)
 			}
 		case agentask.FieldExpiresAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -278,7 +279,7 @@ func (_m *AgentAsk) String() string {
 	builder.WriteString(_m.FromAgentName)
 	builder.WriteString(", ")
 	builder.WriteString("from_agent_type=")
-	builder.WriteString(_m.FromAgentType)
+	builder.WriteString(fmt.Sprintf("%v", _m.FromAgentType))
 	builder.WriteString(", ")
 	builder.WriteString("investigation_id=")
 	builder.WriteString(_m.InvestigationID)
@@ -288,8 +289,10 @@ func (_m *AgentAsk) String() string {
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteString(", ")
-	builder.WriteString("to_agent_type=")
-	builder.WriteString(_m.ToAgentType)
+	if v := _m.ToAgentType; v != nil {
+		builder.WriteString("to_agent_type=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("question=")
 	builder.WriteString(_m.Question)
@@ -306,7 +309,7 @@ func (_m *AgentAsk) String() string {
 	builder.WriteString(_m.RepliedByAgentName)
 	builder.WriteString(", ")
 	builder.WriteString("status=")
-	builder.WriteString(_m.Status)
+	builder.WriteString(fmt.Sprintf("%v", _m.Status))
 	builder.WriteString(", ")
 	builder.WriteString("expires_at=")
 	builder.WriteString(_m.ExpiresAt.Format(time.ANSIC))

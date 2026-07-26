@@ -107,13 +107,13 @@ func (_u *ICSRoleAssignmentUpdate) ClearAgentTokenID() *ICSRoleAssignmentUpdate 
 }
 
 // SetRoleType sets the "role_type" field.
-func (_u *ICSRoleAssignmentUpdate) SetRoleType(v string) *ICSRoleAssignmentUpdate {
+func (_u *ICSRoleAssignmentUpdate) SetRoleType(v icsroleassignment.RoleType) *ICSRoleAssignmentUpdate {
 	_u.mutation.SetRoleType(v)
 	return _u
 }
 
 // SetNillableRoleType sets the "role_type" field if the given value is not nil.
-func (_u *ICSRoleAssignmentUpdate) SetNillableRoleType(v *string) *ICSRoleAssignmentUpdate {
+func (_u *ICSRoleAssignmentUpdate) SetNillableRoleType(v *icsroleassignment.RoleType) *ICSRoleAssignmentUpdate {
 	if v != nil {
 		_u.SetRoleType(*v)
 	}
@@ -121,13 +121,13 @@ func (_u *ICSRoleAssignmentUpdate) SetNillableRoleType(v *string) *ICSRoleAssign
 }
 
 // SetStatus sets the "status" field.
-func (_u *ICSRoleAssignmentUpdate) SetStatus(v string) *ICSRoleAssignmentUpdate {
+func (_u *ICSRoleAssignmentUpdate) SetStatus(v icsroleassignment.Status) *ICSRoleAssignmentUpdate {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *ICSRoleAssignmentUpdate) SetNillableStatus(v *string) *ICSRoleAssignmentUpdate {
+func (_u *ICSRoleAssignmentUpdate) SetNillableStatus(v *icsroleassignment.Status) *ICSRoleAssignmentUpdate {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -135,13 +135,13 @@ func (_u *ICSRoleAssignmentUpdate) SetNillableStatus(v *string) *ICSRoleAssignme
 }
 
 // SetAssigneeType sets the "assignee_type" field.
-func (_u *ICSRoleAssignmentUpdate) SetAssigneeType(v string) *ICSRoleAssignmentUpdate {
+func (_u *ICSRoleAssignmentUpdate) SetAssigneeType(v icsroleassignment.AssigneeType) *ICSRoleAssignmentUpdate {
 	_u.mutation.SetAssigneeType(v)
 	return _u
 }
 
 // SetNillableAssigneeType sets the "assignee_type" field if the given value is not nil.
-func (_u *ICSRoleAssignmentUpdate) SetNillableAssigneeType(v *string) *ICSRoleAssignmentUpdate {
+func (_u *ICSRoleAssignmentUpdate) SetNillableAssigneeType(v *icsroleassignment.AssigneeType) *ICSRoleAssignmentUpdate {
 	if v != nil {
 		_u.SetAssigneeType(*v)
 	}
@@ -169,13 +169,13 @@ func (_u *ICSRoleAssignmentUpdate) ClearScopeDescription() *ICSRoleAssignmentUpd
 }
 
 // SetEndedReason sets the "ended_reason" field.
-func (_u *ICSRoleAssignmentUpdate) SetEndedReason(v string) *ICSRoleAssignmentUpdate {
+func (_u *ICSRoleAssignmentUpdate) SetEndedReason(v icsroleassignment.EndedReason) *ICSRoleAssignmentUpdate {
 	_u.mutation.SetEndedReason(v)
 	return _u
 }
 
 // SetNillableEndedReason sets the "ended_reason" field if the given value is not nil.
-func (_u *ICSRoleAssignmentUpdate) SetNillableEndedReason(v *string) *ICSRoleAssignmentUpdate {
+func (_u *ICSRoleAssignmentUpdate) SetNillableEndedReason(v *icsroleassignment.EndedReason) *ICSRoleAssignmentUpdate {
 	if v != nil {
 		_u.SetEndedReason(*v)
 	}
@@ -336,6 +336,26 @@ func (_u *ICSRoleAssignmentUpdate) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *ICSRoleAssignmentUpdate) check() error {
+	if v, ok := _u.mutation.RoleType(); ok {
+		if err := icsroleassignment.RoleTypeValidator(v); err != nil {
+			return &ValidationError{Name: "role_type", err: fmt.Errorf(`ent: validator failed for field "ICSRoleAssignment.role_type": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := icsroleassignment.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "ICSRoleAssignment.status": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.AssigneeType(); ok {
+		if err := icsroleassignment.AssigneeTypeValidator(v); err != nil {
+			return &ValidationError{Name: "assignee_type", err: fmt.Errorf(`ent: validator failed for field "ICSRoleAssignment.assignee_type": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.EndedReason(); ok {
+		if err := icsroleassignment.EndedReasonValidator(v); err != nil {
+			return &ValidationError{Name: "ended_reason", err: fmt.Errorf(`ent: validator failed for field "ICSRoleAssignment.ended_reason": %w`, err)}
+		}
+	}
 	if _u.mutation.IncidentCleared() && len(_u.mutation.IncidentIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ICSRoleAssignment.incident"`)
 	}
@@ -355,13 +375,13 @@ func (_u *ICSRoleAssignmentUpdate) sqlSave(ctx context.Context) (_node int, err 
 		}
 	}
 	if value, ok := _u.mutation.RoleType(); ok {
-		_spec.SetField(icsroleassignment.FieldRoleType, field.TypeString, value)
+		_spec.SetField(icsroleassignment.FieldRoleType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(icsroleassignment.FieldStatus, field.TypeString, value)
+		_spec.SetField(icsroleassignment.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.AssigneeType(); ok {
-		_spec.SetField(icsroleassignment.FieldAssigneeType, field.TypeString, value)
+		_spec.SetField(icsroleassignment.FieldAssigneeType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.ScopeDescription(); ok {
 		_spec.SetField(icsroleassignment.FieldScopeDescription, field.TypeString, value)
@@ -370,10 +390,10 @@ func (_u *ICSRoleAssignmentUpdate) sqlSave(ctx context.Context) (_node int, err 
 		_spec.ClearField(icsroleassignment.FieldScopeDescription, field.TypeString)
 	}
 	if value, ok := _u.mutation.EndedReason(); ok {
-		_spec.SetField(icsroleassignment.FieldEndedReason, field.TypeString, value)
+		_spec.SetField(icsroleassignment.FieldEndedReason, field.TypeEnum, value)
 	}
 	if _u.mutation.EndedReasonCleared() {
-		_spec.ClearField(icsroleassignment.FieldEndedReason, field.TypeString)
+		_spec.ClearField(icsroleassignment.FieldEndedReason, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.StartedAt(); ok {
 		_spec.SetField(icsroleassignment.FieldStartedAt, field.TypeTime, value)
@@ -640,13 +660,13 @@ func (_u *ICSRoleAssignmentUpdateOne) ClearAgentTokenID() *ICSRoleAssignmentUpda
 }
 
 // SetRoleType sets the "role_type" field.
-func (_u *ICSRoleAssignmentUpdateOne) SetRoleType(v string) *ICSRoleAssignmentUpdateOne {
+func (_u *ICSRoleAssignmentUpdateOne) SetRoleType(v icsroleassignment.RoleType) *ICSRoleAssignmentUpdateOne {
 	_u.mutation.SetRoleType(v)
 	return _u
 }
 
 // SetNillableRoleType sets the "role_type" field if the given value is not nil.
-func (_u *ICSRoleAssignmentUpdateOne) SetNillableRoleType(v *string) *ICSRoleAssignmentUpdateOne {
+func (_u *ICSRoleAssignmentUpdateOne) SetNillableRoleType(v *icsroleassignment.RoleType) *ICSRoleAssignmentUpdateOne {
 	if v != nil {
 		_u.SetRoleType(*v)
 	}
@@ -654,13 +674,13 @@ func (_u *ICSRoleAssignmentUpdateOne) SetNillableRoleType(v *string) *ICSRoleAss
 }
 
 // SetStatus sets the "status" field.
-func (_u *ICSRoleAssignmentUpdateOne) SetStatus(v string) *ICSRoleAssignmentUpdateOne {
+func (_u *ICSRoleAssignmentUpdateOne) SetStatus(v icsroleassignment.Status) *ICSRoleAssignmentUpdateOne {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *ICSRoleAssignmentUpdateOne) SetNillableStatus(v *string) *ICSRoleAssignmentUpdateOne {
+func (_u *ICSRoleAssignmentUpdateOne) SetNillableStatus(v *icsroleassignment.Status) *ICSRoleAssignmentUpdateOne {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -668,13 +688,13 @@ func (_u *ICSRoleAssignmentUpdateOne) SetNillableStatus(v *string) *ICSRoleAssig
 }
 
 // SetAssigneeType sets the "assignee_type" field.
-func (_u *ICSRoleAssignmentUpdateOne) SetAssigneeType(v string) *ICSRoleAssignmentUpdateOne {
+func (_u *ICSRoleAssignmentUpdateOne) SetAssigneeType(v icsroleassignment.AssigneeType) *ICSRoleAssignmentUpdateOne {
 	_u.mutation.SetAssigneeType(v)
 	return _u
 }
 
 // SetNillableAssigneeType sets the "assignee_type" field if the given value is not nil.
-func (_u *ICSRoleAssignmentUpdateOne) SetNillableAssigneeType(v *string) *ICSRoleAssignmentUpdateOne {
+func (_u *ICSRoleAssignmentUpdateOne) SetNillableAssigneeType(v *icsroleassignment.AssigneeType) *ICSRoleAssignmentUpdateOne {
 	if v != nil {
 		_u.SetAssigneeType(*v)
 	}
@@ -702,13 +722,13 @@ func (_u *ICSRoleAssignmentUpdateOne) ClearScopeDescription() *ICSRoleAssignment
 }
 
 // SetEndedReason sets the "ended_reason" field.
-func (_u *ICSRoleAssignmentUpdateOne) SetEndedReason(v string) *ICSRoleAssignmentUpdateOne {
+func (_u *ICSRoleAssignmentUpdateOne) SetEndedReason(v icsroleassignment.EndedReason) *ICSRoleAssignmentUpdateOne {
 	_u.mutation.SetEndedReason(v)
 	return _u
 }
 
 // SetNillableEndedReason sets the "ended_reason" field if the given value is not nil.
-func (_u *ICSRoleAssignmentUpdateOne) SetNillableEndedReason(v *string) *ICSRoleAssignmentUpdateOne {
+func (_u *ICSRoleAssignmentUpdateOne) SetNillableEndedReason(v *icsroleassignment.EndedReason) *ICSRoleAssignmentUpdateOne {
 	if v != nil {
 		_u.SetEndedReason(*v)
 	}
@@ -882,6 +902,26 @@ func (_u *ICSRoleAssignmentUpdateOne) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *ICSRoleAssignmentUpdateOne) check() error {
+	if v, ok := _u.mutation.RoleType(); ok {
+		if err := icsroleassignment.RoleTypeValidator(v); err != nil {
+			return &ValidationError{Name: "role_type", err: fmt.Errorf(`ent: validator failed for field "ICSRoleAssignment.role_type": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := icsroleassignment.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "ICSRoleAssignment.status": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.AssigneeType(); ok {
+		if err := icsroleassignment.AssigneeTypeValidator(v); err != nil {
+			return &ValidationError{Name: "assignee_type", err: fmt.Errorf(`ent: validator failed for field "ICSRoleAssignment.assignee_type": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.EndedReason(); ok {
+		if err := icsroleassignment.EndedReasonValidator(v); err != nil {
+			return &ValidationError{Name: "ended_reason", err: fmt.Errorf(`ent: validator failed for field "ICSRoleAssignment.ended_reason": %w`, err)}
+		}
+	}
 	if _u.mutation.IncidentCleared() && len(_u.mutation.IncidentIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ICSRoleAssignment.incident"`)
 	}
@@ -918,13 +958,13 @@ func (_u *ICSRoleAssignmentUpdateOne) sqlSave(ctx context.Context) (_node *ICSRo
 		}
 	}
 	if value, ok := _u.mutation.RoleType(); ok {
-		_spec.SetField(icsroleassignment.FieldRoleType, field.TypeString, value)
+		_spec.SetField(icsroleassignment.FieldRoleType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(icsroleassignment.FieldStatus, field.TypeString, value)
+		_spec.SetField(icsroleassignment.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.AssigneeType(); ok {
-		_spec.SetField(icsroleassignment.FieldAssigneeType, field.TypeString, value)
+		_spec.SetField(icsroleassignment.FieldAssigneeType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.ScopeDescription(); ok {
 		_spec.SetField(icsroleassignment.FieldScopeDescription, field.TypeString, value)
@@ -933,10 +973,10 @@ func (_u *ICSRoleAssignmentUpdateOne) sqlSave(ctx context.Context) (_node *ICSRo
 		_spec.ClearField(icsroleassignment.FieldScopeDescription, field.TypeString)
 	}
 	if value, ok := _u.mutation.EndedReason(); ok {
-		_spec.SetField(icsroleassignment.FieldEndedReason, field.TypeString, value)
+		_spec.SetField(icsroleassignment.FieldEndedReason, field.TypeEnum, value)
 	}
 	if _u.mutation.EndedReasonCleared() {
-		_spec.ClearField(icsroleassignment.FieldEndedReason, field.TypeString)
+		_spec.ClearField(icsroleassignment.FieldEndedReason, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.StartedAt(); ok {
 		_spec.SetField(icsroleassignment.FieldStartedAt, field.TypeTime, value)

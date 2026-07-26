@@ -26,7 +26,7 @@ func (StatusPage) Fields() []ent.Field {
 		field.String("name").NotEmpty(),
 		field.String("slug").Unique().NotEmpty(),
 		field.String("description").Default(""),
-		field.String("visibility").Default("internal"),
+		field.Enum("visibility").Values("internal", "public").Default("internal"),
 		field.Bool("enabled").Default(true),
 		field.UUID("owner_team_id", uuid.UUID{}).Optional().Nillable(),
 		field.Time("created_at").Default(timeNow),
@@ -66,7 +66,7 @@ func (StatusPageComponent) Fields() []ent.Field {
 		field.String("description").Default(""),
 		field.UUID("service_id", uuid.UUID{}).Optional().Nillable(),
 		field.Int("display_order").Default(0).NonNegative(),
-		field.String("status").Default("operational"),
+		field.Enum("status").Values("operational", "degraded", "partial_outage", "major_outage", "maintenance").Default("operational"),
 		field.Time("created_at").Default(timeNow),
 		field.Time("updated_at").Default(timeNow).UpdateDefault(timeNow),
 	}

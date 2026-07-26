@@ -50,13 +50,13 @@ func (_c *StatusPageCreate) SetNillableDescription(v *string) *StatusPageCreate 
 }
 
 // SetVisibility sets the "visibility" field.
-func (_c *StatusPageCreate) SetVisibility(v string) *StatusPageCreate {
+func (_c *StatusPageCreate) SetVisibility(v statuspage.Visibility) *StatusPageCreate {
 	_c.mutation.SetVisibility(v)
 	return _c
 }
 
 // SetNillableVisibility sets the "visibility" field if the given value is not nil.
-func (_c *StatusPageCreate) SetNillableVisibility(v *string) *StatusPageCreate {
+func (_c *StatusPageCreate) SetNillableVisibility(v *statuspage.Visibility) *StatusPageCreate {
 	if v != nil {
 		_c.SetVisibility(*v)
 	}
@@ -238,6 +238,11 @@ func (_c *StatusPageCreate) check() error {
 	if _, ok := _c.mutation.Visibility(); !ok {
 		return &ValidationError{Name: "visibility", err: errors.New(`ent: missing required field "StatusPage.visibility"`)}
 	}
+	if v, ok := _c.mutation.Visibility(); ok {
+		if err := statuspage.VisibilityValidator(v); err != nil {
+			return &ValidationError{Name: "visibility", err: fmt.Errorf(`ent: validator failed for field "StatusPage.visibility": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Enabled(); !ok {
 		return &ValidationError{Name: "enabled", err: errors.New(`ent: missing required field "StatusPage.enabled"`)}
 	}
@@ -295,7 +300,7 @@ func (_c *StatusPageCreate) createSpec() (*StatusPage, *sqlgraph.CreateSpec) {
 		_node.Description = value
 	}
 	if value, ok := _c.mutation.Visibility(); ok {
-		_spec.SetField(statuspage.FieldVisibility, field.TypeString, value)
+		_spec.SetField(statuspage.FieldVisibility, field.TypeEnum, value)
 		_node.Visibility = value
 	}
 	if value, ok := _c.mutation.Enabled(); ok {

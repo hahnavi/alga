@@ -19,7 +19,7 @@ type DeliveryTarget struct {
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
 	// Provider holds the value of the "provider" field.
-	Provider string `json:"provider,omitempty"`
+	Provider deliverytarget.Provider `json:"provider,omitempty"`
 	// Channel holds the value of the "channel" field.
 	Channel string `json:"channel,omitempty"`
 	// ChannelName holds the value of the "channel_name" field.
@@ -88,7 +88,7 @@ func (_m *DeliveryTarget) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field provider", values[i])
 			} else if value.Valid {
-				_m.Provider = value.String
+				_m.Provider = deliverytarget.Provider(value.String)
 			}
 		case deliverytarget.FieldChannel:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -156,7 +156,7 @@ func (_m *DeliveryTarget) String() string {
 	builder.WriteString("DeliveryTarget(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("provider=")
-	builder.WriteString(_m.Provider)
+	builder.WriteString(fmt.Sprintf("%v", _m.Provider))
 	builder.WriteString(", ")
 	builder.WriteString("channel=")
 	builder.WriteString(_m.Channel)

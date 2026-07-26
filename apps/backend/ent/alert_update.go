@@ -49,13 +49,13 @@ func (_u *AlertUpdate) SetNillableFingerprint(v *string) *AlertUpdate {
 }
 
 // SetStatus sets the "status" field.
-func (_u *AlertUpdate) SetStatus(v string) *AlertUpdate {
+func (_u *AlertUpdate) SetStatus(v alert.Status) *AlertUpdate {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *AlertUpdate) SetNillableStatus(v *string) *AlertUpdate {
+func (_u *AlertUpdate) SetNillableStatus(v *alert.Status) *AlertUpdate {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -510,6 +510,11 @@ func (_u *AlertUpdate) check() error {
 			return &ValidationError{Name: "fingerprint", err: fmt.Errorf(`ent: validator failed for field "Alert.fingerprint": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := alert.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Alert.status": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.AlertNumber(); ok {
 		if err := alert.AlertNumberValidator(v); err != nil {
 			return &ValidationError{Name: "alert_number", err: fmt.Errorf(`ent: validator failed for field "Alert.alert_number": %w`, err)}
@@ -534,7 +539,7 @@ func (_u *AlertUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		_spec.SetField(alert.FieldFingerprint, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(alert.FieldStatus, field.TypeString, value)
+		_spec.SetField(alert.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Acknowledged(); ok {
 		_spec.SetField(alert.FieldAcknowledged, field.TypeBool, value)
@@ -852,13 +857,13 @@ func (_u *AlertUpdateOne) SetNillableFingerprint(v *string) *AlertUpdateOne {
 }
 
 // SetStatus sets the "status" field.
-func (_u *AlertUpdateOne) SetStatus(v string) *AlertUpdateOne {
+func (_u *AlertUpdateOne) SetStatus(v alert.Status) *AlertUpdateOne {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *AlertUpdateOne) SetNillableStatus(v *string) *AlertUpdateOne {
+func (_u *AlertUpdateOne) SetNillableStatus(v *alert.Status) *AlertUpdateOne {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -1326,6 +1331,11 @@ func (_u *AlertUpdateOne) check() error {
 			return &ValidationError{Name: "fingerprint", err: fmt.Errorf(`ent: validator failed for field "Alert.fingerprint": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := alert.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Alert.status": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.AlertNumber(); ok {
 		if err := alert.AlertNumberValidator(v); err != nil {
 			return &ValidationError{Name: "alert_number", err: fmt.Errorf(`ent: validator failed for field "Alert.alert_number": %w`, err)}
@@ -1367,7 +1377,7 @@ func (_u *AlertUpdateOne) sqlSave(ctx context.Context) (_node *Alert, err error)
 		_spec.SetField(alert.FieldFingerprint, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(alert.FieldStatus, field.TypeString, value)
+		_spec.SetField(alert.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Acknowledged(); ok {
 		_spec.SetField(alert.FieldAcknowledged, field.TypeBool, value)

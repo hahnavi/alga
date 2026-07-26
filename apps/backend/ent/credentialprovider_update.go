@@ -45,13 +45,13 @@ func (_u *CredentialProviderUpdate) SetNillableName(v *string) *CredentialProvid
 }
 
 // SetType sets the "type" field.
-func (_u *CredentialProviderUpdate) SetType(v string) *CredentialProviderUpdate {
+func (_u *CredentialProviderUpdate) SetType(v credentialprovider.Type) *CredentialProviderUpdate {
 	_u.mutation.SetType(v)
 	return _u
 }
 
 // SetNillableType sets the "type" field if the given value is not nil.
-func (_u *CredentialProviderUpdate) SetNillableType(v *string) *CredentialProviderUpdate {
+func (_u *CredentialProviderUpdate) SetNillableType(v *credentialprovider.Type) *CredentialProviderUpdate {
 	if v != nil {
 		_u.SetType(*v)
 	}
@@ -204,6 +204,11 @@ func (_u *CredentialProviderUpdate) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "CredentialProvider.name": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.GetType(); ok {
+		if err := credentialprovider.TypeValidator(v); err != nil {
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "CredentialProvider.type": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -223,7 +228,7 @@ func (_u *CredentialProviderUpdate) sqlSave(ctx context.Context) (_node int, err
 		_spec.SetField(credentialprovider.FieldName, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.GetType(); ok {
-		_spec.SetField(credentialprovider.FieldType, field.TypeString, value)
+		_spec.SetField(credentialprovider.FieldType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.ConfigEncrypted(); ok {
 		_spec.SetField(credentialprovider.FieldConfigEncrypted, field.TypeString, value)
@@ -320,13 +325,13 @@ func (_u *CredentialProviderUpdateOne) SetNillableName(v *string) *CredentialPro
 }
 
 // SetType sets the "type" field.
-func (_u *CredentialProviderUpdateOne) SetType(v string) *CredentialProviderUpdateOne {
+func (_u *CredentialProviderUpdateOne) SetType(v credentialprovider.Type) *CredentialProviderUpdateOne {
 	_u.mutation.SetType(v)
 	return _u
 }
 
 // SetNillableType sets the "type" field if the given value is not nil.
-func (_u *CredentialProviderUpdateOne) SetNillableType(v *string) *CredentialProviderUpdateOne {
+func (_u *CredentialProviderUpdateOne) SetNillableType(v *credentialprovider.Type) *CredentialProviderUpdateOne {
 	if v != nil {
 		_u.SetType(*v)
 	}
@@ -492,6 +497,11 @@ func (_u *CredentialProviderUpdateOne) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "CredentialProvider.name": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.GetType(); ok {
+		if err := credentialprovider.TypeValidator(v); err != nil {
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "CredentialProvider.type": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -528,7 +538,7 @@ func (_u *CredentialProviderUpdateOne) sqlSave(ctx context.Context) (_node *Cred
 		_spec.SetField(credentialprovider.FieldName, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.GetType(); ok {
-		_spec.SetField(credentialprovider.FieldType, field.TypeString, value)
+		_spec.SetField(credentialprovider.FieldType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.ConfigEncrypted(); ok {
 		_spec.SetField(credentialprovider.FieldConfigEncrypted, field.TypeString, value)

@@ -123,13 +123,13 @@ func (_c *ServiceCreate) SetNillableSLAResolveMinutes(v *int) *ServiceCreate {
 }
 
 // SetStatus sets the "status" field.
-func (_c *ServiceCreate) SetStatus(v string) *ServiceCreate {
+func (_c *ServiceCreate) SetStatus(v service.Status) *ServiceCreate {
 	_c.mutation.SetStatus(v)
 	return _c
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_c *ServiceCreate) SetNillableStatus(v *string) *ServiceCreate {
+func (_c *ServiceCreate) SetNillableStatus(v *service.Status) *ServiceCreate {
 	if v != nil {
 		_c.SetStatus(*v)
 	}
@@ -359,6 +359,11 @@ func (_c *ServiceCreate) check() error {
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "Service.status"`)}
 	}
+	if v, ok := _c.mutation.Status(); ok {
+		if err := service.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Service.status": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Service.created_at"`)}
 	}
@@ -425,7 +430,7 @@ func (_c *ServiceCreate) createSpec() (*Service, *sqlgraph.CreateSpec) {
 		_node.SLAResolveMinutes = value
 	}
 	if value, ok := _c.mutation.Status(); ok {
-		_spec.SetField(service.FieldStatus, field.TypeString, value)
+		_spec.SetField(service.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {

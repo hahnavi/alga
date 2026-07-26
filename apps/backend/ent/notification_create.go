@@ -28,7 +28,7 @@ func (_c *NotificationCreate) SetUserID(v string) *NotificationCreate {
 }
 
 // SetType sets the "type" field.
-func (_c *NotificationCreate) SetType(v string) *NotificationCreate {
+func (_c *NotificationCreate) SetType(v notification.Type) *NotificationCreate {
 	_c.mutation.SetType(v)
 	return _c
 }
@@ -60,13 +60,13 @@ func (_c *NotificationCreate) SetNillableRead(v *bool) *NotificationCreate {
 }
 
 // SetResourceType sets the "resource_type" field.
-func (_c *NotificationCreate) SetResourceType(v string) *NotificationCreate {
+func (_c *NotificationCreate) SetResourceType(v notification.ResourceType) *NotificationCreate {
 	_c.mutation.SetResourceType(v)
 	return _c
 }
 
 // SetNillableResourceType sets the "resource_type" field if the given value is not nil.
-func (_c *NotificationCreate) SetNillableResourceType(v *string) *NotificationCreate {
+func (_c *NotificationCreate) SetNillableResourceType(v *notification.ResourceType) *NotificationCreate {
 	if v != nil {
 		_c.SetResourceType(*v)
 	}
@@ -182,10 +182,6 @@ func (_c *NotificationCreate) defaults() {
 		v := notification.DefaultRead
 		_c.mutation.SetRead(v)
 	}
-	if _, ok := _c.mutation.ResourceType(); !ok {
-		v := notification.DefaultResourceType
-		_c.mutation.SetResourceType(v)
-	}
 	if _, ok := _c.mutation.ResourceID(); !ok {
 		v := notification.DefaultResourceID
 		_c.mutation.SetResourceID(v)
@@ -245,6 +241,11 @@ func (_c *NotificationCreate) check() error {
 	if _, ok := _c.mutation.Read(); !ok {
 		return &ValidationError{Name: "read", err: errors.New(`ent: missing required field "Notification.read"`)}
 	}
+	if v, ok := _c.mutation.ResourceType(); ok {
+		if err := notification.ResourceTypeValidator(v); err != nil {
+			return &ValidationError{Name: "resource_type", err: fmt.Errorf(`ent: validator failed for field "Notification.resource_type": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Notification.created_at"`)}
 	}
@@ -288,7 +289,7 @@ func (_c *NotificationCreate) createSpec() (*Notification, *sqlgraph.CreateSpec)
 		_node.UserID = value
 	}
 	if value, ok := _c.mutation.GetType(); ok {
-		_spec.SetField(notification.FieldType, field.TypeString, value)
+		_spec.SetField(notification.FieldType, field.TypeEnum, value)
 		_node.Type = value
 	}
 	if value, ok := _c.mutation.Title(); ok {
@@ -304,8 +305,8 @@ func (_c *NotificationCreate) createSpec() (*Notification, *sqlgraph.CreateSpec)
 		_node.Read = value
 	}
 	if value, ok := _c.mutation.ResourceType(); ok {
-		_spec.SetField(notification.FieldResourceType, field.TypeString, value)
-		_node.ResourceType = value
+		_spec.SetField(notification.FieldResourceType, field.TypeEnum, value)
+		_node.ResourceType = &value
 	}
 	if value, ok := _c.mutation.ResourceID(); ok {
 		_spec.SetField(notification.FieldResourceID, field.TypeString, value)

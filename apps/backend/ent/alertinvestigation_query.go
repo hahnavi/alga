@@ -679,7 +679,7 @@ func (_q *AlertInvestigationQuery) loadAlerts(ctx context.Context, query *AlertI
 		}
 	}
 	if len(query.ctx.Fields) > 0 {
-		query.ctx.AppendFieldOnce(alertinvestigationalert.FieldAlertInvestigationUUID)
+		query.ctx.AppendFieldOnce(alertinvestigationalert.FieldAlertInvestigationID)
 	}
 	query.Where(predicate.AlertInvestigationAlert(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(alertinvestigation.AlertsColumn), fks...))
@@ -689,10 +689,10 @@ func (_q *AlertInvestigationQuery) loadAlerts(ctx context.Context, query *AlertI
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.AlertInvestigationUUID
+		fk := n.AlertInvestigationID
 		node, ok := nodeids[fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "alert_investigation_uuid" returned %v for node %v`, fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "alert_investigation_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}
@@ -709,7 +709,7 @@ func (_q *AlertInvestigationQuery) loadUpdates(ctx context.Context, query *Alert
 		}
 	}
 	if len(query.ctx.Fields) > 0 {
-		query.ctx.AppendFieldOnce(alertinvestigationupdateentry.FieldAlertInvestigationUUID)
+		query.ctx.AppendFieldOnce(alertinvestigationupdateentry.FieldAlertInvestigationID)
 	}
 	query.Where(predicate.AlertInvestigationUpdateEntry(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(alertinvestigation.UpdatesColumn), fks...))
@@ -719,10 +719,10 @@ func (_q *AlertInvestigationQuery) loadUpdates(ctx context.Context, query *Alert
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.AlertInvestigationUUID
+		fk := n.AlertInvestigationID
 		node, ok := nodeids[fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "alert_investigation_uuid" returned %v for node %v`, fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "alert_investigation_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}
@@ -739,7 +739,7 @@ func (_q *AlertInvestigationQuery) loadEvents(ctx context.Context, query *AlertI
 		}
 	}
 	if len(query.ctx.Fields) > 0 {
-		query.ctx.AppendFieldOnce(alertinvestigationevent.FieldAlertInvestigationUUID)
+		query.ctx.AppendFieldOnce(alertinvestigationevent.FieldAlertInvestigationID)
 	}
 	query.Where(predicate.AlertInvestigationEvent(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(alertinvestigation.EventsColumn), fks...))
@@ -749,10 +749,10 @@ func (_q *AlertInvestigationQuery) loadEvents(ctx context.Context, query *AlertI
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.AlertInvestigationUUID
+		fk := n.AlertInvestigationID
 		node, ok := nodeids[fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "alert_investigation_uuid" returned %v for node %v`, fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "alert_investigation_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}

@@ -20,10 +20,10 @@ type AlertInvestigationEvent struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
-	// AlertInvestigationUUID holds the value of the "alert_investigation_uuid" field.
-	AlertInvestigationUUID uuid.UUID `json:"alert_investigation_uuid,omitempty"`
+	// AlertInvestigationID holds the value of the "alert_investigation_id" field.
+	AlertInvestigationID uuid.UUID `json:"alert_investigation_id,omitempty"`
 	// EventType holds the value of the "event_type" field.
-	EventType string `json:"event_type,omitempty"`
+	EventType alertinvestigationevent.EventType `json:"event_type,omitempty"`
 	// Reason holds the value of the "reason" field.
 	Reason string `json:"reason,omitempty"`
 	// ActorType holds the value of the "actor_type" field.
@@ -79,7 +79,7 @@ func (*AlertInvestigationEvent) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case alertinvestigationevent.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
-		case alertinvestigationevent.FieldID, alertinvestigationevent.FieldAlertInvestigationUUID:
+		case alertinvestigationevent.FieldID, alertinvestigationevent.FieldAlertInvestigationID:
 			values[i] = new(uuid.UUID)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -102,17 +102,17 @@ func (_m *AlertInvestigationEvent) assignValues(columns []string, values []any) 
 			} else if value != nil {
 				_m.ID = *value
 			}
-		case alertinvestigationevent.FieldAlertInvestigationUUID:
+		case alertinvestigationevent.FieldAlertInvestigationID:
 			if value, ok := values[i].(*uuid.UUID); !ok {
-				return fmt.Errorf("unexpected type %T for field alert_investigation_uuid", values[i])
+				return fmt.Errorf("unexpected type %T for field alert_investigation_id", values[i])
 			} else if value != nil {
-				_m.AlertInvestigationUUID = *value
+				_m.AlertInvestigationID = *value
 			}
 		case alertinvestigationevent.FieldEventType:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field event_type", values[i])
 			} else if value.Valid {
-				_m.EventType = value.String
+				_m.EventType = alertinvestigationevent.EventType(value.String)
 			}
 		case alertinvestigationevent.FieldReason:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -211,11 +211,11 @@ func (_m *AlertInvestigationEvent) String() string {
 	var builder strings.Builder
 	builder.WriteString("AlertInvestigationEvent(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
-	builder.WriteString("alert_investigation_uuid=")
-	builder.WriteString(fmt.Sprintf("%v", _m.AlertInvestigationUUID))
+	builder.WriteString("alert_investigation_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.AlertInvestigationID))
 	builder.WriteString(", ")
 	builder.WriteString("event_type=")
-	builder.WriteString(_m.EventType)
+	builder.WriteString(fmt.Sprintf("%v", _m.EventType))
 	builder.WriteString(", ")
 	builder.WriteString("reason=")
 	builder.WriteString(_m.Reason)

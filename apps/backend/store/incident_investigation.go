@@ -74,6 +74,9 @@ func (s *pgIncidentInvestigationStore) CreateIncidentInvestigation(ctx context.C
 	if record.Status == "" {
 		record.Status = IncidentInvestigationStatusPending
 	}
+	if record.AssigneeType == "" {
+		record.AssigneeType = "agent"
+	}
 	if record.IncidentInvestigationID == "" {
 		record.IncidentInvestigationID = uuid.NewString()
 	}
@@ -85,10 +88,14 @@ func (s *pgIncidentInvestigationStore) CreateIncidentInvestigation(ctx context.C
 	defer rollbackTx(tx)
 
 	if record.IncidentNumber != 0 {
+		activeStatuses := make([]incidentinvestigation.Status, len(activeIncidentInvestigationStatuses))
+		for i, st := range activeIncidentInvestigationStatuses {
+			activeStatuses[i] = incidentinvestigation.Status(st)
+		}
 		active, err := tx.Client().IncidentInvestigation.Query().
 			Where(
 				incidentinvestigation.HasIncidentWith(incident.IncidentNumber(record.IncidentNumber)),
-				incidentinvestigation.StatusIn(activeIncidentInvestigationStatuses...),
+				incidentinvestigation.StatusIn(activeStatuses...),
 			).
 			Exist(ctx)
 		if err != nil {
@@ -101,7 +108,7 @@ func (s *pgIncidentInvestigationStore) CreateIncidentInvestigation(ctx context.C
 
 	b := tx.Client().IncidentInvestigation.Create().
 		SetIncidentInvestigationID(record.IncidentInvestigationID).
-		SetStatus(record.Status).
+		SetStatus(incidentinvestigation.Status(record.Status)).
 		SetAgentID(record.AgentID).
 		SetAgentName(record.AgentName).
 		SetAgentType(record.AgentType).
@@ -145,7 +152,7 @@ func (s *pgIncidentInvestigationStore) CreateIncidentInvestigation(ctx context.C
 		b.SetCompletedAt(*record.CompletedAt)
 	}
 	if record.AssigneeType != "" {
-		b.SetAssigneeType(record.AssigneeType)
+		b.SetAssigneeType(incidentinvestigation.AssigneeType(record.AssigneeType))
 	}
 	if record.AssigneeID != nil {
 		b.SetAssigneeID(*record.AssigneeID)
@@ -180,9 +187,13 @@ func (s *pgIncidentInvestigationStore) GetActiveIncidentInvestigationByIncident(
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
+	activeStatuses := make([]incidentinvestigation.Status, len(activeIncidentInvestigationStatuses))
+	for i, st := range activeIncidentInvestigationStatuses {
+		activeStatuses[i] = incidentinvestigation.Status(st)
+	}
 	return s.getIncidentInvestigationBy(ctx,
 		incidentinvestigation.HasIncidentWith(incident.IncidentNumber(incidentNumber)),
-		incidentinvestigation.StatusIn(activeIncidentInvestigationStatuses...),
+		incidentinvestigation.StatusIn(activeStatuses...),
 	)
 }
 
@@ -238,7 +249,7 @@ func (s *pgIncidentInvestigationStore) UpdateIncidentInvestigationStatus(ctx con
 
 	n, err := s.client.IncidentInvestigation.Update().
 		Where(incidentinvestigation.IncidentInvestigationID(id)).
-		SetStatus(status).
+		SetStatus(incidentinvestigation.Status(status)).
 		SetUpdatedAt(time.Now().UTC()).
 		Save(ctx)
 	if err != nil {
@@ -286,8 +297,8 @@ func (s *pgIncidentInvestigationStore) ClaimPendingIncidentInvestigation(ctx con
 	}
 	now := time.Now().UTC()
 	_, err = s.client.IncidentInvestigation.UpdateOneID(inv.ID).
-		Where(incidentinvestigation.StatusEQ(IncidentInvestigationStatusPending)).
-		SetStatus(IncidentInvestigationStatusAssigned).
+		Where(incidentinvestigation.StatusEQ(incidentinvestigation.Status(IncidentInvestigationStatusPending))).
+		SetStatus(incidentinvestigation.Status(IncidentInvestigationStatusAssigned)).
 		SetAgentID(agentID).
 		SetAgentName(agentName).
 		SetAgentType(agentType).
@@ -305,7 +316,7 @@ func (s *pgIncidentInvestigationStore) ListPendingIncidentInvestigations(ctx con
 	defer cancel()
 
 	invs, err := s.client.IncidentInvestigation.Query().
-		Where(incidentinvestigation.StatusEQ(IncidentInvestigationStatusPending)).
+		Where(incidentinvestigation.StatusEQ(incidentinvestigation.Status(IncidentInvestigationStatusPending))).
 		Order(ent.Asc(incidentinvestigation.FieldCreatedAt)).
 		Limit(int(limit)).
 		All(ctx)
@@ -375,7 +386,7 @@ func (s *pgIncidentInvestigationStore) toIncidentInvestigationRecord(ctx context
 		ID:                         inv.ID,
 		IncidentInvestigationID:    inv.IncidentInvestigationID,
 		IncidentNumber:             incidentNumber,
-		Status:                     inv.Status,
+		Status:                     string(inv.Status),
 		AgentID:                    inv.AgentID,
 		AgentName:                  inv.AgentName,
 		AgentType:                  inv.AgentType,
@@ -394,7 +405,7 @@ func (s *pgIncidentInvestigationStore) toIncidentInvestigationRecord(ctx context
 		CompletedAt:                inv.CompletedAt,
 		StartedAt:                  inv.StartedAt,
 		InvestigatingDurationMs:    inv.InvestigatingDurationMs,
-		AssigneeType:               inv.AssigneeType,
+		AssigneeType:               string(inv.AssigneeType),
 		AssigneeID:                 inv.AssigneeID,
 	}, nil
 }
@@ -406,7 +417,7 @@ func createIncidentInvestigationUpdate(ctx context.Context, client *ent.Client, 
 	}
 
 	b := client.IncidentInvestigationUpdateEntry.Create().
-		SetIncidentInvestigationUUID(incidentInvestigationID).
+		SetIncidentInvestigationID(incidentInvestigationID).
 		SetType(string(update.Type)).
 		SetMessage(update.Message).
 		SetSource(string(update.Source)).
@@ -445,7 +456,7 @@ func (s *pgIncidentInvestigationStore) SetIncidentInvestigationAssignee(ctx cont
 
 	u := s.client.IncidentInvestigation.Update().
 		Where(incidentinvestigation.IncidentInvestigationID(id)).
-		SetAssigneeType(assigneeType).
+		SetAssigneeType(incidentinvestigation.AssigneeType(assigneeType)).
 		SetUpdatedAt(time.Now().UTC())
 
 	if assigneeID != nil {

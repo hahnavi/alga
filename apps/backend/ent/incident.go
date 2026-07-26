@@ -32,15 +32,15 @@ type Incident struct {
 	// Summary holds the value of the "summary" field.
 	Summary string `json:"summary,omitempty"`
 	// Status holds the value of the "status" field.
-	Status string `json:"status,omitempty"`
+	Status incident.Status `json:"status,omitempty"`
 	// Severity holds the value of the "severity" field.
-	Severity string `json:"severity,omitempty"`
+	Severity incident.Severity `json:"severity,omitempty"`
 	// ImpactLevel holds the value of the "impact_level" field.
-	ImpactLevel string `json:"impact_level,omitempty"`
+	ImpactLevel incident.ImpactLevel `json:"impact_level,omitempty"`
 	// Priority holds the value of the "priority" field.
-	Priority string `json:"priority,omitempty"`
+	Priority incident.Priority `json:"priority,omitempty"`
 	// IncidentType holds the value of the "incident_type" field.
-	IncidentType string `json:"incident_type,omitempty"`
+	IncidentType incident.IncidentType `json:"incident_type,omitempty"`
 	// CommanderID holds the value of the "commander_id" field.
 	CommanderID *uuid.UUID `json:"commander_id,omitempty"`
 	// CommunicatorID holds the value of the "communicator_id" field.
@@ -48,9 +48,9 @@ type Incident struct {
 	// OnCallResponderID holds the value of the "on_call_responder_id" field.
 	OnCallResponderID *uuid.UUID `json:"on_call_responder_id,omitempty"`
 	// CommanderAssigneeType holds the value of the "commander_assignee_type" field.
-	CommanderAssigneeType string `json:"commander_assignee_type,omitempty"`
+	CommanderAssigneeType incident.CommanderAssigneeType `json:"commander_assignee_type,omitempty"`
 	// CommunicatorAssigneeType holds the value of the "communicator_assignee_type" field.
-	CommunicatorAssigneeType string `json:"communicator_assignee_type,omitempty"`
+	CommunicatorAssigneeType incident.CommunicatorAssigneeType `json:"communicator_assignee_type,omitempty"`
 	// ServiceID holds the value of the "service_id" field.
 	ServiceID *uuid.UUID `json:"service_id,omitempty"`
 	// EscalationPolicyID holds the value of the "escalation_policy_id" field.
@@ -350,31 +350,31 @@ func (_m *Incident) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
-				_m.Status = value.String
+				_m.Status = incident.Status(value.String)
 			}
 		case incident.FieldSeverity:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field severity", values[i])
 			} else if value.Valid {
-				_m.Severity = value.String
+				_m.Severity = incident.Severity(value.String)
 			}
 		case incident.FieldImpactLevel:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field impact_level", values[i])
 			} else if value.Valid {
-				_m.ImpactLevel = value.String
+				_m.ImpactLevel = incident.ImpactLevel(value.String)
 			}
 		case incident.FieldPriority:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field priority", values[i])
 			} else if value.Valid {
-				_m.Priority = value.String
+				_m.Priority = incident.Priority(value.String)
 			}
 		case incident.FieldIncidentType:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field incident_type", values[i])
 			} else if value.Valid {
-				_m.IncidentType = value.String
+				_m.IncidentType = incident.IncidentType(value.String)
 			}
 		case incident.FieldCommanderID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -401,13 +401,13 @@ func (_m *Incident) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field commander_assignee_type", values[i])
 			} else if value.Valid {
-				_m.CommanderAssigneeType = value.String
+				_m.CommanderAssigneeType = incident.CommanderAssigneeType(value.String)
 			}
 		case incident.FieldCommunicatorAssigneeType:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field communicator_assignee_type", values[i])
 			} else if value.Valid {
-				_m.CommunicatorAssigneeType = value.String
+				_m.CommunicatorAssigneeType = incident.CommunicatorAssigneeType(value.String)
 			}
 		case incident.FieldServiceID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -706,19 +706,19 @@ func (_m *Incident) String() string {
 	builder.WriteString(_m.Summary)
 	builder.WriteString(", ")
 	builder.WriteString("status=")
-	builder.WriteString(_m.Status)
+	builder.WriteString(fmt.Sprintf("%v", _m.Status))
 	builder.WriteString(", ")
 	builder.WriteString("severity=")
-	builder.WriteString(_m.Severity)
+	builder.WriteString(fmt.Sprintf("%v", _m.Severity))
 	builder.WriteString(", ")
 	builder.WriteString("impact_level=")
-	builder.WriteString(_m.ImpactLevel)
+	builder.WriteString(fmt.Sprintf("%v", _m.ImpactLevel))
 	builder.WriteString(", ")
 	builder.WriteString("priority=")
-	builder.WriteString(_m.Priority)
+	builder.WriteString(fmt.Sprintf("%v", _m.Priority))
 	builder.WriteString(", ")
 	builder.WriteString("incident_type=")
-	builder.WriteString(_m.IncidentType)
+	builder.WriteString(fmt.Sprintf("%v", _m.IncidentType))
 	builder.WriteString(", ")
 	if v := _m.CommanderID; v != nil {
 		builder.WriteString("commander_id=")
@@ -736,10 +736,10 @@ func (_m *Incident) String() string {
 	}
 	builder.WriteString(", ")
 	builder.WriteString("commander_assignee_type=")
-	builder.WriteString(_m.CommanderAssigneeType)
+	builder.WriteString(fmt.Sprintf("%v", _m.CommanderAssigneeType))
 	builder.WriteString(", ")
 	builder.WriteString("communicator_assignee_type=")
-	builder.WriteString(_m.CommunicatorAssigneeType)
+	builder.WriteString(fmt.Sprintf("%v", _m.CommunicatorAssigneeType))
 	builder.WriteString(", ")
 	if v := _m.ServiceID; v != nil {
 		builder.WriteString("service_id=")

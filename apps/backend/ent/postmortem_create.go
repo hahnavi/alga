@@ -45,13 +45,13 @@ func (_c *PostMortemCreate) SetNillableTitle(v *string) *PostMortemCreate {
 }
 
 // SetStatus sets the "status" field.
-func (_c *PostMortemCreate) SetStatus(v string) *PostMortemCreate {
+func (_c *PostMortemCreate) SetStatus(v postmortem.Status) *PostMortemCreate {
 	_c.mutation.SetStatus(v)
 	return _c
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_c *PostMortemCreate) SetNillableStatus(v *string) *PostMortemCreate {
+func (_c *PostMortemCreate) SetNillableStatus(v *postmortem.Status) *PostMortemCreate {
 	if v != nil {
 		_c.SetStatus(*v)
 	}
@@ -377,6 +377,11 @@ func (_c *PostMortemCreate) check() error {
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "PostMortem.status"`)}
 	}
+	if v, ok := _c.mutation.Status(); ok {
+		if err := postmortem.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "PostMortem.status": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Summary(); !ok {
 		return &ValidationError{Name: "summary", err: errors.New(`ent: missing required field "PostMortem.summary"`)}
 	}
@@ -450,7 +455,7 @@ func (_c *PostMortemCreate) createSpec() (*PostMortem, *sqlgraph.CreateSpec) {
 		_node.Title = value
 	}
 	if value, ok := _c.mutation.Status(); ok {
-		_spec.SetField(postmortem.FieldStatus, field.TypeString, value)
+		_spec.SetField(postmortem.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
 	}
 	if value, ok := _c.mutation.Summary(); ok {

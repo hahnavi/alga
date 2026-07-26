@@ -62,13 +62,13 @@ func (_u *PostMortemUpdate) SetNillableTitle(v *string) *PostMortemUpdate {
 }
 
 // SetStatus sets the "status" field.
-func (_u *PostMortemUpdate) SetStatus(v string) *PostMortemUpdate {
+func (_u *PostMortemUpdate) SetStatus(v postmortem.Status) *PostMortemUpdate {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *PostMortemUpdate) SetNillableStatus(v *string) *PostMortemUpdate {
+func (_u *PostMortemUpdate) SetNillableStatus(v *postmortem.Status) *PostMortemUpdate {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -384,6 +384,11 @@ func (_u *PostMortemUpdate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *PostMortemUpdate) check() error {
+	if v, ok := _u.mutation.Status(); ok {
+		if err := postmortem.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "PostMortem.status": %w`, err)}
+		}
+	}
 	if _u.mutation.IncidentCleared() && len(_u.mutation.IncidentIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "PostMortem.incident"`)
 	}
@@ -406,7 +411,7 @@ func (_u *PostMortemUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 		_spec.SetField(postmortem.FieldTitle, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(postmortem.FieldStatus, field.TypeString, value)
+		_spec.SetField(postmortem.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Summary(); ok {
 		_spec.SetField(postmortem.FieldSummary, field.TypeString, value)
@@ -618,13 +623,13 @@ func (_u *PostMortemUpdateOne) SetNillableTitle(v *string) *PostMortemUpdateOne 
 }
 
 // SetStatus sets the "status" field.
-func (_u *PostMortemUpdateOne) SetStatus(v string) *PostMortemUpdateOne {
+func (_u *PostMortemUpdateOne) SetStatus(v postmortem.Status) *PostMortemUpdateOne {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *PostMortemUpdateOne) SetNillableStatus(v *string) *PostMortemUpdateOne {
+func (_u *PostMortemUpdateOne) SetNillableStatus(v *postmortem.Status) *PostMortemUpdateOne {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -953,6 +958,11 @@ func (_u *PostMortemUpdateOne) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *PostMortemUpdateOne) check() error {
+	if v, ok := _u.mutation.Status(); ok {
+		if err := postmortem.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "PostMortem.status": %w`, err)}
+		}
+	}
 	if _u.mutation.IncidentCleared() && len(_u.mutation.IncidentIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "PostMortem.incident"`)
 	}
@@ -992,7 +1002,7 @@ func (_u *PostMortemUpdateOne) sqlSave(ctx context.Context) (_node *PostMortem, 
 		_spec.SetField(postmortem.FieldTitle, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(postmortem.FieldStatus, field.TypeString, value)
+		_spec.SetField(postmortem.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Summary(); ok {
 		_spec.SetField(postmortem.FieldSummary, field.TypeString, value)

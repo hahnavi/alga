@@ -372,13 +372,13 @@ func (_c *IntegrationCreate) SetNillableTelnyxTtsAPIKeyRef(v *string) *Integrati
 }
 
 // SetVoiceProvider sets the "voice_provider" field.
-func (_c *IntegrationCreate) SetVoiceProvider(v string) *IntegrationCreate {
+func (_c *IntegrationCreate) SetVoiceProvider(v integration.VoiceProvider) *IntegrationCreate {
 	_c.mutation.SetVoiceProvider(v)
 	return _c
 }
 
 // SetNillableVoiceProvider sets the "voice_provider" field if the given value is not nil.
-func (_c *IntegrationCreate) SetNillableVoiceProvider(v *string) *IntegrationCreate {
+func (_c *IntegrationCreate) SetNillableVoiceProvider(v *integration.VoiceProvider) *IntegrationCreate {
 	if v != nil {
 		_c.SetVoiceProvider(*v)
 	}
@@ -612,6 +612,11 @@ func (_c *IntegrationCreate) check() error {
 	if _, ok := _c.mutation.TelnyxDisabled(); !ok {
 		return &ValidationError{Name: "telnyx_disabled", err: errors.New(`ent: missing required field "Integration.telnyx_disabled"`)}
 	}
+	if v, ok := _c.mutation.VoiceProvider(); ok {
+		if err := integration.VoiceProviderValidator(v); err != nil {
+			return &ValidationError{Name: "voice_provider", err: fmt.Errorf(`ent: validator failed for field "Integration.voice_provider": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "Integration.updated_at"`)}
 	}
@@ -751,7 +756,7 @@ func (_c *IntegrationCreate) createSpec() (*Integration, *sqlgraph.CreateSpec) {
 		_node.TelnyxTtsAPIKeyRef = value
 	}
 	if value, ok := _c.mutation.VoiceProvider(); ok {
-		_spec.SetField(integration.FieldVoiceProvider, field.TypeString, value)
+		_spec.SetField(integration.FieldVoiceProvider, field.TypeEnum, value)
 		_node.VoiceProvider = value
 	}
 	if value, ok := _c.mutation.HermesPlatformURL(); ok {

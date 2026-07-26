@@ -3,6 +3,7 @@
 package triageresult
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -137,22 +138,10 @@ var (
 	CorrelationKeyValidator func(string) error
 	// DefaultAlertCount holds the default value on creation for the "alert_count" field.
 	DefaultAlertCount int
-	// DefaultSeverityInput holds the default value on creation for the "severity_input" field.
-	DefaultSeverityInput string
-	// DecisionValidator is a validator for the "decision" field. It is called by the builders before save.
-	DecisionValidator func(string) error
 	// DefaultConfidence holds the default value on creation for the "confidence" field.
 	DefaultConfidence float64
-	// DefaultSeverityClassified holds the default value on creation for the "severity_classified" field.
-	DefaultSeverityClassified string
-	// DefaultCategory holds the default value on creation for the "category" field.
-	DefaultCategory string
 	// DefaultReasoning holds the default value on creation for the "reasoning" field.
 	DefaultReasoning string
-	// DefaultOutcome holds the default value on creation for the "outcome" field.
-	DefaultOutcome string
-	// DefaultOverriddenTo holds the default value on creation for the "overridden_to" field.
-	DefaultOverriddenTo string
 	// DefaultModelUsed holds the default value on creation for the "model_used" field.
 	DefaultModelUsed string
 	// DefaultTriageDurationMs holds the default value on creation for the "triage_duration_ms" field.
@@ -170,6 +159,163 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// SeverityInput defines the type for the "severity_input" enum field.
+type SeverityInput string
+
+// SeverityInput values.
+const (
+	SeverityInputCritical SeverityInput = "critical"
+	SeverityInputHigh     SeverityInput = "high"
+	SeverityInputWarning  SeverityInput = "warning"
+	SeverityInputInfo     SeverityInput = "info"
+	SeverityInputLow      SeverityInput = "low"
+)
+
+func (si SeverityInput) String() string {
+	return string(si)
+}
+
+// SeverityInputValidator is a validator for the "severity_input" field enum values. It is called by the builders before save.
+func SeverityInputValidator(si SeverityInput) error {
+	switch si {
+	case SeverityInputCritical, SeverityInputHigh, SeverityInputWarning, SeverityInputInfo, SeverityInputLow:
+		return nil
+	default:
+		return fmt.Errorf("triageresult: invalid enum value for severity_input field: %q", si)
+	}
+}
+
+// Decision defines the type for the "decision" enum field.
+type Decision string
+
+// Decision values.
+const (
+	DecisionInvestigate Decision = "investigate"
+	DecisionAutoResolve Decision = "auto_resolve"
+	DecisionSuppress    Decision = "suppress"
+	DecisionEscalate    Decision = "escalate"
+	DecisionEnrichOnly  Decision = "enrich_only"
+)
+
+func (d Decision) String() string {
+	return string(d)
+}
+
+// DecisionValidator is a validator for the "decision" field enum values. It is called by the builders before save.
+func DecisionValidator(d Decision) error {
+	switch d {
+	case DecisionInvestigate, DecisionAutoResolve, DecisionSuppress, DecisionEscalate, DecisionEnrichOnly:
+		return nil
+	default:
+		return fmt.Errorf("triageresult: invalid enum value for decision field: %q", d)
+	}
+}
+
+// SeverityClassified defines the type for the "severity_classified" enum field.
+type SeverityClassified string
+
+// SeverityClassified values.
+const (
+	SeverityClassifiedCritical SeverityClassified = "critical"
+	SeverityClassifiedHigh     SeverityClassified = "high"
+	SeverityClassifiedWarning  SeverityClassified = "warning"
+	SeverityClassifiedInfo     SeverityClassified = "info"
+	SeverityClassifiedLow      SeverityClassified = "low"
+)
+
+func (sc SeverityClassified) String() string {
+	return string(sc)
+}
+
+// SeverityClassifiedValidator is a validator for the "severity_classified" field enum values. It is called by the builders before save.
+func SeverityClassifiedValidator(sc SeverityClassified) error {
+	switch sc {
+	case SeverityClassifiedCritical, SeverityClassifiedHigh, SeverityClassifiedWarning, SeverityClassifiedInfo, SeverityClassifiedLow:
+		return nil
+	default:
+		return fmt.Errorf("triageresult: invalid enum value for severity_classified field: %q", sc)
+	}
+}
+
+// Category defines the type for the "category" enum field.
+type Category string
+
+// Category values.
+const (
+	CategoryInfrastructure Category = "infrastructure"
+	CategoryApplication    Category = "application"
+	CategoryNetwork        Category = "network"
+	CategorySecurity       Category = "security"
+	CategoryOther          Category = "other"
+)
+
+func (c Category) String() string {
+	return string(c)
+}
+
+// CategoryValidator is a validator for the "category" field enum values. It is called by the builders before save.
+func CategoryValidator(c Category) error {
+	switch c {
+	case CategoryInfrastructure, CategoryApplication, CategoryNetwork, CategorySecurity, CategoryOther:
+		return nil
+	default:
+		return fmt.Errorf("triageresult: invalid enum value for category field: %q", c)
+	}
+}
+
+// Outcome defines the type for the "outcome" enum field.
+type Outcome string
+
+// OutcomePending is the default value of the Outcome enum.
+const DefaultOutcome = OutcomePending
+
+// Outcome values.
+const (
+	OutcomePending    Outcome = "pending"
+	OutcomeConfirmed  Outcome = "confirmed"
+	OutcomeOverridden Outcome = "overridden"
+)
+
+func (o Outcome) String() string {
+	return string(o)
+}
+
+// OutcomeValidator is a validator for the "outcome" field enum values. It is called by the builders before save.
+func OutcomeValidator(o Outcome) error {
+	switch o {
+	case OutcomePending, OutcomeConfirmed, OutcomeOverridden:
+		return nil
+	default:
+		return fmt.Errorf("triageresult: invalid enum value for outcome field: %q", o)
+	}
+}
+
+// OverriddenTo defines the type for the "overridden_to" enum field.
+type OverriddenTo string
+
+// OverriddenTo values.
+const (
+	OverriddenToInvestigate OverriddenTo = "investigate"
+	OverriddenToAutoResolve OverriddenTo = "auto_resolve"
+	OverriddenToSuppress    OverriddenTo = "suppress"
+	OverriddenToEscalate    OverriddenTo = "escalate"
+	OverriddenToEnrichOnly  OverriddenTo = "enrich_only"
+)
+
+func (ot OverriddenTo) String() string {
+	return string(ot)
+}
+
+// OverriddenToValidator is a validator for the "overridden_to" field enum values. It is called by the builders before save.
+func OverriddenToValidator(ot OverriddenTo) error {
+	switch ot {
+	case OverriddenToInvestigate, OverriddenToAutoResolve, OverriddenToSuppress, OverriddenToEscalate, OverriddenToEnrichOnly:
+		return nil
+	default:
+		return fmt.Errorf("triageresult: invalid enum value for overridden_to field: %q", ot)
+	}
+}
 
 // OrderOption defines the ordering options for the TriageResult queries.
 type OrderOption func(*sql.Selector)

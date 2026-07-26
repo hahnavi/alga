@@ -3,6 +3,7 @@
 package coordinationtask
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -131,10 +132,6 @@ func ValidColumn(column string) bool {
 }
 
 var (
-	// DefaultKind holds the default value on creation for the "kind" field.
-	DefaultKind string
-	// DefaultAssigneeRole holds the default value on creation for the "assignee_role" field.
-	DefaultAssigneeRole string
 	// DefaultAssigneeAgentID holds the default value on creation for the "assignee_agent_id" field.
 	DefaultAssigneeAgentID string
 	// DefaultAssigneeAgentName holds the default value on creation for the "assignee_agent_name" field.
@@ -143,8 +140,6 @@ var (
 	GoalValidator func(string) error
 	// DefaultInputContext holds the default value on creation for the "input_context" field.
 	DefaultInputContext map[string]interface{}
-	// DefaultStatus holds the default value on creation for the "status" field.
-	DefaultStatus string
 	// DefaultPriority holds the default value on creation for the "priority" field.
 	DefaultPriority int
 	// PriorityValidator is a validator for the "priority" field. It is called by the builders before save.
@@ -168,6 +163,92 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// Kind defines the type for the "kind" enum field.
+type Kind string
+
+// KindInvestigate is the default value of the Kind enum.
+const DefaultKind = KindInvestigate
+
+// Kind values.
+const (
+	KindInvestigate Kind = "investigate"
+	KindCommunicate Kind = "communicate"
+	KindVerify      Kind = "verify"
+	KindMitigate    Kind = "mitigate"
+	KindSynthesize  Kind = "synthesize"
+)
+
+func (k Kind) String() string {
+	return string(k)
+}
+
+// KindValidator is a validator for the "kind" field enum values. It is called by the builders before save.
+func KindValidator(k Kind) error {
+	switch k {
+	case KindInvestigate, KindCommunicate, KindVerify, KindMitigate, KindSynthesize:
+		return nil
+	default:
+		return fmt.Errorf("coordinationtask: invalid enum value for kind field: %q", k)
+	}
+}
+
+// AssigneeRole defines the type for the "assignee_role" enum field.
+type AssigneeRole string
+
+// AssigneeRoleResponder is the default value of the AssigneeRole enum.
+const DefaultAssigneeRole = AssigneeRoleResponder
+
+// AssigneeRole values.
+const (
+	AssigneeRoleCommander    AssigneeRole = "commander"
+	AssigneeRoleCommunicator AssigneeRole = "communicator"
+	AssigneeRoleResponder    AssigneeRole = "responder"
+)
+
+func (ar AssigneeRole) String() string {
+	return string(ar)
+}
+
+// AssigneeRoleValidator is a validator for the "assignee_role" field enum values. It is called by the builders before save.
+func AssigneeRoleValidator(ar AssigneeRole) error {
+	switch ar {
+	case AssigneeRoleCommander, AssigneeRoleCommunicator, AssigneeRoleResponder:
+		return nil
+	default:
+		return fmt.Errorf("coordinationtask: invalid enum value for assignee_role field: %q", ar)
+	}
+}
+
+// Status defines the type for the "status" enum field.
+type Status string
+
+// StatusPending is the default value of the Status enum.
+const DefaultStatus = StatusPending
+
+// Status values.
+const (
+	StatusPending    Status = "pending"
+	StatusAssigned   Status = "assigned"
+	StatusInProgress Status = "in_progress"
+	StatusComplete   Status = "complete"
+	StatusFailed     Status = "failed"
+	StatusCancelled  Status = "cancelled"
+)
+
+func (s Status) String() string {
+	return string(s)
+}
+
+// StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
+func StatusValidator(s Status) error {
+	switch s {
+	case StatusPending, StatusAssigned, StatusInProgress, StatusComplete, StatusFailed, StatusCancelled:
+		return nil
+	default:
+		return fmt.Errorf("coordinationtask: invalid enum value for status field: %q", s)
+	}
+}
 
 // OrderOption defines the ordering options for the CoordinationTask queries.
 type OrderOption func(*sql.Selector)

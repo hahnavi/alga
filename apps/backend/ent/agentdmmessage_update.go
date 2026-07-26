@@ -45,13 +45,13 @@ func (_u *AgentDMMessageUpdate) SetNillableChatID(v *string) *AgentDMMessageUpda
 }
 
 // SetRole sets the "role" field.
-func (_u *AgentDMMessageUpdate) SetRole(v string) *AgentDMMessageUpdate {
+func (_u *AgentDMMessageUpdate) SetRole(v agentdmmessage.Role) *AgentDMMessageUpdate {
 	_u.mutation.SetRole(v)
 	return _u
 }
 
 // SetNillableRole sets the "role" field if the given value is not nil.
-func (_u *AgentDMMessageUpdate) SetNillableRole(v *string) *AgentDMMessageUpdate {
+func (_u *AgentDMMessageUpdate) SetNillableRole(v *agentdmmessage.Role) *AgentDMMessageUpdate {
 	if v != nil {
 		_u.SetRole(*v)
 	}
@@ -246,7 +246,7 @@ func (_u *AgentDMMessageUpdate) sqlSave(ctx context.Context) (_node int, err err
 		_spec.SetField(agentdmmessage.FieldChatID, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Role(); ok {
-		_spec.SetField(agentdmmessage.FieldRole, field.TypeString, value)
+		_spec.SetField(agentdmmessage.FieldRole, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Body(); ok {
 		_spec.SetField(agentdmmessage.FieldBody, field.TypeString, value)
@@ -336,13 +336,13 @@ func (_u *AgentDMMessageUpdateOne) SetNillableChatID(v *string) *AgentDMMessageU
 }
 
 // SetRole sets the "role" field.
-func (_u *AgentDMMessageUpdateOne) SetRole(v string) *AgentDMMessageUpdateOne {
+func (_u *AgentDMMessageUpdateOne) SetRole(v agentdmmessage.Role) *AgentDMMessageUpdateOne {
 	_u.mutation.SetRole(v)
 	return _u
 }
 
 // SetNillableRole sets the "role" field if the given value is not nil.
-func (_u *AgentDMMessageUpdateOne) SetNillableRole(v *string) *AgentDMMessageUpdateOne {
+func (_u *AgentDMMessageUpdateOne) SetNillableRole(v *agentdmmessage.Role) *AgentDMMessageUpdateOne {
 	if v != nil {
 		_u.SetRole(*v)
 	}
@@ -567,7 +567,7 @@ func (_u *AgentDMMessageUpdateOne) sqlSave(ctx context.Context) (_node *AgentDMM
 		_spec.SetField(agentdmmessage.FieldChatID, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Role(); ok {
-		_spec.SetField(agentdmmessage.FieldRole, field.TypeString, value)
+		_spec.SetField(agentdmmessage.FieldRole, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Body(); ok {
 		_spec.SetField(agentdmmessage.FieldBody, field.TypeString, value)

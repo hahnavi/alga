@@ -47,13 +47,13 @@ func (_c *IncidentInvestigationCreate) SetNillableIncidentID(v *uuid.UUID) *Inci
 }
 
 // SetStatus sets the "status" field.
-func (_c *IncidentInvestigationCreate) SetStatus(v string) *IncidentInvestigationCreate {
+func (_c *IncidentInvestigationCreate) SetStatus(v incidentinvestigation.Status) *IncidentInvestigationCreate {
 	_c.mutation.SetStatus(v)
 	return _c
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_c *IncidentInvestigationCreate) SetNillableStatus(v *string) *IncidentInvestigationCreate {
+func (_c *IncidentInvestigationCreate) SetNillableStatus(v *incidentinvestigation.Status) *IncidentInvestigationCreate {
 	if v != nil {
 		_c.SetStatus(*v)
 	}
@@ -289,13 +289,13 @@ func (_c *IncidentInvestigationCreate) SetNillableParentInvestigationID(v *uuid.
 }
 
 // SetAssigneeType sets the "assignee_type" field.
-func (_c *IncidentInvestigationCreate) SetAssigneeType(v string) *IncidentInvestigationCreate {
+func (_c *IncidentInvestigationCreate) SetAssigneeType(v incidentinvestigation.AssigneeType) *IncidentInvestigationCreate {
 	_c.mutation.SetAssigneeType(v)
 	return _c
 }
 
 // SetNillableAssigneeType sets the "assignee_type" field if the given value is not nil.
-func (_c *IncidentInvestigationCreate) SetNillableAssigneeType(v *string) *IncidentInvestigationCreate {
+func (_c *IncidentInvestigationCreate) SetNillableAssigneeType(v *incidentinvestigation.AssigneeType) *IncidentInvestigationCreate {
 	if v != nil {
 		_c.SetAssigneeType(*v)
 	}
@@ -511,6 +511,11 @@ func (_c *IncidentInvestigationCreate) check() error {
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "IncidentInvestigation.status"`)}
 	}
+	if v, ok := _c.mutation.Status(); ok {
+		if err := incidentinvestigation.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "IncidentInvestigation.status": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "IncidentInvestigation.created_at"`)}
 	}
@@ -519,6 +524,11 @@ func (_c *IncidentInvestigationCreate) check() error {
 	}
 	if _, ok := _c.mutation.AssigneeType(); !ok {
 		return &ValidationError{Name: "assignee_type", err: errors.New(`ent: missing required field "IncidentInvestigation.assignee_type"`)}
+	}
+	if v, ok := _c.mutation.AssigneeType(); ok {
+		if err := incidentinvestigation.AssigneeTypeValidator(v); err != nil {
+			return &ValidationError{Name: "assignee_type", err: fmt.Errorf(`ent: validator failed for field "IncidentInvestigation.assignee_type": %w`, err)}
+		}
 	}
 	return nil
 }
@@ -560,7 +570,7 @@ func (_c *IncidentInvestigationCreate) createSpec() (*IncidentInvestigation, *sq
 		_node.IncidentInvestigationID = value
 	}
 	if value, ok := _c.mutation.Status(); ok {
-		_spec.SetField(incidentinvestigation.FieldStatus, field.TypeString, value)
+		_spec.SetField(incidentinvestigation.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
 	}
 	if value, ok := _c.mutation.AgentID(); ok {
@@ -628,7 +638,7 @@ func (_c *IncidentInvestigationCreate) createSpec() (*IncidentInvestigation, *sq
 		_node.InvestigatingDurationMs = value
 	}
 	if value, ok := _c.mutation.AssigneeType(); ok {
-		_spec.SetField(incidentinvestigation.FieldAssigneeType, field.TypeString, value)
+		_spec.SetField(incidentinvestigation.FieldAssigneeType, field.TypeEnum, value)
 		_node.AssigneeType = value
 	}
 	if value, ok := _c.mutation.AssigneeID(); ok {

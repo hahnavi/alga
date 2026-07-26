@@ -172,13 +172,13 @@ func (_u *ServiceUpdate) AddSLAResolveMinutes(v int) *ServiceUpdate {
 }
 
 // SetStatus sets the "status" field.
-func (_u *ServiceUpdate) SetStatus(v string) *ServiceUpdate {
+func (_u *ServiceUpdate) SetStatus(v service.Status) *ServiceUpdate {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *ServiceUpdate) SetNillableStatus(v *string) *ServiceUpdate {
+func (_u *ServiceUpdate) SetNillableStatus(v *service.Status) *ServiceUpdate {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -429,6 +429,11 @@ func (_u *ServiceUpdate) check() error {
 			return &ValidationError{Name: "sla_resolve_minutes", err: fmt.Errorf(`ent: validator failed for field "Service.sla_resolve_minutes": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := service.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Service.status": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -474,7 +479,7 @@ func (_u *ServiceUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		_spec.AddField(service.FieldSLAResolveMinutes, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(service.FieldStatus, field.TypeString, value)
+		_spec.SetField(service.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.CreatedAt(); ok {
 		_spec.SetField(service.FieldCreatedAt, field.TypeTime, value)
@@ -877,13 +882,13 @@ func (_u *ServiceUpdateOne) AddSLAResolveMinutes(v int) *ServiceUpdateOne {
 }
 
 // SetStatus sets the "status" field.
-func (_u *ServiceUpdateOne) SetStatus(v string) *ServiceUpdateOne {
+func (_u *ServiceUpdateOne) SetStatus(v service.Status) *ServiceUpdateOne {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *ServiceUpdateOne) SetNillableStatus(v *string) *ServiceUpdateOne {
+func (_u *ServiceUpdateOne) SetNillableStatus(v *service.Status) *ServiceUpdateOne {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -1147,6 +1152,11 @@ func (_u *ServiceUpdateOne) check() error {
 			return &ValidationError{Name: "sla_resolve_minutes", err: fmt.Errorf(`ent: validator failed for field "Service.sla_resolve_minutes": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := service.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Service.status": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -1209,7 +1219,7 @@ func (_u *ServiceUpdateOne) sqlSave(ctx context.Context) (_node *Service, err er
 		_spec.AddField(service.FieldSLAResolveMinutes, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(service.FieldStatus, field.TypeString, value)
+		_spec.SetField(service.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.CreatedAt(); ok {
 		_spec.SetField(service.FieldCreatedAt, field.TypeTime, value)

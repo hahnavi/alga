@@ -49,13 +49,13 @@ func (_c *TriageRuleCreate) SetConditions(v []map[string]interface{}) *TriageRul
 }
 
 // SetMatchMode sets the "match_mode" field.
-func (_c *TriageRuleCreate) SetMatchMode(v string) *TriageRuleCreate {
+func (_c *TriageRuleCreate) SetMatchMode(v triagerule.MatchMode) *TriageRuleCreate {
 	_c.mutation.SetMatchMode(v)
 	return _c
 }
 
 // SetNillableMatchMode sets the "match_mode" field if the given value is not nil.
-func (_c *TriageRuleCreate) SetNillableMatchMode(v *string) *TriageRuleCreate {
+func (_c *TriageRuleCreate) SetNillableMatchMode(v *triagerule.MatchMode) *TriageRuleCreate {
 	if v != nil {
 		_c.SetMatchMode(*v)
 	}
@@ -63,19 +63,19 @@ func (_c *TriageRuleCreate) SetNillableMatchMode(v *string) *TriageRuleCreate {
 }
 
 // SetDecision sets the "decision" field.
-func (_c *TriageRuleCreate) SetDecision(v string) *TriageRuleCreate {
+func (_c *TriageRuleCreate) SetDecision(v triagerule.Decision) *TriageRuleCreate {
 	_c.mutation.SetDecision(v)
 	return _c
 }
 
 // SetSeverity sets the "severity" field.
-func (_c *TriageRuleCreate) SetSeverity(v string) *TriageRuleCreate {
+func (_c *TriageRuleCreate) SetSeverity(v triagerule.Severity) *TriageRuleCreate {
 	_c.mutation.SetSeverity(v)
 	return _c
 }
 
 // SetNillableSeverity sets the "severity" field if the given value is not nil.
-func (_c *TriageRuleCreate) SetNillableSeverity(v *string) *TriageRuleCreate {
+func (_c *TriageRuleCreate) SetNillableSeverity(v *triagerule.Severity) *TriageRuleCreate {
 	if v != nil {
 		_c.SetSeverity(*v)
 	}
@@ -83,13 +83,13 @@ func (_c *TriageRuleCreate) SetNillableSeverity(v *string) *TriageRuleCreate {
 }
 
 // SetCategory sets the "category" field.
-func (_c *TriageRuleCreate) SetCategory(v string) *TriageRuleCreate {
+func (_c *TriageRuleCreate) SetCategory(v triagerule.Category) *TriageRuleCreate {
 	_c.mutation.SetCategory(v)
 	return _c
 }
 
 // SetNillableCategory sets the "category" field if the given value is not nil.
-func (_c *TriageRuleCreate) SetNillableCategory(v *string) *TriageRuleCreate {
+func (_c *TriageRuleCreate) SetNillableCategory(v *triagerule.Category) *TriageRuleCreate {
 	if v != nil {
 		_c.SetCategory(*v)
 	}
@@ -248,14 +248,6 @@ func (_c *TriageRuleCreate) defaults() {
 		v := triagerule.DefaultMatchMode
 		_c.mutation.SetMatchMode(v)
 	}
-	if _, ok := _c.mutation.Severity(); !ok {
-		v := triagerule.DefaultSeverity
-		_c.mutation.SetSeverity(v)
-	}
-	if _, ok := _c.mutation.Category(); !ok {
-		v := triagerule.DefaultCategory
-		_c.mutation.SetCategory(v)
-	}
 	if _, ok := _c.mutation.Priority(); !ok {
 		v := triagerule.DefaultPriority
 		_c.mutation.SetPriority(v)
@@ -291,12 +283,27 @@ func (_c *TriageRuleCreate) check() error {
 	if _, ok := _c.mutation.MatchMode(); !ok {
 		return &ValidationError{Name: "match_mode", err: errors.New(`ent: missing required field "TriageRule.match_mode"`)}
 	}
+	if v, ok := _c.mutation.MatchMode(); ok {
+		if err := triagerule.MatchModeValidator(v); err != nil {
+			return &ValidationError{Name: "match_mode", err: fmt.Errorf(`ent: validator failed for field "TriageRule.match_mode": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Decision(); !ok {
 		return &ValidationError{Name: "decision", err: errors.New(`ent: missing required field "TriageRule.decision"`)}
 	}
 	if v, ok := _c.mutation.Decision(); ok {
 		if err := triagerule.DecisionValidator(v); err != nil {
 			return &ValidationError{Name: "decision", err: fmt.Errorf(`ent: validator failed for field "TriageRule.decision": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.Severity(); ok {
+		if err := triagerule.SeverityValidator(v); err != nil {
+			return &ValidationError{Name: "severity", err: fmt.Errorf(`ent: validator failed for field "TriageRule.severity": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.Category(); ok {
+		if err := triagerule.CategoryValidator(v); err != nil {
+			return &ValidationError{Name: "category", err: fmt.Errorf(`ent: validator failed for field "TriageRule.category": %w`, err)}
 		}
 	}
 	if _, ok := _c.mutation.Priority(); !ok {
@@ -364,20 +371,20 @@ func (_c *TriageRuleCreate) createSpec() (*TriageRule, *sqlgraph.CreateSpec) {
 		_node.Conditions = value
 	}
 	if value, ok := _c.mutation.MatchMode(); ok {
-		_spec.SetField(triagerule.FieldMatchMode, field.TypeString, value)
+		_spec.SetField(triagerule.FieldMatchMode, field.TypeEnum, value)
 		_node.MatchMode = value
 	}
 	if value, ok := _c.mutation.Decision(); ok {
-		_spec.SetField(triagerule.FieldDecision, field.TypeString, value)
+		_spec.SetField(triagerule.FieldDecision, field.TypeEnum, value)
 		_node.Decision = value
 	}
 	if value, ok := _c.mutation.Severity(); ok {
-		_spec.SetField(triagerule.FieldSeverity, field.TypeString, value)
-		_node.Severity = value
+		_spec.SetField(triagerule.FieldSeverity, field.TypeEnum, value)
+		_node.Severity = &value
 	}
 	if value, ok := _c.mutation.Category(); ok {
-		_spec.SetField(triagerule.FieldCategory, field.TypeString, value)
-		_node.Category = value
+		_spec.SetField(triagerule.FieldCategory, field.TypeEnum, value)
+		_node.Category = &value
 	}
 	if value, ok := _c.mutation.Enrichment(); ok {
 		_spec.SetField(triagerule.FieldEnrichment, field.TypeJSON, value)

@@ -64,13 +64,13 @@ func (_u *NotificationDeliveryLogUpdate) ClearIncidentID() *NotificationDelivery
 }
 
 // SetNotificationType sets the "notification_type" field.
-func (_u *NotificationDeliveryLogUpdate) SetNotificationType(v string) *NotificationDeliveryLogUpdate {
+func (_u *NotificationDeliveryLogUpdate) SetNotificationType(v notificationdeliverylog.NotificationType) *NotificationDeliveryLogUpdate {
 	_u.mutation.SetNotificationType(v)
 	return _u
 }
 
 // SetNillableNotificationType sets the "notification_type" field if the given value is not nil.
-func (_u *NotificationDeliveryLogUpdate) SetNillableNotificationType(v *string) *NotificationDeliveryLogUpdate {
+func (_u *NotificationDeliveryLogUpdate) SetNillableNotificationType(v *notificationdeliverylog.NotificationType) *NotificationDeliveryLogUpdate {
 	if v != nil {
 		_u.SetNotificationType(*v)
 	}
@@ -78,13 +78,13 @@ func (_u *NotificationDeliveryLogUpdate) SetNillableNotificationType(v *string) 
 }
 
 // SetChannel sets the "channel" field.
-func (_u *NotificationDeliveryLogUpdate) SetChannel(v string) *NotificationDeliveryLogUpdate {
+func (_u *NotificationDeliveryLogUpdate) SetChannel(v notificationdeliverylog.Channel) *NotificationDeliveryLogUpdate {
 	_u.mutation.SetChannel(v)
 	return _u
 }
 
 // SetNillableChannel sets the "channel" field if the given value is not nil.
-func (_u *NotificationDeliveryLogUpdate) SetNillableChannel(v *string) *NotificationDeliveryLogUpdate {
+func (_u *NotificationDeliveryLogUpdate) SetNillableChannel(v *notificationdeliverylog.Channel) *NotificationDeliveryLogUpdate {
 	if v != nil {
 		_u.SetChannel(*v)
 	}
@@ -92,13 +92,13 @@ func (_u *NotificationDeliveryLogUpdate) SetNillableChannel(v *string) *Notifica
 }
 
 // SetStatus sets the "status" field.
-func (_u *NotificationDeliveryLogUpdate) SetStatus(v string) *NotificationDeliveryLogUpdate {
+func (_u *NotificationDeliveryLogUpdate) SetStatus(v notificationdeliverylog.Status) *NotificationDeliveryLogUpdate {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *NotificationDeliveryLogUpdate) SetNillableStatus(v *string) *NotificationDeliveryLogUpdate {
+func (_u *NotificationDeliveryLogUpdate) SetNillableStatus(v *notificationdeliverylog.Status) *NotificationDeliveryLogUpdate {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -183,6 +183,11 @@ func (_u *NotificationDeliveryLogUpdate) check() error {
 			return &ValidationError{Name: "channel", err: fmt.Errorf(`ent: validator failed for field "NotificationDeliveryLog.channel": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := notificationdeliverylog.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "NotificationDeliveryLog.status": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -208,13 +213,13 @@ func (_u *NotificationDeliveryLogUpdate) sqlSave(ctx context.Context) (_node int
 		_spec.ClearField(notificationdeliverylog.FieldIncidentID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.NotificationType(); ok {
-		_spec.SetField(notificationdeliverylog.FieldNotificationType, field.TypeString, value)
+		_spec.SetField(notificationdeliverylog.FieldNotificationType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Channel(); ok {
-		_spec.SetField(notificationdeliverylog.FieldChannel, field.TypeString, value)
+		_spec.SetField(notificationdeliverylog.FieldChannel, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(notificationdeliverylog.FieldStatus, field.TypeString, value)
+		_spec.SetField(notificationdeliverylog.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.ErrorMessage(); ok {
 		_spec.SetField(notificationdeliverylog.FieldErrorMessage, field.TypeString, value)
@@ -280,13 +285,13 @@ func (_u *NotificationDeliveryLogUpdateOne) ClearIncidentID() *NotificationDeliv
 }
 
 // SetNotificationType sets the "notification_type" field.
-func (_u *NotificationDeliveryLogUpdateOne) SetNotificationType(v string) *NotificationDeliveryLogUpdateOne {
+func (_u *NotificationDeliveryLogUpdateOne) SetNotificationType(v notificationdeliverylog.NotificationType) *NotificationDeliveryLogUpdateOne {
 	_u.mutation.SetNotificationType(v)
 	return _u
 }
 
 // SetNillableNotificationType sets the "notification_type" field if the given value is not nil.
-func (_u *NotificationDeliveryLogUpdateOne) SetNillableNotificationType(v *string) *NotificationDeliveryLogUpdateOne {
+func (_u *NotificationDeliveryLogUpdateOne) SetNillableNotificationType(v *notificationdeliverylog.NotificationType) *NotificationDeliveryLogUpdateOne {
 	if v != nil {
 		_u.SetNotificationType(*v)
 	}
@@ -294,13 +299,13 @@ func (_u *NotificationDeliveryLogUpdateOne) SetNillableNotificationType(v *strin
 }
 
 // SetChannel sets the "channel" field.
-func (_u *NotificationDeliveryLogUpdateOne) SetChannel(v string) *NotificationDeliveryLogUpdateOne {
+func (_u *NotificationDeliveryLogUpdateOne) SetChannel(v notificationdeliverylog.Channel) *NotificationDeliveryLogUpdateOne {
 	_u.mutation.SetChannel(v)
 	return _u
 }
 
 // SetNillableChannel sets the "channel" field if the given value is not nil.
-func (_u *NotificationDeliveryLogUpdateOne) SetNillableChannel(v *string) *NotificationDeliveryLogUpdateOne {
+func (_u *NotificationDeliveryLogUpdateOne) SetNillableChannel(v *notificationdeliverylog.Channel) *NotificationDeliveryLogUpdateOne {
 	if v != nil {
 		_u.SetChannel(*v)
 	}
@@ -308,13 +313,13 @@ func (_u *NotificationDeliveryLogUpdateOne) SetNillableChannel(v *string) *Notif
 }
 
 // SetStatus sets the "status" field.
-func (_u *NotificationDeliveryLogUpdateOne) SetStatus(v string) *NotificationDeliveryLogUpdateOne {
+func (_u *NotificationDeliveryLogUpdateOne) SetStatus(v notificationdeliverylog.Status) *NotificationDeliveryLogUpdateOne {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *NotificationDeliveryLogUpdateOne) SetNillableStatus(v *string) *NotificationDeliveryLogUpdateOne {
+func (_u *NotificationDeliveryLogUpdateOne) SetNillableStatus(v *notificationdeliverylog.Status) *NotificationDeliveryLogUpdateOne {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -412,6 +417,11 @@ func (_u *NotificationDeliveryLogUpdateOne) check() error {
 			return &ValidationError{Name: "channel", err: fmt.Errorf(`ent: validator failed for field "NotificationDeliveryLog.channel": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := notificationdeliverylog.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "NotificationDeliveryLog.status": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -454,13 +464,13 @@ func (_u *NotificationDeliveryLogUpdateOne) sqlSave(ctx context.Context) (_node 
 		_spec.ClearField(notificationdeliverylog.FieldIncidentID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.NotificationType(); ok {
-		_spec.SetField(notificationdeliverylog.FieldNotificationType, field.TypeString, value)
+		_spec.SetField(notificationdeliverylog.FieldNotificationType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Channel(); ok {
-		_spec.SetField(notificationdeliverylog.FieldChannel, field.TypeString, value)
+		_spec.SetField(notificationdeliverylog.FieldChannel, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(notificationdeliverylog.FieldStatus, field.TypeString, value)
+		_spec.SetField(notificationdeliverylog.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.ErrorMessage(); ok {
 		_spec.SetField(notificationdeliverylog.FieldErrorMessage, field.TypeString, value)

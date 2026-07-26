@@ -92,10 +92,10 @@ func (s *pgAgentAskStore) Create(ctx context.Context, r *AgentAskRecord) (*Agent
 	b := s.client.AgentAsk.Create().
 		SetFromAgentID(r.FromAgentID).
 		SetFromAgentName(r.FromAgentName).
-		SetFromAgentType(r.FromAgentType).
+		SetFromAgentType(agentask.FromAgentType(r.FromAgentType)).
 		SetInvestigationID(r.InvestigationID).
 		SetQuestion(r.Question).
-		SetStatus(string(r.Status)).
+		SetStatus(agentask.Status(r.Status)).
 		SetExpiresAt(r.ExpiresAt).
 		SetCreatedAt(now)
 
@@ -103,7 +103,7 @@ func (s *pgAgentAskStore) Create(ctx context.Context, r *AgentAskRecord) (*Agent
 		b.SetToAgentID(*r.ToAgentID)
 	}
 	if r.ToAgentType != "" {
-		b.SetToAgentType(r.ToAgentType)
+		b.SetToAgentType(agentask.ToAgentType(r.ToAgentType))
 	}
 
 	saved, err := b.Save(ctx)
@@ -132,7 +132,7 @@ func (s *pgAgentAskStore) List(ctx context.Context, q AgentAskQuery) ([]AgentAsk
 	query := s.client.AgentAsk.Query()
 
 	if q.Status != "" {
-		query = query.Where(agentask.Status(string(q.Status)))
+		query = query.Where(agentask.StatusEQ(agentask.Status(q.Status)))
 	}
 	if q.FromAgentID != nil {
 		query = query.Where(agentask.FromAgentID(*q.FromAgentID))
@@ -144,14 +144,14 @@ func (s *pgAgentAskStore) List(ctx context.Context, q AgentAskQuery) ([]AgentAsk
 				agentask.ToAgentID(uid),
 				agentask.And(
 					agentask.ToAgentIDIsNil(),
-					agentask.ToAgentType(q.ForAgentType),
+					agentask.ToAgentTypeEQ(agentask.ToAgentType(q.ForAgentType)),
 				),
 			))
 		} else {
 			query = query.Where(agentask.ToAgentID(uid))
 		}
 	} else if q.ForAgentType != "" {
-		query = query.Where(agentask.ToAgentType(q.ForAgentType))
+		query = query.Where(agentask.ToAgentTypeEQ(agentask.ToAgentType(q.ForAgentType)))
 	}
 
 	total, err := query.Count(ctx)
@@ -196,11 +196,11 @@ func (s *pgAgentAskStore) Reply(ctx context.Context, id string, reply string, re
 	now := time.Now().UTC()
 
 	n, err := s.client.AgentAsk.Update().
-		Where(agentask.ID(uid), agentask.Status(AgentAskPending)).
+		Where(agentask.ID(uid), agentask.StatusEQ(agentask.StatusPending)).
 		SetReply(reply).
 		SetRepliedByAgentID(repliedBy).
 		SetRepliedByAgentName(repliedByName).
-		SetStatus(AgentAskAnswered).
+		SetStatus(agentask.StatusAnswered).
 		SetAnsweredAt(now).
 		Save(ctx)
 	if err != nil {
@@ -223,9 +223,9 @@ func (s *pgAgentAskStore) Cancel(ctx context.Context, id string, requesterID uui
 		Where(
 			agentask.ID(uid),
 			agentask.FromAgentID(requesterID),
-			agentask.Status(AgentAskPending),
+			agentask.StatusEQ(agentask.StatusPending),
 		).
-		SetStatus(AgentAskCancelled).
+		SetStatus(agentask.StatusCancelled).
 		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("cancel peer ask: %w", err)
@@ -239,10 +239,10 @@ func (s *pgAgentAskStore) Cancel(ctx context.Context, id string, requesterID uui
 func (s *pgAgentAskStore) ExpirePending(ctx context.Context) (int64, error) {
 	n, err := s.client.AgentAsk.Update().
 		Where(
-			agentask.Status(AgentAskPending),
+			agentask.StatusEQ(agentask.StatusPending),
 			agentask.ExpiresAtLT(time.Now().UTC()),
 		).
-		SetStatus(AgentAskExpired).
+		SetStatus(agentask.StatusExpired).
 		Save(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("expire peer asks: %w", err)
@@ -251,14 +251,13 @@ func (s *pgAgentAskStore) ExpirePending(ctx context.Context) (int64, error) {
 }
 
 func pgAgentAskToRecord(a *ent.AgentAsk) *AgentAskRecord {
-	return &AgentAskRecord{
+	r := &AgentAskRecord{
 		ID:                 a.ID,
 		FromAgentID:        a.FromAgentID,
 		FromAgentName:      a.FromAgentName,
-		FromAgentType:      a.FromAgentType,
+		FromAgentType:      string(a.FromAgentType),
 		InvestigationID:    a.InvestigationID,
 		ToAgentID:          a.ToAgentID,
-		ToAgentType:        a.ToAgentType,
 		Question:           a.Question,
 		Reply:              a.Reply,
 		RepliedByAgentID:   a.RepliedByAgentID,
@@ -268,4 +267,8 @@ func pgAgentAskToRecord(a *ent.AgentAsk) *AgentAskRecord {
 		CreatedAt:          a.CreatedAt,
 		AnsweredAt:         a.AnsweredAt,
 	}
+	if a.ToAgentType != nil {
+		r.ToAgentType = string(*a.ToAgentType)
+	}
+	return r
 }

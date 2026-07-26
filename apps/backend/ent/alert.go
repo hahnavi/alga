@@ -23,7 +23,7 @@ type Alert struct {
 	// Fingerprint holds the value of the "fingerprint" field.
 	Fingerprint string `json:"fingerprint,omitempty"`
 	// Status holds the value of the "status" field.
-	Status string `json:"status,omitempty"`
+	Status alert.Status `json:"status,omitempty"`
 	// Acknowledged holds the value of the "acknowledged" field.
 	Acknowledged bool `json:"acknowledged,omitempty"`
 	// Silenced holds the value of the "silenced" field.
@@ -176,7 +176,7 @@ func (_m *Alert) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
-				_m.Status = value.String
+				_m.Status = alert.Status(value.String)
 			}
 		case alert.FieldAcknowledged:
 			if value, ok := values[i].(*sql.NullBool); !ok {
@@ -350,7 +350,7 @@ func (_m *Alert) String() string {
 	builder.WriteString(_m.Fingerprint)
 	builder.WriteString(", ")
 	builder.WriteString("status=")
-	builder.WriteString(_m.Status)
+	builder.WriteString(fmt.Sprintf("%v", _m.Status))
 	builder.WriteString(", ")
 	builder.WriteString("acknowledged=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Acknowledged))

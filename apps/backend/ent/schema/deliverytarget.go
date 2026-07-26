@@ -23,7 +23,7 @@ func (DeliveryTarget) Annotations() []schema.Annotation {
 func (DeliveryTarget) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
-		field.String("provider").NotEmpty(),
+		field.Enum("provider").Values("slack", "mattermost", "pagerduty"),
 		field.String("channel").NotEmpty(),
 		field.String("channel_name").Optional().Default(""),
 		field.String("post_id").Optional().Default(""),

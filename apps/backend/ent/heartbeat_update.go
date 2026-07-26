@@ -135,13 +135,13 @@ func (_u *HeartbeatUpdate) ClearOwnerTeamID() *HeartbeatUpdate {
 }
 
 // SetStatus sets the "status" field.
-func (_u *HeartbeatUpdate) SetStatus(v string) *HeartbeatUpdate {
+func (_u *HeartbeatUpdate) SetStatus(v heartbeat.Status) *HeartbeatUpdate {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *HeartbeatUpdate) SetNillableStatus(v *string) *HeartbeatUpdate {
+func (_u *HeartbeatUpdate) SetNillableStatus(v *heartbeat.Status) *HeartbeatUpdate {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -149,13 +149,13 @@ func (_u *HeartbeatUpdate) SetNillableStatus(v *string) *HeartbeatUpdate {
 }
 
 // SetSeverity sets the "severity" field.
-func (_u *HeartbeatUpdate) SetSeverity(v string) *HeartbeatUpdate {
+func (_u *HeartbeatUpdate) SetSeverity(v heartbeat.Severity) *HeartbeatUpdate {
 	_u.mutation.SetSeverity(v)
 	return _u
 }
 
 // SetNillableSeverity sets the "severity" field if the given value is not nil.
-func (_u *HeartbeatUpdate) SetNillableSeverity(v *string) *HeartbeatUpdate {
+func (_u *HeartbeatUpdate) SetNillableSeverity(v *heartbeat.Severity) *HeartbeatUpdate {
 	if v != nil {
 		_u.SetSeverity(*v)
 	}
@@ -371,6 +371,16 @@ func (_u *HeartbeatUpdate) check() error {
 			return &ValidationError{Name: "grace_seconds", err: fmt.Errorf(`ent: validator failed for field "Heartbeat.grace_seconds": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := heartbeat.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Heartbeat.status": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Severity(); ok {
+		if err := heartbeat.SeverityValidator(v); err != nil {
+			return &ValidationError{Name: "severity", err: fmt.Errorf(`ent: validator failed for field "Heartbeat.severity": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.PingTokenHash(); ok {
 		if err := heartbeat.PingTokenHashValidator(v); err != nil {
 			return &ValidationError{Name: "ping_token_hash", err: fmt.Errorf(`ent: validator failed for field "Heartbeat.ping_token_hash": %w`, err)}
@@ -418,10 +428,10 @@ func (_u *HeartbeatUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		_spec.SetField(heartbeat.FieldEnabled, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(heartbeat.FieldStatus, field.TypeString, value)
+		_spec.SetField(heartbeat.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Severity(); ok {
-		_spec.SetField(heartbeat.FieldSeverity, field.TypeString, value)
+		_spec.SetField(heartbeat.FieldSeverity, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Labels(); ok {
 		_spec.SetField(heartbeat.FieldLabels, field.TypeJSON, value)
@@ -619,13 +629,13 @@ func (_u *HeartbeatUpdateOne) ClearOwnerTeamID() *HeartbeatUpdateOne {
 }
 
 // SetStatus sets the "status" field.
-func (_u *HeartbeatUpdateOne) SetStatus(v string) *HeartbeatUpdateOne {
+func (_u *HeartbeatUpdateOne) SetStatus(v heartbeat.Status) *HeartbeatUpdateOne {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *HeartbeatUpdateOne) SetNillableStatus(v *string) *HeartbeatUpdateOne {
+func (_u *HeartbeatUpdateOne) SetNillableStatus(v *heartbeat.Status) *HeartbeatUpdateOne {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -633,13 +643,13 @@ func (_u *HeartbeatUpdateOne) SetNillableStatus(v *string) *HeartbeatUpdateOne {
 }
 
 // SetSeverity sets the "severity" field.
-func (_u *HeartbeatUpdateOne) SetSeverity(v string) *HeartbeatUpdateOne {
+func (_u *HeartbeatUpdateOne) SetSeverity(v heartbeat.Severity) *HeartbeatUpdateOne {
 	_u.mutation.SetSeverity(v)
 	return _u
 }
 
 // SetNillableSeverity sets the "severity" field if the given value is not nil.
-func (_u *HeartbeatUpdateOne) SetNillableSeverity(v *string) *HeartbeatUpdateOne {
+func (_u *HeartbeatUpdateOne) SetNillableSeverity(v *heartbeat.Severity) *HeartbeatUpdateOne {
 	if v != nil {
 		_u.SetSeverity(*v)
 	}
@@ -868,6 +878,16 @@ func (_u *HeartbeatUpdateOne) check() error {
 			return &ValidationError{Name: "grace_seconds", err: fmt.Errorf(`ent: validator failed for field "Heartbeat.grace_seconds": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := heartbeat.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Heartbeat.status": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Severity(); ok {
+		if err := heartbeat.SeverityValidator(v); err != nil {
+			return &ValidationError{Name: "severity", err: fmt.Errorf(`ent: validator failed for field "Heartbeat.severity": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.PingTokenHash(); ok {
 		if err := heartbeat.PingTokenHashValidator(v); err != nil {
 			return &ValidationError{Name: "ping_token_hash", err: fmt.Errorf(`ent: validator failed for field "Heartbeat.ping_token_hash": %w`, err)}
@@ -932,10 +952,10 @@ func (_u *HeartbeatUpdateOne) sqlSave(ctx context.Context) (_node *Heartbeat, er
 		_spec.SetField(heartbeat.FieldEnabled, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(heartbeat.FieldStatus, field.TypeString, value)
+		_spec.SetField(heartbeat.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Severity(); ok {
-		_spec.SetField(heartbeat.FieldSeverity, field.TypeString, value)
+		_spec.SetField(heartbeat.FieldSeverity, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Labels(); ok {
 		_spec.SetField(heartbeat.FieldLabels, field.TypeJSON, value)

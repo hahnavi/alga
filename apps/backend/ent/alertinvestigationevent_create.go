@@ -22,14 +22,14 @@ type AlertInvestigationEventCreate struct {
 	hooks    []Hook
 }
 
-// SetAlertInvestigationUUID sets the "alert_investigation_uuid" field.
-func (_c *AlertInvestigationEventCreate) SetAlertInvestigationUUID(v uuid.UUID) *AlertInvestigationEventCreate {
-	_c.mutation.SetAlertInvestigationUUID(v)
+// SetAlertInvestigationID sets the "alert_investigation_id" field.
+func (_c *AlertInvestigationEventCreate) SetAlertInvestigationID(v uuid.UUID) *AlertInvestigationEventCreate {
+	_c.mutation.SetAlertInvestigationID(v)
 	return _c
 }
 
 // SetEventType sets the "event_type" field.
-func (_c *AlertInvestigationEventCreate) SetEventType(v string) *AlertInvestigationEventCreate {
+func (_c *AlertInvestigationEventCreate) SetEventType(v alertinvestigationevent.EventType) *AlertInvestigationEventCreate {
 	_c.mutation.SetEventType(v)
 	return _c
 }
@@ -166,12 +166,6 @@ func (_c *AlertInvestigationEventCreate) SetNillableID(v *uuid.UUID) *AlertInves
 	return _c
 }
 
-// SetAlertInvestigationID sets the "alert_investigation" edge to the AlertInvestigation entity by ID.
-func (_c *AlertInvestigationEventCreate) SetAlertInvestigationID(id uuid.UUID) *AlertInvestigationEventCreate {
-	_c.mutation.SetAlertInvestigationID(id)
-	return _c
-}
-
 // SetAlertInvestigation sets the "alert_investigation" edge to the AlertInvestigation entity.
 func (_c *AlertInvestigationEventCreate) SetAlertInvestigation(v *AlertInvestigation) *AlertInvestigationEventCreate {
 	return _c.SetAlertInvestigationID(v.ID)
@@ -252,8 +246,8 @@ func (_c *AlertInvestigationEventCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *AlertInvestigationEventCreate) check() error {
-	if _, ok := _c.mutation.AlertInvestigationUUID(); !ok {
-		return &ValidationError{Name: "alert_investigation_uuid", err: errors.New(`ent: missing required field "AlertInvestigationEvent.alert_investigation_uuid"`)}
+	if _, ok := _c.mutation.AlertInvestigationID(); !ok {
+		return &ValidationError{Name: "alert_investigation_id", err: errors.New(`ent: missing required field "AlertInvestigationEvent.alert_investigation_id"`)}
 	}
 	if _, ok := _c.mutation.EventType(); !ok {
 		return &ValidationError{Name: "event_type", err: errors.New(`ent: missing required field "AlertInvestigationEvent.event_type"`)}
@@ -305,7 +299,7 @@ func (_c *AlertInvestigationEventCreate) createSpec() (*AlertInvestigationEvent,
 		_spec.ID.Value = &id
 	}
 	if value, ok := _c.mutation.EventType(); ok {
-		_spec.SetField(alertinvestigationevent.FieldEventType, field.TypeString, value)
+		_spec.SetField(alertinvestigationevent.FieldEventType, field.TypeEnum, value)
 		_node.EventType = value
 	}
 	if value, ok := _c.mutation.Reason(); ok {
@@ -358,7 +352,7 @@ func (_c *AlertInvestigationEventCreate) createSpec() (*AlertInvestigationEvent,
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.AlertInvestigationUUID = nodes[0]
+		_node.AlertInvestigationID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

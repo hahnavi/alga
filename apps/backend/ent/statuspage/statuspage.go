@@ -3,6 +3,7 @@
 package statuspage
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -83,8 +84,6 @@ var (
 	SlugValidator func(string) error
 	// DefaultDescription holds the default value on creation for the "description" field.
 	DefaultDescription string
-	// DefaultVisibility holds the default value on creation for the "visibility" field.
-	DefaultVisibility string
 	// DefaultEnabled holds the default value on creation for the "enabled" field.
 	DefaultEnabled bool
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
@@ -96,6 +95,32 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// Visibility defines the type for the "visibility" enum field.
+type Visibility string
+
+// VisibilityInternal is the default value of the Visibility enum.
+const DefaultVisibility = VisibilityInternal
+
+// Visibility values.
+const (
+	VisibilityInternal Visibility = "internal"
+	VisibilityPublic   Visibility = "public"
+)
+
+func (v Visibility) String() string {
+	return string(v)
+}
+
+// VisibilityValidator is a validator for the "visibility" field enum values. It is called by the builders before save.
+func VisibilityValidator(v Visibility) error {
+	switch v {
+	case VisibilityInternal, VisibilityPublic:
+		return nil
+	default:
+		return fmt.Errorf("statuspage: invalid enum value for visibility field: %q", v)
+	}
+}
 
 // OrderOption defines the ordering options for the StatusPage queries.
 type OrderOption func(*sql.Selector)

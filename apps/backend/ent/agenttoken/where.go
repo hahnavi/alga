@@ -61,11 +61,6 @@ func Name(v string) predicate.AgentToken {
 	return predicate.AgentToken(sql.FieldEQ(FieldName, v))
 }
 
-// AgentType applies equality check predicate on the "agent_type" field. It's identical to AgentTypeEQ.
-func AgentType(v string) predicate.AgentToken {
-	return predicate.AgentToken(sql.FieldEQ(FieldAgentType, v))
-}
-
 // TokenHash applies equality check predicate on the "token_hash" field. It's identical to TokenHashEQ.
 func TokenHash(v string) predicate.AgentToken {
 	return predicate.AgentToken(sql.FieldEQ(FieldTokenHash, v))
@@ -177,68 +172,23 @@ func NameContainsFold(v string) predicate.AgentToken {
 }
 
 // AgentTypeEQ applies the EQ predicate on the "agent_type" field.
-func AgentTypeEQ(v string) predicate.AgentToken {
+func AgentTypeEQ(v AgentType) predicate.AgentToken {
 	return predicate.AgentToken(sql.FieldEQ(FieldAgentType, v))
 }
 
 // AgentTypeNEQ applies the NEQ predicate on the "agent_type" field.
-func AgentTypeNEQ(v string) predicate.AgentToken {
+func AgentTypeNEQ(v AgentType) predicate.AgentToken {
 	return predicate.AgentToken(sql.FieldNEQ(FieldAgentType, v))
 }
 
 // AgentTypeIn applies the In predicate on the "agent_type" field.
-func AgentTypeIn(vs ...string) predicate.AgentToken {
+func AgentTypeIn(vs ...AgentType) predicate.AgentToken {
 	return predicate.AgentToken(sql.FieldIn(FieldAgentType, vs...))
 }
 
 // AgentTypeNotIn applies the NotIn predicate on the "agent_type" field.
-func AgentTypeNotIn(vs ...string) predicate.AgentToken {
+func AgentTypeNotIn(vs ...AgentType) predicate.AgentToken {
 	return predicate.AgentToken(sql.FieldNotIn(FieldAgentType, vs...))
-}
-
-// AgentTypeGT applies the GT predicate on the "agent_type" field.
-func AgentTypeGT(v string) predicate.AgentToken {
-	return predicate.AgentToken(sql.FieldGT(FieldAgentType, v))
-}
-
-// AgentTypeGTE applies the GTE predicate on the "agent_type" field.
-func AgentTypeGTE(v string) predicate.AgentToken {
-	return predicate.AgentToken(sql.FieldGTE(FieldAgentType, v))
-}
-
-// AgentTypeLT applies the LT predicate on the "agent_type" field.
-func AgentTypeLT(v string) predicate.AgentToken {
-	return predicate.AgentToken(sql.FieldLT(FieldAgentType, v))
-}
-
-// AgentTypeLTE applies the LTE predicate on the "agent_type" field.
-func AgentTypeLTE(v string) predicate.AgentToken {
-	return predicate.AgentToken(sql.FieldLTE(FieldAgentType, v))
-}
-
-// AgentTypeContains applies the Contains predicate on the "agent_type" field.
-func AgentTypeContains(v string) predicate.AgentToken {
-	return predicate.AgentToken(sql.FieldContains(FieldAgentType, v))
-}
-
-// AgentTypeHasPrefix applies the HasPrefix predicate on the "agent_type" field.
-func AgentTypeHasPrefix(v string) predicate.AgentToken {
-	return predicate.AgentToken(sql.FieldHasPrefix(FieldAgentType, v))
-}
-
-// AgentTypeHasSuffix applies the HasSuffix predicate on the "agent_type" field.
-func AgentTypeHasSuffix(v string) predicate.AgentToken {
-	return predicate.AgentToken(sql.FieldHasSuffix(FieldAgentType, v))
-}
-
-// AgentTypeEqualFold applies the EqualFold predicate on the "agent_type" field.
-func AgentTypeEqualFold(v string) predicate.AgentToken {
-	return predicate.AgentToken(sql.FieldEqualFold(FieldAgentType, v))
-}
-
-// AgentTypeContainsFold applies the ContainsFold predicate on the "agent_type" field.
-func AgentTypeContainsFold(v string) predicate.AgentToken {
-	return predicate.AgentToken(sql.FieldContainsFold(FieldAgentType, v))
 }
 
 // TokenHashEQ applies the EQ predicate on the "token_hash" field.

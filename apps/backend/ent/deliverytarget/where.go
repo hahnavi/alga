@@ -55,11 +55,6 @@ func IDLTE(id uuid.UUID) predicate.DeliveryTarget {
 	return predicate.DeliveryTarget(sql.FieldLTE(FieldID, id))
 }
 
-// Provider applies equality check predicate on the "provider" field. It's identical to ProviderEQ.
-func Provider(v string) predicate.DeliveryTarget {
-	return predicate.DeliveryTarget(sql.FieldEQ(FieldProvider, v))
-}
-
 // Channel applies equality check predicate on the "channel" field. It's identical to ChannelEQ.
 func Channel(v string) predicate.DeliveryTarget {
 	return predicate.DeliveryTarget(sql.FieldEQ(FieldChannel, v))
@@ -81,68 +76,23 @@ func AlertID(v uuid.UUID) predicate.DeliveryTarget {
 }
 
 // ProviderEQ applies the EQ predicate on the "provider" field.
-func ProviderEQ(v string) predicate.DeliveryTarget {
+func ProviderEQ(v Provider) predicate.DeliveryTarget {
 	return predicate.DeliveryTarget(sql.FieldEQ(FieldProvider, v))
 }
 
 // ProviderNEQ applies the NEQ predicate on the "provider" field.
-func ProviderNEQ(v string) predicate.DeliveryTarget {
+func ProviderNEQ(v Provider) predicate.DeliveryTarget {
 	return predicate.DeliveryTarget(sql.FieldNEQ(FieldProvider, v))
 }
 
 // ProviderIn applies the In predicate on the "provider" field.
-func ProviderIn(vs ...string) predicate.DeliveryTarget {
+func ProviderIn(vs ...Provider) predicate.DeliveryTarget {
 	return predicate.DeliveryTarget(sql.FieldIn(FieldProvider, vs...))
 }
 
 // ProviderNotIn applies the NotIn predicate on the "provider" field.
-func ProviderNotIn(vs ...string) predicate.DeliveryTarget {
+func ProviderNotIn(vs ...Provider) predicate.DeliveryTarget {
 	return predicate.DeliveryTarget(sql.FieldNotIn(FieldProvider, vs...))
-}
-
-// ProviderGT applies the GT predicate on the "provider" field.
-func ProviderGT(v string) predicate.DeliveryTarget {
-	return predicate.DeliveryTarget(sql.FieldGT(FieldProvider, v))
-}
-
-// ProviderGTE applies the GTE predicate on the "provider" field.
-func ProviderGTE(v string) predicate.DeliveryTarget {
-	return predicate.DeliveryTarget(sql.FieldGTE(FieldProvider, v))
-}
-
-// ProviderLT applies the LT predicate on the "provider" field.
-func ProviderLT(v string) predicate.DeliveryTarget {
-	return predicate.DeliveryTarget(sql.FieldLT(FieldProvider, v))
-}
-
-// ProviderLTE applies the LTE predicate on the "provider" field.
-func ProviderLTE(v string) predicate.DeliveryTarget {
-	return predicate.DeliveryTarget(sql.FieldLTE(FieldProvider, v))
-}
-
-// ProviderContains applies the Contains predicate on the "provider" field.
-func ProviderContains(v string) predicate.DeliveryTarget {
-	return predicate.DeliveryTarget(sql.FieldContains(FieldProvider, v))
-}
-
-// ProviderHasPrefix applies the HasPrefix predicate on the "provider" field.
-func ProviderHasPrefix(v string) predicate.DeliveryTarget {
-	return predicate.DeliveryTarget(sql.FieldHasPrefix(FieldProvider, v))
-}
-
-// ProviderHasSuffix applies the HasSuffix predicate on the "provider" field.
-func ProviderHasSuffix(v string) predicate.DeliveryTarget {
-	return predicate.DeliveryTarget(sql.FieldHasSuffix(FieldProvider, v))
-}
-
-// ProviderEqualFold applies the EqualFold predicate on the "provider" field.
-func ProviderEqualFold(v string) predicate.DeliveryTarget {
-	return predicate.DeliveryTarget(sql.FieldEqualFold(FieldProvider, v))
-}
-
-// ProviderContainsFold applies the ContainsFold predicate on the "provider" field.
-func ProviderContainsFold(v string) predicate.DeliveryTarget {
-	return predicate.DeliveryTarget(sql.FieldContainsFold(FieldProvider, v))
 }
 
 // ChannelEQ applies the EQ predicate on the "channel" field.

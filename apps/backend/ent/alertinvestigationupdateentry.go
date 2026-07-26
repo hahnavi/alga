@@ -20,8 +20,8 @@ type AlertInvestigationUpdateEntry struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
-	// AlertInvestigationUUID holds the value of the "alert_investigation_uuid" field.
-	AlertInvestigationUUID uuid.UUID `json:"alert_investigation_uuid,omitempty"`
+	// AlertInvestigationID holds the value of the "alert_investigation_id" field.
+	AlertInvestigationID uuid.UUID `json:"alert_investigation_id,omitempty"`
 	// Type holds the value of the "type" field.
 	Type string `json:"type,omitempty"`
 	// Message holds the value of the "message" field.
@@ -85,7 +85,7 @@ func (*AlertInvestigationUpdateEntry) scanValues(columns []string) ([]any, error
 			values[i] = new(sql.NullString)
 		case alertinvestigationupdateentry.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
-		case alertinvestigationupdateentry.FieldID, alertinvestigationupdateentry.FieldAlertInvestigationUUID:
+		case alertinvestigationupdateentry.FieldID, alertinvestigationupdateentry.FieldAlertInvestigationID:
 			values[i] = new(uuid.UUID)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -108,11 +108,11 @@ func (_m *AlertInvestigationUpdateEntry) assignValues(columns []string, values [
 			} else if value != nil {
 				_m.ID = *value
 			}
-		case alertinvestigationupdateentry.FieldAlertInvestigationUUID:
+		case alertinvestigationupdateentry.FieldAlertInvestigationID:
 			if value, ok := values[i].(*uuid.UUID); !ok {
-				return fmt.Errorf("unexpected type %T for field alert_investigation_uuid", values[i])
+				return fmt.Errorf("unexpected type %T for field alert_investigation_id", values[i])
 			} else if value != nil {
-				_m.AlertInvestigationUUID = *value
+				_m.AlertInvestigationID = *value
 			}
 		case alertinvestigationupdateentry.FieldType:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -232,8 +232,8 @@ func (_m *AlertInvestigationUpdateEntry) String() string {
 	var builder strings.Builder
 	builder.WriteString("AlertInvestigationUpdateEntry(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
-	builder.WriteString("alert_investigation_uuid=")
-	builder.WriteString(fmt.Sprintf("%v", _m.AlertInvestigationUUID))
+	builder.WriteString("alert_investigation_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.AlertInvestigationID))
 	builder.WriteString(", ")
 	builder.WriteString("type=")
 	builder.WriteString(_m.Type)

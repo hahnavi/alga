@@ -22,9 +22,9 @@ type IncidentInvestigationUpdateEntryCreate struct {
 	hooks    []Hook
 }
 
-// SetIncidentInvestigationUUID sets the "incident_investigation_uuid" field.
-func (_c *IncidentInvestigationUpdateEntryCreate) SetIncidentInvestigationUUID(v uuid.UUID) *IncidentInvestigationUpdateEntryCreate {
-	_c.mutation.SetIncidentInvestigationUUID(v)
+// SetIncidentInvestigationID sets the "incident_investigation_id" field.
+func (_c *IncidentInvestigationUpdateEntryCreate) SetIncidentInvestigationID(v uuid.UUID) *IncidentInvestigationUpdateEntryCreate {
+	_c.mutation.SetIncidentInvestigationID(v)
 	return _c
 }
 
@@ -178,12 +178,6 @@ func (_c *IncidentInvestigationUpdateEntryCreate) SetNillableID(v *uuid.UUID) *I
 	return _c
 }
 
-// SetIncidentInvestigationID sets the "incident_investigation" edge to the IncidentInvestigation entity by ID.
-func (_c *IncidentInvestigationUpdateEntryCreate) SetIncidentInvestigationID(id uuid.UUID) *IncidentInvestigationUpdateEntryCreate {
-	_c.mutation.SetIncidentInvestigationID(id)
-	return _c
-}
-
 // SetIncidentInvestigation sets the "incident_investigation" edge to the IncidentInvestigation entity.
 func (_c *IncidentInvestigationUpdateEntryCreate) SetIncidentInvestigation(v *IncidentInvestigation) *IncidentInvestigationUpdateEntryCreate {
 	return _c.SetIncidentInvestigationID(v.ID)
@@ -252,8 +246,8 @@ func (_c *IncidentInvestigationUpdateEntryCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *IncidentInvestigationUpdateEntryCreate) check() error {
-	if _, ok := _c.mutation.IncidentInvestigationUUID(); !ok {
-		return &ValidationError{Name: "incident_investigation_uuid", err: errors.New(`ent: missing required field "IncidentInvestigationUpdateEntry.incident_investigation_uuid"`)}
+	if _, ok := _c.mutation.IncidentInvestigationID(); !ok {
+		return &ValidationError{Name: "incident_investigation_id", err: errors.New(`ent: missing required field "IncidentInvestigationUpdateEntry.incident_investigation_id"`)}
 	}
 	if _, ok := _c.mutation.GetType(); !ok {
 		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "IncidentInvestigationUpdateEntry.type"`)}
@@ -388,7 +382,7 @@ func (_c *IncidentInvestigationUpdateEntryCreate) createSpec() (*IncidentInvesti
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.IncidentInvestigationUUID = nodes[0]
+		_node.IncidentInvestigationID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

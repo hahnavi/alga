@@ -23,7 +23,7 @@ type AgentMemory struct {
 	// Content holds the value of the "content" field.
 	Content string `json:"content,omitempty"`
 	// MemoryType holds the value of the "memory_type" field.
-	MemoryType string `json:"memory_type,omitempty"`
+	MemoryType agentmemory.MemoryType `json:"memory_type,omitempty"`
 	// Hash holds the value of the "hash" field.
 	Hash string `json:"hash,omitempty"`
 	// Embedding holds the value of the "embedding" field.
@@ -130,7 +130,7 @@ func (_m *AgentMemory) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field memory_type", values[i])
 			} else if value.Valid {
-				_m.MemoryType = value.String
+				_m.MemoryType = agentmemory.MemoryType(value.String)
 			}
 		case agentmemory.FieldHash:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -278,7 +278,7 @@ func (_m *AgentMemory) String() string {
 	builder.WriteString(_m.Content)
 	builder.WriteString(", ")
 	builder.WriteString("memory_type=")
-	builder.WriteString(_m.MemoryType)
+	builder.WriteString(fmt.Sprintf("%v", _m.MemoryType))
 	builder.WriteString(", ")
 	builder.WriteString("hash=")
 	builder.WriteString(_m.Hash)

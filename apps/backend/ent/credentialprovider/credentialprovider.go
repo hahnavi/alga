@@ -3,6 +3,7 @@
 package credentialprovider
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -67,8 +68,6 @@ func ValidColumn(column string) bool {
 var (
 	// NameValidator is a validator for the "name" field. It is called by the builders before save.
 	NameValidator func(string) error
-	// DefaultType holds the default value on creation for the "type" field.
-	DefaultType string
 	// DefaultConfigEncrypted holds the default value on creation for the "config_encrypted" field.
 	DefaultConfigEncrypted string
 	// DefaultEnabled holds the default value on creation for the "enabled" field.
@@ -84,6 +83,35 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// Type defines the type for the "type" enum field.
+type Type string
+
+// TypeInternal is the default value of the Type enum.
+const DefaultType = TypeInternal
+
+// Type values.
+const (
+	TypeInternal          Type = "internal"
+	TypeHashicorpVault    Type = "hashicorp_vault"
+	TypeAWSSecretsManager Type = "aws_secrets_manager"
+	TypeGcpSecretManager  Type = "gcp_secret_manager"
+	TypeAzureKeyVault     Type = "azure_key_vault"
+)
+
+func (_type Type) String() string {
+	return string(_type)
+}
+
+// TypeValidator is a validator for the "type" field enum values. It is called by the builders before save.
+func TypeValidator(_type Type) error {
+	switch _type {
+	case TypeInternal, TypeHashicorpVault, TypeAWSSecretsManager, TypeGcpSecretManager, TypeAzureKeyVault:
+		return nil
+	default:
+		return fmt.Errorf("credentialprovider: invalid enum value for type field: %q", _type)
+	}
+}
 
 // OrderOption defines the ordering options for the CredentialProvider queries.
 type OrderOption func(*sql.Selector)

@@ -24,7 +24,7 @@ func (Alert) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
 		field.String("fingerprint").NotEmpty(),
-		field.String("status").Default("firing"),
+		field.Enum("status").Values("firing", "resolved").Default("firing"),
 		field.Bool("acknowledged").Default(false),
 		field.Bool("silenced").Default(false),
 		field.JSON("labels", map[string]string{}).Default(map[string]string{}),

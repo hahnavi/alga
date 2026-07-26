@@ -37,7 +37,7 @@ func (_c *AgentDMMessageCreate) SetNillableChatID(v *string) *AgentDMMessageCrea
 }
 
 // SetRole sets the "role" field.
-func (_c *AgentDMMessageCreate) SetRole(v string) *AgentDMMessageCreate {
+func (_c *AgentDMMessageCreate) SetRole(v agentdmmessage.Role) *AgentDMMessageCreate {
 	_c.mutation.SetRole(v)
 	return _c
 }
@@ -276,7 +276,7 @@ func (_c *AgentDMMessageCreate) createSpec() (*AgentDMMessage, *sqlgraph.CreateS
 		_node.ChatID = value
 	}
 	if value, ok := _c.mutation.Role(); ok {
-		_spec.SetField(agentdmmessage.FieldRole, field.TypeString, value)
+		_spec.SetField(agentdmmessage.FieldRole, field.TypeEnum, value)
 		_node.Role = value
 	}
 	if value, ok := _c.mutation.Body(); ok {

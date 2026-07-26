@@ -134,7 +134,7 @@ func (s *pgInvestigationThreadStore) AddMessage(ctx context.Context, threadID st
 	}
 
 	create := tx.Client().InvestigationThreadMessage.Create().
-		SetThreadUUID(thread.ID).
+		SetThreadID(thread.ID).
 		SetMessage(message.Message).
 		SetInternal(message.Internal).
 		SetEdited(message.Edited).

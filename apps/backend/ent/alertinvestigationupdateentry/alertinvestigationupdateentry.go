@@ -15,8 +15,8 @@ const (
 	Label = "alert_investigation_update_entry"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
-	// FieldAlertInvestigationUUID holds the string denoting the alert_investigation_uuid field in the database.
-	FieldAlertInvestigationUUID = "alert_investigation_uuid"
+	// FieldAlertInvestigationID holds the string denoting the alert_investigation_id field in the database.
+	FieldAlertInvestigationID = "alert_investigation_id"
 	// FieldType holds the string denoting the type field in the database.
 	FieldType = "type"
 	// FieldMessage holds the string denoting the message field in the database.
@@ -51,13 +51,13 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "alertinvestigation" package.
 	AlertInvestigationInverseTable = "alert_investigations"
 	// AlertInvestigationColumn is the table column denoting the alert_investigation relation/edge.
-	AlertInvestigationColumn = "alert_investigation_uuid"
+	AlertInvestigationColumn = "alert_investigation_id"
 )
 
 // Columns holds all SQL columns for alertinvestigationupdateentry fields.
 var Columns = []string{
 	FieldID,
-	FieldAlertInvestigationUUID,
+	FieldAlertInvestigationID,
 	FieldType,
 	FieldMessage,
 	FieldSource,
@@ -111,9 +111,9 @@ func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
 }
 
-// ByAlertInvestigationUUID orders the results by the alert_investigation_uuid field.
-func ByAlertInvestigationUUID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldAlertInvestigationUUID, opts...).ToFunc()
+// ByAlertInvestigationID orders the results by the alert_investigation_id field.
+func ByAlertInvestigationID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAlertInvestigationID, opts...).ToFunc()
 }
 
 // ByType orders the results by the type field.

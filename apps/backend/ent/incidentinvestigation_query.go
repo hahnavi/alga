@@ -681,7 +681,7 @@ func (_q *IncidentInvestigationQuery) loadUpdates(ctx context.Context, query *In
 		}
 	}
 	if len(query.ctx.Fields) > 0 {
-		query.ctx.AppendFieldOnce(incidentinvestigationupdateentry.FieldIncidentInvestigationUUID)
+		query.ctx.AppendFieldOnce(incidentinvestigationupdateentry.FieldIncidentInvestigationID)
 	}
 	query.Where(predicate.IncidentInvestigationUpdateEntry(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(incidentinvestigation.UpdatesColumn), fks...))
@@ -691,10 +691,10 @@ func (_q *IncidentInvestigationQuery) loadUpdates(ctx context.Context, query *In
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.IncidentInvestigationUUID
+		fk := n.IncidentInvestigationID
 		node, ok := nodeids[fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "incident_investigation_uuid" returned %v for node %v`, fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "incident_investigation_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}

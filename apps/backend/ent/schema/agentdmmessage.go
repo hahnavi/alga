@@ -24,7 +24,7 @@ func (AgentDMMessage) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
 		field.String("chat_id").Default("alga_dm"),
-		field.String("role").NotEmpty(),
+		field.Enum("role").Values("user", "agent"),
 		field.String("body").NotEmpty(),
 		field.String("user_id").Optional().Nillable(),
 		field.String("username").Optional().Nillable(),

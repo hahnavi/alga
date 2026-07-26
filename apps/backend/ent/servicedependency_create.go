@@ -35,13 +35,13 @@ func (_c *ServiceDependencyCreate) SetDependentOnServiceID(v uuid.UUID) *Service
 }
 
 // SetDependencyType sets the "dependency_type" field.
-func (_c *ServiceDependencyCreate) SetDependencyType(v string) *ServiceDependencyCreate {
+func (_c *ServiceDependencyCreate) SetDependencyType(v servicedependency.DependencyType) *ServiceDependencyCreate {
 	_c.mutation.SetDependencyType(v)
 	return _c
 }
 
 // SetNillableDependencyType sets the "dependency_type" field if the given value is not nil.
-func (_c *ServiceDependencyCreate) SetNillableDependencyType(v *string) *ServiceDependencyCreate {
+func (_c *ServiceDependencyCreate) SetNillableDependencyType(v *servicedependency.DependencyType) *ServiceDependencyCreate {
 	if v != nil {
 		_c.SetDependencyType(*v)
 	}
@@ -146,6 +146,11 @@ func (_c *ServiceDependencyCreate) check() error {
 	if _, ok := _c.mutation.DependencyType(); !ok {
 		return &ValidationError{Name: "dependency_type", err: errors.New(`ent: missing required field "ServiceDependency.dependency_type"`)}
 	}
+	if v, ok := _c.mutation.DependencyType(); ok {
+		if err := servicedependency.DependencyTypeValidator(v); err != nil {
+			return &ValidationError{Name: "dependency_type", err: fmt.Errorf(`ent: validator failed for field "ServiceDependency.dependency_type": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "ServiceDependency.created_at"`)}
 	}
@@ -191,7 +196,7 @@ func (_c *ServiceDependencyCreate) createSpec() (*ServiceDependency, *sqlgraph.C
 		_spec.ID.Value = &id
 	}
 	if value, ok := _c.mutation.DependencyType(); ok {
-		_spec.SetField(servicedependency.FieldDependencyType, field.TypeString, value)
+		_spec.SetField(servicedependency.FieldDependencyType, field.TypeEnum, value)
 		_node.DependencyType = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {

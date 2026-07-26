@@ -306,7 +306,7 @@ func TestCreateAlertInvestigationRetiresExistingCurrentLinks(t *testing.T) {
 	}
 
 	oldCurrent, err := client.AlertInvestigationAlert.Query().
-		Where(alertinvestigationalert.AlertInvestigationUUID(older.ID)).
+		Where(alertinvestigationalert.AlertInvestigationID(older.ID)).
 		Only(ctx)
 	if err != nil {
 		t.Fatalf("query older alert link: %v", err)
@@ -354,7 +354,7 @@ func TestAppendAlertsToAlertInvestigationRetiresExistingCurrentLinks(t *testing.
 	}
 
 	oldCurrent, err := client.AlertInvestigationAlert.Query().
-		Where(alertinvestigationalert.AlertInvestigationUUID(older.ID)).
+		Where(alertinvestigationalert.AlertInvestigationID(older.ID)).
 		Only(ctx)
 	if err != nil {
 		t.Fatalf("query older alert link: %v", err)

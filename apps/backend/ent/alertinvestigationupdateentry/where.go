@@ -56,9 +56,9 @@ func IDLTE(id uuid.UUID) predicate.AlertInvestigationUpdateEntry {
 	return predicate.AlertInvestigationUpdateEntry(sql.FieldLTE(FieldID, id))
 }
 
-// AlertInvestigationUUID applies equality check predicate on the "alert_investigation_uuid" field. It's identical to AlertInvestigationUUIDEQ.
-func AlertInvestigationUUID(v uuid.UUID) predicate.AlertInvestigationUpdateEntry {
-	return predicate.AlertInvestigationUpdateEntry(sql.FieldEQ(FieldAlertInvestigationUUID, v))
+// AlertInvestigationID applies equality check predicate on the "alert_investigation_id" field. It's identical to AlertInvestigationIDEQ.
+func AlertInvestigationID(v uuid.UUID) predicate.AlertInvestigationUpdateEntry {
+	return predicate.AlertInvestigationUpdateEntry(sql.FieldEQ(FieldAlertInvestigationID, v))
 }
 
 // Type applies equality check predicate on the "type" field. It's identical to TypeEQ.
@@ -116,24 +116,24 @@ func CreatedAt(v time.Time) predicate.AlertInvestigationUpdateEntry {
 	return predicate.AlertInvestigationUpdateEntry(sql.FieldEQ(FieldCreatedAt, v))
 }
 
-// AlertInvestigationUUIDEQ applies the EQ predicate on the "alert_investigation_uuid" field.
-func AlertInvestigationUUIDEQ(v uuid.UUID) predicate.AlertInvestigationUpdateEntry {
-	return predicate.AlertInvestigationUpdateEntry(sql.FieldEQ(FieldAlertInvestigationUUID, v))
+// AlertInvestigationIDEQ applies the EQ predicate on the "alert_investigation_id" field.
+func AlertInvestigationIDEQ(v uuid.UUID) predicate.AlertInvestigationUpdateEntry {
+	return predicate.AlertInvestigationUpdateEntry(sql.FieldEQ(FieldAlertInvestigationID, v))
 }
 
-// AlertInvestigationUUIDNEQ applies the NEQ predicate on the "alert_investigation_uuid" field.
-func AlertInvestigationUUIDNEQ(v uuid.UUID) predicate.AlertInvestigationUpdateEntry {
-	return predicate.AlertInvestigationUpdateEntry(sql.FieldNEQ(FieldAlertInvestigationUUID, v))
+// AlertInvestigationIDNEQ applies the NEQ predicate on the "alert_investigation_id" field.
+func AlertInvestigationIDNEQ(v uuid.UUID) predicate.AlertInvestigationUpdateEntry {
+	return predicate.AlertInvestigationUpdateEntry(sql.FieldNEQ(FieldAlertInvestigationID, v))
 }
 
-// AlertInvestigationUUIDIn applies the In predicate on the "alert_investigation_uuid" field.
-func AlertInvestigationUUIDIn(vs ...uuid.UUID) predicate.AlertInvestigationUpdateEntry {
-	return predicate.AlertInvestigationUpdateEntry(sql.FieldIn(FieldAlertInvestigationUUID, vs...))
+// AlertInvestigationIDIn applies the In predicate on the "alert_investigation_id" field.
+func AlertInvestigationIDIn(vs ...uuid.UUID) predicate.AlertInvestigationUpdateEntry {
+	return predicate.AlertInvestigationUpdateEntry(sql.FieldIn(FieldAlertInvestigationID, vs...))
 }
 
-// AlertInvestigationUUIDNotIn applies the NotIn predicate on the "alert_investigation_uuid" field.
-func AlertInvestigationUUIDNotIn(vs ...uuid.UUID) predicate.AlertInvestigationUpdateEntry {
-	return predicate.AlertInvestigationUpdateEntry(sql.FieldNotIn(FieldAlertInvestigationUUID, vs...))
+// AlertInvestigationIDNotIn applies the NotIn predicate on the "alert_investigation_id" field.
+func AlertInvestigationIDNotIn(vs ...uuid.UUID) predicate.AlertInvestigationUpdateEntry {
+	return predicate.AlertInvestigationUpdateEntry(sql.FieldNotIn(FieldAlertInvestigationID, vs...))
 }
 
 // TypeEQ applies the EQ predicate on the "type" field.

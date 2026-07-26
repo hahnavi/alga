@@ -82,13 +82,13 @@ func (_c *IncidentCreate) SetNillableSummary(v *string) *IncidentCreate {
 }
 
 // SetStatus sets the "status" field.
-func (_c *IncidentCreate) SetStatus(v string) *IncidentCreate {
+func (_c *IncidentCreate) SetStatus(v incident.Status) *IncidentCreate {
 	_c.mutation.SetStatus(v)
 	return _c
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_c *IncidentCreate) SetNillableStatus(v *string) *IncidentCreate {
+func (_c *IncidentCreate) SetNillableStatus(v *incident.Status) *IncidentCreate {
 	if v != nil {
 		_c.SetStatus(*v)
 	}
@@ -96,13 +96,13 @@ func (_c *IncidentCreate) SetNillableStatus(v *string) *IncidentCreate {
 }
 
 // SetSeverity sets the "severity" field.
-func (_c *IncidentCreate) SetSeverity(v string) *IncidentCreate {
+func (_c *IncidentCreate) SetSeverity(v incident.Severity) *IncidentCreate {
 	_c.mutation.SetSeverity(v)
 	return _c
 }
 
 // SetNillableSeverity sets the "severity" field if the given value is not nil.
-func (_c *IncidentCreate) SetNillableSeverity(v *string) *IncidentCreate {
+func (_c *IncidentCreate) SetNillableSeverity(v *incident.Severity) *IncidentCreate {
 	if v != nil {
 		_c.SetSeverity(*v)
 	}
@@ -110,13 +110,13 @@ func (_c *IncidentCreate) SetNillableSeverity(v *string) *IncidentCreate {
 }
 
 // SetImpactLevel sets the "impact_level" field.
-func (_c *IncidentCreate) SetImpactLevel(v string) *IncidentCreate {
+func (_c *IncidentCreate) SetImpactLevel(v incident.ImpactLevel) *IncidentCreate {
 	_c.mutation.SetImpactLevel(v)
 	return _c
 }
 
 // SetNillableImpactLevel sets the "impact_level" field if the given value is not nil.
-func (_c *IncidentCreate) SetNillableImpactLevel(v *string) *IncidentCreate {
+func (_c *IncidentCreate) SetNillableImpactLevel(v *incident.ImpactLevel) *IncidentCreate {
 	if v != nil {
 		_c.SetImpactLevel(*v)
 	}
@@ -124,13 +124,13 @@ func (_c *IncidentCreate) SetNillableImpactLevel(v *string) *IncidentCreate {
 }
 
 // SetPriority sets the "priority" field.
-func (_c *IncidentCreate) SetPriority(v string) *IncidentCreate {
+func (_c *IncidentCreate) SetPriority(v incident.Priority) *IncidentCreate {
 	_c.mutation.SetPriority(v)
 	return _c
 }
 
 // SetNillablePriority sets the "priority" field if the given value is not nil.
-func (_c *IncidentCreate) SetNillablePriority(v *string) *IncidentCreate {
+func (_c *IncidentCreate) SetNillablePriority(v *incident.Priority) *IncidentCreate {
 	if v != nil {
 		_c.SetPriority(*v)
 	}
@@ -138,13 +138,13 @@ func (_c *IncidentCreate) SetNillablePriority(v *string) *IncidentCreate {
 }
 
 // SetIncidentType sets the "incident_type" field.
-func (_c *IncidentCreate) SetIncidentType(v string) *IncidentCreate {
+func (_c *IncidentCreate) SetIncidentType(v incident.IncidentType) *IncidentCreate {
 	_c.mutation.SetIncidentType(v)
 	return _c
 }
 
 // SetNillableIncidentType sets the "incident_type" field if the given value is not nil.
-func (_c *IncidentCreate) SetNillableIncidentType(v *string) *IncidentCreate {
+func (_c *IncidentCreate) SetNillableIncidentType(v *incident.IncidentType) *IncidentCreate {
 	if v != nil {
 		_c.SetIncidentType(*v)
 	}
@@ -194,13 +194,13 @@ func (_c *IncidentCreate) SetNillableOnCallResponderID(v *uuid.UUID) *IncidentCr
 }
 
 // SetCommanderAssigneeType sets the "commander_assignee_type" field.
-func (_c *IncidentCreate) SetCommanderAssigneeType(v string) *IncidentCreate {
+func (_c *IncidentCreate) SetCommanderAssigneeType(v incident.CommanderAssigneeType) *IncidentCreate {
 	_c.mutation.SetCommanderAssigneeType(v)
 	return _c
 }
 
 // SetNillableCommanderAssigneeType sets the "commander_assignee_type" field if the given value is not nil.
-func (_c *IncidentCreate) SetNillableCommanderAssigneeType(v *string) *IncidentCreate {
+func (_c *IncidentCreate) SetNillableCommanderAssigneeType(v *incident.CommanderAssigneeType) *IncidentCreate {
 	if v != nil {
 		_c.SetCommanderAssigneeType(*v)
 	}
@@ -208,13 +208,13 @@ func (_c *IncidentCreate) SetNillableCommanderAssigneeType(v *string) *IncidentC
 }
 
 // SetCommunicatorAssigneeType sets the "communicator_assignee_type" field.
-func (_c *IncidentCreate) SetCommunicatorAssigneeType(v string) *IncidentCreate {
+func (_c *IncidentCreate) SetCommunicatorAssigneeType(v incident.CommunicatorAssigneeType) *IncidentCreate {
 	_c.mutation.SetCommunicatorAssigneeType(v)
 	return _c
 }
 
 // SetNillableCommunicatorAssigneeType sets the "communicator_assignee_type" field if the given value is not nil.
-func (_c *IncidentCreate) SetNillableCommunicatorAssigneeType(v *string) *IncidentCreate {
+func (_c *IncidentCreate) SetNillableCommunicatorAssigneeType(v *incident.CommunicatorAssigneeType) *IncidentCreate {
 	if v != nil {
 		_c.SetCommunicatorAssigneeType(*v)
 	}
@@ -875,17 +875,52 @@ func (_c *IncidentCreate) check() error {
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "Incident.status"`)}
 	}
+	if v, ok := _c.mutation.Status(); ok {
+		if err := incident.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Incident.status": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Severity(); !ok {
 		return &ValidationError{Name: "severity", err: errors.New(`ent: missing required field "Incident.severity"`)}
+	}
+	if v, ok := _c.mutation.Severity(); ok {
+		if err := incident.SeverityValidator(v); err != nil {
+			return &ValidationError{Name: "severity", err: fmt.Errorf(`ent: validator failed for field "Incident.severity": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.ImpactLevel(); !ok {
 		return &ValidationError{Name: "impact_level", err: errors.New(`ent: missing required field "Incident.impact_level"`)}
 	}
+	if v, ok := _c.mutation.ImpactLevel(); ok {
+		if err := incident.ImpactLevelValidator(v); err != nil {
+			return &ValidationError{Name: "impact_level", err: fmt.Errorf(`ent: validator failed for field "Incident.impact_level": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Priority(); !ok {
 		return &ValidationError{Name: "priority", err: errors.New(`ent: missing required field "Incident.priority"`)}
 	}
+	if v, ok := _c.mutation.Priority(); ok {
+		if err := incident.PriorityValidator(v); err != nil {
+			return &ValidationError{Name: "priority", err: fmt.Errorf(`ent: validator failed for field "Incident.priority": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.IncidentType(); !ok {
 		return &ValidationError{Name: "incident_type", err: errors.New(`ent: missing required field "Incident.incident_type"`)}
+	}
+	if v, ok := _c.mutation.IncidentType(); ok {
+		if err := incident.IncidentTypeValidator(v); err != nil {
+			return &ValidationError{Name: "incident_type", err: fmt.Errorf(`ent: validator failed for field "Incident.incident_type": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.CommanderAssigneeType(); ok {
+		if err := incident.CommanderAssigneeTypeValidator(v); err != nil {
+			return &ValidationError{Name: "commander_assignee_type", err: fmt.Errorf(`ent: validator failed for field "Incident.commander_assignee_type": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.CommunicatorAssigneeType(); ok {
+		if err := incident.CommunicatorAssigneeTypeValidator(v); err != nil {
+			return &ValidationError{Name: "communicator_assignee_type", err: fmt.Errorf(`ent: validator failed for field "Incident.communicator_assignee_type": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.ConferenceURL(); !ok {
 		return &ValidationError{Name: "conference_url", err: errors.New(`ent: missing required field "Incident.conference_url"`)}
@@ -960,31 +995,31 @@ func (_c *IncidentCreate) createSpec() (*Incident, *sqlgraph.CreateSpec) {
 		_node.Summary = value
 	}
 	if value, ok := _c.mutation.Status(); ok {
-		_spec.SetField(incident.FieldStatus, field.TypeString, value)
+		_spec.SetField(incident.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
 	}
 	if value, ok := _c.mutation.Severity(); ok {
-		_spec.SetField(incident.FieldSeverity, field.TypeString, value)
+		_spec.SetField(incident.FieldSeverity, field.TypeEnum, value)
 		_node.Severity = value
 	}
 	if value, ok := _c.mutation.ImpactLevel(); ok {
-		_spec.SetField(incident.FieldImpactLevel, field.TypeString, value)
+		_spec.SetField(incident.FieldImpactLevel, field.TypeEnum, value)
 		_node.ImpactLevel = value
 	}
 	if value, ok := _c.mutation.Priority(); ok {
-		_spec.SetField(incident.FieldPriority, field.TypeString, value)
+		_spec.SetField(incident.FieldPriority, field.TypeEnum, value)
 		_node.Priority = value
 	}
 	if value, ok := _c.mutation.IncidentType(); ok {
-		_spec.SetField(incident.FieldIncidentType, field.TypeString, value)
+		_spec.SetField(incident.FieldIncidentType, field.TypeEnum, value)
 		_node.IncidentType = value
 	}
 	if value, ok := _c.mutation.CommanderAssigneeType(); ok {
-		_spec.SetField(incident.FieldCommanderAssigneeType, field.TypeString, value)
+		_spec.SetField(incident.FieldCommanderAssigneeType, field.TypeEnum, value)
 		_node.CommanderAssigneeType = value
 	}
 	if value, ok := _c.mutation.CommunicatorAssigneeType(); ok {
-		_spec.SetField(incident.FieldCommunicatorAssigneeType, field.TypeString, value)
+		_spec.SetField(incident.FieldCommunicatorAssigneeType, field.TypeEnum, value)
 		_node.CommunicatorAssigneeType = value
 	}
 	if value, ok := _c.mutation.ConferenceURL(); ok {

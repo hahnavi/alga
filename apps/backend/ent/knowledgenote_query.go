@@ -299,7 +299,7 @@ func (_q *KnowledgeNoteQuery) WithAuthor(opts ...func(*UserQuery)) *KnowledgeNot
 // Example:
 //
 //	var v []struct {
-//		Kind string `json:"kind,omitempty"`
+//		Kind knowledgenote.Kind `json:"kind,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
@@ -322,7 +322,7 @@ func (_q *KnowledgeNoteQuery) GroupBy(field string, fields ...string) *Knowledge
 // Example:
 //
 //	var v []struct {
-//		Kind string `json:"kind,omitempty"`
+//		Kind knowledgenote.Kind `json:"kind,omitempty"`
 //	}
 //
 //	client.KnowledgeNote.Query().

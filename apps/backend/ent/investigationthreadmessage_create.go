@@ -22,9 +22,9 @@ type InvestigationThreadMessageCreate struct {
 	hooks    []Hook
 }
 
-// SetThreadUUID sets the "thread_uuid" field.
-func (_c *InvestigationThreadMessageCreate) SetThreadUUID(v uuid.UUID) *InvestigationThreadMessageCreate {
-	_c.mutation.SetThreadUUID(v)
+// SetThreadID sets the "thread_id" field.
+func (_c *InvestigationThreadMessageCreate) SetThreadID(v uuid.UUID) *InvestigationThreadMessageCreate {
+	_c.mutation.SetThreadID(v)
 	return _c
 }
 
@@ -222,12 +222,6 @@ func (_c *InvestigationThreadMessageCreate) SetNillableID(v *uuid.UUID) *Investi
 	return _c
 }
 
-// SetThreadID sets the "thread" edge to the InvestigationThread entity by ID.
-func (_c *InvestigationThreadMessageCreate) SetThreadID(id uuid.UUID) *InvestigationThreadMessageCreate {
-	_c.mutation.SetThreadID(id)
-	return _c
-}
-
 // SetThread sets the "thread" edge to the InvestigationThread entity.
 func (_c *InvestigationThreadMessageCreate) SetThread(v *InvestigationThread) *InvestigationThreadMessageCreate {
 	return _c.SetThreadID(v.ID)
@@ -324,8 +318,8 @@ func (_c *InvestigationThreadMessageCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *InvestigationThreadMessageCreate) check() error {
-	if _, ok := _c.mutation.ThreadUUID(); !ok {
-		return &ValidationError{Name: "thread_uuid", err: errors.New(`ent: missing required field "InvestigationThreadMessage.thread_uuid"`)}
+	if _, ok := _c.mutation.ThreadID(); !ok {
+		return &ValidationError{Name: "thread_id", err: errors.New(`ent: missing required field "InvestigationThreadMessage.thread_id"`)}
 	}
 	if _, ok := _c.mutation.GetType(); !ok {
 		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "InvestigationThreadMessage.type"`)}
@@ -461,7 +455,7 @@ func (_c *InvestigationThreadMessageCreate) createSpec() (*InvestigationThreadMe
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.ThreadUUID = nodes[0]
+		_node.ThreadID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

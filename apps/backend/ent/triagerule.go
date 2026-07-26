@@ -27,13 +27,13 @@ type TriageRule struct {
 	// Conditions holds the value of the "conditions" field.
 	Conditions []map[string]interface{} `json:"conditions,omitempty"`
 	// MatchMode holds the value of the "match_mode" field.
-	MatchMode string `json:"match_mode,omitempty"`
+	MatchMode triagerule.MatchMode `json:"match_mode,omitempty"`
 	// Decision holds the value of the "decision" field.
-	Decision string `json:"decision,omitempty"`
+	Decision triagerule.Decision `json:"decision,omitempty"`
 	// Severity holds the value of the "severity" field.
-	Severity string `json:"severity,omitempty"`
+	Severity *triagerule.Severity `json:"severity,omitempty"`
 	// Category holds the value of the "category" field.
-	Category string `json:"category,omitempty"`
+	Category *triagerule.Category `json:"category,omitempty"`
 	// Enrichment holds the value of the "enrichment" field.
 	Enrichment map[string]interface{} `json:"enrichment,omitempty"`
 	// Priority holds the value of the "priority" field.
@@ -134,25 +134,27 @@ func (_m *TriageRule) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field match_mode", values[i])
 			} else if value.Valid {
-				_m.MatchMode = value.String
+				_m.MatchMode = triagerule.MatchMode(value.String)
 			}
 		case triagerule.FieldDecision:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field decision", values[i])
 			} else if value.Valid {
-				_m.Decision = value.String
+				_m.Decision = triagerule.Decision(value.String)
 			}
 		case triagerule.FieldSeverity:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field severity", values[i])
 			} else if value.Valid {
-				_m.Severity = value.String
+				_m.Severity = new(triagerule.Severity)
+				*_m.Severity = triagerule.Severity(value.String)
 			}
 		case triagerule.FieldCategory:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field category", values[i])
 			} else if value.Valid {
-				_m.Category = value.String
+				_m.Category = new(triagerule.Category)
+				*_m.Category = triagerule.Category(value.String)
 			}
 		case triagerule.FieldEnrichment:
 			if value, ok := values[i].(*[]byte); !ok {
@@ -243,16 +245,20 @@ func (_m *TriageRule) String() string {
 	builder.WriteString(fmt.Sprintf("%v", _m.Conditions))
 	builder.WriteString(", ")
 	builder.WriteString("match_mode=")
-	builder.WriteString(_m.MatchMode)
+	builder.WriteString(fmt.Sprintf("%v", _m.MatchMode))
 	builder.WriteString(", ")
 	builder.WriteString("decision=")
-	builder.WriteString(_m.Decision)
+	builder.WriteString(fmt.Sprintf("%v", _m.Decision))
 	builder.WriteString(", ")
-	builder.WriteString("severity=")
-	builder.WriteString(_m.Severity)
+	if v := _m.Severity; v != nil {
+		builder.WriteString("severity=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
-	builder.WriteString("category=")
-	builder.WriteString(_m.Category)
+	if v := _m.Category; v != nil {
+		builder.WriteString("category=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("enrichment=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Enrichment))

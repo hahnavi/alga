@@ -25,7 +25,7 @@ type ScheduleLayer struct {
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty"`
 	// RotationType holds the value of the "rotation_type" field.
-	RotationType string `json:"rotation_type,omitempty"`
+	RotationType schedulelayer.RotationType `json:"rotation_type,omitempty"`
 	// RotationInterval holds the value of the "rotation_interval" field.
 	RotationInterval int `json:"rotation_interval,omitempty"`
 	// StartDate holds the value of the "start_date" field.
@@ -126,7 +126,7 @@ func (_m *ScheduleLayer) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field rotation_type", values[i])
 			} else if value.Valid {
-				_m.RotationType = value.String
+				_m.RotationType = schedulelayer.RotationType(value.String)
 			}
 		case schedulelayer.FieldRotationInterval:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -247,7 +247,7 @@ func (_m *ScheduleLayer) String() string {
 	builder.WriteString(_m.Name)
 	builder.WriteString(", ")
 	builder.WriteString("rotation_type=")
-	builder.WriteString(_m.RotationType)
+	builder.WriteString(fmt.Sprintf("%v", _m.RotationType))
 	builder.WriteString(", ")
 	builder.WriteString("rotation_interval=")
 	builder.WriteString(fmt.Sprintf("%v", _m.RotationInterval))

@@ -30,13 +30,13 @@ func (_u *DeliveryTargetUpdate) Where(ps ...predicate.DeliveryTarget) *DeliveryT
 }
 
 // SetProvider sets the "provider" field.
-func (_u *DeliveryTargetUpdate) SetProvider(v string) *DeliveryTargetUpdate {
+func (_u *DeliveryTargetUpdate) SetProvider(v deliverytarget.Provider) *DeliveryTargetUpdate {
 	_u.mutation.SetProvider(v)
 	return _u
 }
 
 // SetNillableProvider sets the "provider" field if the given value is not nil.
-func (_u *DeliveryTargetUpdate) SetNillableProvider(v *string) *DeliveryTargetUpdate {
+func (_u *DeliveryTargetUpdate) SetNillableProvider(v *deliverytarget.Provider) *DeliveryTargetUpdate {
 	if v != nil {
 		_u.SetProvider(*v)
 	}
@@ -185,7 +185,7 @@ func (_u *DeliveryTargetUpdate) sqlSave(ctx context.Context) (_node int, err err
 		}
 	}
 	if value, ok := _u.mutation.Provider(); ok {
-		_spec.SetField(deliverytarget.FieldProvider, field.TypeString, value)
+		_spec.SetField(deliverytarget.FieldProvider, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Channel(); ok {
 		_spec.SetField(deliverytarget.FieldChannel, field.TypeString, value)
@@ -252,13 +252,13 @@ type DeliveryTargetUpdateOne struct {
 }
 
 // SetProvider sets the "provider" field.
-func (_u *DeliveryTargetUpdateOne) SetProvider(v string) *DeliveryTargetUpdateOne {
+func (_u *DeliveryTargetUpdateOne) SetProvider(v deliverytarget.Provider) *DeliveryTargetUpdateOne {
 	_u.mutation.SetProvider(v)
 	return _u
 }
 
 // SetNillableProvider sets the "provider" field if the given value is not nil.
-func (_u *DeliveryTargetUpdateOne) SetNillableProvider(v *string) *DeliveryTargetUpdateOne {
+func (_u *DeliveryTargetUpdateOne) SetNillableProvider(v *deliverytarget.Provider) *DeliveryTargetUpdateOne {
 	if v != nil {
 		_u.SetProvider(*v)
 	}
@@ -437,7 +437,7 @@ func (_u *DeliveryTargetUpdateOne) sqlSave(ctx context.Context) (_node *Delivery
 		}
 	}
 	if value, ok := _u.mutation.Provider(); ok {
-		_spec.SetField(deliverytarget.FieldProvider, field.TypeString, value)
+		_spec.SetField(deliverytarget.FieldProvider, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Channel(); ok {
 		_spec.SetField(deliverytarget.FieldChannel, field.TypeString, value)

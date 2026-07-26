@@ -3,6 +3,8 @@
 package deliverytarget
 
 import (
+	"fmt"
+
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
@@ -57,8 +59,6 @@ func ValidColumn(column string) bool {
 }
 
 var (
-	// ProviderValidator is a validator for the "provider" field. It is called by the builders before save.
-	ProviderValidator func(string) error
 	// ChannelValidator is a validator for the "channel" field. It is called by the builders before save.
 	ChannelValidator func(string) error
 	// DefaultChannelName holds the default value on creation for the "channel_name" field.
@@ -68,6 +68,30 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// Provider defines the type for the "provider" enum field.
+type Provider string
+
+// Provider values.
+const (
+	ProviderSlack      Provider = "slack"
+	ProviderMattermost Provider = "mattermost"
+	ProviderPagerduty  Provider = "pagerduty"
+)
+
+func (pr Provider) String() string {
+	return string(pr)
+}
+
+// ProviderValidator is a validator for the "provider" field enum values. It is called by the builders before save.
+func ProviderValidator(pr Provider) error {
+	switch pr {
+	case ProviderSlack, ProviderMattermost, ProviderPagerduty:
+		return nil
+	default:
+		return fmt.Errorf("deliverytarget: invalid enum value for provider field: %q", pr)
+	}
+}
 
 // OrderOption defines the ordering options for the DeliveryTarget queries.
 type OrderOption func(*sql.Selector)

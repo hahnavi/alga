@@ -25,7 +25,7 @@ func (ServiceDependency) Fields() []ent.Field {
 		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
 		field.UUID("service_id", uuid.UUID{}),
 		field.UUID("dependent_on_service_id", uuid.UUID{}),
-		field.String("dependency_type").Default("depends_on"),
+		field.Enum("dependency_type").Values("depends_on", "hard", "soft").Default("depends_on"),
 		field.Time("created_at").Default(timeNow),
 	}
 }

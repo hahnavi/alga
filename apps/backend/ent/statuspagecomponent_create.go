@@ -78,13 +78,13 @@ func (_c *StatusPageComponentCreate) SetNillableDisplayOrder(v *int) *StatusPage
 }
 
 // SetStatus sets the "status" field.
-func (_c *StatusPageComponentCreate) SetStatus(v string) *StatusPageComponentCreate {
+func (_c *StatusPageComponentCreate) SetStatus(v statuspagecomponent.Status) *StatusPageComponentCreate {
 	_c.mutation.SetStatus(v)
 	return _c
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_c *StatusPageComponentCreate) SetNillableStatus(v *string) *StatusPageComponentCreate {
+func (_c *StatusPageComponentCreate) SetNillableStatus(v *statuspagecomponent.Status) *StatusPageComponentCreate {
 	if v != nil {
 		_c.SetStatus(*v)
 	}
@@ -231,6 +231,11 @@ func (_c *StatusPageComponentCreate) check() error {
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "StatusPageComponent.status"`)}
 	}
+	if v, ok := _c.mutation.Status(); ok {
+		if err := statuspagecomponent.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "StatusPageComponent.status": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "StatusPageComponent.created_at"`)}
 	}
@@ -288,7 +293,7 @@ func (_c *StatusPageComponentCreate) createSpec() (*StatusPageComponent, *sqlgra
 		_node.DisplayOrder = value
 	}
 	if value, ok := _c.mutation.Status(); ok {
-		_spec.SetField(statuspagecomponent.FieldStatus, field.TypeString, value)
+		_spec.SetField(statuspagecomponent.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {

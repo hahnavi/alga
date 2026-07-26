@@ -3,6 +3,7 @@
 package knowledgenote
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -83,14 +84,10 @@ func ValidColumn(column string) bool {
 }
 
 var (
-	// KindValidator is a validator for the "kind" field. It is called by the builders before save.
-	KindValidator func(string) error
 	// TitleValidator is a validator for the "title" field. It is called by the builders before save.
 	TitleValidator func(string) error
 	// BodyMarkdownValidator is a validator for the "body_markdown" field. It is called by the builders before save.
 	BodyMarkdownValidator func(string) error
-	// DefaultAuthorType holds the default value on creation for the "author_type" field.
-	DefaultAuthorType string
 	// DefaultAuthorName holds the default value on creation for the "author_name" field.
 	DefaultAuthorName string
 	// DefaultSourceInvestigationID holds the default value on creation for the "source_investigation_id" field.
@@ -104,6 +101,57 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// Kind defines the type for the "kind" enum field.
+type Kind string
+
+// Kind values.
+const (
+	KindRunbook      Kind = "runbook"
+	KindKnownIssue   Kind = "known_issue"
+	KindServiceOwner Kind = "service_owner"
+	KindFact         Kind = "fact"
+)
+
+func (k Kind) String() string {
+	return string(k)
+}
+
+// KindValidator is a validator for the "kind" field enum values. It is called by the builders before save.
+func KindValidator(k Kind) error {
+	switch k {
+	case KindRunbook, KindKnownIssue, KindServiceOwner, KindFact:
+		return nil
+	default:
+		return fmt.Errorf("knowledgenote: invalid enum value for kind field: %q", k)
+	}
+}
+
+// AuthorType defines the type for the "author_type" enum field.
+type AuthorType string
+
+// AuthorTypeUser is the default value of the AuthorType enum.
+const DefaultAuthorType = AuthorTypeUser
+
+// AuthorType values.
+const (
+	AuthorTypeUser  AuthorType = "user"
+	AuthorTypeAgent AuthorType = "agent"
+)
+
+func (at AuthorType) String() string {
+	return string(at)
+}
+
+// AuthorTypeValidator is a validator for the "author_type" field enum values. It is called by the builders before save.
+func AuthorTypeValidator(at AuthorType) error {
+	switch at {
+	case AuthorTypeUser, AuthorTypeAgent:
+		return nil
+	default:
+		return fmt.Errorf("knowledgenote: invalid enum value for author_type field: %q", at)
+	}
+}
 
 // OrderOption defines the ordering options for the KnowledgeNote queries.
 type OrderOption func(*sql.Selector)

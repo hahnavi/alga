@@ -136,13 +136,13 @@ func (s *pgCoordinationTaskStore) CreateTask(ctx context.Context, record *Coordi
 	}
 
 	b := tx.Client().CoordinationTask.Create().
-		SetKind(record.Kind).
-		SetAssigneeRole(record.AssigneeRole).
+		SetKind(coordinationtask.Kind(record.Kind)).
+		SetAssigneeRole(coordinationtask.AssigneeRole(record.AssigneeRole)).
 		SetAssigneeAgentID(record.AssigneeAgentID).
 		SetAssigneeAgentName(record.AssigneeAgentName).
 		SetGoal(record.Goal).
 		SetInputContext(inputContext).
-		SetStatus(status).
+		SetStatus(coordinationtask.Status(status)).
 		SetPriority(record.Priority).
 		SetCreatedByAgentID(record.CreatedByAgentID).
 		SetCreatedByName(record.CreatedByName).
@@ -269,10 +269,10 @@ func (s *pgCoordinationTaskStore) ListTasksByIncident(ctx context.Context, incid
 		}
 	}
 	if v, ok := filter["status"].(string); ok && v != "" {
-		preds = append(preds, coordinationtask.StatusEQ(v))
+		preds = append(preds, coordinationtask.StatusEQ(coordinationtask.Status(v)))
 	}
 	if v, ok := filter["assignee_role"].(string); ok && v != "" {
-		preds = append(preds, coordinationtask.AssigneeRoleEQ(v))
+		preds = append(preds, coordinationtask.AssigneeRoleEQ(coordinationtask.AssigneeRole(v)))
 	}
 
 	sortField, _ := filter["$sort"].(string)
@@ -311,8 +311,8 @@ func (s *pgCoordinationTaskStore) ListPendingTasks(ctx context.Context, role str
 
 	items, err := s.client.CoordinationTask.Query().
 		Where(
-			coordinationtask.StatusEQ(CoordinationTaskStatusPending),
-			coordinationtask.AssigneeRoleEQ(role),
+			coordinationtask.StatusEQ(coordinationtask.Status(CoordinationTaskStatusPending)),
+			coordinationtask.AssigneeRoleEQ(coordinationtask.AssigneeRole(role)),
 		).
 		WithIncident().
 		Order(
@@ -345,7 +345,7 @@ func (s *pgCoordinationTaskStore) ListOverdueTasks(ctx context.Context, now time
 
 	items, err := s.client.CoordinationTask.Query().
 		Where(
-			coordinationtask.StatusEQ(CoordinationTaskStatusInProgress),
+			coordinationtask.StatusEQ(coordinationtask.Status(CoordinationTaskStatusInProgress)),
 			coordinationtask.DueAtNotNil(),
 			coordinationtask.DueAtLT(now),
 		).
@@ -371,7 +371,7 @@ func (s *pgCoordinationTaskStore) ListInProgressByAgent(ctx context.Context, age
 	items, err := s.client.CoordinationTask.Query().
 		Where(
 			coordinationtask.AssigneeAgentID(agentIDHex),
-			coordinationtask.StatusIn(CoordinationTaskStatusAssigned, CoordinationTaskStatusInProgress),
+			coordinationtask.StatusIn(coordinationtask.Status(CoordinationTaskStatusAssigned), coordinationtask.Status(CoordinationTaskStatusInProgress)),
 		).
 		WithIncident().
 		Order(coordinationtask.ByCreatedAt()).
@@ -398,10 +398,10 @@ func (s *pgCoordinationTaskStore) ClaimTask(ctx context.Context, taskID uuid.UUI
 	n, err := s.client.CoordinationTask.Update().
 		Where(
 			coordinationtask.ID(taskID),
-			coordinationtask.StatusEQ(CoordinationTaskStatusPending),
-			coordinationtask.AssigneeRoleEQ(role),
+			coordinationtask.StatusEQ(coordinationtask.Status(CoordinationTaskStatusPending)),
+			coordinationtask.AssigneeRoleEQ(coordinationtask.AssigneeRole(role)),
 		).
-		SetStatus(CoordinationTaskStatusAssigned).
+		SetStatus(coordinationtask.Status(CoordinationTaskStatusAssigned)).
 		SetAssigneeAgentID(agentIDHex).
 		SetAssigneeAgentName(agentName).
 		SetClaimedAt(now).
@@ -425,9 +425,9 @@ func (s *pgCoordinationTaskStore) MarkInProgress(ctx context.Context, taskID uui
 	n, err := s.client.CoordinationTask.Update().
 		Where(
 			coordinationtask.ID(taskID),
-			coordinationtask.StatusEQ(CoordinationTaskStatusAssigned),
+			coordinationtask.StatusEQ(coordinationtask.Status(CoordinationTaskStatusAssigned)),
 		).
-		SetStatus(CoordinationTaskStatusInProgress).
+		SetStatus(coordinationtask.Status(CoordinationTaskStatusInProgress)).
 		SetUpdatedAt(now).
 		Save(ctx)
 	if err != nil {
@@ -451,9 +451,9 @@ func (s *pgCoordinationTaskStore) RevertByAgent(ctx context.Context, agentIDHex 
 	n, err := s.client.CoordinationTask.Update().
 		Where(
 			coordinationtask.AssigneeAgentID(agentIDHex),
-			coordinationtask.StatusIn(CoordinationTaskStatusAssigned, CoordinationTaskStatusInProgress),
+			coordinationtask.StatusIn(coordinationtask.Status(CoordinationTaskStatusAssigned), coordinationtask.Status(CoordinationTaskStatusInProgress)),
 		).
-		SetStatus(CoordinationTaskStatusPending).
+		SetStatus(coordinationtask.Status(CoordinationTaskStatusPending)).
 		SetAssigneeAgentID("").
 		SetAssigneeAgentName("").
 		ClearClaimedAt().
@@ -486,9 +486,9 @@ func (s *pgCoordinationTaskStore) CompleteTask(ctx context.Context, taskID uuid.
 	n, err := tx.Client().CoordinationTask.Update().
 		Where(
 			coordinationtask.ID(taskID),
-			coordinationtask.StatusEQ(CoordinationTaskStatusInProgress),
+			coordinationtask.StatusEQ(coordinationtask.Status(CoordinationTaskStatusInProgress)),
 		).
-		SetStatus(CoordinationTaskStatusComplete).
+		SetStatus(coordinationtask.Status(CoordinationTaskStatusComplete)).
 		SetResult(result).
 		SetCompletedAt(now).
 		SetUpdatedAt(now).
@@ -526,7 +526,7 @@ func (s *pgCoordinationTaskStore) FailTask(ctx context.Context, taskID uuid.UUID
 	now := time.Now().UTC()
 	n, err := s.client.CoordinationTask.Update().
 		Where(coordinationtask.ID(taskID)).
-		SetStatus(CoordinationTaskStatusFailed).
+		SetStatus(coordinationtask.Status(CoordinationTaskStatusFailed)).
 		SetFailureReason(reason).
 		SetCompletedAt(now).
 		SetUpdatedAt(now).
@@ -550,7 +550,7 @@ func (s *pgCoordinationTaskStore) CancelTask(ctx context.Context, taskID uuid.UU
 	now := time.Now().UTC()
 	n, err := s.client.CoordinationTask.Update().
 		Where(coordinationtask.ID(taskID)).
-		SetStatus(CoordinationTaskStatusCancelled).
+		SetStatus(coordinationtask.Status(CoordinationTaskStatusCancelled)).
 		SetUpdatedAt(now).
 		Save(ctx)
 	if err != nil {
@@ -567,9 +567,9 @@ func (s *pgCoordinationTaskStore) cancelChildTasks(ctx context.Context, parentTa
 		Where(
 			coordinationtask.ParentTaskID(parentTaskID),
 			coordinationtask.StatusNotIn(
-				CoordinationTaskStatusComplete,
-				CoordinationTaskStatusFailed,
-				CoordinationTaskStatusCancelled,
+				coordinationtask.Status(CoordinationTaskStatusComplete),
+				coordinationtask.Status(CoordinationTaskStatusFailed),
+				coordinationtask.Status(CoordinationTaskStatusCancelled),
 			),
 		).
 		All(ctx)
@@ -579,7 +579,7 @@ func (s *pgCoordinationTaskStore) cancelChildTasks(ctx context.Context, parentTa
 	for _, child := range children {
 		if _, err := s.client.CoordinationTask.Update().
 			Where(coordinationtask.ID(child.ID)).
-			SetStatus(CoordinationTaskStatusCancelled).
+			SetStatus(coordinationtask.Status(CoordinationTaskStatusCancelled)).
 			SetUpdatedAt(now).
 			Save(ctx); err != nil {
 			return fmt.Errorf("failed to cancel child coordination task %s: %w", child.ID, err)
@@ -600,10 +600,14 @@ func (s *pgCoordinationTaskStore) UpdateTaskStatus(ctx context.Context, taskID u
 	now := time.Now().UTC()
 	q := s.client.CoordinationTask.Update().
 		Where(coordinationtask.ID(taskID)).
-		SetStatus(toStatus).
+		SetStatus(coordinationtask.Status(toStatus)).
 		SetUpdatedAt(now)
 	if len(fromStatuses) > 0 {
-		q.Where(coordinationtask.StatusIn(fromStatuses...))
+		statuses := make([]coordinationtask.Status, len(fromStatuses))
+		for i, s := range fromStatuses {
+			statuses[i] = coordinationtask.Status(s)
+		}
+		q.Where(coordinationtask.StatusIn(statuses...))
 	}
 	n, err := q.Save(ctx)
 	if err != nil {
@@ -627,12 +631,12 @@ func (s *pgCoordinationTaskStore) BumpDispatchAttempts(ctx context.Context, task
 		Where(
 			coordinationtask.ID(taskID),
 			coordinationtask.StatusIn(
-				CoordinationTaskStatusPending,
-				CoordinationTaskStatusAssigned,
-				CoordinationTaskStatusInProgress,
+				coordinationtask.Status(CoordinationTaskStatusPending),
+				coordinationtask.Status(CoordinationTaskStatusAssigned),
+				coordinationtask.Status(CoordinationTaskStatusInProgress),
 			),
 		).
-		SetStatus(CoordinationTaskStatusPending).
+		SetStatus(coordinationtask.Status(CoordinationTaskStatusPending)).
 		SetAssigneeAgentID("").
 		SetAssigneeAgentName("").
 		ClearClaimedAt().
@@ -745,8 +749,8 @@ func coordinationTaskFromEnt(e *ent.CoordinationTask) *CoordinationTaskRecord {
 		ID:                    e.ID,
 		IncidentID:            e.IncidentID,
 		ParentTaskID:          e.ParentTaskID,
-		Kind:                  e.Kind,
-		AssigneeRole:          e.AssigneeRole,
+		Kind:                  string(e.Kind),
+		AssigneeRole:          string(e.AssigneeRole),
 		AssigneeAgentID:       e.AssigneeAgentID,
 		AssigneeAgentName:     e.AssigneeAgentName,
 		Goal:                  e.Goal,
@@ -754,7 +758,7 @@ func coordinationTaskFromEnt(e *ent.CoordinationTask) *CoordinationTaskRecord {
 		Result:                e.Result,
 		ResultSchema:          e.ResultSchema,
 		LinkedInvestigationID: e.LinkedInvestigationID,
-		Status:                e.Status,
+		Status:                string(e.Status),
 		Priority:              e.Priority,
 		DueAt:                 e.DueAt,
 		ClaimedAt:             e.ClaimedAt,

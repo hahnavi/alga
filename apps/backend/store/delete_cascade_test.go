@@ -65,7 +65,7 @@ func TestDeleteAlertHardDeletesLinkedInvestigationArtifacts(t *testing.T) {
 		t.Fatal("investigation should be hard-deleted")
 	}
 	if n, _ := client.AlertInvestigationAlert.Query().
-		Where(alertinvestigationalert.AlertInvestigationUUIDEQ(created.ID)).
+		Where(alertinvestigationalert.AlertInvestigationIDEQ(created.ID)).
 		Count(ctx); n != 0 {
 		t.Fatalf("expected 0 join rows, got %d", n)
 	}

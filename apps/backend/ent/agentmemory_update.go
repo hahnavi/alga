@@ -46,13 +46,13 @@ func (_u *AgentMemoryUpdate) SetNillableContent(v *string) *AgentMemoryUpdate {
 }
 
 // SetMemoryType sets the "memory_type" field.
-func (_u *AgentMemoryUpdate) SetMemoryType(v string) *AgentMemoryUpdate {
+func (_u *AgentMemoryUpdate) SetMemoryType(v agentmemory.MemoryType) *AgentMemoryUpdate {
 	_u.mutation.SetMemoryType(v)
 	return _u
 }
 
 // SetNillableMemoryType sets the "memory_type" field if the given value is not nil.
-func (_u *AgentMemoryUpdate) SetNillableMemoryType(v *string) *AgentMemoryUpdate {
+func (_u *AgentMemoryUpdate) SetNillableMemoryType(v *agentmemory.MemoryType) *AgentMemoryUpdate {
 	if v != nil {
 		_u.SetMemoryType(*v)
 	}
@@ -380,6 +380,11 @@ func (_u *AgentMemoryUpdate) check() error {
 			return &ValidationError{Name: "content", err: fmt.Errorf(`ent: validator failed for field "AgentMemory.content": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.MemoryType(); ok {
+		if err := agentmemory.MemoryTypeValidator(v); err != nil {
+			return &ValidationError{Name: "memory_type", err: fmt.Errorf(`ent: validator failed for field "AgentMemory.memory_type": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Hash(); ok {
 		if err := agentmemory.HashValidator(v); err != nil {
 			return &ValidationError{Name: "hash", err: fmt.Errorf(`ent: validator failed for field "AgentMemory.hash": %w`, err)}
@@ -414,7 +419,7 @@ func (_u *AgentMemoryUpdate) sqlSave(ctx context.Context) (_node int, err error)
 		_spec.SetField(agentmemory.FieldContent, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.MemoryType(); ok {
-		_spec.SetField(agentmemory.FieldMemoryType, field.TypeString, value)
+		_spec.SetField(agentmemory.FieldMemoryType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Hash(); ok {
 		_spec.SetField(agentmemory.FieldHash, field.TypeString, value)
@@ -568,13 +573,13 @@ func (_u *AgentMemoryUpdateOne) SetNillableContent(v *string) *AgentMemoryUpdate
 }
 
 // SetMemoryType sets the "memory_type" field.
-func (_u *AgentMemoryUpdateOne) SetMemoryType(v string) *AgentMemoryUpdateOne {
+func (_u *AgentMemoryUpdateOne) SetMemoryType(v agentmemory.MemoryType) *AgentMemoryUpdateOne {
 	_u.mutation.SetMemoryType(v)
 	return _u
 }
 
 // SetNillableMemoryType sets the "memory_type" field if the given value is not nil.
-func (_u *AgentMemoryUpdateOne) SetNillableMemoryType(v *string) *AgentMemoryUpdateOne {
+func (_u *AgentMemoryUpdateOne) SetNillableMemoryType(v *agentmemory.MemoryType) *AgentMemoryUpdateOne {
 	if v != nil {
 		_u.SetMemoryType(*v)
 	}
@@ -915,6 +920,11 @@ func (_u *AgentMemoryUpdateOne) check() error {
 			return &ValidationError{Name: "content", err: fmt.Errorf(`ent: validator failed for field "AgentMemory.content": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.MemoryType(); ok {
+		if err := agentmemory.MemoryTypeValidator(v); err != nil {
+			return &ValidationError{Name: "memory_type", err: fmt.Errorf(`ent: validator failed for field "AgentMemory.memory_type": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Hash(); ok {
 		if err := agentmemory.HashValidator(v); err != nil {
 			return &ValidationError{Name: "hash", err: fmt.Errorf(`ent: validator failed for field "AgentMemory.hash": %w`, err)}
@@ -966,7 +976,7 @@ func (_u *AgentMemoryUpdateOne) sqlSave(ctx context.Context) (_node *AgentMemory
 		_spec.SetField(agentmemory.FieldContent, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.MemoryType(); ok {
-		_spec.SetField(agentmemory.FieldMemoryType, field.TypeString, value)
+		_spec.SetField(agentmemory.FieldMemoryType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Hash(); ok {
 		_spec.SetField(agentmemory.FieldHash, field.TypeString, value)

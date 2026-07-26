@@ -66,16 +66,6 @@ func ParentTaskID(v uuid.UUID) predicate.CoordinationTask {
 	return predicate.CoordinationTask(sql.FieldEQ(FieldParentTaskID, v))
 }
 
-// Kind applies equality check predicate on the "kind" field. It's identical to KindEQ.
-func Kind(v string) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldEQ(FieldKind, v))
-}
-
-// AssigneeRole applies equality check predicate on the "assignee_role" field. It's identical to AssigneeRoleEQ.
-func AssigneeRole(v string) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldEQ(FieldAssigneeRole, v))
-}
-
 // AssigneeAgentID applies equality check predicate on the "assignee_agent_id" field. It's identical to AssigneeAgentIDEQ.
 func AssigneeAgentID(v string) predicate.CoordinationTask {
 	return predicate.CoordinationTask(sql.FieldEQ(FieldAssigneeAgentID, v))
@@ -94,11 +84,6 @@ func Goal(v string) predicate.CoordinationTask {
 // LinkedInvestigationID applies equality check predicate on the "linked_investigation_id" field. It's identical to LinkedInvestigationIDEQ.
 func LinkedInvestigationID(v uuid.UUID) predicate.CoordinationTask {
 	return predicate.CoordinationTask(sql.FieldEQ(FieldLinkedInvestigationID, v))
-}
-
-// Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
-func Status(v string) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldEQ(FieldStatus, v))
 }
 
 // Priority applies equality check predicate on the "priority" field. It's identical to PriorityEQ.
@@ -212,133 +197,43 @@ func ParentTaskIDNotNil() predicate.CoordinationTask {
 }
 
 // KindEQ applies the EQ predicate on the "kind" field.
-func KindEQ(v string) predicate.CoordinationTask {
+func KindEQ(v Kind) predicate.CoordinationTask {
 	return predicate.CoordinationTask(sql.FieldEQ(FieldKind, v))
 }
 
 // KindNEQ applies the NEQ predicate on the "kind" field.
-func KindNEQ(v string) predicate.CoordinationTask {
+func KindNEQ(v Kind) predicate.CoordinationTask {
 	return predicate.CoordinationTask(sql.FieldNEQ(FieldKind, v))
 }
 
 // KindIn applies the In predicate on the "kind" field.
-func KindIn(vs ...string) predicate.CoordinationTask {
+func KindIn(vs ...Kind) predicate.CoordinationTask {
 	return predicate.CoordinationTask(sql.FieldIn(FieldKind, vs...))
 }
 
 // KindNotIn applies the NotIn predicate on the "kind" field.
-func KindNotIn(vs ...string) predicate.CoordinationTask {
+func KindNotIn(vs ...Kind) predicate.CoordinationTask {
 	return predicate.CoordinationTask(sql.FieldNotIn(FieldKind, vs...))
 }
 
-// KindGT applies the GT predicate on the "kind" field.
-func KindGT(v string) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldGT(FieldKind, v))
-}
-
-// KindGTE applies the GTE predicate on the "kind" field.
-func KindGTE(v string) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldGTE(FieldKind, v))
-}
-
-// KindLT applies the LT predicate on the "kind" field.
-func KindLT(v string) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldLT(FieldKind, v))
-}
-
-// KindLTE applies the LTE predicate on the "kind" field.
-func KindLTE(v string) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldLTE(FieldKind, v))
-}
-
-// KindContains applies the Contains predicate on the "kind" field.
-func KindContains(v string) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldContains(FieldKind, v))
-}
-
-// KindHasPrefix applies the HasPrefix predicate on the "kind" field.
-func KindHasPrefix(v string) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldHasPrefix(FieldKind, v))
-}
-
-// KindHasSuffix applies the HasSuffix predicate on the "kind" field.
-func KindHasSuffix(v string) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldHasSuffix(FieldKind, v))
-}
-
-// KindEqualFold applies the EqualFold predicate on the "kind" field.
-func KindEqualFold(v string) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldEqualFold(FieldKind, v))
-}
-
-// KindContainsFold applies the ContainsFold predicate on the "kind" field.
-func KindContainsFold(v string) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldContainsFold(FieldKind, v))
-}
-
 // AssigneeRoleEQ applies the EQ predicate on the "assignee_role" field.
-func AssigneeRoleEQ(v string) predicate.CoordinationTask {
+func AssigneeRoleEQ(v AssigneeRole) predicate.CoordinationTask {
 	return predicate.CoordinationTask(sql.FieldEQ(FieldAssigneeRole, v))
 }
 
 // AssigneeRoleNEQ applies the NEQ predicate on the "assignee_role" field.
-func AssigneeRoleNEQ(v string) predicate.CoordinationTask {
+func AssigneeRoleNEQ(v AssigneeRole) predicate.CoordinationTask {
 	return predicate.CoordinationTask(sql.FieldNEQ(FieldAssigneeRole, v))
 }
 
 // AssigneeRoleIn applies the In predicate on the "assignee_role" field.
-func AssigneeRoleIn(vs ...string) predicate.CoordinationTask {
+func AssigneeRoleIn(vs ...AssigneeRole) predicate.CoordinationTask {
 	return predicate.CoordinationTask(sql.FieldIn(FieldAssigneeRole, vs...))
 }
 
 // AssigneeRoleNotIn applies the NotIn predicate on the "assignee_role" field.
-func AssigneeRoleNotIn(vs ...string) predicate.CoordinationTask {
+func AssigneeRoleNotIn(vs ...AssigneeRole) predicate.CoordinationTask {
 	return predicate.CoordinationTask(sql.FieldNotIn(FieldAssigneeRole, vs...))
-}
-
-// AssigneeRoleGT applies the GT predicate on the "assignee_role" field.
-func AssigneeRoleGT(v string) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldGT(FieldAssigneeRole, v))
-}
-
-// AssigneeRoleGTE applies the GTE predicate on the "assignee_role" field.
-func AssigneeRoleGTE(v string) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldGTE(FieldAssigneeRole, v))
-}
-
-// AssigneeRoleLT applies the LT predicate on the "assignee_role" field.
-func AssigneeRoleLT(v string) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldLT(FieldAssigneeRole, v))
-}
-
-// AssigneeRoleLTE applies the LTE predicate on the "assignee_role" field.
-func AssigneeRoleLTE(v string) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldLTE(FieldAssigneeRole, v))
-}
-
-// AssigneeRoleContains applies the Contains predicate on the "assignee_role" field.
-func AssigneeRoleContains(v string) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldContains(FieldAssigneeRole, v))
-}
-
-// AssigneeRoleHasPrefix applies the HasPrefix predicate on the "assignee_role" field.
-func AssigneeRoleHasPrefix(v string) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldHasPrefix(FieldAssigneeRole, v))
-}
-
-// AssigneeRoleHasSuffix applies the HasSuffix predicate on the "assignee_role" field.
-func AssigneeRoleHasSuffix(v string) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldHasSuffix(FieldAssigneeRole, v))
-}
-
-// AssigneeRoleEqualFold applies the EqualFold predicate on the "assignee_role" field.
-func AssigneeRoleEqualFold(v string) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldEqualFold(FieldAssigneeRole, v))
-}
-
-// AssigneeRoleContainsFold applies the ContainsFold predicate on the "assignee_role" field.
-func AssigneeRoleContainsFold(v string) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldContainsFold(FieldAssigneeRole, v))
 }
 
 // AssigneeAgentIDEQ applies the EQ predicate on the "assignee_agent_id" field.
@@ -607,68 +502,23 @@ func LinkedInvestigationIDNotNil() predicate.CoordinationTask {
 }
 
 // StatusEQ applies the EQ predicate on the "status" field.
-func StatusEQ(v string) predicate.CoordinationTask {
+func StatusEQ(v Status) predicate.CoordinationTask {
 	return predicate.CoordinationTask(sql.FieldEQ(FieldStatus, v))
 }
 
 // StatusNEQ applies the NEQ predicate on the "status" field.
-func StatusNEQ(v string) predicate.CoordinationTask {
+func StatusNEQ(v Status) predicate.CoordinationTask {
 	return predicate.CoordinationTask(sql.FieldNEQ(FieldStatus, v))
 }
 
 // StatusIn applies the In predicate on the "status" field.
-func StatusIn(vs ...string) predicate.CoordinationTask {
+func StatusIn(vs ...Status) predicate.CoordinationTask {
 	return predicate.CoordinationTask(sql.FieldIn(FieldStatus, vs...))
 }
 
 // StatusNotIn applies the NotIn predicate on the "status" field.
-func StatusNotIn(vs ...string) predicate.CoordinationTask {
+func StatusNotIn(vs ...Status) predicate.CoordinationTask {
 	return predicate.CoordinationTask(sql.FieldNotIn(FieldStatus, vs...))
-}
-
-// StatusGT applies the GT predicate on the "status" field.
-func StatusGT(v string) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldGT(FieldStatus, v))
-}
-
-// StatusGTE applies the GTE predicate on the "status" field.
-func StatusGTE(v string) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldGTE(FieldStatus, v))
-}
-
-// StatusLT applies the LT predicate on the "status" field.
-func StatusLT(v string) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldLT(FieldStatus, v))
-}
-
-// StatusLTE applies the LTE predicate on the "status" field.
-func StatusLTE(v string) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldLTE(FieldStatus, v))
-}
-
-// StatusContains applies the Contains predicate on the "status" field.
-func StatusContains(v string) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldContains(FieldStatus, v))
-}
-
-// StatusHasPrefix applies the HasPrefix predicate on the "status" field.
-func StatusHasPrefix(v string) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldHasPrefix(FieldStatus, v))
-}
-
-// StatusHasSuffix applies the HasSuffix predicate on the "status" field.
-func StatusHasSuffix(v string) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldHasSuffix(FieldStatus, v))
-}
-
-// StatusEqualFold applies the EqualFold predicate on the "status" field.
-func StatusEqualFold(v string) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldEqualFold(FieldStatus, v))
-}
-
-// StatusContainsFold applies the ContainsFold predicate on the "status" field.
-func StatusContainsFold(v string) predicate.CoordinationTask {
-	return predicate.CoordinationTask(sql.FieldContainsFold(FieldStatus, v))
 }
 
 // PriorityEQ applies the EQ predicate on the "priority" field.

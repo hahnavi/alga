@@ -299,12 +299,12 @@ func (_q *InvestigationThreadMessageQuery) WithThread(opts ...func(*Investigatio
 // Example:
 //
 //	var v []struct {
-//		ThreadUUID uuid.UUID `json:"thread_uuid,omitempty"`
+//		ThreadID uuid.UUID `json:"thread_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.InvestigationThreadMessage.Query().
-//		GroupBy(investigationthreadmessage.FieldThreadUUID).
+//		GroupBy(investigationthreadmessage.FieldThreadID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *InvestigationThreadMessageQuery) GroupBy(field string, fields ...string) *InvestigationThreadMessageGroupBy {
@@ -322,11 +322,11 @@ func (_q *InvestigationThreadMessageQuery) GroupBy(field string, fields ...strin
 // Example:
 //
 //	var v []struct {
-//		ThreadUUID uuid.UUID `json:"thread_uuid,omitempty"`
+//		ThreadID uuid.UUID `json:"thread_id,omitempty"`
 //	}
 //
 //	client.InvestigationThreadMessage.Query().
-//		Select(investigationthreadmessage.FieldThreadUUID).
+//		Select(investigationthreadmessage.FieldThreadID).
 //		Scan(ctx, &v)
 func (_q *InvestigationThreadMessageQuery) Select(fields ...string) *InvestigationThreadMessageSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
@@ -406,7 +406,7 @@ func (_q *InvestigationThreadMessageQuery) loadThread(ctx context.Context, query
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*InvestigationThreadMessage)
 	for i := range nodes {
-		fk := nodes[i].ThreadUUID
+		fk := nodes[i].ThreadID
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -423,7 +423,7 @@ func (_q *InvestigationThreadMessageQuery) loadThread(ctx context.Context, query
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "thread_uuid" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "thread_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -458,7 +458,7 @@ func (_q *InvestigationThreadMessageQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 		if _q.withThread != nil {
-			_spec.Node.AddColumnOnce(investigationthreadmessage.FieldThreadUUID)
+			_spec.Node.AddColumnOnce(investigationthreadmessage.FieldThreadID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

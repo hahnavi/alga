@@ -118,8 +118,8 @@ func (s *pgHeartbeatStore) Create(ctx context.Context, record *HeartbeatRecord) 
 		SetGraceSeconds(record.GraceSeconds).
 		SetEnabled(record.Enabled).
 		SetNillableOwnerTeamID(record.OwnerTeamID).
-		SetStatus(record.Status).
-		SetSeverity(record.Severity).
+		SetStatus(heartbeat.Status(record.Status)).
+		SetSeverity(heartbeat.Severity(record.Severity)).
 		SetLabels(record.Labels).
 		SetPingTokenHash(record.PingTokenHash).
 		SetLookupPrefix(record.LookupPrefix).
@@ -157,7 +157,7 @@ func (s *pgHeartbeatStore) Update(ctx context.Context, id uuid.UUID, patch *Hear
 		b.SetGraceSeconds(patch.GraceSeconds)
 	}
 	if patch.Severity != "" {
-		b.SetSeverity(patch.Severity)
+		b.SetSeverity(heartbeat.Severity(patch.Severity))
 	}
 	if patch.Labels != nil {
 		b.SetLabels(patch.Labels)
@@ -192,7 +192,7 @@ func (s *pgHeartbeatStore) Update(ctx context.Context, id uuid.UUID, patch *Hear
 		}
 		expiresAt := base.Add(time.Duration(interval+grace) * time.Second)
 		b.SetExpiresAt(expiresAt)
-		b.SetStatus(HeartbeatStatusHealthy)
+		b.SetStatus(heartbeat.Status(HeartbeatStatusHealthy))
 	}
 
 	saved, err := b.Save(ctx)
@@ -231,7 +231,7 @@ func (s *pgHeartbeatStore) List(ctx context.Context, q HeartbeatQuery) ([]Heartb
 		query = query.Where(heartbeat.EnabledEQ(*q.Enabled))
 	}
 	if q.Status != "" {
-		query = query.Where(heartbeat.StatusEQ(q.Status))
+		query = query.Where(heartbeat.StatusEQ(heartbeat.Status(q.Status)))
 	}
 	if q.OwnerTeamID != nil {
 		query = query.Where(heartbeat.OwnerTeamIDEQ(*q.OwnerTeamID))
@@ -321,7 +321,7 @@ func (s *pgHeartbeatStore) RecordPing(ctx context.Context, id uuid.UUID, now tim
 	saved, err := s.client.Heartbeat.UpdateOneID(id).
 		SetLastPingAt(now).
 		SetExpiresAt(expiresAt).
-		SetStatus(HeartbeatStatusHealthy).
+		SetStatus(heartbeat.Status(HeartbeatStatusHealthy)).
 		SetUpdatedAt(now).
 		Save(ctx)
 	if err != nil {
@@ -337,7 +337,7 @@ func (s *pgHeartbeatStore) ListExpired(ctx context.Context, now time.Time) ([]He
 	items, err := s.client.Heartbeat.Query().
 		Where(
 			heartbeat.EnabledEQ(true),
-			heartbeat.StatusEQ(HeartbeatStatusHealthy),
+			heartbeat.StatusEQ(heartbeat.Status(HeartbeatStatusHealthy)),
 			heartbeat.ExpiresAtNotNil(),
 			heartbeat.ExpiresAtLT(now),
 		).
@@ -354,7 +354,7 @@ func (s *pgHeartbeatStore) ListExpired(ctx context.Context, now time.Time) ([]He
 
 func (s *pgHeartbeatStore) MarkExpired(ctx context.Context, id uuid.UUID, now time.Time) (*HeartbeatRecord, error) {
 	saved, err := s.client.Heartbeat.UpdateOneID(id).
-		SetStatus(HeartbeatStatusExpired).
+		SetStatus(heartbeat.Status(HeartbeatStatusExpired)).
 		SetLastBreachAt(now).
 		SetUpdatedAt(now).
 		Save(ctx)
@@ -382,8 +382,8 @@ func pgHeartbeatToRecord(hb *ent.Heartbeat) *HeartbeatRecord {
 		GraceSeconds:    hb.GraceSeconds,
 		Enabled:         hb.Enabled,
 		OwnerTeamID:     hb.OwnerTeamID,
-		Status:          hb.Status,
-		Severity:        hb.Severity,
+		Status:          string(hb.Status),
+		Severity:        string(hb.Severity),
 		Labels:          labels,
 		PingTokenHash:   hb.PingTokenHash,
 		LookupPrefix:    hb.LookupPrefix,

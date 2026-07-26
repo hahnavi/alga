@@ -43,13 +43,13 @@ func (_c *ScheduleLayerCreate) SetNillableName(v *string) *ScheduleLayerCreate {
 }
 
 // SetRotationType sets the "rotation_type" field.
-func (_c *ScheduleLayerCreate) SetRotationType(v string) *ScheduleLayerCreate {
+func (_c *ScheduleLayerCreate) SetRotationType(v schedulelayer.RotationType) *ScheduleLayerCreate {
 	_c.mutation.SetRotationType(v)
 	return _c
 }
 
 // SetNillableRotationType sets the "rotation_type" field if the given value is not nil.
-func (_c *ScheduleLayerCreate) SetNillableRotationType(v *string) *ScheduleLayerCreate {
+func (_c *ScheduleLayerCreate) SetNillableRotationType(v *schedulelayer.RotationType) *ScheduleLayerCreate {
 	if v != nil {
 		_c.SetRotationType(*v)
 	}
@@ -313,6 +313,11 @@ func (_c *ScheduleLayerCreate) check() error {
 	if _, ok := _c.mutation.RotationType(); !ok {
 		return &ValidationError{Name: "rotation_type", err: errors.New(`ent: missing required field "ScheduleLayer.rotation_type"`)}
 	}
+	if v, ok := _c.mutation.RotationType(); ok {
+		if err := schedulelayer.RotationTypeValidator(v); err != nil {
+			return &ValidationError{Name: "rotation_type", err: fmt.Errorf(`ent: validator failed for field "ScheduleLayer.rotation_type": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.RotationInterval(); !ok {
 		return &ValidationError{Name: "rotation_interval", err: errors.New(`ent: missing required field "ScheduleLayer.rotation_interval"`)}
 	}
@@ -396,7 +401,7 @@ func (_c *ScheduleLayerCreate) createSpec() (*ScheduleLayer, *sqlgraph.CreateSpe
 		_node.Name = value
 	}
 	if value, ok := _c.mutation.RotationType(); ok {
-		_spec.SetField(schedulelayer.FieldRotationType, field.TypeString, value)
+		_spec.SetField(schedulelayer.FieldRotationType, field.TypeEnum, value)
 		_node.RotationType = value
 	}
 	if value, ok := _c.mutation.RotationInterval(); ok {

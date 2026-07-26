@@ -3,6 +3,7 @@
 package icsroleassignment
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -107,17 +108,115 @@ func ValidColumn(column string) bool {
 }
 
 var (
-	// DefaultRoleType holds the default value on creation for the "role_type" field.
-	DefaultRoleType string
-	// DefaultStatus holds the default value on creation for the "status" field.
-	DefaultStatus string
-	// DefaultAssigneeType holds the default value on creation for the "assignee_type" field.
-	DefaultAssigneeType string
 	// DefaultStartedAt holds the default value on creation for the "started_at" field.
 	DefaultStartedAt func() time.Time
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// RoleType defines the type for the "role_type" enum field.
+type RoleType string
+
+// RoleTypeResponder is the default value of the RoleType enum.
+const DefaultRoleType = RoleTypeResponder
+
+// RoleType values.
+const (
+	RoleTypeIncidentCommander  RoleType = "incident_commander"
+	RoleTypeCommunicationsLead RoleType = "communications_lead"
+	RoleTypeResponder          RoleType = "responder"
+)
+
+func (rt RoleType) String() string {
+	return string(rt)
+}
+
+// RoleTypeValidator is a validator for the "role_type" field enum values. It is called by the builders before save.
+func RoleTypeValidator(rt RoleType) error {
+	switch rt {
+	case RoleTypeIncidentCommander, RoleTypeCommunicationsLead, RoleTypeResponder:
+		return nil
+	default:
+		return fmt.Errorf("icsroleassignment: invalid enum value for role_type field: %q", rt)
+	}
+}
+
+// Status defines the type for the "status" enum field.
+type Status string
+
+// StatusActive is the default value of the Status enum.
+const DefaultStatus = StatusActive
+
+// Status values.
+const (
+	StatusActive Status = "active"
+	StatusEnded  Status = "ended"
+)
+
+func (s Status) String() string {
+	return string(s)
+}
+
+// StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
+func StatusValidator(s Status) error {
+	switch s {
+	case StatusActive, StatusEnded:
+		return nil
+	default:
+		return fmt.Errorf("icsroleassignment: invalid enum value for status field: %q", s)
+	}
+}
+
+// AssigneeType defines the type for the "assignee_type" enum field.
+type AssigneeType string
+
+// AssigneeTypeUser is the default value of the AssigneeType enum.
+const DefaultAssigneeType = AssigneeTypeUser
+
+// AssigneeType values.
+const (
+	AssigneeTypeUser  AssigneeType = "user"
+	AssigneeTypeAgent AssigneeType = "agent"
+)
+
+func (at AssigneeType) String() string {
+	return string(at)
+}
+
+// AssigneeTypeValidator is a validator for the "assignee_type" field enum values. It is called by the builders before save.
+func AssigneeTypeValidator(at AssigneeType) error {
+	switch at {
+	case AssigneeTypeUser, AssigneeTypeAgent:
+		return nil
+	default:
+		return fmt.Errorf("icsroleassignment: invalid enum value for assignee_type field: %q", at)
+	}
+}
+
+// EndedReason defines the type for the "ended_reason" enum field.
+type EndedReason string
+
+// EndedReason values.
+const (
+	EndedReasonReplaced         EndedReason = "replaced"
+	EndedReasonIncidentResolved EndedReason = "incident_resolved"
+	EndedReasonAssigned         EndedReason = "assigned"
+	EndedReasonAgentOffline     EndedReason = "agent_offline"
+)
+
+func (er EndedReason) String() string {
+	return string(er)
+}
+
+// EndedReasonValidator is a validator for the "ended_reason" field enum values. It is called by the builders before save.
+func EndedReasonValidator(er EndedReason) error {
+	switch er {
+	case EndedReasonReplaced, EndedReasonIncidentResolved, EndedReasonAssigned, EndedReasonAgentOffline:
+		return nil
+	default:
+		return fmt.Errorf("icsroleassignment: invalid enum value for ended_reason field: %q", er)
+	}
+}
 
 // OrderOption defines the ordering options for the ICSRoleAssignment queries.
 type OrderOption func(*sql.Selector)

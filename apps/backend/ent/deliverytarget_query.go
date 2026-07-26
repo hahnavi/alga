@@ -299,7 +299,7 @@ func (_q *DeliveryTargetQuery) WithAlert(opts ...func(*AlertQuery)) *DeliveryTar
 // Example:
 //
 //	var v []struct {
-//		Provider string `json:"provider,omitempty"`
+//		Provider deliverytarget.Provider `json:"provider,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
@@ -322,7 +322,7 @@ func (_q *DeliveryTargetQuery) GroupBy(field string, fields ...string) *Delivery
 // Example:
 //
 //	var v []struct {
-//		Provider string `json:"provider,omitempty"`
+//		Provider deliverytarget.Provider `json:"provider,omitempty"`
 //	}
 //
 //	client.DeliveryTarget.Query().

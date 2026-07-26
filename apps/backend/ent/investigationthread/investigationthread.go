@@ -35,7 +35,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "investigationthreadmessage" package.
 	MessagesInverseTable = "investigation_thread_messages"
 	// MessagesColumn is the table column denoting the messages relation/edge.
-	MessagesColumn = "thread_uuid"
+	MessagesColumn = "thread_id"
 )
 
 // Columns holds all SQL columns for investigationthread fields.

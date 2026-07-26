@@ -47,12 +47,22 @@ func newPGActionItemStore(client *ent.Client) ActionItemStore {
 func (s *pgActionItemStore) Create(ctx context.Context, record *ActionItemRecord) (*ActionItemRecord, error) {
 	now := time.Now().UTC()
 
+	if record.Status == "" {
+		record.Status = "open"
+	}
+	if record.Priority == "" {
+		record.Priority = "medium"
+	}
+	if record.Type == "" {
+		record.Type = "investigate"
+	}
+
 	b := s.client.ActionItem.Create().
 		SetPostMortemID(record.PostMortemID).
 		SetDescription(record.Description).
-		SetStatus(record.Status).
-		SetPriority(record.Priority).
-		SetType(record.Type).
+		SetStatus(entactionitem.Status(record.Status)).
+		SetPriority(entactionitem.Priority(record.Priority)).
+		SetType(entactionitem.Type(record.Type)).
 		SetAssigneeName(record.AssigneeName).
 		SetCreatedAt(now).
 		SetUpdatedAt(now)
@@ -99,8 +109,8 @@ func (s *pgActionItemStore) ListByPostMortem(ctx context.Context, postMortemID u
 func (s *pgActionItemStore) ListOpen(ctx context.Context) ([]ActionItemRecord, error) {
 	items, err := s.client.ActionItem.Query().
 		Where(
-			entactionitem.StatusNEQ("completed"),
-			entactionitem.StatusNEQ("cancelled"),
+			entactionitem.StatusNEQ(entactionitem.StatusCompleted),
+			entactionitem.StatusNEQ(entactionitem.StatusCancelled),
 		).
 		Order(ent.Asc(entactionitem.FieldDueDate)).
 		All(ctx)
@@ -119,8 +129,8 @@ func (s *pgActionItemStore) ListOverdue(ctx context.Context) ([]ActionItemRecord
 	now := time.Now().UTC()
 	items, err := s.client.ActionItem.Query().
 		Where(
-			entactionitem.StatusNEQ("completed"),
-			entactionitem.StatusNEQ("cancelled"),
+			entactionitem.StatusNEQ(entactionitem.StatusCompleted),
+			entactionitem.StatusNEQ(entactionitem.StatusCancelled),
 			entactionitem.DueDateLT(now),
 			entactionitem.DueDateNotNil(),
 		).
@@ -140,9 +150,9 @@ func (s *pgActionItemStore) ListOverdue(ctx context.Context) ([]ActionItemRecord
 func (s *pgActionItemStore) Update(ctx context.Context, id uuid.UUID, record *ActionItemRecord) (*ActionItemRecord, error) {
 	b := s.client.ActionItem.UpdateOneID(id).
 		SetDescription(record.Description).
-		SetStatus(record.Status).
-		SetPriority(record.Priority).
-		SetType(record.Type).
+		SetStatus(entactionitem.Status(record.Status)).
+		SetPriority(entactionitem.Priority(record.Priority)).
+		SetType(entactionitem.Type(record.Type)).
 		SetAssigneeName(record.AssigneeName).
 		SetUpdatedAt(time.Now().UTC())
 
@@ -189,9 +199,9 @@ func (s *pgActionItemStore) toRecord(ai *ent.ActionItem) *ActionItemRecord {
 		PostMortemID: ai.PostMortemID,
 		Description:  ai.Description,
 		AssigneeID:   ai.AssigneeID,
-		Status:       ai.Status,
-		Priority:     ai.Priority,
-		Type:         ai.Type,
+		Status:       string(ai.Status),
+		Priority:     string(ai.Priority),
+		Type:         string(ai.Type),
 		AssigneeName: ai.AssigneeName,
 		DueDate:      ai.DueDate,
 		CreatedAt:    ai.CreatedAt,

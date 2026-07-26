@@ -3,6 +3,7 @@
 package heartbeat
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -107,10 +108,6 @@ var (
 	GraceSecondsValidator func(int) error
 	// DefaultEnabled holds the default value on creation for the "enabled" field.
 	DefaultEnabled bool
-	// DefaultStatus holds the default value on creation for the "status" field.
-	DefaultStatus string
-	// DefaultSeverity holds the default value on creation for the "severity" field.
-	DefaultSeverity string
 	// PingTokenHashValidator is a validator for the "ping_token_hash" field. It is called by the builders before save.
 	PingTokenHashValidator func(string) error
 	// LookupPrefixValidator is a validator for the "lookup_prefix" field. It is called by the builders before save.
@@ -124,6 +121,59 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// Status defines the type for the "status" enum field.
+type Status string
+
+// StatusHealthy is the default value of the Status enum.
+const DefaultStatus = StatusHealthy
+
+// Status values.
+const (
+	StatusHealthy Status = "healthy"
+	StatusExpired Status = "expired"
+)
+
+func (s Status) String() string {
+	return string(s)
+}
+
+// StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
+func StatusValidator(s Status) error {
+	switch s {
+	case StatusHealthy, StatusExpired:
+		return nil
+	default:
+		return fmt.Errorf("heartbeat: invalid enum value for status field: %q", s)
+	}
+}
+
+// Severity defines the type for the "severity" enum field.
+type Severity string
+
+// SeverityWarning is the default value of the Severity enum.
+const DefaultSeverity = SeverityWarning
+
+// Severity values.
+const (
+	SeverityCritical Severity = "critical"
+	SeverityWarning  Severity = "warning"
+	SeverityInfo     Severity = "info"
+)
+
+func (s Severity) String() string {
+	return string(s)
+}
+
+// SeverityValidator is a validator for the "severity" field enum values. It is called by the builders before save.
+func SeverityValidator(s Severity) error {
+	switch s {
+	case SeverityCritical, SeverityWarning, SeverityInfo:
+		return nil
+	default:
+		return fmt.Errorf("heartbeat: invalid enum value for severity field: %q", s)
+	}
+}
 
 // OrderOption defines the ordering options for the Heartbeat queries.
 type OrderOption func(*sql.Selector)

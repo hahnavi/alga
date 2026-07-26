@@ -84,13 +84,13 @@ func (_u *TriageRuleUpdate) ClearConditions() *TriageRuleUpdate {
 }
 
 // SetMatchMode sets the "match_mode" field.
-func (_u *TriageRuleUpdate) SetMatchMode(v string) *TriageRuleUpdate {
+func (_u *TriageRuleUpdate) SetMatchMode(v triagerule.MatchMode) *TriageRuleUpdate {
 	_u.mutation.SetMatchMode(v)
 	return _u
 }
 
 // SetNillableMatchMode sets the "match_mode" field if the given value is not nil.
-func (_u *TriageRuleUpdate) SetNillableMatchMode(v *string) *TriageRuleUpdate {
+func (_u *TriageRuleUpdate) SetNillableMatchMode(v *triagerule.MatchMode) *TriageRuleUpdate {
 	if v != nil {
 		_u.SetMatchMode(*v)
 	}
@@ -98,13 +98,13 @@ func (_u *TriageRuleUpdate) SetNillableMatchMode(v *string) *TriageRuleUpdate {
 }
 
 // SetDecision sets the "decision" field.
-func (_u *TriageRuleUpdate) SetDecision(v string) *TriageRuleUpdate {
+func (_u *TriageRuleUpdate) SetDecision(v triagerule.Decision) *TriageRuleUpdate {
 	_u.mutation.SetDecision(v)
 	return _u
 }
 
 // SetNillableDecision sets the "decision" field if the given value is not nil.
-func (_u *TriageRuleUpdate) SetNillableDecision(v *string) *TriageRuleUpdate {
+func (_u *TriageRuleUpdate) SetNillableDecision(v *triagerule.Decision) *TriageRuleUpdate {
 	if v != nil {
 		_u.SetDecision(*v)
 	}
@@ -112,13 +112,13 @@ func (_u *TriageRuleUpdate) SetNillableDecision(v *string) *TriageRuleUpdate {
 }
 
 // SetSeverity sets the "severity" field.
-func (_u *TriageRuleUpdate) SetSeverity(v string) *TriageRuleUpdate {
+func (_u *TriageRuleUpdate) SetSeverity(v triagerule.Severity) *TriageRuleUpdate {
 	_u.mutation.SetSeverity(v)
 	return _u
 }
 
 // SetNillableSeverity sets the "severity" field if the given value is not nil.
-func (_u *TriageRuleUpdate) SetNillableSeverity(v *string) *TriageRuleUpdate {
+func (_u *TriageRuleUpdate) SetNillableSeverity(v *triagerule.Severity) *TriageRuleUpdate {
 	if v != nil {
 		_u.SetSeverity(*v)
 	}
@@ -132,13 +132,13 @@ func (_u *TriageRuleUpdate) ClearSeverity() *TriageRuleUpdate {
 }
 
 // SetCategory sets the "category" field.
-func (_u *TriageRuleUpdate) SetCategory(v string) *TriageRuleUpdate {
+func (_u *TriageRuleUpdate) SetCategory(v triagerule.Category) *TriageRuleUpdate {
 	_u.mutation.SetCategory(v)
 	return _u
 }
 
 // SetNillableCategory sets the "category" field if the given value is not nil.
-func (_u *TriageRuleUpdate) SetNillableCategory(v *string) *TriageRuleUpdate {
+func (_u *TriageRuleUpdate) SetNillableCategory(v *triagerule.Category) *TriageRuleUpdate {
 	if v != nil {
 		_u.SetCategory(*v)
 	}
@@ -311,9 +311,24 @@ func (_u *TriageRuleUpdate) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "TriageRule.name": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.MatchMode(); ok {
+		if err := triagerule.MatchModeValidator(v); err != nil {
+			return &ValidationError{Name: "match_mode", err: fmt.Errorf(`ent: validator failed for field "TriageRule.match_mode": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Decision(); ok {
 		if err := triagerule.DecisionValidator(v); err != nil {
 			return &ValidationError{Name: "decision", err: fmt.Errorf(`ent: validator failed for field "TriageRule.decision": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Severity(); ok {
+		if err := triagerule.SeverityValidator(v); err != nil {
+			return &ValidationError{Name: "severity", err: fmt.Errorf(`ent: validator failed for field "TriageRule.severity": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Category(); ok {
+		if err := triagerule.CategoryValidator(v); err != nil {
+			return &ValidationError{Name: "category", err: fmt.Errorf(`ent: validator failed for field "TriageRule.category": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.Priority(); ok {
@@ -357,22 +372,22 @@ func (_u *TriageRuleUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 		_spec.ClearField(triagerule.FieldConditions, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.MatchMode(); ok {
-		_spec.SetField(triagerule.FieldMatchMode, field.TypeString, value)
+		_spec.SetField(triagerule.FieldMatchMode, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Decision(); ok {
-		_spec.SetField(triagerule.FieldDecision, field.TypeString, value)
+		_spec.SetField(triagerule.FieldDecision, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Severity(); ok {
-		_spec.SetField(triagerule.FieldSeverity, field.TypeString, value)
+		_spec.SetField(triagerule.FieldSeverity, field.TypeEnum, value)
 	}
 	if _u.mutation.SeverityCleared() {
-		_spec.ClearField(triagerule.FieldSeverity, field.TypeString)
+		_spec.ClearField(triagerule.FieldSeverity, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.Category(); ok {
-		_spec.SetField(triagerule.FieldCategory, field.TypeString, value)
+		_spec.SetField(triagerule.FieldCategory, field.TypeEnum, value)
 	}
 	if _u.mutation.CategoryCleared() {
-		_spec.ClearField(triagerule.FieldCategory, field.TypeString)
+		_spec.ClearField(triagerule.FieldCategory, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.Enrichment(); ok {
 		_spec.SetField(triagerule.FieldEnrichment, field.TypeJSON, value)
@@ -497,13 +512,13 @@ func (_u *TriageRuleUpdateOne) ClearConditions() *TriageRuleUpdateOne {
 }
 
 // SetMatchMode sets the "match_mode" field.
-func (_u *TriageRuleUpdateOne) SetMatchMode(v string) *TriageRuleUpdateOne {
+func (_u *TriageRuleUpdateOne) SetMatchMode(v triagerule.MatchMode) *TriageRuleUpdateOne {
 	_u.mutation.SetMatchMode(v)
 	return _u
 }
 
 // SetNillableMatchMode sets the "match_mode" field if the given value is not nil.
-func (_u *TriageRuleUpdateOne) SetNillableMatchMode(v *string) *TriageRuleUpdateOne {
+func (_u *TriageRuleUpdateOne) SetNillableMatchMode(v *triagerule.MatchMode) *TriageRuleUpdateOne {
 	if v != nil {
 		_u.SetMatchMode(*v)
 	}
@@ -511,13 +526,13 @@ func (_u *TriageRuleUpdateOne) SetNillableMatchMode(v *string) *TriageRuleUpdate
 }
 
 // SetDecision sets the "decision" field.
-func (_u *TriageRuleUpdateOne) SetDecision(v string) *TriageRuleUpdateOne {
+func (_u *TriageRuleUpdateOne) SetDecision(v triagerule.Decision) *TriageRuleUpdateOne {
 	_u.mutation.SetDecision(v)
 	return _u
 }
 
 // SetNillableDecision sets the "decision" field if the given value is not nil.
-func (_u *TriageRuleUpdateOne) SetNillableDecision(v *string) *TriageRuleUpdateOne {
+func (_u *TriageRuleUpdateOne) SetNillableDecision(v *triagerule.Decision) *TriageRuleUpdateOne {
 	if v != nil {
 		_u.SetDecision(*v)
 	}
@@ -525,13 +540,13 @@ func (_u *TriageRuleUpdateOne) SetNillableDecision(v *string) *TriageRuleUpdateO
 }
 
 // SetSeverity sets the "severity" field.
-func (_u *TriageRuleUpdateOne) SetSeverity(v string) *TriageRuleUpdateOne {
+func (_u *TriageRuleUpdateOne) SetSeverity(v triagerule.Severity) *TriageRuleUpdateOne {
 	_u.mutation.SetSeverity(v)
 	return _u
 }
 
 // SetNillableSeverity sets the "severity" field if the given value is not nil.
-func (_u *TriageRuleUpdateOne) SetNillableSeverity(v *string) *TriageRuleUpdateOne {
+func (_u *TriageRuleUpdateOne) SetNillableSeverity(v *triagerule.Severity) *TriageRuleUpdateOne {
 	if v != nil {
 		_u.SetSeverity(*v)
 	}
@@ -545,13 +560,13 @@ func (_u *TriageRuleUpdateOne) ClearSeverity() *TriageRuleUpdateOne {
 }
 
 // SetCategory sets the "category" field.
-func (_u *TriageRuleUpdateOne) SetCategory(v string) *TriageRuleUpdateOne {
+func (_u *TriageRuleUpdateOne) SetCategory(v triagerule.Category) *TriageRuleUpdateOne {
 	_u.mutation.SetCategory(v)
 	return _u
 }
 
 // SetNillableCategory sets the "category" field if the given value is not nil.
-func (_u *TriageRuleUpdateOne) SetNillableCategory(v *string) *TriageRuleUpdateOne {
+func (_u *TriageRuleUpdateOne) SetNillableCategory(v *triagerule.Category) *TriageRuleUpdateOne {
 	if v != nil {
 		_u.SetCategory(*v)
 	}
@@ -737,9 +752,24 @@ func (_u *TriageRuleUpdateOne) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "TriageRule.name": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.MatchMode(); ok {
+		if err := triagerule.MatchModeValidator(v); err != nil {
+			return &ValidationError{Name: "match_mode", err: fmt.Errorf(`ent: validator failed for field "TriageRule.match_mode": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Decision(); ok {
 		if err := triagerule.DecisionValidator(v); err != nil {
 			return &ValidationError{Name: "decision", err: fmt.Errorf(`ent: validator failed for field "TriageRule.decision": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Severity(); ok {
+		if err := triagerule.SeverityValidator(v); err != nil {
+			return &ValidationError{Name: "severity", err: fmt.Errorf(`ent: validator failed for field "TriageRule.severity": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Category(); ok {
+		if err := triagerule.CategoryValidator(v); err != nil {
+			return &ValidationError{Name: "category", err: fmt.Errorf(`ent: validator failed for field "TriageRule.category": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.Priority(); ok {
@@ -800,22 +830,22 @@ func (_u *TriageRuleUpdateOne) sqlSave(ctx context.Context) (_node *TriageRule, 
 		_spec.ClearField(triagerule.FieldConditions, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.MatchMode(); ok {
-		_spec.SetField(triagerule.FieldMatchMode, field.TypeString, value)
+		_spec.SetField(triagerule.FieldMatchMode, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Decision(); ok {
-		_spec.SetField(triagerule.FieldDecision, field.TypeString, value)
+		_spec.SetField(triagerule.FieldDecision, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Severity(); ok {
-		_spec.SetField(triagerule.FieldSeverity, field.TypeString, value)
+		_spec.SetField(triagerule.FieldSeverity, field.TypeEnum, value)
 	}
 	if _u.mutation.SeverityCleared() {
-		_spec.ClearField(triagerule.FieldSeverity, field.TypeString)
+		_spec.ClearField(triagerule.FieldSeverity, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.Category(); ok {
-		_spec.SetField(triagerule.FieldCategory, field.TypeString, value)
+		_spec.SetField(triagerule.FieldCategory, field.TypeEnum, value)
 	}
 	if _u.mutation.CategoryCleared() {
-		_spec.ClearField(triagerule.FieldCategory, field.TypeString)
+		_spec.ClearField(triagerule.FieldCategory, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.Enrichment(); ok {
 		_spec.SetField(triagerule.FieldEnrichment, field.TypeJSON, value)

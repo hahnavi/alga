@@ -26,7 +26,7 @@ type StatusPage struct {
 	// Description holds the value of the "description" field.
 	Description string `json:"description,omitempty"`
 	// Visibility holds the value of the "visibility" field.
-	Visibility string `json:"visibility,omitempty"`
+	Visibility statuspage.Visibility `json:"visibility,omitempty"`
 	// Enabled holds the value of the "enabled" field.
 	Enabled bool `json:"enabled,omitempty"`
 	// OwnerTeamID holds the value of the "owner_team_id" field.
@@ -130,7 +130,7 @@ func (_m *StatusPage) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field visibility", values[i])
 			} else if value.Valid {
-				_m.Visibility = value.String
+				_m.Visibility = statuspage.Visibility(value.String)
 			}
 		case statuspage.FieldEnabled:
 			if value, ok := values[i].(*sql.NullBool); !ok {
@@ -213,7 +213,7 @@ func (_m *StatusPage) String() string {
 	builder.WriteString(_m.Description)
 	builder.WriteString(", ")
 	builder.WriteString("visibility=")
-	builder.WriteString(_m.Visibility)
+	builder.WriteString(fmt.Sprintf("%v", _m.Visibility))
 	builder.WriteString(", ")
 	builder.WriteString("enabled=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Enabled))

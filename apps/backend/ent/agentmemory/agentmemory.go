@@ -3,6 +3,7 @@
 package agentmemory
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -97,8 +98,6 @@ func ValidColumn(column string) bool {
 var (
 	// ContentValidator is a validator for the "content" field. It is called by the builders before save.
 	ContentValidator func(string) error
-	// DefaultMemoryType holds the default value on creation for the "memory_type" field.
-	DefaultMemoryType string
 	// HashValidator is a validator for the "hash" field. It is called by the builders before save.
 	HashValidator func(string) error
 	// DefaultAgentName holds the default value on creation for the "agent_name" field.
@@ -124,6 +123,33 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// MemoryType defines the type for the "memory_type" enum field.
+type MemoryType string
+
+// MemoryTypeFact is the default value of the MemoryType enum.
+const DefaultMemoryType = MemoryTypeFact
+
+// MemoryType values.
+const (
+	MemoryTypeFact      MemoryType = "fact"
+	MemoryTypePattern   MemoryType = "pattern"
+	MemoryTypeProcedure MemoryType = "procedure"
+)
+
+func (mt MemoryType) String() string {
+	return string(mt)
+}
+
+// MemoryTypeValidator is a validator for the "memory_type" field enum values. It is called by the builders before save.
+func MemoryTypeValidator(mt MemoryType) error {
+	switch mt {
+	case MemoryTypeFact, MemoryTypePattern, MemoryTypeProcedure:
+		return nil
+	default:
+		return fmt.Errorf("agentmemory: invalid enum value for memory_type field: %q", mt)
+	}
+}
 
 // OrderOption defines the ordering options for the AgentMemory queries.
 type OrderOption func(*sql.Selector)

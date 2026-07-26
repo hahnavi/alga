@@ -56,9 +56,9 @@ func IDLTE(id uuid.UUID) predicate.IncidentInvestigationUpdateEntry {
 	return predicate.IncidentInvestigationUpdateEntry(sql.FieldLTE(FieldID, id))
 }
 
-// IncidentInvestigationUUID applies equality check predicate on the "incident_investigation_uuid" field. It's identical to IncidentInvestigationUUIDEQ.
-func IncidentInvestigationUUID(v uuid.UUID) predicate.IncidentInvestigationUpdateEntry {
-	return predicate.IncidentInvestigationUpdateEntry(sql.FieldEQ(FieldIncidentInvestigationUUID, v))
+// IncidentInvestigationID applies equality check predicate on the "incident_investigation_id" field. It's identical to IncidentInvestigationIDEQ.
+func IncidentInvestigationID(v uuid.UUID) predicate.IncidentInvestigationUpdateEntry {
+	return predicate.IncidentInvestigationUpdateEntry(sql.FieldEQ(FieldIncidentInvestigationID, v))
 }
 
 // Type applies equality check predicate on the "type" field. It's identical to TypeEQ.
@@ -116,24 +116,24 @@ func CreatedAt(v time.Time) predicate.IncidentInvestigationUpdateEntry {
 	return predicate.IncidentInvestigationUpdateEntry(sql.FieldEQ(FieldCreatedAt, v))
 }
 
-// IncidentInvestigationUUIDEQ applies the EQ predicate on the "incident_investigation_uuid" field.
-func IncidentInvestigationUUIDEQ(v uuid.UUID) predicate.IncidentInvestigationUpdateEntry {
-	return predicate.IncidentInvestigationUpdateEntry(sql.FieldEQ(FieldIncidentInvestigationUUID, v))
+// IncidentInvestigationIDEQ applies the EQ predicate on the "incident_investigation_id" field.
+func IncidentInvestigationIDEQ(v uuid.UUID) predicate.IncidentInvestigationUpdateEntry {
+	return predicate.IncidentInvestigationUpdateEntry(sql.FieldEQ(FieldIncidentInvestigationID, v))
 }
 
-// IncidentInvestigationUUIDNEQ applies the NEQ predicate on the "incident_investigation_uuid" field.
-func IncidentInvestigationUUIDNEQ(v uuid.UUID) predicate.IncidentInvestigationUpdateEntry {
-	return predicate.IncidentInvestigationUpdateEntry(sql.FieldNEQ(FieldIncidentInvestigationUUID, v))
+// IncidentInvestigationIDNEQ applies the NEQ predicate on the "incident_investigation_id" field.
+func IncidentInvestigationIDNEQ(v uuid.UUID) predicate.IncidentInvestigationUpdateEntry {
+	return predicate.IncidentInvestigationUpdateEntry(sql.FieldNEQ(FieldIncidentInvestigationID, v))
 }
 
-// IncidentInvestigationUUIDIn applies the In predicate on the "incident_investigation_uuid" field.
-func IncidentInvestigationUUIDIn(vs ...uuid.UUID) predicate.IncidentInvestigationUpdateEntry {
-	return predicate.IncidentInvestigationUpdateEntry(sql.FieldIn(FieldIncidentInvestigationUUID, vs...))
+// IncidentInvestigationIDIn applies the In predicate on the "incident_investigation_id" field.
+func IncidentInvestigationIDIn(vs ...uuid.UUID) predicate.IncidentInvestigationUpdateEntry {
+	return predicate.IncidentInvestigationUpdateEntry(sql.FieldIn(FieldIncidentInvestigationID, vs...))
 }
 
-// IncidentInvestigationUUIDNotIn applies the NotIn predicate on the "incident_investigation_uuid" field.
-func IncidentInvestigationUUIDNotIn(vs ...uuid.UUID) predicate.IncidentInvestigationUpdateEntry {
-	return predicate.IncidentInvestigationUpdateEntry(sql.FieldNotIn(FieldIncidentInvestigationUUID, vs...))
+// IncidentInvestigationIDNotIn applies the NotIn predicate on the "incident_investigation_id" field.
+func IncidentInvestigationIDNotIn(vs ...uuid.UUID) predicate.IncidentInvestigationUpdateEntry {
+	return predicate.IncidentInvestigationUpdateEntry(sql.FieldNotIn(FieldIncidentInvestigationID, vs...))
 }
 
 // TypeEQ applies the EQ predicate on the "type" field.

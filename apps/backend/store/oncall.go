@@ -79,7 +79,7 @@ func createScheduleLayers(ctx context.Context, tx *ent.Tx, scheduleID uuid.UUID,
 		lb := tx.ScheduleLayer.Create().
 			SetScheduleID(scheduleID).
 			SetName(layer.Name).
-			SetRotationType(layer.RotationType).
+			SetRotationType(entschedulelayer.RotationType(layer.RotationType)).
 			SetRotationInterval(layer.RotationInterval).
 			SetStartDate(layer.StartDate).
 			SetTimezone(layer.Timezone).
@@ -169,7 +169,7 @@ func (s *pgOnCallStore) GetSchedule(ctx context.Context, id uuid.UUID) (*OnCallS
 			ID:               l.ID,
 			ScheduleID:       l.ScheduleID,
 			Name:             l.Name,
-			RotationType:     l.RotationType,
+			RotationType:     string(l.RotationType),
 			RotationInterval: l.RotationInterval,
 			StartDate:        l.StartDate,
 			EndDate:          l.EndDate,
@@ -222,7 +222,7 @@ func (s *pgOnCallStore) GetScheduleByTeam(ctx context.Context, teamID uuid.UUID)
 			ID:               l.ID,
 			ScheduleID:       l.ScheduleID,
 			Name:             l.Name,
-			RotationType:     l.RotationType,
+			RotationType:     string(l.RotationType),
 			RotationInterval: l.RotationInterval,
 			StartDate:        l.StartDate,
 			EndDate:          l.EndDate,

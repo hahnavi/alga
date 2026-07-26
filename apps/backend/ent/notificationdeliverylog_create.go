@@ -42,25 +42,25 @@ func (_c *NotificationDeliveryLogCreate) SetNillableIncidentID(v *uuid.UUID) *No
 }
 
 // SetNotificationType sets the "notification_type" field.
-func (_c *NotificationDeliveryLogCreate) SetNotificationType(v string) *NotificationDeliveryLogCreate {
+func (_c *NotificationDeliveryLogCreate) SetNotificationType(v notificationdeliverylog.NotificationType) *NotificationDeliveryLogCreate {
 	_c.mutation.SetNotificationType(v)
 	return _c
 }
 
 // SetChannel sets the "channel" field.
-func (_c *NotificationDeliveryLogCreate) SetChannel(v string) *NotificationDeliveryLogCreate {
+func (_c *NotificationDeliveryLogCreate) SetChannel(v notificationdeliverylog.Channel) *NotificationDeliveryLogCreate {
 	_c.mutation.SetChannel(v)
 	return _c
 }
 
 // SetStatus sets the "status" field.
-func (_c *NotificationDeliveryLogCreate) SetStatus(v string) *NotificationDeliveryLogCreate {
+func (_c *NotificationDeliveryLogCreate) SetStatus(v notificationdeliverylog.Status) *NotificationDeliveryLogCreate {
 	_c.mutation.SetStatus(v)
 	return _c
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_c *NotificationDeliveryLogCreate) SetNillableStatus(v *string) *NotificationDeliveryLogCreate {
+func (_c *NotificationDeliveryLogCreate) SetNillableStatus(v *notificationdeliverylog.Status) *NotificationDeliveryLogCreate {
 	if v != nil {
 		_c.SetStatus(*v)
 	}
@@ -186,6 +186,11 @@ func (_c *NotificationDeliveryLogCreate) check() error {
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "NotificationDeliveryLog.status"`)}
 	}
+	if v, ok := _c.mutation.Status(); ok {
+		if err := notificationdeliverylog.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "NotificationDeliveryLog.status": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "NotificationDeliveryLog.created_at"`)}
 	}
@@ -233,15 +238,15 @@ func (_c *NotificationDeliveryLogCreate) createSpec() (*NotificationDeliveryLog,
 		_node.IncidentID = &value
 	}
 	if value, ok := _c.mutation.NotificationType(); ok {
-		_spec.SetField(notificationdeliverylog.FieldNotificationType, field.TypeString, value)
+		_spec.SetField(notificationdeliverylog.FieldNotificationType, field.TypeEnum, value)
 		_node.NotificationType = value
 	}
 	if value, ok := _c.mutation.Channel(); ok {
-		_spec.SetField(notificationdeliverylog.FieldChannel, field.TypeString, value)
+		_spec.SetField(notificationdeliverylog.FieldChannel, field.TypeEnum, value)
 		_node.Channel = value
 	}
 	if value, ok := _c.mutation.Status(); ok {
-		_spec.SetField(notificationdeliverylog.FieldStatus, field.TypeString, value)
+		_spec.SetField(notificationdeliverylog.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
 	}
 	if value, ok := _c.mutation.ErrorMessage(); ok {

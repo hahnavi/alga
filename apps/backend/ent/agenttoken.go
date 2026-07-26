@@ -23,7 +23,7 @@ type AgentToken struct {
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty"`
 	// AgentType holds the value of the "agent_type" field.
-	AgentType string `json:"agent_type,omitempty"`
+	AgentType agenttoken.AgentType `json:"agent_type,omitempty"`
 	// TokenHash holds the value of the "token_hash" field.
 	TokenHash string `json:"-"`
 	// LookupPrefix holds the value of the "lookup_prefix" field.
@@ -171,7 +171,7 @@ func (_m *AgentToken) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field agent_type", values[i])
 			} else if value.Valid {
-				_m.AgentType = value.String
+				_m.AgentType = agenttoken.AgentType(value.String)
 			}
 		case agenttoken.FieldTokenHash:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -315,7 +315,7 @@ func (_m *AgentToken) String() string {
 	builder.WriteString(_m.Name)
 	builder.WriteString(", ")
 	builder.WriteString("agent_type=")
-	builder.WriteString(_m.AgentType)
+	builder.WriteString(fmt.Sprintf("%v", _m.AgentType))
 	builder.WriteString(", ")
 	builder.WriteString("token_hash=<sensitive>")
 	builder.WriteString(", ")

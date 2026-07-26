@@ -3,6 +3,7 @@
 package servicedependency
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -65,13 +66,38 @@ func ValidColumn(column string) bool {
 }
 
 var (
-	// DefaultDependencyType holds the default value on creation for the "dependency_type" field.
-	DefaultDependencyType string
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// DependencyType defines the type for the "dependency_type" enum field.
+type DependencyType string
+
+// DependencyTypeDependsOn is the default value of the DependencyType enum.
+const DefaultDependencyType = DependencyTypeDependsOn
+
+// DependencyType values.
+const (
+	DependencyTypeDependsOn DependencyType = "depends_on"
+	DependencyTypeHard      DependencyType = "hard"
+	DependencyTypeSoft      DependencyType = "soft"
+)
+
+func (dt DependencyType) String() string {
+	return string(dt)
+}
+
+// DependencyTypeValidator is a validator for the "dependency_type" field enum values. It is called by the builders before save.
+func DependencyTypeValidator(dt DependencyType) error {
+	switch dt {
+	case DependencyTypeDependsOn, DependencyTypeHard, DependencyTypeSoft:
+		return nil
+	default:
+		return fmt.Errorf("servicedependency: invalid enum value for dependency_type field: %q", dt)
+	}
+}
 
 // OrderOption defines the ordering options for the ServiceDependency queries.
 type OrderOption func(*sql.Selector)

@@ -24,7 +24,7 @@ type ServiceDependency struct {
 	// DependentOnServiceID holds the value of the "dependent_on_service_id" field.
 	DependentOnServiceID uuid.UUID `json:"dependent_on_service_id,omitempty"`
 	// DependencyType holds the value of the "dependency_type" field.
-	DependencyType string `json:"dependency_type,omitempty"`
+	DependencyType servicedependency.DependencyType `json:"dependency_type,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -114,7 +114,7 @@ func (_m *ServiceDependency) assignValues(columns []string, values []any) error 
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field dependency_type", values[i])
 			} else if value.Valid {
-				_m.DependencyType = value.String
+				_m.DependencyType = servicedependency.DependencyType(value.String)
 			}
 		case servicedependency.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -175,7 +175,7 @@ func (_m *ServiceDependency) String() string {
 	builder.WriteString(fmt.Sprintf("%v", _m.DependentOnServiceID))
 	builder.WriteString(", ")
 	builder.WriteString("dependency_type=")
-	builder.WriteString(_m.DependencyType)
+	builder.WriteString(fmt.Sprintf("%v", _m.DependencyType))
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

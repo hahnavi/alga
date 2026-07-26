@@ -60,13 +60,13 @@ func (_u *ScheduleLayerUpdate) SetNillableName(v *string) *ScheduleLayerUpdate {
 }
 
 // SetRotationType sets the "rotation_type" field.
-func (_u *ScheduleLayerUpdate) SetRotationType(v string) *ScheduleLayerUpdate {
+func (_u *ScheduleLayerUpdate) SetRotationType(v schedulelayer.RotationType) *ScheduleLayerUpdate {
 	_u.mutation.SetRotationType(v)
 	return _u
 }
 
 // SetNillableRotationType sets the "rotation_type" field if the given value is not nil.
-func (_u *ScheduleLayerUpdate) SetNillableRotationType(v *string) *ScheduleLayerUpdate {
+func (_u *ScheduleLayerUpdate) SetNillableRotationType(v *schedulelayer.RotationType) *ScheduleLayerUpdate {
 	if v != nil {
 		_u.SetRotationType(*v)
 	}
@@ -289,6 +289,11 @@ func (_u *ScheduleLayerUpdate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *ScheduleLayerUpdate) check() error {
+	if v, ok := _u.mutation.RotationType(); ok {
+		if err := schedulelayer.RotationTypeValidator(v); err != nil {
+			return &ValidationError{Name: "rotation_type", err: fmt.Errorf(`ent: validator failed for field "ScheduleLayer.rotation_type": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.RotationInterval(); ok {
 		if err := schedulelayer.RotationIntervalValidator(v); err != nil {
 			return &ValidationError{Name: "rotation_interval", err: fmt.Errorf(`ent: validator failed for field "ScheduleLayer.rotation_interval": %w`, err)}
@@ -321,7 +326,7 @@ func (_u *ScheduleLayerUpdate) sqlSave(ctx context.Context) (_node int, err erro
 		_spec.SetField(schedulelayer.FieldName, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.RotationType(); ok {
-		_spec.SetField(schedulelayer.FieldRotationType, field.TypeString, value)
+		_spec.SetField(schedulelayer.FieldRotationType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.RotationInterval(); ok {
 		_spec.SetField(schedulelayer.FieldRotationInterval, field.TypeInt, value)
@@ -453,13 +458,13 @@ func (_u *ScheduleLayerUpdateOne) SetNillableName(v *string) *ScheduleLayerUpdat
 }
 
 // SetRotationType sets the "rotation_type" field.
-func (_u *ScheduleLayerUpdateOne) SetRotationType(v string) *ScheduleLayerUpdateOne {
+func (_u *ScheduleLayerUpdateOne) SetRotationType(v schedulelayer.RotationType) *ScheduleLayerUpdateOne {
 	_u.mutation.SetRotationType(v)
 	return _u
 }
 
 // SetNillableRotationType sets the "rotation_type" field if the given value is not nil.
-func (_u *ScheduleLayerUpdateOne) SetNillableRotationType(v *string) *ScheduleLayerUpdateOne {
+func (_u *ScheduleLayerUpdateOne) SetNillableRotationType(v *schedulelayer.RotationType) *ScheduleLayerUpdateOne {
 	if v != nil {
 		_u.SetRotationType(*v)
 	}
@@ -695,6 +700,11 @@ func (_u *ScheduleLayerUpdateOne) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *ScheduleLayerUpdateOne) check() error {
+	if v, ok := _u.mutation.RotationType(); ok {
+		if err := schedulelayer.RotationTypeValidator(v); err != nil {
+			return &ValidationError{Name: "rotation_type", err: fmt.Errorf(`ent: validator failed for field "ScheduleLayer.rotation_type": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.RotationInterval(); ok {
 		if err := schedulelayer.RotationIntervalValidator(v); err != nil {
 			return &ValidationError{Name: "rotation_interval", err: fmt.Errorf(`ent: validator failed for field "ScheduleLayer.rotation_interval": %w`, err)}
@@ -744,7 +754,7 @@ func (_u *ScheduleLayerUpdateOne) sqlSave(ctx context.Context) (_node *ScheduleL
 		_spec.SetField(schedulelayer.FieldName, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.RotationType(); ok {
-		_spec.SetField(schedulelayer.FieldRotationType, field.TypeString, value)
+		_spec.SetField(schedulelayer.FieldRotationType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.RotationInterval(); ok {
 		_spec.SetField(schedulelayer.FieldRotationInterval, field.TypeInt, value)

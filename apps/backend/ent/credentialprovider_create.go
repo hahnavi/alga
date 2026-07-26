@@ -29,13 +29,13 @@ func (_c *CredentialProviderCreate) SetName(v string) *CredentialProviderCreate 
 }
 
 // SetType sets the "type" field.
-func (_c *CredentialProviderCreate) SetType(v string) *CredentialProviderCreate {
+func (_c *CredentialProviderCreate) SetType(v credentialprovider.Type) *CredentialProviderCreate {
 	_c.mutation.SetType(v)
 	return _c
 }
 
 // SetNillableType sets the "type" field if the given value is not nil.
-func (_c *CredentialProviderCreate) SetNillableType(v *string) *CredentialProviderCreate {
+func (_c *CredentialProviderCreate) SetNillableType(v *credentialprovider.Type) *CredentialProviderCreate {
 	if v != nil {
 		_c.SetType(*v)
 	}
@@ -219,6 +219,11 @@ func (_c *CredentialProviderCreate) check() error {
 	if _, ok := _c.mutation.GetType(); !ok {
 		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "CredentialProvider.type"`)}
 	}
+	if v, ok := _c.mutation.GetType(); ok {
+		if err := credentialprovider.TypeValidator(v); err != nil {
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "CredentialProvider.type": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.ConfigEncrypted(); !ok {
 		return &ValidationError{Name: "config_encrypted", err: errors.New(`ent: missing required field "CredentialProvider.config_encrypted"`)}
 	}
@@ -274,7 +279,7 @@ func (_c *CredentialProviderCreate) createSpec() (*CredentialProvider, *sqlgraph
 		_node.Name = value
 	}
 	if value, ok := _c.mutation.GetType(); ok {
-		_spec.SetField(credentialprovider.FieldType, field.TypeString, value)
+		_spec.SetField(credentialprovider.FieldType, field.TypeEnum, value)
 		_node.Type = value
 	}
 	if value, ok := _c.mutation.ConfigEncrypted(); ok {

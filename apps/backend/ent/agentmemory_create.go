@@ -29,13 +29,13 @@ func (_c *AgentMemoryCreate) SetContent(v string) *AgentMemoryCreate {
 }
 
 // SetMemoryType sets the "memory_type" field.
-func (_c *AgentMemoryCreate) SetMemoryType(v string) *AgentMemoryCreate {
+func (_c *AgentMemoryCreate) SetMemoryType(v agentmemory.MemoryType) *AgentMemoryCreate {
 	_c.mutation.SetMemoryType(v)
 	return _c
 }
 
 // SetNillableMemoryType sets the "memory_type" field if the given value is not nil.
-func (_c *AgentMemoryCreate) SetNillableMemoryType(v *string) *AgentMemoryCreate {
+func (_c *AgentMemoryCreate) SetNillableMemoryType(v *agentmemory.MemoryType) *AgentMemoryCreate {
 	if v != nil {
 		_c.SetMemoryType(*v)
 	}
@@ -317,6 +317,11 @@ func (_c *AgentMemoryCreate) check() error {
 	if _, ok := _c.mutation.MemoryType(); !ok {
 		return &ValidationError{Name: "memory_type", err: errors.New(`ent: missing required field "AgentMemory.memory_type"`)}
 	}
+	if v, ok := _c.mutation.MemoryType(); ok {
+		if err := agentmemory.MemoryTypeValidator(v); err != nil {
+			return &ValidationError{Name: "memory_type", err: fmt.Errorf(`ent: validator failed for field "AgentMemory.memory_type": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Hash(); !ok {
 		return &ValidationError{Name: "hash", err: errors.New(`ent: missing required field "AgentMemory.hash"`)}
 	}
@@ -384,7 +389,7 @@ func (_c *AgentMemoryCreate) createSpec() (*AgentMemory, *sqlgraph.CreateSpec) {
 		_node.Content = value
 	}
 	if value, ok := _c.mutation.MemoryType(); ok {
-		_spec.SetField(agentmemory.FieldMemoryType, field.TypeString, value)
+		_spec.SetField(agentmemory.FieldMemoryType, field.TypeEnum, value)
 		_node.MemoryType = value
 	}
 	if value, ok := _c.mutation.Hash(); ok {

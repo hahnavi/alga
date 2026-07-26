@@ -84,7 +84,7 @@ func (s *pgServiceStore) CreateService(ctx context.Context, record *ServiceRecor
 		SetDescription(record.Description).
 		SetSLAResponseMinutes(record.SLAResponseMinutes).
 		SetSLAResolveMinutes(record.SLAResolveMinutes).
-		SetStatus(record.Status).
+		SetStatus(entservice.Status(record.Status)).
 		SetCreatedAt(now).
 		SetUpdatedAt(now)
 
@@ -155,7 +155,7 @@ func (s *pgServiceStore) UpdateService(ctx context.Context, id string, record *S
 		SetUpdatedAt(time.Now().UTC())
 
 	if record.Status != "" {
-		b.SetStatus(record.Status)
+		b.SetStatus(entservice.Status(record.Status))
 	}
 	if record.OwnerTeamID != nil {
 		b.SetOwnerTeamID(*record.OwnerTeamID)
@@ -226,7 +226,7 @@ func (s *pgServiceStore) ListServices(ctx context.Context, filter ListServicesFi
 	query := s.client.Service.Query().Order(ent.Asc(entservice.FieldName))
 
 	if filter.Status != "" {
-		query = query.Where(entservice.StatusEQ(filter.Status))
+		query = query.Where(entservice.StatusEQ(entservice.Status(filter.Status)))
 	}
 	if filter.Query != "" {
 		query = query.Where(
@@ -272,7 +272,7 @@ func (s *pgServiceStore) UpdateServiceStatus(ctx context.Context, id string, sta
 	}
 
 	_, err = s.client.Service.UpdateOneID(sid).
-		SetStatus(status).
+		SetStatus(entservice.Status(status)).
 		SetUpdatedAt(time.Now().UTC()).
 		Save(ctx)
 	if err != nil {
@@ -291,7 +291,7 @@ func (s *pgServiceStore) AddDependency(ctx context.Context, serviceID, dependsOn
 	_, err := s.client.ServiceDependency.Create().
 		SetServiceID(serviceID).
 		SetDependentOnServiceID(dependsOnID).
-		SetDependencyType(depType).
+		SetDependencyType(entsd.DependencyType(depType)).
 		SetCreatedAt(time.Now().UTC()).
 		Save(ctx)
 	if err != nil {
@@ -354,7 +354,7 @@ func (s *pgServiceStore) GetDependencies(ctx context.Context, serviceID uuid.UUI
 			ID:                     d.ID,
 			ServiceID:              d.ServiceID,
 			DependentOnServiceID:   d.DependentOnServiceID,
-			DependencyType:         d.DependencyType,
+			DependencyType:         string(d.DependencyType),
 			CreatedAt:              d.CreatedAt,
 			DependentOnServiceName: nameMap[d.DependentOnServiceID],
 		}
@@ -401,7 +401,7 @@ func (s *pgServiceStore) GetDependents(ctx context.Context, serviceID uuid.UUID)
 			ID:                     d.ID,
 			ServiceID:              d.ServiceID,
 			DependentOnServiceID:   d.DependentOnServiceID,
-			DependencyType:         d.DependencyType,
+			DependencyType:         string(d.DependencyType),
 			CreatedAt:              d.CreatedAt,
 			DependentOnServiceName: nameMap[d.ServiceID],
 		}
@@ -446,7 +446,7 @@ func (s *pgServiceStore) toServiceRecord(svc *ent.Service) *ServiceRecord {
 		LabelMatchers:      svc.LabelMatchers,
 		SLAResponseMinutes: svc.SLAResponseMinutes,
 		SLAResolveMinutes:  svc.SLAResolveMinutes,
-		Status:             svc.Status,
+		Status:             string(svc.Status),
 		CreatedAt:          svc.CreatedAt,
 		UpdatedAt:          svc.UpdatedAt,
 	}

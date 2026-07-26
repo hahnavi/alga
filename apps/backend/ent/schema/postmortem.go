@@ -25,7 +25,7 @@ func (PostMortem) Fields() []ent.Field {
 		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
 		field.UUID("incident_id", uuid.UUID{}).Unique(),
 		field.String("title").Default(""),
-		field.String("status").Default("draft"),
+		field.Enum("status").Values("draft", "in_review", "approved", "published").Default("draft"),
 		field.Text("summary").Default(""),
 		field.JSON("timeline", []map[string]any{}).Optional(),
 		field.Text("root_cause").Default(""),

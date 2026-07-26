@@ -31,15 +31,15 @@ type TriageResult struct {
 	// AlertLabels holds the value of the "alert_labels" field.
 	AlertLabels map[string]string `json:"alert_labels,omitempty"`
 	// SeverityInput holds the value of the "severity_input" field.
-	SeverityInput string `json:"severity_input,omitempty"`
+	SeverityInput *triageresult.SeverityInput `json:"severity_input,omitempty"`
 	// Decision holds the value of the "decision" field.
-	Decision string `json:"decision,omitempty"`
+	Decision triageresult.Decision `json:"decision,omitempty"`
 	// Confidence holds the value of the "confidence" field.
 	Confidence float64 `json:"confidence,omitempty"`
 	// SeverityClassified holds the value of the "severity_classified" field.
-	SeverityClassified string `json:"severity_classified,omitempty"`
+	SeverityClassified *triageresult.SeverityClassified `json:"severity_classified,omitempty"`
 	// Category holds the value of the "category" field.
-	Category string `json:"category,omitempty"`
+	Category *triageresult.Category `json:"category,omitempty"`
 	// Reasoning holds the value of the "reasoning" field.
 	Reasoning string `json:"reasoning,omitempty"`
 	// SuggestedActions holds the value of the "suggested_actions" field.
@@ -49,9 +49,9 @@ type TriageResult struct {
 	// ContextUsed holds the value of the "context_used" field.
 	ContextUsed map[string]interface{} `json:"context_used,omitempty"`
 	// Outcome holds the value of the "outcome" field.
-	Outcome string `json:"outcome,omitempty"`
+	Outcome triageresult.Outcome `json:"outcome,omitempty"`
 	// OverriddenTo holds the value of the "overridden_to" field.
-	OverriddenTo string `json:"overridden_to,omitempty"`
+	OverriddenTo *triageresult.OverriddenTo `json:"overridden_to,omitempty"`
 	// OverriddenBy holds the value of the "overridden_by" field.
 	OverriddenBy uuid.UUID `json:"overridden_by,omitempty"`
 	// OverriddenAt holds the value of the "overridden_at" field.
@@ -190,13 +190,14 @@ func (_m *TriageResult) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field severity_input", values[i])
 			} else if value.Valid {
-				_m.SeverityInput = value.String
+				_m.SeverityInput = new(triageresult.SeverityInput)
+				*_m.SeverityInput = triageresult.SeverityInput(value.String)
 			}
 		case triageresult.FieldDecision:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field decision", values[i])
 			} else if value.Valid {
-				_m.Decision = value.String
+				_m.Decision = triageresult.Decision(value.String)
 			}
 		case triageresult.FieldConfidence:
 			if value, ok := values[i].(*sql.NullFloat64); !ok {
@@ -208,13 +209,15 @@ func (_m *TriageResult) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field severity_classified", values[i])
 			} else if value.Valid {
-				_m.SeverityClassified = value.String
+				_m.SeverityClassified = new(triageresult.SeverityClassified)
+				*_m.SeverityClassified = triageresult.SeverityClassified(value.String)
 			}
 		case triageresult.FieldCategory:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field category", values[i])
 			} else if value.Valid {
-				_m.Category = value.String
+				_m.Category = new(triageresult.Category)
+				*_m.Category = triageresult.Category(value.String)
 			}
 		case triageresult.FieldReasoning:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -250,13 +253,14 @@ func (_m *TriageResult) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field outcome", values[i])
 			} else if value.Valid {
-				_m.Outcome = value.String
+				_m.Outcome = triageresult.Outcome(value.String)
 			}
 		case triageresult.FieldOverriddenTo:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field overridden_to", values[i])
 			} else if value.Valid {
-				_m.OverriddenTo = value.String
+				_m.OverriddenTo = new(triageresult.OverriddenTo)
+				*_m.OverriddenTo = triageresult.OverriddenTo(value.String)
 			}
 		case triageresult.FieldOverriddenBy:
 			if value, ok := values[i].(*uuid.UUID); !ok {
@@ -367,20 +371,26 @@ func (_m *TriageResult) String() string {
 	builder.WriteString("alert_labels=")
 	builder.WriteString(fmt.Sprintf("%v", _m.AlertLabels))
 	builder.WriteString(", ")
-	builder.WriteString("severity_input=")
-	builder.WriteString(_m.SeverityInput)
+	if v := _m.SeverityInput; v != nil {
+		builder.WriteString("severity_input=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("decision=")
-	builder.WriteString(_m.Decision)
+	builder.WriteString(fmt.Sprintf("%v", _m.Decision))
 	builder.WriteString(", ")
 	builder.WriteString("confidence=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Confidence))
 	builder.WriteString(", ")
-	builder.WriteString("severity_classified=")
-	builder.WriteString(_m.SeverityClassified)
+	if v := _m.SeverityClassified; v != nil {
+		builder.WriteString("severity_classified=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
-	builder.WriteString("category=")
-	builder.WriteString(_m.Category)
+	if v := _m.Category; v != nil {
+		builder.WriteString("category=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("reasoning=")
 	builder.WriteString(_m.Reasoning)
@@ -395,10 +405,12 @@ func (_m *TriageResult) String() string {
 	builder.WriteString(fmt.Sprintf("%v", _m.ContextUsed))
 	builder.WriteString(", ")
 	builder.WriteString("outcome=")
-	builder.WriteString(_m.Outcome)
+	builder.WriteString(fmt.Sprintf("%v", _m.Outcome))
 	builder.WriteString(", ")
-	builder.WriteString("overridden_to=")
-	builder.WriteString(_m.OverriddenTo)
+	if v := _m.OverriddenTo; v != nil {
+		builder.WriteString("overridden_to=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("overridden_by=")
 	builder.WriteString(fmt.Sprintf("%v", _m.OverriddenBy))

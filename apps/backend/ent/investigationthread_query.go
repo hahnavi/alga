@@ -417,7 +417,7 @@ func (_q *InvestigationThreadQuery) loadMessages(ctx context.Context, query *Inv
 		}
 	}
 	if len(query.ctx.Fields) > 0 {
-		query.ctx.AppendFieldOnce(investigationthreadmessage.FieldThreadUUID)
+		query.ctx.AppendFieldOnce(investigationthreadmessage.FieldThreadID)
 	}
 	query.Where(predicate.InvestigationThreadMessage(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(investigationthread.MessagesColumn), fks...))
@@ -427,10 +427,10 @@ func (_q *InvestigationThreadQuery) loadMessages(ctx context.Context, query *Inv
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.ThreadUUID
+		fk := n.ThreadID
 		node, ok := nodeids[fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "thread_uuid" returned %v for node %v`, fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "thread_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}

@@ -25,7 +25,7 @@ func (IncidentInvestigation) Fields() []ent.Field {
 		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
 		field.String("incident_investigation_id").Unique().NotEmpty(),
 		field.UUID("incident_id", uuid.UUID{}).Optional().Nillable(),
-		field.String("status").Default("pending"),
+		field.Enum("status").Values("pending", "assigned", "investigating", "paused", "complete", "cancelled", "coordinating").Default("pending"),
 		field.String("agent_id").Optional().Default(""),
 		field.String("agent_name").Optional().Default(""),
 		field.String("agent_type").Optional().Default(""),
@@ -44,7 +44,7 @@ func (IncidentInvestigation) Fields() []ent.Field {
 		field.Time("started_at").Optional().Nillable(),
 		field.Int64("investigating_duration_ms").Optional().Default(0),
 		field.UUID("parent_investigation_id", uuid.UUID{}).Optional().Nillable(),
-		field.String("assignee_type").Default("agent"),
+		field.Enum("assignee_type").Values("agent", "user", "system", "grafana").Default("agent"),
 		field.UUID("assignee_id", uuid.UUID{}).Optional().Nillable(),
 	}
 }

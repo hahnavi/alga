@@ -56,9 +56,9 @@ func IDLTE(id uuid.UUID) predicate.InvestigationThreadMessage {
 	return predicate.InvestigationThreadMessage(sql.FieldLTE(FieldID, id))
 }
 
-// ThreadUUID applies equality check predicate on the "thread_uuid" field. It's identical to ThreadUUIDEQ.
-func ThreadUUID(v uuid.UUID) predicate.InvestigationThreadMessage {
-	return predicate.InvestigationThreadMessage(sql.FieldEQ(FieldThreadUUID, v))
+// ThreadID applies equality check predicate on the "thread_id" field. It's identical to ThreadIDEQ.
+func ThreadID(v uuid.UUID) predicate.InvestigationThreadMessage {
+	return predicate.InvestigationThreadMessage(sql.FieldEQ(FieldThreadID, v))
 }
 
 // Type applies equality check predicate on the "type" field. It's identical to TypeEQ.
@@ -126,24 +126,24 @@ func UpdatedAt(v time.Time) predicate.InvestigationThreadMessage {
 	return predicate.InvestigationThreadMessage(sql.FieldEQ(FieldUpdatedAt, v))
 }
 
-// ThreadUUIDEQ applies the EQ predicate on the "thread_uuid" field.
-func ThreadUUIDEQ(v uuid.UUID) predicate.InvestigationThreadMessage {
-	return predicate.InvestigationThreadMessage(sql.FieldEQ(FieldThreadUUID, v))
+// ThreadIDEQ applies the EQ predicate on the "thread_id" field.
+func ThreadIDEQ(v uuid.UUID) predicate.InvestigationThreadMessage {
+	return predicate.InvestigationThreadMessage(sql.FieldEQ(FieldThreadID, v))
 }
 
-// ThreadUUIDNEQ applies the NEQ predicate on the "thread_uuid" field.
-func ThreadUUIDNEQ(v uuid.UUID) predicate.InvestigationThreadMessage {
-	return predicate.InvestigationThreadMessage(sql.FieldNEQ(FieldThreadUUID, v))
+// ThreadIDNEQ applies the NEQ predicate on the "thread_id" field.
+func ThreadIDNEQ(v uuid.UUID) predicate.InvestigationThreadMessage {
+	return predicate.InvestigationThreadMessage(sql.FieldNEQ(FieldThreadID, v))
 }
 
-// ThreadUUIDIn applies the In predicate on the "thread_uuid" field.
-func ThreadUUIDIn(vs ...uuid.UUID) predicate.InvestigationThreadMessage {
-	return predicate.InvestigationThreadMessage(sql.FieldIn(FieldThreadUUID, vs...))
+// ThreadIDIn applies the In predicate on the "thread_id" field.
+func ThreadIDIn(vs ...uuid.UUID) predicate.InvestigationThreadMessage {
+	return predicate.InvestigationThreadMessage(sql.FieldIn(FieldThreadID, vs...))
 }
 
-// ThreadUUIDNotIn applies the NotIn predicate on the "thread_uuid" field.
-func ThreadUUIDNotIn(vs ...uuid.UUID) predicate.InvestigationThreadMessage {
-	return predicate.InvestigationThreadMessage(sql.FieldNotIn(FieldThreadUUID, vs...))
+// ThreadIDNotIn applies the NotIn predicate on the "thread_id" field.
+func ThreadIDNotIn(vs ...uuid.UUID) predicate.InvestigationThreadMessage {
+	return predicate.InvestigationThreadMessage(sql.FieldNotIn(FieldThreadID, vs...))
 }
 
 // TypeEQ applies the EQ predicate on the "type" field.

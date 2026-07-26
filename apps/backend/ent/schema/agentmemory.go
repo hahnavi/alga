@@ -24,7 +24,7 @@ func (AgentMemory) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
 		field.String("content").NotEmpty(),
-		field.String("memory_type").Default("fact"),
+		field.Enum("memory_type").Values("fact", "pattern", "procedure").Default("fact"),
 		field.String("hash").Unique().NotEmpty(),
 		field.JSON("embedding", []float32{}).Optional(),
 		field.UUID("agent_id", uuid.UUID{}).Optional().Nillable(),

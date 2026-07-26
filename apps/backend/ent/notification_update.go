@@ -43,13 +43,13 @@ func (_u *NotificationUpdate) SetNillableUserID(v *string) *NotificationUpdate {
 }
 
 // SetType sets the "type" field.
-func (_u *NotificationUpdate) SetType(v string) *NotificationUpdate {
+func (_u *NotificationUpdate) SetType(v notification.Type) *NotificationUpdate {
 	_u.mutation.SetType(v)
 	return _u
 }
 
 // SetNillableType sets the "type" field if the given value is not nil.
-func (_u *NotificationUpdate) SetNillableType(v *string) *NotificationUpdate {
+func (_u *NotificationUpdate) SetNillableType(v *notification.Type) *NotificationUpdate {
 	if v != nil {
 		_u.SetType(*v)
 	}
@@ -99,13 +99,13 @@ func (_u *NotificationUpdate) SetNillableRead(v *bool) *NotificationUpdate {
 }
 
 // SetResourceType sets the "resource_type" field.
-func (_u *NotificationUpdate) SetResourceType(v string) *NotificationUpdate {
+func (_u *NotificationUpdate) SetResourceType(v notification.ResourceType) *NotificationUpdate {
 	_u.mutation.SetResourceType(v)
 	return _u
 }
 
 // SetNillableResourceType sets the "resource_type" field if the given value is not nil.
-func (_u *NotificationUpdate) SetNillableResourceType(v *string) *NotificationUpdate {
+func (_u *NotificationUpdate) SetNillableResourceType(v *notification.ResourceType) *NotificationUpdate {
 	if v != nil {
 		_u.SetResourceType(*v)
 	}
@@ -246,6 +246,11 @@ func (_u *NotificationUpdate) check() error {
 			return &ValidationError{Name: "message", err: fmt.Errorf(`ent: validator failed for field "Notification.message": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.ResourceType(); ok {
+		if err := notification.ResourceTypeValidator(v); err != nil {
+			return &ValidationError{Name: "resource_type", err: fmt.Errorf(`ent: validator failed for field "Notification.resource_type": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -265,7 +270,7 @@ func (_u *NotificationUpdate) sqlSave(ctx context.Context) (_node int, err error
 		_spec.SetField(notification.FieldUserID, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.GetType(); ok {
-		_spec.SetField(notification.FieldType, field.TypeString, value)
+		_spec.SetField(notification.FieldType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(notification.FieldTitle, field.TypeString, value)
@@ -277,10 +282,10 @@ func (_u *NotificationUpdate) sqlSave(ctx context.Context) (_node int, err error
 		_spec.SetField(notification.FieldRead, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.ResourceType(); ok {
-		_spec.SetField(notification.FieldResourceType, field.TypeString, value)
+		_spec.SetField(notification.FieldResourceType, field.TypeEnum, value)
 	}
 	if _u.mutation.ResourceTypeCleared() {
-		_spec.ClearField(notification.FieldResourceType, field.TypeString)
+		_spec.ClearField(notification.FieldResourceType, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.ResourceID(); ok {
 		_spec.SetField(notification.FieldResourceID, field.TypeString, value)
@@ -338,13 +343,13 @@ func (_u *NotificationUpdateOne) SetNillableUserID(v *string) *NotificationUpdat
 }
 
 // SetType sets the "type" field.
-func (_u *NotificationUpdateOne) SetType(v string) *NotificationUpdateOne {
+func (_u *NotificationUpdateOne) SetType(v notification.Type) *NotificationUpdateOne {
 	_u.mutation.SetType(v)
 	return _u
 }
 
 // SetNillableType sets the "type" field if the given value is not nil.
-func (_u *NotificationUpdateOne) SetNillableType(v *string) *NotificationUpdateOne {
+func (_u *NotificationUpdateOne) SetNillableType(v *notification.Type) *NotificationUpdateOne {
 	if v != nil {
 		_u.SetType(*v)
 	}
@@ -394,13 +399,13 @@ func (_u *NotificationUpdateOne) SetNillableRead(v *bool) *NotificationUpdateOne
 }
 
 // SetResourceType sets the "resource_type" field.
-func (_u *NotificationUpdateOne) SetResourceType(v string) *NotificationUpdateOne {
+func (_u *NotificationUpdateOne) SetResourceType(v notification.ResourceType) *NotificationUpdateOne {
 	_u.mutation.SetResourceType(v)
 	return _u
 }
 
 // SetNillableResourceType sets the "resource_type" field if the given value is not nil.
-func (_u *NotificationUpdateOne) SetNillableResourceType(v *string) *NotificationUpdateOne {
+func (_u *NotificationUpdateOne) SetNillableResourceType(v *notification.ResourceType) *NotificationUpdateOne {
 	if v != nil {
 		_u.SetResourceType(*v)
 	}
@@ -554,6 +559,11 @@ func (_u *NotificationUpdateOne) check() error {
 			return &ValidationError{Name: "message", err: fmt.Errorf(`ent: validator failed for field "Notification.message": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.ResourceType(); ok {
+		if err := notification.ResourceTypeValidator(v); err != nil {
+			return &ValidationError{Name: "resource_type", err: fmt.Errorf(`ent: validator failed for field "Notification.resource_type": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -590,7 +600,7 @@ func (_u *NotificationUpdateOne) sqlSave(ctx context.Context) (_node *Notificati
 		_spec.SetField(notification.FieldUserID, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.GetType(); ok {
-		_spec.SetField(notification.FieldType, field.TypeString, value)
+		_spec.SetField(notification.FieldType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(notification.FieldTitle, field.TypeString, value)
@@ -602,10 +612,10 @@ func (_u *NotificationUpdateOne) sqlSave(ctx context.Context) (_node *Notificati
 		_spec.SetField(notification.FieldRead, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.ResourceType(); ok {
-		_spec.SetField(notification.FieldResourceType, field.TypeString, value)
+		_spec.SetField(notification.FieldResourceType, field.TypeEnum, value)
 	}
 	if _u.mutation.ResourceTypeCleared() {
-		_spec.ClearField(notification.FieldResourceType, field.TypeString)
+		_spec.ClearField(notification.FieldResourceType, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.ResourceID(); ok {
 		_spec.SetField(notification.FieldResourceID, field.TypeString, value)

@@ -26,7 +26,7 @@ type PostMortem struct {
 	// Title holds the value of the "title" field.
 	Title string `json:"title,omitempty"`
 	// Status holds the value of the "status" field.
-	Status string `json:"status,omitempty"`
+	Status postmortem.Status `json:"status,omitempty"`
 	// Summary holds the value of the "summary" field.
 	Summary string `json:"summary,omitempty"`
 	// Timeline holds the value of the "timeline" field.
@@ -159,7 +159,7 @@ func (_m *PostMortem) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
-				_m.Status = value.String
+				_m.Status = postmortem.Status(value.String)
 			}
 		case postmortem.FieldSummary:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -309,7 +309,7 @@ func (_m *PostMortem) String() string {
 	builder.WriteString(_m.Title)
 	builder.WriteString(", ")
 	builder.WriteString("status=")
-	builder.WriteString(_m.Status)
+	builder.WriteString(fmt.Sprintf("%v", _m.Status))
 	builder.WriteString(", ")
 	builder.WriteString("summary=")
 	builder.WriteString(_m.Summary)

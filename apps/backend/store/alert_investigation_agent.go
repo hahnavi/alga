@@ -22,9 +22,9 @@ func (s *pgAlertInvestigationStore) ResetInvestigatingByAgent(ctx context.Contex
 	_, err := s.client.AlertInvestigation.Update().
 		Where(
 			alertinvestigation.AgentIDEQ(agentID),
-			alertinvestigation.StatusIn(AlertInvestigationStatusInvestigating, AlertInvestigationStatusPaused),
+			alertinvestigation.StatusIn(alertinvestigation.Status(AlertInvestigationStatusInvestigating), alertinvestigation.Status(AlertInvestigationStatusPaused)),
 		).
-		SetStatus(AlertInvestigationStatusPending).
+		SetStatus(alertinvestigation.Status(AlertInvestigationStatusPending)).
 		ClearAgentID().
 		ClearAgentName().
 		ClearAgentType().
@@ -44,9 +44,9 @@ func (s *pgAlertInvestigationStore) ResetAssignedByAgent(ctx context.Context, ag
 	_, err := s.client.AlertInvestigation.Update().
 		Where(
 			alertinvestigation.AgentIDEQ(agentID),
-			alertinvestigation.StatusEQ(AlertInvestigationStatusAssigned),
+			alertinvestigation.StatusEQ(alertinvestigation.Status(AlertInvestigationStatusAssigned)),
 		).
-		SetStatus(AlertInvestigationStatusPending).
+		SetStatus(alertinvestigation.Status(AlertInvestigationStatusPending)).
 		ClearAgentID().
 		ClearAgentName().
 		ClearAgentType().
@@ -66,7 +66,7 @@ func (s *pgAlertInvestigationStore) CountActiveByAgent(ctx context.Context, agen
 	count, err := s.client.AlertInvestigation.Query().
 		Where(
 			alertinvestigation.AgentIDEQ(agentID),
-			alertinvestigation.StatusIn(AlertInvestigationStatusAssigned, AlertInvestigationStatusInvestigating, AlertInvestigationStatusPaused),
+			alertinvestigation.StatusIn(alertinvestigation.Status(AlertInvestigationStatusAssigned), alertinvestigation.Status(AlertInvestigationStatusInvestigating), alertinvestigation.Status(AlertInvestigationStatusPaused)),
 		).
 		Count(ctx)
 	if err != nil {
@@ -91,7 +91,7 @@ func (s *pgAlertInvestigationStore) CountActiveByAgents(ctx context.Context, age
 	err := s.client.AlertInvestigation.Query().
 		Where(
 			alertinvestigation.AgentIDIn(agentIDs...),
-			alertinvestigation.StatusIn(AlertInvestigationStatusAssigned, AlertInvestigationStatusInvestigating, AlertInvestigationStatusPaused),
+			alertinvestigation.StatusIn(alertinvestigation.Status(AlertInvestigationStatusAssigned), alertinvestigation.Status(AlertInvestigationStatusInvestigating), alertinvestigation.Status(AlertInvestigationStatusPaused)),
 		).
 		GroupBy(alertinvestigation.FieldAgentID).
 		Aggregate(ent.Count()).
@@ -134,7 +134,7 @@ func (s *pgAlertInvestigationStore) listStalledAlertInvestigationsByStatus(ctx c
 
 	cutoff := time.Now().UTC().Add(-threshold)
 	preds := []predicate.AlertInvestigation{
-		alertinvestigation.StatusEQ(status),
+		alertinvestigation.StatusEQ(alertinvestigation.Status(status)),
 		alertinvestigation.StartedAtLTE(cutoff),
 	}
 	preds = append(preds, extraPreds...)
@@ -183,7 +183,7 @@ func (s *pgAlertInvestigationStore) resetStalledAlertInvestigationsByStatus(stat
 
 	cutoff := time.Now().UTC().Add(-timeout)
 	preds := []predicate.AlertInvestigation{
-		alertinvestigation.StatusEQ(status),
+		alertinvestigation.StatusEQ(alertinvestigation.Status(status)),
 		alertinvestigation.StartedAtLTE(cutoff),
 	}
 	preds = append(preds, extraPreds...)
@@ -196,7 +196,7 @@ func (s *pgAlertInvestigationStore) resetStalledAlertInvestigationsByStatus(stat
 	ids := make([]string, 0, len(invs))
 	for _, inv := range invs {
 		_, err := s.client.AlertInvestigation.UpdateOneID(inv.ID).
-			SetStatus(AlertInvestigationStatusPending).
+			SetStatus(alertinvestigation.Status(AlertInvestigationStatusPending)).
 			ClearAgentID().
 			ClearAgentName().
 			ClearAgentType().

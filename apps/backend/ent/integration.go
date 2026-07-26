@@ -69,7 +69,7 @@ type Integration struct {
 	// TelnyxTtsAPIKeyRef holds the value of the "telnyx_tts_api_key_ref" field.
 	TelnyxTtsAPIKeyRef string `json:"telnyx_tts_api_key_ref,omitempty"`
 	// VoiceProvider holds the value of the "voice_provider" field.
-	VoiceProvider string `json:"voice_provider,omitempty"`
+	VoiceProvider integration.VoiceProvider `json:"voice_provider,omitempty"`
 	// HermesPlatformURL holds the value of the "hermes_platform_url" field.
 	HermesPlatformURL string `json:"hermes_platform_url,omitempty"`
 	// HermesPlatformToken holds the value of the "hermes_platform_token" field.
@@ -267,7 +267,7 @@ func (_m *Integration) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field voice_provider", values[i])
 			} else if value.Valid {
-				_m.VoiceProvider = value.String
+				_m.VoiceProvider = integration.VoiceProvider(value.String)
 			}
 		case integration.FieldHermesPlatformURL:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -393,7 +393,7 @@ func (_m *Integration) String() string {
 	builder.WriteString(_m.TelnyxTtsAPIKeyRef)
 	builder.WriteString(", ")
 	builder.WriteString("voice_provider=")
-	builder.WriteString(_m.VoiceProvider)
+	builder.WriteString(fmt.Sprintf("%v", _m.VoiceProvider))
 	builder.WriteString(", ")
 	builder.WriteString("hermes_platform_url=")
 	builder.WriteString(_m.HermesPlatformURL)

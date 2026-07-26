@@ -125,7 +125,7 @@ func (s *pgAlertStore) Create(record AlertRecord) (int64, error) {
 
 	b := s.client.Alert.Create().
 		SetFingerprint(record.Fingerprint).
-		SetStatus(record.Status).
+		SetStatus(alert.Status(record.Status)).
 		SetAcknowledged(record.Acknowledged).
 		SetSilenced(record.Silenced).
 		SetLabels(record.Labels).
@@ -194,7 +194,7 @@ func (s *pgAlertStore) GetOpenByFingerprint(fingerprint string) (*AlertRecord, e
 	defer cancel()
 
 	a, err := s.client.Alert.Query().
-		Where(alert.Fingerprint(fingerprint), alert.StatusNEQ("resolved"), alert.DeletedAtIsNil()).
+		Where(alert.Fingerprint(fingerprint), alert.StatusNEQ(alert.StatusResolved), alert.DeletedAtIsNil()).
 		Order(ent.Desc(alert.FieldUpdatedAt)).
 		First(ctx)
 	if err != nil {
@@ -235,7 +235,7 @@ func (s *pgAlertStore) AcknowledgeAlertByNumber(alertNumber int64, actor *EventA
 	defer cancel()
 
 	a, err := s.client.Alert.Query().
-		Where(alert.AlertNumber(alertNumber), alert.StatusNEQ("resolved"), alert.DeletedAtIsNil()).
+		Where(alert.AlertNumber(alertNumber), alert.StatusNEQ(alert.StatusResolved), alert.DeletedAtIsNil()).
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -265,7 +265,7 @@ func (s *pgAlertStore) ResolveAlertByNumber(alertNumber int64, actor *EventActor
 	defer cancel()
 
 	a, err := s.client.Alert.Query().
-		Where(alert.AlertNumber(alertNumber), alert.StatusNEQ("resolved"), alert.DeletedAtIsNil()).
+		Where(alert.AlertNumber(alertNumber), alert.StatusNEQ(alert.StatusResolved), alert.DeletedAtIsNil()).
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -276,7 +276,7 @@ func (s *pgAlertStore) ResolveAlertByNumber(alertNumber int64, actor *EventActor
 
 	now := time.Now().UTC()
 	_, err = s.client.Alert.UpdateOneID(a.ID).
-		SetStatus("resolved").
+		SetStatus(alert.StatusResolved).
 		SetUpdatedAt(now).
 		Save(ctx)
 	if err != nil {
@@ -295,7 +295,7 @@ func (s *pgAlertStore) ReopenAlertByNumber(alertNumber int64, ev AlertEvent) err
 	defer cancel()
 
 	a, err := s.client.Alert.Query().
-		Where(alert.AlertNumber(alertNumber), alert.StatusEQ("resolved"), alert.DeletedAtIsNil()).
+		Where(alert.AlertNumber(alertNumber), alert.StatusEQ(alert.StatusResolved), alert.DeletedAtIsNil()).
 		Order(ent.Desc(alert.FieldUpdatedAt)).
 		First(ctx)
 	if err != nil {
@@ -307,7 +307,7 @@ func (s *pgAlertStore) ReopenAlertByNumber(alertNumber int64, ev AlertEvent) err
 
 	now := time.Now().UTC()
 	_, err = s.client.Alert.UpdateOneID(a.ID).
-		SetStatus("firing").
+		SetStatus(alert.StatusFiring).
 		SetAcknowledged(false).
 		SetUpdatedAt(now).
 		Save(ctx)
@@ -369,13 +369,13 @@ func (s *pgAlertStore) UpdateStatus(fingerprint, status string, resolvedEvent *A
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	a, err := s.client.Alert.Query().Where(alert.Fingerprint(fingerprint), alert.StatusNEQ("resolved"), alert.DeletedAtIsNil()).Only(ctx)
+	a, err := s.client.Alert.Query().Where(alert.Fingerprint(fingerprint), alert.StatusNEQ(alert.StatusResolved), alert.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to find alert: %w", err)
 	}
 
 	now := time.Now().UTC()
-	upd := s.client.Alert.UpdateOneID(a.ID).SetStatus(status).SetUpdatedAt(now)
+	upd := s.client.Alert.UpdateOneID(a.ID).SetStatus(alert.Status(status)).SetUpdatedAt(now)
 
 	if status == "resolved" {
 		ev := resolvedEvent
@@ -404,14 +404,14 @@ func (s *pgAlertStore) UpdateStatusSilenced(fingerprint string) error {
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	a, err := s.client.Alert.Query().Where(alert.Fingerprint(fingerprint), alert.StatusNEQ("resolved"), alert.DeletedAtIsNil()).Only(ctx)
+	a, err := s.client.Alert.Query().Where(alert.Fingerprint(fingerprint), alert.StatusNEQ(alert.StatusResolved), alert.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to find alert: %w", err)
 	}
 
 	now := time.Now().UTC()
 	_, err = s.client.Alert.UpdateOneID(a.ID).
-		SetStatus("resolved").
+		SetStatus(alert.StatusResolved).
 		SetSilenced(true).
 		SetUpdatedAt(now).
 		Save(ctx)
@@ -429,7 +429,7 @@ func (s *pgAlertStore) UpdateDeliveryTargets(fingerprint string, targets []Deliv
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	a, err := s.client.Alert.Query().Where(alert.Fingerprint(fingerprint), alert.StatusNEQ("resolved"), alert.DeletedAtIsNil()).Only(ctx)
+	a, err := s.client.Alert.Query().Where(alert.Fingerprint(fingerprint), alert.StatusNEQ(alert.StatusResolved), alert.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to find alert: %w", err)
 	}
@@ -445,7 +445,7 @@ func (s *pgAlertStore) UpdateDeliveryTargets(fingerprint string, targets []Deliv
 	for _, t := range targets {
 		_, err = s.client.DeliveryTarget.Create().
 			SetAlertID(a.ID).
-			SetProvider(t.Provider).
+			SetProvider(deliverytarget.Provider(t.Provider)).
 			SetChannel(t.Channel).
 			SetChannelName(t.ChannelName).
 			SetPostID(t.PostID).
@@ -466,7 +466,7 @@ func (s *pgAlertStore) AcknowledgeAlert(fingerprint string, actor *EventActor) e
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	a, err := s.client.Alert.Query().Where(alert.Fingerprint(fingerprint), alert.StatusNEQ("resolved"), alert.DeletedAtIsNil()).Only(ctx)
+	a, err := s.client.Alert.Query().Where(alert.Fingerprint(fingerprint), alert.StatusNEQ(alert.StatusResolved), alert.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return fmt.Errorf("alert not found: %w", ErrAlertNotFound)
@@ -500,7 +500,7 @@ func (s *pgAlertStore) ReopenAlert(fingerprint string, ev AlertEvent) error {
 	defer cancel()
 
 	a, err := s.client.Alert.Query().
-		Where(alert.Fingerprint(fingerprint), alert.Status("resolved"), alert.DeletedAtIsNil()).
+		Where(alert.Fingerprint(fingerprint), alert.StatusEQ(alert.StatusResolved), alert.DeletedAtIsNil()).
 		Order(ent.Desc(alert.FieldUpdatedAt)).
 		First(ctx)
 	if err != nil {
@@ -516,7 +516,7 @@ func (s *pgAlertStore) ReopenAlert(fingerprint string, ev AlertEvent) error {
 	}
 
 	_, err = s.client.Alert.UpdateOneID(a.ID).
-		SetStatus("firing").
+		SetStatus(alert.StatusFiring).
 		SetAcknowledged(false).
 		SetSilenced(false).
 		SetUpdatedAt(now).
@@ -536,7 +536,7 @@ func (s *pgAlertStore) ResolveAlertByUser(fingerprint string, actor *EventActor)
 	defer cancel()
 
 	a, err := s.client.Alert.Query().
-		Where(alert.Fingerprint(fingerprint), alert.StatusNEQ("resolved"), alert.DeletedAtIsNil()).
+		Where(alert.Fingerprint(fingerprint), alert.StatusNEQ(alert.StatusResolved), alert.DeletedAtIsNil()).
 		Order(ent.Desc(alert.FieldUpdatedAt)).
 		First(ctx)
 	if err != nil {
@@ -550,7 +550,7 @@ func (s *pgAlertStore) ResolveAlertByUser(fingerprint string, actor *EventActor)
 	ev := AlertEventWithActor("resolved", now, actor)
 
 	_, err = s.client.Alert.UpdateOneID(a.ID).
-		SetStatus("resolved").
+		SetStatus(alert.StatusResolved).
 		SetUpdatedAt(now).
 		Save(ctx)
 	if err != nil {
@@ -650,7 +650,7 @@ func (s *pgAlertStore) QueryAlerts(filter map[string]any) ([]AlertRecord, error)
 	}
 
 	if status, ok := filter["status"].(string); ok {
-		query = query.Where(alert.Status(status))
+		query = query.Where(alert.StatusEQ(alert.Status(status)))
 	}
 	if ack, ok := filter["acknowledged"].(bool); ok {
 		query = query.Where(alert.Acknowledged(ack))
@@ -753,7 +753,7 @@ func (s *pgAlertStore) QueryAlerts(filter map[string]any) ([]AlertRecord, error)
 
 func (s *pgAlertStore) DeleteOlderThan(ctx context.Context, olderThan time.Time) (int64, error) {
 	n, err := s.client.Alert.Delete().
-		Where(alert.CreatedAtLT(olderThan), alert.StatusEQ("resolved"), alert.DeletedAtIsNil()).
+		Where(alert.CreatedAtLT(olderThan), alert.StatusEQ(alert.StatusResolved), alert.DeletedAtIsNil()).
 		Exec(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to delete old alerts: %w", err)
@@ -763,7 +763,7 @@ func (s *pgAlertStore) DeleteOlderThan(ctx context.Context, olderThan time.Time)
 
 func (s *pgAlertStore) CountOlderThan(ctx context.Context, olderThan time.Time) (int64, error) {
 	n, err := s.client.Alert.Query().
-		Where(alert.CreatedAtLT(olderThan), alert.StatusEQ("resolved"), alert.DeletedAtIsNil()).
+		Where(alert.CreatedAtLT(olderThan), alert.StatusEQ(alert.StatusResolved), alert.DeletedAtIsNil()).
 		Count(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to count old alerts: %w", err)
@@ -818,7 +818,7 @@ func (s *pgAlertStore) ListUninvestigatedAlerts(ctx context.Context, threshold t
 
 	alerts, err := s.client.Alert.Query().
 		Where(
-			alert.Status("firing"),
+			alert.StatusEQ(alert.StatusFiring),
 			alert.CreatedAtLTE(cutoff),
 			alert.DeletedAtIsNil(),
 			notInvestigated,
@@ -845,7 +845,7 @@ func (s *pgAlertStore) ListUninvestigatedAlerts(ctx context.Context, threshold t
 func (s *pgAlertStore) toAlertRecordSummary(a *ent.Alert) AlertRecord {
 	rec := AlertRecord{
 		Fingerprint:  a.Fingerprint,
-		Status:       a.Status,
+		Status:       string(a.Status),
 		Acknowledged: a.Acknowledged,
 		Silenced:     a.Silenced,
 		Labels:       a.Labels,
@@ -897,7 +897,7 @@ func (s *pgAlertStore) toAlertRecord(ctx context.Context, a *ent.Alert) (*AlertR
 	var deliveryTargets []DeliveryTarget
 	for _, t := range targets {
 		deliveryTargets = append(deliveryTargets, DeliveryTarget{
-			Provider:    t.Provider,
+			Provider:    string(t.Provider),
 			Channel:     t.Channel,
 			ChannelName: t.ChannelName,
 			PostID:      t.PostID,
@@ -906,7 +906,7 @@ func (s *pgAlertStore) toAlertRecord(ctx context.Context, a *ent.Alert) (*AlertR
 
 	rec := &AlertRecord{
 		Fingerprint:     a.Fingerprint,
-		Status:          a.Status,
+		Status:          string(a.Status),
 		Acknowledged:    a.Acknowledged,
 		Silenced:        a.Silenced,
 		Labels:          a.Labels,
@@ -1070,12 +1070,12 @@ func (s *pgAlertStore) ResolveAlertsByIncident(ctx context.Context, incidentNumb
 	}
 	for _, a := range linked {
 		ref := AlertRef{AlertNumber: a.AlertNumber, Fingerprint: a.Fingerprint}
-		if a.Status == "resolved" {
+		if a.Status == alert.StatusResolved {
 			result.Skipped = append(result.Skipped, ref)
 			continue
 		}
 		if _, err := s.client.Alert.UpdateOneID(a.ID).
-			SetStatus("resolved").
+			SetStatus(alert.StatusResolved).
 			SetUpdatedAt(now).
 			Save(ctx); err != nil {
 			logger.ErrorCtx(ctx, "Failed to resolve alert during incident cascade",
@@ -1104,7 +1104,7 @@ func (s *pgAlertStore) ResolveAlertsByIncident(ctx context.Context, incidentNumb
 		// helper. The full record lets callers emit alert_updated (the event
 		// type every alert page subscribes to) instead of an unconsumed
 		// alert_resolved event.
-		a.Status = "resolved"
+		a.Status = alert.StatusResolved
 		a.UpdatedAt = now
 		rec, convErr := s.toAlertRecord(ctx, a)
 		if convErr != nil {

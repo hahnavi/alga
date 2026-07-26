@@ -91,13 +91,13 @@ func (_c *HeartbeatCreate) SetNillableOwnerTeamID(v *uuid.UUID) *HeartbeatCreate
 }
 
 // SetStatus sets the "status" field.
-func (_c *HeartbeatCreate) SetStatus(v string) *HeartbeatCreate {
+func (_c *HeartbeatCreate) SetStatus(v heartbeat.Status) *HeartbeatCreate {
 	_c.mutation.SetStatus(v)
 	return _c
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_c *HeartbeatCreate) SetNillableStatus(v *string) *HeartbeatCreate {
+func (_c *HeartbeatCreate) SetNillableStatus(v *heartbeat.Status) *HeartbeatCreate {
 	if v != nil {
 		_c.SetStatus(*v)
 	}
@@ -105,13 +105,13 @@ func (_c *HeartbeatCreate) SetNillableStatus(v *string) *HeartbeatCreate {
 }
 
 // SetSeverity sets the "severity" field.
-func (_c *HeartbeatCreate) SetSeverity(v string) *HeartbeatCreate {
+func (_c *HeartbeatCreate) SetSeverity(v heartbeat.Severity) *HeartbeatCreate {
 	_c.mutation.SetSeverity(v)
 	return _c
 }
 
 // SetNillableSeverity sets the "severity" field if the given value is not nil.
-func (_c *HeartbeatCreate) SetNillableSeverity(v *string) *HeartbeatCreate {
+func (_c *HeartbeatCreate) SetNillableSeverity(v *heartbeat.Severity) *HeartbeatCreate {
 	if v != nil {
 		_c.SetSeverity(*v)
 	}
@@ -343,8 +343,18 @@ func (_c *HeartbeatCreate) check() error {
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "Heartbeat.status"`)}
 	}
+	if v, ok := _c.mutation.Status(); ok {
+		if err := heartbeat.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Heartbeat.status": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Severity(); !ok {
 		return &ValidationError{Name: "severity", err: errors.New(`ent: missing required field "Heartbeat.severity"`)}
+	}
+	if v, ok := _c.mutation.Severity(); ok {
+		if err := heartbeat.SeverityValidator(v); err != nil {
+			return &ValidationError{Name: "severity", err: fmt.Errorf(`ent: validator failed for field "Heartbeat.severity": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.PingTokenHash(); !ok {
 		return &ValidationError{Name: "ping_token_hash", err: errors.New(`ent: missing required field "Heartbeat.ping_token_hash"`)}
@@ -424,11 +434,11 @@ func (_c *HeartbeatCreate) createSpec() (*Heartbeat, *sqlgraph.CreateSpec) {
 		_node.Enabled = value
 	}
 	if value, ok := _c.mutation.Status(); ok {
-		_spec.SetField(heartbeat.FieldStatus, field.TypeString, value)
+		_spec.SetField(heartbeat.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
 	}
 	if value, ok := _c.mutation.Severity(); ok {
-		_spec.SetField(heartbeat.FieldSeverity, field.TypeString, value)
+		_spec.SetField(heartbeat.FieldSeverity, field.TypeEnum, value)
 		_node.Severity = value
 	}
 	if value, ok := _c.mutation.Labels(); ok {

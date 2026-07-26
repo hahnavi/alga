@@ -44,9 +44,9 @@ func (s *pgNotificationDeliveryStore) Create(ctx context.Context, record *Notifi
 
 	b := s.client.NotificationDeliveryLog.Create().
 		SetUserID(record.UserID).
-		SetNotificationType(record.NotificationType).
-		SetChannel(record.Channel).
-		SetStatus(record.Status).
+		SetNotificationType(entndlog.NotificationType(record.NotificationType)).
+		SetChannel(entndlog.Channel(record.Channel)).
+		SetStatus(entndlog.Status(record.Status)).
 		SetErrorMessage(record.ErrorMessage).
 		SetCreatedAt(record.CreatedAt)
 
@@ -103,7 +103,7 @@ func (s *pgNotificationDeliveryStore) ListByIncident(ctx context.Context, incide
 
 func (s *pgNotificationDeliveryStore) UpdateStatus(ctx context.Context, id uuid.UUID, status, errMsg string) error {
 	b := s.client.NotificationDeliveryLog.UpdateOneID(id).
-		SetStatus(status).
+		SetStatus(entndlog.Status(status)).
 		SetErrorMessage(errMsg)
 
 	_, err := b.Save(ctx)
@@ -118,9 +118,9 @@ func (s *pgNotificationDeliveryStore) toRecord(l *ent.NotificationDeliveryLog) *
 		ID:               l.ID,
 		UserID:           l.UserID,
 		IncidentID:       l.IncidentID,
-		NotificationType: l.NotificationType,
-		Channel:          l.Channel,
-		Status:           l.Status,
+		NotificationType: string(l.NotificationType),
+		Channel:          string(l.Channel),
+		Status:           string(l.Status),
 		ErrorMessage:     l.ErrorMessage,
 		CreatedAt:        l.CreatedAt,
 	}

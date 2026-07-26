@@ -3,6 +3,7 @@
 package incident
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -293,20 +294,6 @@ var (
 	DefaultDescription string
 	// DefaultSummary holds the default value on creation for the "summary" field.
 	DefaultSummary string
-	// DefaultStatus holds the default value on creation for the "status" field.
-	DefaultStatus string
-	// DefaultSeverity holds the default value on creation for the "severity" field.
-	DefaultSeverity string
-	// DefaultImpactLevel holds the default value on creation for the "impact_level" field.
-	DefaultImpactLevel string
-	// DefaultPriority holds the default value on creation for the "priority" field.
-	DefaultPriority string
-	// DefaultIncidentType holds the default value on creation for the "incident_type" field.
-	DefaultIncidentType string
-	// DefaultCommanderAssigneeType holds the default value on creation for the "commander_assignee_type" field.
-	DefaultCommanderAssigneeType string
-	// DefaultCommunicatorAssigneeType holds the default value on creation for the "communicator_assignee_type" field.
-	DefaultCommunicatorAssigneeType string
 	// DefaultConferenceURL holds the default value on creation for the "conference_url" field.
 	DefaultConferenceURL string
 	// DefaultSlackChannelName holds the default value on creation for the "slack_channel_name" field.
@@ -330,6 +317,200 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// Status defines the type for the "status" enum field.
+type Status string
+
+// StatusDetected is the default value of the Status enum.
+const DefaultStatus = StatusDetected
+
+// Status values.
+const (
+	StatusDetected  Status = "detected"
+	StatusTriaging  Status = "triaging"
+	StatusActive    Status = "active"
+	StatusMitigated Status = "mitigated"
+	StatusResolved  Status = "resolved"
+	StatusClosed    Status = "closed"
+	StatusCancelled Status = "cancelled"
+)
+
+func (s Status) String() string {
+	return string(s)
+}
+
+// StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
+func StatusValidator(s Status) error {
+	switch s {
+	case StatusDetected, StatusTriaging, StatusActive, StatusMitigated, StatusResolved, StatusClosed, StatusCancelled:
+		return nil
+	default:
+		return fmt.Errorf("incident: invalid enum value for status field: %q", s)
+	}
+}
+
+// Severity defines the type for the "severity" enum field.
+type Severity string
+
+// SeverityWarning is the default value of the Severity enum.
+const DefaultSeverity = SeverityWarning
+
+// Severity values.
+const (
+	SeverityCritical Severity = "critical"
+	SeverityHigh     Severity = "high"
+	SeverityWarning  Severity = "warning"
+	SeverityInfo     Severity = "info"
+)
+
+func (s Severity) String() string {
+	return string(s)
+}
+
+// SeverityValidator is a validator for the "severity" field enum values. It is called by the builders before save.
+func SeverityValidator(s Severity) error {
+	switch s {
+	case SeverityCritical, SeverityHigh, SeverityWarning, SeverityInfo:
+		return nil
+	default:
+		return fmt.Errorf("incident: invalid enum value for severity field: %q", s)
+	}
+}
+
+// ImpactLevel defines the type for the "impact_level" enum field.
+type ImpactLevel string
+
+// ImpactLevelMedium is the default value of the ImpactLevel enum.
+const DefaultImpactLevel = ImpactLevelMedium
+
+// ImpactLevel values.
+const (
+	ImpactLevelHigh   ImpactLevel = "high"
+	ImpactLevelMedium ImpactLevel = "medium"
+	ImpactLevelLow    ImpactLevel = "low"
+)
+
+func (il ImpactLevel) String() string {
+	return string(il)
+}
+
+// ImpactLevelValidator is a validator for the "impact_level" field enum values. It is called by the builders before save.
+func ImpactLevelValidator(il ImpactLevel) error {
+	switch il {
+	case ImpactLevelHigh, ImpactLevelMedium, ImpactLevelLow:
+		return nil
+	default:
+		return fmt.Errorf("incident: invalid enum value for impact_level field: %q", il)
+	}
+}
+
+// Priority defines the type for the "priority" enum field.
+type Priority string
+
+// PriorityP4 is the default value of the Priority enum.
+const DefaultPriority = PriorityP4
+
+// Priority values.
+const (
+	PriorityP1 Priority = "P1"
+	PriorityP2 Priority = "P2"
+	PriorityP3 Priority = "P3"
+	PriorityP4 Priority = "P4"
+	PriorityP5 Priority = "P5"
+)
+
+func (pr Priority) String() string {
+	return string(pr)
+}
+
+// PriorityValidator is a validator for the "priority" field enum values. It is called by the builders before save.
+func PriorityValidator(pr Priority) error {
+	switch pr {
+	case PriorityP1, PriorityP2, PriorityP3, PriorityP4, PriorityP5:
+		return nil
+	default:
+		return fmt.Errorf("incident: invalid enum value for priority field: %q", pr)
+	}
+}
+
+// IncidentType defines the type for the "incident_type" enum field.
+type IncidentType string
+
+// IncidentTypeReal is the default value of the IncidentType enum.
+const DefaultIncidentType = IncidentTypeReal
+
+// IncidentType values.
+const (
+	IncidentTypeReal        IncidentType = "real"
+	IncidentTypeAlert       IncidentType = "alert"
+	IncidentTypeDegradation IncidentType = "degradation"
+)
+
+func (it IncidentType) String() string {
+	return string(it)
+}
+
+// IncidentTypeValidator is a validator for the "incident_type" field enum values. It is called by the builders before save.
+func IncidentTypeValidator(it IncidentType) error {
+	switch it {
+	case IncidentTypeReal, IncidentTypeAlert, IncidentTypeDegradation:
+		return nil
+	default:
+		return fmt.Errorf("incident: invalid enum value for incident_type field: %q", it)
+	}
+}
+
+// CommanderAssigneeType defines the type for the "commander_assignee_type" enum field.
+type CommanderAssigneeType string
+
+// CommanderAssigneeTypeUser is the default value of the CommanderAssigneeType enum.
+const DefaultCommanderAssigneeType = CommanderAssigneeTypeUser
+
+// CommanderAssigneeType values.
+const (
+	CommanderAssigneeTypeUser  CommanderAssigneeType = "user"
+	CommanderAssigneeTypeAgent CommanderAssigneeType = "agent"
+)
+
+func (cat CommanderAssigneeType) String() string {
+	return string(cat)
+}
+
+// CommanderAssigneeTypeValidator is a validator for the "commander_assignee_type" field enum values. It is called by the builders before save.
+func CommanderAssigneeTypeValidator(cat CommanderAssigneeType) error {
+	switch cat {
+	case CommanderAssigneeTypeUser, CommanderAssigneeTypeAgent:
+		return nil
+	default:
+		return fmt.Errorf("incident: invalid enum value for commander_assignee_type field: %q", cat)
+	}
+}
+
+// CommunicatorAssigneeType defines the type for the "communicator_assignee_type" enum field.
+type CommunicatorAssigneeType string
+
+// CommunicatorAssigneeTypeUser is the default value of the CommunicatorAssigneeType enum.
+const DefaultCommunicatorAssigneeType = CommunicatorAssigneeTypeUser
+
+// CommunicatorAssigneeType values.
+const (
+	CommunicatorAssigneeTypeUser  CommunicatorAssigneeType = "user"
+	CommunicatorAssigneeTypeAgent CommunicatorAssigneeType = "agent"
+)
+
+func (cat CommunicatorAssigneeType) String() string {
+	return string(cat)
+}
+
+// CommunicatorAssigneeTypeValidator is a validator for the "communicator_assignee_type" field enum values. It is called by the builders before save.
+func CommunicatorAssigneeTypeValidator(cat CommunicatorAssigneeType) error {
+	switch cat {
+	case CommunicatorAssigneeTypeUser, CommunicatorAssigneeTypeAgent:
+		return nil
+	default:
+		return fmt.Errorf("incident: invalid enum value for communicator_assignee_type field: %q", cat)
+	}
+}
 
 // OrderOption defines the ordering options for the Incident queries.
 type OrderOption func(*sql.Selector)

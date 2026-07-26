@@ -36,13 +36,13 @@ func (_c *TeamMemberCreate) SetUserID(v uuid.UUID) *TeamMemberCreate {
 }
 
 // SetRole sets the "role" field.
-func (_c *TeamMemberCreate) SetRole(v string) *TeamMemberCreate {
+func (_c *TeamMemberCreate) SetRole(v teammember.Role) *TeamMemberCreate {
 	_c.mutation.SetRole(v)
 	return _c
 }
 
 // SetNillableRole sets the "role" field if the given value is not nil.
-func (_c *TeamMemberCreate) SetNillableRole(v *string) *TeamMemberCreate {
+func (_c *TeamMemberCreate) SetNillableRole(v *teammember.Role) *TeamMemberCreate {
 	if v != nil {
 		_c.SetRole(*v)
 	}
@@ -147,6 +147,11 @@ func (_c *TeamMemberCreate) check() error {
 	if _, ok := _c.mutation.Role(); !ok {
 		return &ValidationError{Name: "role", err: errors.New(`ent: missing required field "TeamMember.role"`)}
 	}
+	if v, ok := _c.mutation.Role(); ok {
+		if err := teammember.RoleValidator(v); err != nil {
+			return &ValidationError{Name: "role", err: fmt.Errorf(`ent: validator failed for field "TeamMember.role": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "TeamMember.created_at"`)}
 	}
@@ -192,7 +197,7 @@ func (_c *TeamMemberCreate) createSpec() (*TeamMember, *sqlgraph.CreateSpec) {
 		_spec.ID.Value = &id
 	}
 	if value, ok := _c.mutation.Role(); ok {
-		_spec.SetField(teammember.FieldRole, field.TypeString, value)
+		_spec.SetField(teammember.FieldRole, field.TypeEnum, value)
 		_node.Role = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {

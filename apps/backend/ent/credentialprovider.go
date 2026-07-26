@@ -21,7 +21,7 @@ type CredentialProvider struct {
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty"`
 	// Type holds the value of the "type" field.
-	Type string `json:"type,omitempty"`
+	Type credentialprovider.Type `json:"type,omitempty"`
 	// ConfigEncrypted holds the value of the "config_encrypted" field.
 	ConfigEncrypted string `json:"-"`
 	// Enabled holds the value of the "enabled" field.
@@ -100,7 +100,7 @@ func (_m *CredentialProvider) assignValues(columns []string, values []any) error
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field type", values[i])
 			} else if value.Valid {
-				_m.Type = value.String
+				_m.Type = credentialprovider.Type(value.String)
 			}
 		case credentialprovider.FieldConfigEncrypted:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -177,7 +177,7 @@ func (_m *CredentialProvider) String() string {
 	builder.WriteString(_m.Name)
 	builder.WriteString(", ")
 	builder.WriteString("type=")
-	builder.WriteString(_m.Type)
+	builder.WriteString(fmt.Sprintf("%v", _m.Type))
 	builder.WriteString(", ")
 	builder.WriteString("config_encrypted=<sensitive>")
 	builder.WriteString(", ")

@@ -33,13 +33,13 @@ func (_u *KnowledgeNoteUpdate) Where(ps ...predicate.KnowledgeNote) *KnowledgeNo
 }
 
 // SetKind sets the "kind" field.
-func (_u *KnowledgeNoteUpdate) SetKind(v string) *KnowledgeNoteUpdate {
+func (_u *KnowledgeNoteUpdate) SetKind(v knowledgenote.Kind) *KnowledgeNoteUpdate {
 	_u.mutation.SetKind(v)
 	return _u
 }
 
 // SetNillableKind sets the "kind" field if the given value is not nil.
-func (_u *KnowledgeNoteUpdate) SetNillableKind(v *string) *KnowledgeNoteUpdate {
+func (_u *KnowledgeNoteUpdate) SetNillableKind(v *knowledgenote.Kind) *KnowledgeNoteUpdate {
 	if v != nil {
 		_u.SetKind(*v)
 	}
@@ -131,13 +131,13 @@ func (_u *KnowledgeNoteUpdate) ClearAuthorID() *KnowledgeNoteUpdate {
 }
 
 // SetAuthorType sets the "author_type" field.
-func (_u *KnowledgeNoteUpdate) SetAuthorType(v string) *KnowledgeNoteUpdate {
+func (_u *KnowledgeNoteUpdate) SetAuthorType(v knowledgenote.AuthorType) *KnowledgeNoteUpdate {
 	_u.mutation.SetAuthorType(v)
 	return _u
 }
 
 // SetNillableAuthorType sets the "author_type" field if the given value is not nil.
-func (_u *KnowledgeNoteUpdate) SetNillableAuthorType(v *string) *KnowledgeNoteUpdate {
+func (_u *KnowledgeNoteUpdate) SetNillableAuthorType(v *knowledgenote.AuthorType) *KnowledgeNoteUpdate {
 	if v != nil {
 		_u.SetAuthorType(*v)
 	}
@@ -320,6 +320,11 @@ func (_u *KnowledgeNoteUpdate) check() error {
 			return &ValidationError{Name: "body_markdown", err: fmt.Errorf(`ent: validator failed for field "KnowledgeNote.body_markdown": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.AuthorType(); ok {
+		if err := knowledgenote.AuthorTypeValidator(v); err != nil {
+			return &ValidationError{Name: "author_type", err: fmt.Errorf(`ent: validator failed for field "KnowledgeNote.author_type": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -336,7 +341,7 @@ func (_u *KnowledgeNoteUpdate) sqlSave(ctx context.Context) (_node int, err erro
 		}
 	}
 	if value, ok := _u.mutation.Kind(); ok {
-		_spec.SetField(knowledgenote.FieldKind, field.TypeString, value)
+		_spec.SetField(knowledgenote.FieldKind, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(knowledgenote.FieldTitle, field.TypeString, value)
@@ -367,7 +372,7 @@ func (_u *KnowledgeNoteUpdate) sqlSave(ctx context.Context) (_node int, err erro
 		_spec.ClearField(knowledgenote.FieldSelectors, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.AuthorType(); ok {
-		_spec.SetField(knowledgenote.FieldAuthorType, field.TypeString, value)
+		_spec.SetField(knowledgenote.FieldAuthorType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.AuthorName(); ok {
 		_spec.SetField(knowledgenote.FieldAuthorName, field.TypeString, value)
@@ -452,13 +457,13 @@ type KnowledgeNoteUpdateOne struct {
 }
 
 // SetKind sets the "kind" field.
-func (_u *KnowledgeNoteUpdateOne) SetKind(v string) *KnowledgeNoteUpdateOne {
+func (_u *KnowledgeNoteUpdateOne) SetKind(v knowledgenote.Kind) *KnowledgeNoteUpdateOne {
 	_u.mutation.SetKind(v)
 	return _u
 }
 
 // SetNillableKind sets the "kind" field if the given value is not nil.
-func (_u *KnowledgeNoteUpdateOne) SetNillableKind(v *string) *KnowledgeNoteUpdateOne {
+func (_u *KnowledgeNoteUpdateOne) SetNillableKind(v *knowledgenote.Kind) *KnowledgeNoteUpdateOne {
 	if v != nil {
 		_u.SetKind(*v)
 	}
@@ -550,13 +555,13 @@ func (_u *KnowledgeNoteUpdateOne) ClearAuthorID() *KnowledgeNoteUpdateOne {
 }
 
 // SetAuthorType sets the "author_type" field.
-func (_u *KnowledgeNoteUpdateOne) SetAuthorType(v string) *KnowledgeNoteUpdateOne {
+func (_u *KnowledgeNoteUpdateOne) SetAuthorType(v knowledgenote.AuthorType) *KnowledgeNoteUpdateOne {
 	_u.mutation.SetAuthorType(v)
 	return _u
 }
 
 // SetNillableAuthorType sets the "author_type" field if the given value is not nil.
-func (_u *KnowledgeNoteUpdateOne) SetNillableAuthorType(v *string) *KnowledgeNoteUpdateOne {
+func (_u *KnowledgeNoteUpdateOne) SetNillableAuthorType(v *knowledgenote.AuthorType) *KnowledgeNoteUpdateOne {
 	if v != nil {
 		_u.SetAuthorType(*v)
 	}
@@ -752,6 +757,11 @@ func (_u *KnowledgeNoteUpdateOne) check() error {
 			return &ValidationError{Name: "body_markdown", err: fmt.Errorf(`ent: validator failed for field "KnowledgeNote.body_markdown": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.AuthorType(); ok {
+		if err := knowledgenote.AuthorTypeValidator(v); err != nil {
+			return &ValidationError{Name: "author_type", err: fmt.Errorf(`ent: validator failed for field "KnowledgeNote.author_type": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -785,7 +795,7 @@ func (_u *KnowledgeNoteUpdateOne) sqlSave(ctx context.Context) (_node *Knowledge
 		}
 	}
 	if value, ok := _u.mutation.Kind(); ok {
-		_spec.SetField(knowledgenote.FieldKind, field.TypeString, value)
+		_spec.SetField(knowledgenote.FieldKind, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(knowledgenote.FieldTitle, field.TypeString, value)
@@ -816,7 +826,7 @@ func (_u *KnowledgeNoteUpdateOne) sqlSave(ctx context.Context) (_node *Knowledge
 		_spec.ClearField(knowledgenote.FieldSelectors, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.AuthorType(); ok {
-		_spec.SetField(knowledgenote.FieldAuthorType, field.TypeString, value)
+		_spec.SetField(knowledgenote.FieldAuthorType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.AuthorName(); ok {
 		_spec.SetField(knowledgenote.FieldAuthorName, field.TypeString, value)

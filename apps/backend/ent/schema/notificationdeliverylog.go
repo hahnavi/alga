@@ -24,9 +24,9 @@ func (NotificationDeliveryLog) Fields() []ent.Field {
 		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
 		field.UUID("user_id", uuid.UUID{}),
 		field.UUID("incident_id", uuid.UUID{}).Optional().Nillable(),
-		field.String("notification_type").NotEmpty(),
-		field.String("channel").NotEmpty(),
-		field.String("status").Default("sent"),
+		field.Enum("notification_type").Values("escalation", "oncall_handoff", "post_mortem_review_requested", "action_item_assigned", "mention", "info"),
+		field.Enum("channel").Values("email", "mattermost", "slack", "voice"),
+		field.Enum("status").Values("sent", "delivered", "failed", "queued", "skipped", "skipped_no_slack_id", "skipped_no_phone", "skipped_opt_out", "skipped_dedup").Default("sent"),
 		field.Text("error_message").Optional().Default(""),
 		field.Time("created_at").Default(timeNow),
 	}

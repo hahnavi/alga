@@ -22,7 +22,7 @@ type AgentDMMessage struct {
 	// ChatID holds the value of the "chat_id" field.
 	ChatID string `json:"chat_id,omitempty"`
 	// Role holds the value of the "role" field.
-	Role string `json:"role,omitempty"`
+	Role agentdmmessage.Role `json:"role,omitempty"`
 	// Body holds the value of the "body" field.
 	Body string `json:"body,omitempty"`
 	// UserID holds the value of the "user_id" field.
@@ -107,7 +107,7 @@ func (_m *AgentDMMessage) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field role", values[i])
 			} else if value.Valid {
-				_m.Role = value.String
+				_m.Role = agentdmmessage.Role(value.String)
 			}
 		case agentdmmessage.FieldBody:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -198,7 +198,7 @@ func (_m *AgentDMMessage) String() string {
 	builder.WriteString(_m.ChatID)
 	builder.WriteString(", ")
 	builder.WriteString("role=")
-	builder.WriteString(_m.Role)
+	builder.WriteString(fmt.Sprintf("%v", _m.Role))
 	builder.WriteString(", ")
 	builder.WriteString("body=")
 	builder.WriteString(_m.Body)

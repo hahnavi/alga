@@ -30,15 +30,15 @@ type ICSRoleAssignment struct {
 	// AgentTokenID holds the value of the "agent_token_id" field.
 	AgentTokenID *uuid.UUID `json:"agent_token_id,omitempty"`
 	// RoleType holds the value of the "role_type" field.
-	RoleType string `json:"role_type,omitempty"`
+	RoleType icsroleassignment.RoleType `json:"role_type,omitempty"`
 	// Status holds the value of the "status" field.
-	Status string `json:"status,omitempty"`
+	Status icsroleassignment.Status `json:"status,omitempty"`
 	// AssigneeType holds the value of the "assignee_type" field.
-	AssigneeType string `json:"assignee_type,omitempty"`
+	AssigneeType icsroleassignment.AssigneeType `json:"assignee_type,omitempty"`
 	// ScopeDescription holds the value of the "scope_description" field.
 	ScopeDescription *string `json:"scope_description,omitempty"`
 	// EndedReason holds the value of the "ended_reason" field.
-	EndedReason *string `json:"ended_reason,omitempty"`
+	EndedReason *icsroleassignment.EndedReason `json:"ended_reason,omitempty"`
 	// StartedAt holds the value of the "started_at" field.
 	StartedAt time.Time `json:"started_at,omitempty"`
 	// EndedAt holds the value of the "ended_at" field.
@@ -184,19 +184,19 @@ func (_m *ICSRoleAssignment) assignValues(columns []string, values []any) error 
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field role_type", values[i])
 			} else if value.Valid {
-				_m.RoleType = value.String
+				_m.RoleType = icsroleassignment.RoleType(value.String)
 			}
 		case icsroleassignment.FieldStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
-				_m.Status = value.String
+				_m.Status = icsroleassignment.Status(value.String)
 			}
 		case icsroleassignment.FieldAssigneeType:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field assignee_type", values[i])
 			} else if value.Valid {
-				_m.AssigneeType = value.String
+				_m.AssigneeType = icsroleassignment.AssigneeType(value.String)
 			}
 		case icsroleassignment.FieldScopeDescription:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -209,8 +209,8 @@ func (_m *ICSRoleAssignment) assignValues(columns []string, values []any) error 
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field ended_reason", values[i])
 			} else if value.Valid {
-				_m.EndedReason = new(string)
-				*_m.EndedReason = value.String
+				_m.EndedReason = new(icsroleassignment.EndedReason)
+				*_m.EndedReason = icsroleassignment.EndedReason(value.String)
 			}
 		case icsroleassignment.FieldStartedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -305,13 +305,13 @@ func (_m *ICSRoleAssignment) String() string {
 	}
 	builder.WriteString(", ")
 	builder.WriteString("role_type=")
-	builder.WriteString(_m.RoleType)
+	builder.WriteString(fmt.Sprintf("%v", _m.RoleType))
 	builder.WriteString(", ")
 	builder.WriteString("status=")
-	builder.WriteString(_m.Status)
+	builder.WriteString(fmt.Sprintf("%v", _m.Status))
 	builder.WriteString(", ")
 	builder.WriteString("assignee_type=")
-	builder.WriteString(_m.AssigneeType)
+	builder.WriteString(fmt.Sprintf("%v", _m.AssigneeType))
 	builder.WriteString(", ")
 	if v := _m.ScopeDescription; v != nil {
 		builder.WriteString("scope_description=")
@@ -320,7 +320,7 @@ func (_m *ICSRoleAssignment) String() string {
 	builder.WriteString(", ")
 	if v := _m.EndedReason; v != nil {
 		builder.WriteString("ended_reason=")
-		builder.WriteString(*v)
+		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteString(", ")
 	builder.WriteString("started_at=")

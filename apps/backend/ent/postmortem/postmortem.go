@@ -3,6 +3,7 @@
 package postmortem
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -115,8 +116,6 @@ func ValidColumn(column string) bool {
 var (
 	// DefaultTitle holds the default value on creation for the "title" field.
 	DefaultTitle string
-	// DefaultStatus holds the default value on creation for the "status" field.
-	DefaultStatus string
 	// DefaultSummary holds the default value on creation for the "summary" field.
 	DefaultSummary string
 	// DefaultRootCause holds the default value on creation for the "root_cause" field.
@@ -142,6 +141,34 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// Status defines the type for the "status" enum field.
+type Status string
+
+// StatusDraft is the default value of the Status enum.
+const DefaultStatus = StatusDraft
+
+// Status values.
+const (
+	StatusDraft     Status = "draft"
+	StatusInReview  Status = "in_review"
+	StatusApproved  Status = "approved"
+	StatusPublished Status = "published"
+)
+
+func (s Status) String() string {
+	return string(s)
+}
+
+// StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
+func StatusValidator(s Status) error {
+	switch s {
+	case StatusDraft, StatusInReview, StatusApproved, StatusPublished:
+		return nil
+	default:
+		return fmt.Errorf("postmortem: invalid enum value for status field: %q", s)
+	}
+}
 
 // OrderOption defines the ordering options for the PostMortem queries.
 type OrderOption func(*sql.Selector)

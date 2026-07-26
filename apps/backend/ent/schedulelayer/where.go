@@ -66,11 +66,6 @@ func Name(v string) predicate.ScheduleLayer {
 	return predicate.ScheduleLayer(sql.FieldEQ(FieldName, v))
 }
 
-// RotationType applies equality check predicate on the "rotation_type" field. It's identical to RotationTypeEQ.
-func RotationType(v string) predicate.ScheduleLayer {
-	return predicate.ScheduleLayer(sql.FieldEQ(FieldRotationType, v))
-}
-
 // RotationInterval applies equality check predicate on the "rotation_interval" field. It's identical to RotationIntervalEQ.
 func RotationInterval(v int) predicate.ScheduleLayer {
 	return predicate.ScheduleLayer(sql.FieldEQ(FieldRotationInterval, v))
@@ -202,68 +197,23 @@ func NameContainsFold(v string) predicate.ScheduleLayer {
 }
 
 // RotationTypeEQ applies the EQ predicate on the "rotation_type" field.
-func RotationTypeEQ(v string) predicate.ScheduleLayer {
+func RotationTypeEQ(v RotationType) predicate.ScheduleLayer {
 	return predicate.ScheduleLayer(sql.FieldEQ(FieldRotationType, v))
 }
 
 // RotationTypeNEQ applies the NEQ predicate on the "rotation_type" field.
-func RotationTypeNEQ(v string) predicate.ScheduleLayer {
+func RotationTypeNEQ(v RotationType) predicate.ScheduleLayer {
 	return predicate.ScheduleLayer(sql.FieldNEQ(FieldRotationType, v))
 }
 
 // RotationTypeIn applies the In predicate on the "rotation_type" field.
-func RotationTypeIn(vs ...string) predicate.ScheduleLayer {
+func RotationTypeIn(vs ...RotationType) predicate.ScheduleLayer {
 	return predicate.ScheduleLayer(sql.FieldIn(FieldRotationType, vs...))
 }
 
 // RotationTypeNotIn applies the NotIn predicate on the "rotation_type" field.
-func RotationTypeNotIn(vs ...string) predicate.ScheduleLayer {
+func RotationTypeNotIn(vs ...RotationType) predicate.ScheduleLayer {
 	return predicate.ScheduleLayer(sql.FieldNotIn(FieldRotationType, vs...))
-}
-
-// RotationTypeGT applies the GT predicate on the "rotation_type" field.
-func RotationTypeGT(v string) predicate.ScheduleLayer {
-	return predicate.ScheduleLayer(sql.FieldGT(FieldRotationType, v))
-}
-
-// RotationTypeGTE applies the GTE predicate on the "rotation_type" field.
-func RotationTypeGTE(v string) predicate.ScheduleLayer {
-	return predicate.ScheduleLayer(sql.FieldGTE(FieldRotationType, v))
-}
-
-// RotationTypeLT applies the LT predicate on the "rotation_type" field.
-func RotationTypeLT(v string) predicate.ScheduleLayer {
-	return predicate.ScheduleLayer(sql.FieldLT(FieldRotationType, v))
-}
-
-// RotationTypeLTE applies the LTE predicate on the "rotation_type" field.
-func RotationTypeLTE(v string) predicate.ScheduleLayer {
-	return predicate.ScheduleLayer(sql.FieldLTE(FieldRotationType, v))
-}
-
-// RotationTypeContains applies the Contains predicate on the "rotation_type" field.
-func RotationTypeContains(v string) predicate.ScheduleLayer {
-	return predicate.ScheduleLayer(sql.FieldContains(FieldRotationType, v))
-}
-
-// RotationTypeHasPrefix applies the HasPrefix predicate on the "rotation_type" field.
-func RotationTypeHasPrefix(v string) predicate.ScheduleLayer {
-	return predicate.ScheduleLayer(sql.FieldHasPrefix(FieldRotationType, v))
-}
-
-// RotationTypeHasSuffix applies the HasSuffix predicate on the "rotation_type" field.
-func RotationTypeHasSuffix(v string) predicate.ScheduleLayer {
-	return predicate.ScheduleLayer(sql.FieldHasSuffix(FieldRotationType, v))
-}
-
-// RotationTypeEqualFold applies the EqualFold predicate on the "rotation_type" field.
-func RotationTypeEqualFold(v string) predicate.ScheduleLayer {
-	return predicate.ScheduleLayer(sql.FieldEqualFold(FieldRotationType, v))
-}
-
-// RotationTypeContainsFold applies the ContainsFold predicate on the "rotation_type" field.
-func RotationTypeContainsFold(v string) predicate.ScheduleLayer {
-	return predicate.ScheduleLayer(sql.FieldContainsFold(FieldRotationType, v))
 }
 
 // RotationIntervalEQ applies the EQ predicate on the "rotation_interval" field.

@@ -23,13 +23,13 @@ func (KnowledgeNote) Annotations() []schema.Annotation {
 func (KnowledgeNote) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
-		field.String("kind").NotEmpty(),
+		field.Enum("kind").Values("runbook", "known_issue", "service_owner", "fact"),
 		field.String("title").NotEmpty(),
 		field.String("body_markdown").NotEmpty(),
 		field.JSON("tags", []string{}).Optional(),
 		field.JSON("selectors", []RouteCondition{}).Optional(),
 		field.UUID("author_id", uuid.UUID{}).Optional().Nillable(),
-		field.String("author_type").Default("user"),
+		field.Enum("author_type").Values("user", "agent").Default("user"),
 		field.String("author_name").Optional().Default(""),
 		field.String("source_investigation_id").Optional().Default(""),
 		field.Float("confidence").Optional().Nillable(),

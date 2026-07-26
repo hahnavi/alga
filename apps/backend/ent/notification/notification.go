@@ -3,6 +3,7 @@
 package notification
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -66,16 +67,12 @@ func ValidColumn(column string) bool {
 var (
 	// UserIDValidator is a validator for the "user_id" field. It is called by the builders before save.
 	UserIDValidator func(string) error
-	// TypeValidator is a validator for the "type" field. It is called by the builders before save.
-	TypeValidator func(string) error
 	// TitleValidator is a validator for the "title" field. It is called by the builders before save.
 	TitleValidator func(string) error
 	// MessageValidator is a validator for the "message" field. It is called by the builders before save.
 	MessageValidator func(string) error
 	// DefaultRead holds the default value on creation for the "read" field.
 	DefaultRead bool
-	// DefaultResourceType holds the default value on creation for the "resource_type" field.
-	DefaultResourceType string
 	// DefaultResourceID holds the default value on creation for the "resource_id" field.
 	DefaultResourceID string
 	// DefaultTriggeredByUserID holds the default value on creation for the "triggered_by_user_id" field.
@@ -87,6 +84,58 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// Type defines the type for the "type" enum field.
+type Type string
+
+// Type values.
+const (
+	TypeEscalation                Type = "escalation"
+	TypeOncallHandoff             Type = "oncall_handoff"
+	TypePostMortemReviewRequested Type = "post_mortem_review_requested"
+	TypeActionItemAssigned        Type = "action_item_assigned"
+	TypeMention                   Type = "mention"
+	TypeInfo                      Type = "info"
+)
+
+func (_type Type) String() string {
+	return string(_type)
+}
+
+// TypeValidator is a validator for the "type" field enum values. It is called by the builders before save.
+func TypeValidator(_type Type) error {
+	switch _type {
+	case TypeEscalation, TypeOncallHandoff, TypePostMortemReviewRequested, TypeActionItemAssigned, TypeMention, TypeInfo:
+		return nil
+	default:
+		return fmt.Errorf("notification: invalid enum value for type field: %q", _type)
+	}
+}
+
+// ResourceType defines the type for the "resource_type" enum field.
+type ResourceType string
+
+// ResourceType values.
+const (
+	ResourceTypeIncident      ResourceType = "incident"
+	ResourceTypeInvestigation ResourceType = "investigation"
+	ResourceTypePostMortem    ResourceType = "post_mortem"
+	ResourceTypeActionItem    ResourceType = "action_item"
+)
+
+func (rt ResourceType) String() string {
+	return string(rt)
+}
+
+// ResourceTypeValidator is a validator for the "resource_type" field enum values. It is called by the builders before save.
+func ResourceTypeValidator(rt ResourceType) error {
+	switch rt {
+	case ResourceTypeIncident, ResourceTypeInvestigation, ResourceTypePostMortem, ResourceTypeActionItem:
+		return nil
+	default:
+		return fmt.Errorf("notification: invalid enum value for resource_type field: %q", rt)
+	}
+}
 
 // OrderOption defines the ordering options for the Notification queries.
 type OrderOption func(*sql.Selector)

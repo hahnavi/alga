@@ -3,6 +3,7 @@
 package teammember
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -65,13 +66,37 @@ func ValidColumn(column string) bool {
 }
 
 var (
-	// DefaultRole holds the default value on creation for the "role" field.
-	DefaultRole string
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// Role defines the type for the "role" enum field.
+type Role string
+
+// RoleMember is the default value of the Role enum.
+const DefaultRole = RoleMember
+
+// Role values.
+const (
+	RoleMember Role = "member"
+	RoleLead   Role = "lead"
+)
+
+func (r Role) String() string {
+	return string(r)
+}
+
+// RoleValidator is a validator for the "role" field enum values. It is called by the builders before save.
+func RoleValidator(r Role) error {
+	switch r {
+	case RoleMember, RoleLead:
+		return nil
+	default:
+		return fmt.Errorf("teammember: invalid enum value for role field: %q", r)
+	}
+}
 
 // OrderOption defines the ordering options for the TeamMember queries.
 type OrderOption func(*sql.Selector)

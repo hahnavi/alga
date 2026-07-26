@@ -120,13 +120,13 @@ func (_u *TriageResultUpdate) ClearAlertLabels() *TriageResultUpdate {
 }
 
 // SetSeverityInput sets the "severity_input" field.
-func (_u *TriageResultUpdate) SetSeverityInput(v string) *TriageResultUpdate {
+func (_u *TriageResultUpdate) SetSeverityInput(v triageresult.SeverityInput) *TriageResultUpdate {
 	_u.mutation.SetSeverityInput(v)
 	return _u
 }
 
 // SetNillableSeverityInput sets the "severity_input" field if the given value is not nil.
-func (_u *TriageResultUpdate) SetNillableSeverityInput(v *string) *TriageResultUpdate {
+func (_u *TriageResultUpdate) SetNillableSeverityInput(v *triageresult.SeverityInput) *TriageResultUpdate {
 	if v != nil {
 		_u.SetSeverityInput(*v)
 	}
@@ -140,13 +140,13 @@ func (_u *TriageResultUpdate) ClearSeverityInput() *TriageResultUpdate {
 }
 
 // SetDecision sets the "decision" field.
-func (_u *TriageResultUpdate) SetDecision(v string) *TriageResultUpdate {
+func (_u *TriageResultUpdate) SetDecision(v triageresult.Decision) *TriageResultUpdate {
 	_u.mutation.SetDecision(v)
 	return _u
 }
 
 // SetNillableDecision sets the "decision" field if the given value is not nil.
-func (_u *TriageResultUpdate) SetNillableDecision(v *string) *TriageResultUpdate {
+func (_u *TriageResultUpdate) SetNillableDecision(v *triageresult.Decision) *TriageResultUpdate {
 	if v != nil {
 		_u.SetDecision(*v)
 	}
@@ -175,13 +175,13 @@ func (_u *TriageResultUpdate) AddConfidence(v float64) *TriageResultUpdate {
 }
 
 // SetSeverityClassified sets the "severity_classified" field.
-func (_u *TriageResultUpdate) SetSeverityClassified(v string) *TriageResultUpdate {
+func (_u *TriageResultUpdate) SetSeverityClassified(v triageresult.SeverityClassified) *TriageResultUpdate {
 	_u.mutation.SetSeverityClassified(v)
 	return _u
 }
 
 // SetNillableSeverityClassified sets the "severity_classified" field if the given value is not nil.
-func (_u *TriageResultUpdate) SetNillableSeverityClassified(v *string) *TriageResultUpdate {
+func (_u *TriageResultUpdate) SetNillableSeverityClassified(v *triageresult.SeverityClassified) *TriageResultUpdate {
 	if v != nil {
 		_u.SetSeverityClassified(*v)
 	}
@@ -195,13 +195,13 @@ func (_u *TriageResultUpdate) ClearSeverityClassified() *TriageResultUpdate {
 }
 
 // SetCategory sets the "category" field.
-func (_u *TriageResultUpdate) SetCategory(v string) *TriageResultUpdate {
+func (_u *TriageResultUpdate) SetCategory(v triageresult.Category) *TriageResultUpdate {
 	_u.mutation.SetCategory(v)
 	return _u
 }
 
 // SetNillableCategory sets the "category" field if the given value is not nil.
-func (_u *TriageResultUpdate) SetNillableCategory(v *string) *TriageResultUpdate {
+func (_u *TriageResultUpdate) SetNillableCategory(v *triageresult.Category) *TriageResultUpdate {
 	if v != nil {
 		_u.SetCategory(*v)
 	}
@@ -277,13 +277,13 @@ func (_u *TriageResultUpdate) ClearContextUsed() *TriageResultUpdate {
 }
 
 // SetOutcome sets the "outcome" field.
-func (_u *TriageResultUpdate) SetOutcome(v string) *TriageResultUpdate {
+func (_u *TriageResultUpdate) SetOutcome(v triageresult.Outcome) *TriageResultUpdate {
 	_u.mutation.SetOutcome(v)
 	return _u
 }
 
 // SetNillableOutcome sets the "outcome" field if the given value is not nil.
-func (_u *TriageResultUpdate) SetNillableOutcome(v *string) *TriageResultUpdate {
+func (_u *TriageResultUpdate) SetNillableOutcome(v *triageresult.Outcome) *TriageResultUpdate {
 	if v != nil {
 		_u.SetOutcome(*v)
 	}
@@ -291,13 +291,13 @@ func (_u *TriageResultUpdate) SetNillableOutcome(v *string) *TriageResultUpdate 
 }
 
 // SetOverriddenTo sets the "overridden_to" field.
-func (_u *TriageResultUpdate) SetOverriddenTo(v string) *TriageResultUpdate {
+func (_u *TriageResultUpdate) SetOverriddenTo(v triageresult.OverriddenTo) *TriageResultUpdate {
 	_u.mutation.SetOverriddenTo(v)
 	return _u
 }
 
 // SetNillableOverriddenTo sets the "overridden_to" field if the given value is not nil.
-func (_u *TriageResultUpdate) SetNillableOverriddenTo(v *string) *TriageResultUpdate {
+func (_u *TriageResultUpdate) SetNillableOverriddenTo(v *triageresult.OverriddenTo) *TriageResultUpdate {
 	if v != nil {
 		_u.SetOverriddenTo(*v)
 	}
@@ -581,9 +581,34 @@ func (_u *TriageResultUpdate) check() error {
 			return &ValidationError{Name: "correlation_key", err: fmt.Errorf(`ent: validator failed for field "TriageResult.correlation_key": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.SeverityInput(); ok {
+		if err := triageresult.SeverityInputValidator(v); err != nil {
+			return &ValidationError{Name: "severity_input", err: fmt.Errorf(`ent: validator failed for field "TriageResult.severity_input": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Decision(); ok {
 		if err := triageresult.DecisionValidator(v); err != nil {
 			return &ValidationError{Name: "decision", err: fmt.Errorf(`ent: validator failed for field "TriageResult.decision": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.SeverityClassified(); ok {
+		if err := triageresult.SeverityClassifiedValidator(v); err != nil {
+			return &ValidationError{Name: "severity_classified", err: fmt.Errorf(`ent: validator failed for field "TriageResult.severity_classified": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Category(); ok {
+		if err := triageresult.CategoryValidator(v); err != nil {
+			return &ValidationError{Name: "category", err: fmt.Errorf(`ent: validator failed for field "TriageResult.category": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Outcome(); ok {
+		if err := triageresult.OutcomeValidator(v); err != nil {
+			return &ValidationError{Name: "outcome", err: fmt.Errorf(`ent: validator failed for field "TriageResult.outcome": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.OverriddenTo(); ok {
+		if err := triageresult.OverriddenToValidator(v); err != nil {
+			return &ValidationError{Name: "overridden_to", err: fmt.Errorf(`ent: validator failed for field "TriageResult.overridden_to": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.TriageDurationMs(); ok {
@@ -639,13 +664,13 @@ func (_u *TriageResultUpdate) sqlSave(ctx context.Context) (_node int, err error
 		_spec.ClearField(triageresult.FieldAlertLabels, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.SeverityInput(); ok {
-		_spec.SetField(triageresult.FieldSeverityInput, field.TypeString, value)
+		_spec.SetField(triageresult.FieldSeverityInput, field.TypeEnum, value)
 	}
 	if _u.mutation.SeverityInputCleared() {
-		_spec.ClearField(triageresult.FieldSeverityInput, field.TypeString)
+		_spec.ClearField(triageresult.FieldSeverityInput, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.Decision(); ok {
-		_spec.SetField(triageresult.FieldDecision, field.TypeString, value)
+		_spec.SetField(triageresult.FieldDecision, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Confidence(); ok {
 		_spec.SetField(triageresult.FieldConfidence, field.TypeFloat64, value)
@@ -654,16 +679,16 @@ func (_u *TriageResultUpdate) sqlSave(ctx context.Context) (_node int, err error
 		_spec.AddField(triageresult.FieldConfidence, field.TypeFloat64, value)
 	}
 	if value, ok := _u.mutation.SeverityClassified(); ok {
-		_spec.SetField(triageresult.FieldSeverityClassified, field.TypeString, value)
+		_spec.SetField(triageresult.FieldSeverityClassified, field.TypeEnum, value)
 	}
 	if _u.mutation.SeverityClassifiedCleared() {
-		_spec.ClearField(triageresult.FieldSeverityClassified, field.TypeString)
+		_spec.ClearField(triageresult.FieldSeverityClassified, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.Category(); ok {
-		_spec.SetField(triageresult.FieldCategory, field.TypeString, value)
+		_spec.SetField(triageresult.FieldCategory, field.TypeEnum, value)
 	}
 	if _u.mutation.CategoryCleared() {
-		_spec.ClearField(triageresult.FieldCategory, field.TypeString)
+		_spec.ClearField(triageresult.FieldCategory, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.Reasoning(); ok {
 		_spec.SetField(triageresult.FieldReasoning, field.TypeString, value)
@@ -695,13 +720,13 @@ func (_u *TriageResultUpdate) sqlSave(ctx context.Context) (_node int, err error
 		_spec.ClearField(triageresult.FieldContextUsed, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.Outcome(); ok {
-		_spec.SetField(triageresult.FieldOutcome, field.TypeString, value)
+		_spec.SetField(triageresult.FieldOutcome, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.OverriddenTo(); ok {
-		_spec.SetField(triageresult.FieldOverriddenTo, field.TypeString, value)
+		_spec.SetField(triageresult.FieldOverriddenTo, field.TypeEnum, value)
 	}
 	if _u.mutation.OverriddenToCleared() {
-		_spec.ClearField(triageresult.FieldOverriddenTo, field.TypeString)
+		_spec.ClearField(triageresult.FieldOverriddenTo, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.OverriddenAt(); ok {
 		_spec.SetField(triageresult.FieldOverriddenAt, field.TypeTime, value)
@@ -959,13 +984,13 @@ func (_u *TriageResultUpdateOne) ClearAlertLabels() *TriageResultUpdateOne {
 }
 
 // SetSeverityInput sets the "severity_input" field.
-func (_u *TriageResultUpdateOne) SetSeverityInput(v string) *TriageResultUpdateOne {
+func (_u *TriageResultUpdateOne) SetSeverityInput(v triageresult.SeverityInput) *TriageResultUpdateOne {
 	_u.mutation.SetSeverityInput(v)
 	return _u
 }
 
 // SetNillableSeverityInput sets the "severity_input" field if the given value is not nil.
-func (_u *TriageResultUpdateOne) SetNillableSeverityInput(v *string) *TriageResultUpdateOne {
+func (_u *TriageResultUpdateOne) SetNillableSeverityInput(v *triageresult.SeverityInput) *TriageResultUpdateOne {
 	if v != nil {
 		_u.SetSeverityInput(*v)
 	}
@@ -979,13 +1004,13 @@ func (_u *TriageResultUpdateOne) ClearSeverityInput() *TriageResultUpdateOne {
 }
 
 // SetDecision sets the "decision" field.
-func (_u *TriageResultUpdateOne) SetDecision(v string) *TriageResultUpdateOne {
+func (_u *TriageResultUpdateOne) SetDecision(v triageresult.Decision) *TriageResultUpdateOne {
 	_u.mutation.SetDecision(v)
 	return _u
 }
 
 // SetNillableDecision sets the "decision" field if the given value is not nil.
-func (_u *TriageResultUpdateOne) SetNillableDecision(v *string) *TriageResultUpdateOne {
+func (_u *TriageResultUpdateOne) SetNillableDecision(v *triageresult.Decision) *TriageResultUpdateOne {
 	if v != nil {
 		_u.SetDecision(*v)
 	}
@@ -1014,13 +1039,13 @@ func (_u *TriageResultUpdateOne) AddConfidence(v float64) *TriageResultUpdateOne
 }
 
 // SetSeverityClassified sets the "severity_classified" field.
-func (_u *TriageResultUpdateOne) SetSeverityClassified(v string) *TriageResultUpdateOne {
+func (_u *TriageResultUpdateOne) SetSeverityClassified(v triageresult.SeverityClassified) *TriageResultUpdateOne {
 	_u.mutation.SetSeverityClassified(v)
 	return _u
 }
 
 // SetNillableSeverityClassified sets the "severity_classified" field if the given value is not nil.
-func (_u *TriageResultUpdateOne) SetNillableSeverityClassified(v *string) *TriageResultUpdateOne {
+func (_u *TriageResultUpdateOne) SetNillableSeverityClassified(v *triageresult.SeverityClassified) *TriageResultUpdateOne {
 	if v != nil {
 		_u.SetSeverityClassified(*v)
 	}
@@ -1034,13 +1059,13 @@ func (_u *TriageResultUpdateOne) ClearSeverityClassified() *TriageResultUpdateOn
 }
 
 // SetCategory sets the "category" field.
-func (_u *TriageResultUpdateOne) SetCategory(v string) *TriageResultUpdateOne {
+func (_u *TriageResultUpdateOne) SetCategory(v triageresult.Category) *TriageResultUpdateOne {
 	_u.mutation.SetCategory(v)
 	return _u
 }
 
 // SetNillableCategory sets the "category" field if the given value is not nil.
-func (_u *TriageResultUpdateOne) SetNillableCategory(v *string) *TriageResultUpdateOne {
+func (_u *TriageResultUpdateOne) SetNillableCategory(v *triageresult.Category) *TriageResultUpdateOne {
 	if v != nil {
 		_u.SetCategory(*v)
 	}
@@ -1116,13 +1141,13 @@ func (_u *TriageResultUpdateOne) ClearContextUsed() *TriageResultUpdateOne {
 }
 
 // SetOutcome sets the "outcome" field.
-func (_u *TriageResultUpdateOne) SetOutcome(v string) *TriageResultUpdateOne {
+func (_u *TriageResultUpdateOne) SetOutcome(v triageresult.Outcome) *TriageResultUpdateOne {
 	_u.mutation.SetOutcome(v)
 	return _u
 }
 
 // SetNillableOutcome sets the "outcome" field if the given value is not nil.
-func (_u *TriageResultUpdateOne) SetNillableOutcome(v *string) *TriageResultUpdateOne {
+func (_u *TriageResultUpdateOne) SetNillableOutcome(v *triageresult.Outcome) *TriageResultUpdateOne {
 	if v != nil {
 		_u.SetOutcome(*v)
 	}
@@ -1130,13 +1155,13 @@ func (_u *TriageResultUpdateOne) SetNillableOutcome(v *string) *TriageResultUpda
 }
 
 // SetOverriddenTo sets the "overridden_to" field.
-func (_u *TriageResultUpdateOne) SetOverriddenTo(v string) *TriageResultUpdateOne {
+func (_u *TriageResultUpdateOne) SetOverriddenTo(v triageresult.OverriddenTo) *TriageResultUpdateOne {
 	_u.mutation.SetOverriddenTo(v)
 	return _u
 }
 
 // SetNillableOverriddenTo sets the "overridden_to" field if the given value is not nil.
-func (_u *TriageResultUpdateOne) SetNillableOverriddenTo(v *string) *TriageResultUpdateOne {
+func (_u *TriageResultUpdateOne) SetNillableOverriddenTo(v *triageresult.OverriddenTo) *TriageResultUpdateOne {
 	if v != nil {
 		_u.SetOverriddenTo(*v)
 	}
@@ -1433,9 +1458,34 @@ func (_u *TriageResultUpdateOne) check() error {
 			return &ValidationError{Name: "correlation_key", err: fmt.Errorf(`ent: validator failed for field "TriageResult.correlation_key": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.SeverityInput(); ok {
+		if err := triageresult.SeverityInputValidator(v); err != nil {
+			return &ValidationError{Name: "severity_input", err: fmt.Errorf(`ent: validator failed for field "TriageResult.severity_input": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Decision(); ok {
 		if err := triageresult.DecisionValidator(v); err != nil {
 			return &ValidationError{Name: "decision", err: fmt.Errorf(`ent: validator failed for field "TriageResult.decision": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.SeverityClassified(); ok {
+		if err := triageresult.SeverityClassifiedValidator(v); err != nil {
+			return &ValidationError{Name: "severity_classified", err: fmt.Errorf(`ent: validator failed for field "TriageResult.severity_classified": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Category(); ok {
+		if err := triageresult.CategoryValidator(v); err != nil {
+			return &ValidationError{Name: "category", err: fmt.Errorf(`ent: validator failed for field "TriageResult.category": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Outcome(); ok {
+		if err := triageresult.OutcomeValidator(v); err != nil {
+			return &ValidationError{Name: "outcome", err: fmt.Errorf(`ent: validator failed for field "TriageResult.outcome": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.OverriddenTo(); ok {
+		if err := triageresult.OverriddenToValidator(v); err != nil {
+			return &ValidationError{Name: "overridden_to", err: fmt.Errorf(`ent: validator failed for field "TriageResult.overridden_to": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.TriageDurationMs(); ok {
@@ -1508,13 +1558,13 @@ func (_u *TriageResultUpdateOne) sqlSave(ctx context.Context) (_node *TriageResu
 		_spec.ClearField(triageresult.FieldAlertLabels, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.SeverityInput(); ok {
-		_spec.SetField(triageresult.FieldSeverityInput, field.TypeString, value)
+		_spec.SetField(triageresult.FieldSeverityInput, field.TypeEnum, value)
 	}
 	if _u.mutation.SeverityInputCleared() {
-		_spec.ClearField(triageresult.FieldSeverityInput, field.TypeString)
+		_spec.ClearField(triageresult.FieldSeverityInput, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.Decision(); ok {
-		_spec.SetField(triageresult.FieldDecision, field.TypeString, value)
+		_spec.SetField(triageresult.FieldDecision, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Confidence(); ok {
 		_spec.SetField(triageresult.FieldConfidence, field.TypeFloat64, value)
@@ -1523,16 +1573,16 @@ func (_u *TriageResultUpdateOne) sqlSave(ctx context.Context) (_node *TriageResu
 		_spec.AddField(triageresult.FieldConfidence, field.TypeFloat64, value)
 	}
 	if value, ok := _u.mutation.SeverityClassified(); ok {
-		_spec.SetField(triageresult.FieldSeverityClassified, field.TypeString, value)
+		_spec.SetField(triageresult.FieldSeverityClassified, field.TypeEnum, value)
 	}
 	if _u.mutation.SeverityClassifiedCleared() {
-		_spec.ClearField(triageresult.FieldSeverityClassified, field.TypeString)
+		_spec.ClearField(triageresult.FieldSeverityClassified, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.Category(); ok {
-		_spec.SetField(triageresult.FieldCategory, field.TypeString, value)
+		_spec.SetField(triageresult.FieldCategory, field.TypeEnum, value)
 	}
 	if _u.mutation.CategoryCleared() {
-		_spec.ClearField(triageresult.FieldCategory, field.TypeString)
+		_spec.ClearField(triageresult.FieldCategory, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.Reasoning(); ok {
 		_spec.SetField(triageresult.FieldReasoning, field.TypeString, value)
@@ -1564,13 +1614,13 @@ func (_u *TriageResultUpdateOne) sqlSave(ctx context.Context) (_node *TriageResu
 		_spec.ClearField(triageresult.FieldContextUsed, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.Outcome(); ok {
-		_spec.SetField(triageresult.FieldOutcome, field.TypeString, value)
+		_spec.SetField(triageresult.FieldOutcome, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.OverriddenTo(); ok {
-		_spec.SetField(triageresult.FieldOverriddenTo, field.TypeString, value)
+		_spec.SetField(triageresult.FieldOverriddenTo, field.TypeEnum, value)
 	}
 	if _u.mutation.OverriddenToCleared() {
-		_spec.ClearField(triageresult.FieldOverriddenTo, field.TypeString)
+		_spec.ClearField(triageresult.FieldOverriddenTo, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.OverriddenAt(); ok {
 		_spec.SetField(triageresult.FieldOverriddenAt, field.TypeTime, value)

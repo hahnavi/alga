@@ -25,7 +25,7 @@ func (ScheduleLayer) Fields() []ent.Field {
 		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
 		field.UUID("schedule_id", uuid.UUID{}),
 		field.String("name").Default(""),
-		field.String("rotation_type").Default("weekly"),
+		field.Enum("rotation_type").Values("daily", "weekly", "custom").Default("weekly"),
 		field.Int("rotation_interval").Default(1).Positive(),
 		field.Time("start_date").Default(timeNow),
 		field.Time("end_date").Optional().Nillable(),

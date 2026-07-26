@@ -59,13 +59,13 @@ func (_u *AgentAskUpdate) SetNillableFromAgentName(v *string) *AgentAskUpdate {
 }
 
 // SetFromAgentType sets the "from_agent_type" field.
-func (_u *AgentAskUpdate) SetFromAgentType(v string) *AgentAskUpdate {
+func (_u *AgentAskUpdate) SetFromAgentType(v agentask.FromAgentType) *AgentAskUpdate {
 	_u.mutation.SetFromAgentType(v)
 	return _u
 }
 
 // SetNillableFromAgentType sets the "from_agent_type" field if the given value is not nil.
-func (_u *AgentAskUpdate) SetNillableFromAgentType(v *string) *AgentAskUpdate {
+func (_u *AgentAskUpdate) SetNillableFromAgentType(v *agentask.FromAgentType) *AgentAskUpdate {
 	if v != nil {
 		_u.SetFromAgentType(*v)
 	}
@@ -113,13 +113,13 @@ func (_u *AgentAskUpdate) ClearToAgentID() *AgentAskUpdate {
 }
 
 // SetToAgentType sets the "to_agent_type" field.
-func (_u *AgentAskUpdate) SetToAgentType(v string) *AgentAskUpdate {
+func (_u *AgentAskUpdate) SetToAgentType(v agentask.ToAgentType) *AgentAskUpdate {
 	_u.mutation.SetToAgentType(v)
 	return _u
 }
 
 // SetNillableToAgentType sets the "to_agent_type" field if the given value is not nil.
-func (_u *AgentAskUpdate) SetNillableToAgentType(v *string) *AgentAskUpdate {
+func (_u *AgentAskUpdate) SetNillableToAgentType(v *agentask.ToAgentType) *AgentAskUpdate {
 	if v != nil {
 		_u.SetToAgentType(*v)
 	}
@@ -207,13 +207,13 @@ func (_u *AgentAskUpdate) ClearRepliedByAgentName() *AgentAskUpdate {
 }
 
 // SetStatus sets the "status" field.
-func (_u *AgentAskUpdate) SetStatus(v string) *AgentAskUpdate {
+func (_u *AgentAskUpdate) SetStatus(v agentask.Status) *AgentAskUpdate {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *AgentAskUpdate) SetNillableStatus(v *string) *AgentAskUpdate {
+func (_u *AgentAskUpdate) SetNillableStatus(v *agentask.Status) *AgentAskUpdate {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -340,9 +340,24 @@ func (_u *AgentAskUpdate) check() error {
 			return &ValidationError{Name: "from_agent_name", err: fmt.Errorf(`ent: validator failed for field "AgentAsk.from_agent_name": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.FromAgentType(); ok {
+		if err := agentask.FromAgentTypeValidator(v); err != nil {
+			return &ValidationError{Name: "from_agent_type", err: fmt.Errorf(`ent: validator failed for field "AgentAsk.from_agent_type": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.ToAgentType(); ok {
+		if err := agentask.ToAgentTypeValidator(v); err != nil {
+			return &ValidationError{Name: "to_agent_type", err: fmt.Errorf(`ent: validator failed for field "AgentAsk.to_agent_type": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Question(); ok {
 		if err := agentask.QuestionValidator(v); err != nil {
 			return &ValidationError{Name: "question", err: fmt.Errorf(`ent: validator failed for field "AgentAsk.question": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := agentask.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "AgentAsk.status": %w`, err)}
 		}
 	}
 	if _u.mutation.FromAgentCleared() && len(_u.mutation.FromAgentIDs()) > 0 {
@@ -367,7 +382,7 @@ func (_u *AgentAskUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		_spec.SetField(agentask.FieldFromAgentName, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.FromAgentType(); ok {
-		_spec.SetField(agentask.FieldFromAgentType, field.TypeString, value)
+		_spec.SetField(agentask.FieldFromAgentType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.InvestigationID(); ok {
 		_spec.SetField(agentask.FieldInvestigationID, field.TypeString, value)
@@ -376,10 +391,10 @@ func (_u *AgentAskUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		_spec.ClearField(agentask.FieldInvestigationID, field.TypeString)
 	}
 	if value, ok := _u.mutation.ToAgentType(); ok {
-		_spec.SetField(agentask.FieldToAgentType, field.TypeString, value)
+		_spec.SetField(agentask.FieldToAgentType, field.TypeEnum, value)
 	}
 	if _u.mutation.ToAgentTypeCleared() {
-		_spec.ClearField(agentask.FieldToAgentType, field.TypeString)
+		_spec.ClearField(agentask.FieldToAgentType, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.Question(); ok {
 		_spec.SetField(agentask.FieldQuestion, field.TypeString, value)
@@ -397,7 +412,7 @@ func (_u *AgentAskUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		_spec.ClearField(agentask.FieldRepliedByAgentName, field.TypeString)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(agentask.FieldStatus, field.TypeString, value)
+		_spec.SetField(agentask.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.ExpiresAt(); ok {
 		_spec.SetField(agentask.FieldExpiresAt, field.TypeTime, value)
@@ -547,13 +562,13 @@ func (_u *AgentAskUpdateOne) SetNillableFromAgentName(v *string) *AgentAskUpdate
 }
 
 // SetFromAgentType sets the "from_agent_type" field.
-func (_u *AgentAskUpdateOne) SetFromAgentType(v string) *AgentAskUpdateOne {
+func (_u *AgentAskUpdateOne) SetFromAgentType(v agentask.FromAgentType) *AgentAskUpdateOne {
 	_u.mutation.SetFromAgentType(v)
 	return _u
 }
 
 // SetNillableFromAgentType sets the "from_agent_type" field if the given value is not nil.
-func (_u *AgentAskUpdateOne) SetNillableFromAgentType(v *string) *AgentAskUpdateOne {
+func (_u *AgentAskUpdateOne) SetNillableFromAgentType(v *agentask.FromAgentType) *AgentAskUpdateOne {
 	if v != nil {
 		_u.SetFromAgentType(*v)
 	}
@@ -601,13 +616,13 @@ func (_u *AgentAskUpdateOne) ClearToAgentID() *AgentAskUpdateOne {
 }
 
 // SetToAgentType sets the "to_agent_type" field.
-func (_u *AgentAskUpdateOne) SetToAgentType(v string) *AgentAskUpdateOne {
+func (_u *AgentAskUpdateOne) SetToAgentType(v agentask.ToAgentType) *AgentAskUpdateOne {
 	_u.mutation.SetToAgentType(v)
 	return _u
 }
 
 // SetNillableToAgentType sets the "to_agent_type" field if the given value is not nil.
-func (_u *AgentAskUpdateOne) SetNillableToAgentType(v *string) *AgentAskUpdateOne {
+func (_u *AgentAskUpdateOne) SetNillableToAgentType(v *agentask.ToAgentType) *AgentAskUpdateOne {
 	if v != nil {
 		_u.SetToAgentType(*v)
 	}
@@ -695,13 +710,13 @@ func (_u *AgentAskUpdateOne) ClearRepliedByAgentName() *AgentAskUpdateOne {
 }
 
 // SetStatus sets the "status" field.
-func (_u *AgentAskUpdateOne) SetStatus(v string) *AgentAskUpdateOne {
+func (_u *AgentAskUpdateOne) SetStatus(v agentask.Status) *AgentAskUpdateOne {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *AgentAskUpdateOne) SetNillableStatus(v *string) *AgentAskUpdateOne {
+func (_u *AgentAskUpdateOne) SetNillableStatus(v *agentask.Status) *AgentAskUpdateOne {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -841,9 +856,24 @@ func (_u *AgentAskUpdateOne) check() error {
 			return &ValidationError{Name: "from_agent_name", err: fmt.Errorf(`ent: validator failed for field "AgentAsk.from_agent_name": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.FromAgentType(); ok {
+		if err := agentask.FromAgentTypeValidator(v); err != nil {
+			return &ValidationError{Name: "from_agent_type", err: fmt.Errorf(`ent: validator failed for field "AgentAsk.from_agent_type": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.ToAgentType(); ok {
+		if err := agentask.ToAgentTypeValidator(v); err != nil {
+			return &ValidationError{Name: "to_agent_type", err: fmt.Errorf(`ent: validator failed for field "AgentAsk.to_agent_type": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Question(); ok {
 		if err := agentask.QuestionValidator(v); err != nil {
 			return &ValidationError{Name: "question", err: fmt.Errorf(`ent: validator failed for field "AgentAsk.question": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := agentask.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "AgentAsk.status": %w`, err)}
 		}
 	}
 	if _u.mutation.FromAgentCleared() && len(_u.mutation.FromAgentIDs()) > 0 {
@@ -885,7 +915,7 @@ func (_u *AgentAskUpdateOne) sqlSave(ctx context.Context) (_node *AgentAsk, err 
 		_spec.SetField(agentask.FieldFromAgentName, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.FromAgentType(); ok {
-		_spec.SetField(agentask.FieldFromAgentType, field.TypeString, value)
+		_spec.SetField(agentask.FieldFromAgentType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.InvestigationID(); ok {
 		_spec.SetField(agentask.FieldInvestigationID, field.TypeString, value)
@@ -894,10 +924,10 @@ func (_u *AgentAskUpdateOne) sqlSave(ctx context.Context) (_node *AgentAsk, err 
 		_spec.ClearField(agentask.FieldInvestigationID, field.TypeString)
 	}
 	if value, ok := _u.mutation.ToAgentType(); ok {
-		_spec.SetField(agentask.FieldToAgentType, field.TypeString, value)
+		_spec.SetField(agentask.FieldToAgentType, field.TypeEnum, value)
 	}
 	if _u.mutation.ToAgentTypeCleared() {
-		_spec.ClearField(agentask.FieldToAgentType, field.TypeString)
+		_spec.ClearField(agentask.FieldToAgentType, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.Question(); ok {
 		_spec.SetField(agentask.FieldQuestion, field.TypeString, value)
@@ -915,7 +945,7 @@ func (_u *AgentAskUpdateOne) sqlSave(ctx context.Context) (_node *AgentAsk, err 
 		_spec.ClearField(agentask.FieldRepliedByAgentName, field.TypeString)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(agentask.FieldStatus, field.TypeString, value)
+		_spec.SetField(agentask.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.ExpiresAt(); ok {
 		_spec.SetField(agentask.FieldExpiresAt, field.TypeTime, value)

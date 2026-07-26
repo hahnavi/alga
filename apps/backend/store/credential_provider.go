@@ -106,7 +106,7 @@ func (s *pgCredentialProviderStore) CreateProvider(ctx context.Context, record *
 
 	saved, err := s.client.CredentialProvider.Create().
 		SetName(record.Name).
-		SetType(pt).
+		SetType(credentialprovider.Type(pt)).
 		SetConfigEncrypted(encConfig).
 		SetEnabled(record.Enabled).
 		SetSystem(record.System).
@@ -146,7 +146,7 @@ func (s *pgCredentialProviderStore) UpdateProvider(ctx context.Context, id uuid.
 		if err != nil {
 			return nil, err
 		}
-		b.SetType(pt)
+		b.SetType(credentialprovider.Type(pt))
 	}
 	if patch.EnabledSet {
 		b.SetEnabled(patch.Enabled)
@@ -242,7 +242,7 @@ func (s *pgCredentialProviderStore) ListProviders(ctx context.Context, q Credent
 		if !IsValidCredentialProviderType(t) {
 			return nil, 0, fmt.Errorf("invalid provider type %q", t)
 		}
-		query = query.Where(credentialprovider.TypeEQ(t))
+		query = query.Where(credentialprovider.TypeEQ(credentialprovider.Type(t)))
 	}
 	if q.Enabled != nil {
 		query = query.Where(credentialprovider.EnabledEQ(*q.Enabled))
@@ -370,10 +370,10 @@ func pgCredentialProviderToRecord(p *ent.CredentialProvider) *CredentialProvider
 	return &CredentialProviderRecord{
 		ID:               p.ID,
 		Name:             p.Name,
-		Type:             p.Type,
+		Type:             string(p.Type),
 		Enabled:          p.Enabled,
 		System:           p.System,
-		ProviderTypeName: providerTypeDisplayName(p.Type),
+		ProviderTypeName: providerTypeDisplayName(string(p.Type)),
 		CreatedAt:        p.CreatedAt,
 		UpdatedAt:        p.UpdatedAt,
 	}

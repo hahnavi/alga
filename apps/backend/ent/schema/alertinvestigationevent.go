@@ -23,8 +23,8 @@ func (AlertInvestigationEvent) Annotations() []schema.Annotation {
 func (AlertInvestigationEvent) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
-		field.UUID("alert_investigation_uuid", uuid.UUID{}),
-		field.String("event_type").NotEmpty(),
+		field.UUID("alert_investigation_id", uuid.UUID{}),
+		field.Enum("event_type").Values("assigned", "started", "requeued", "agent_offline_before_start", "agent_offline_during_work", "dispatch_failed", "auto_completed", "completed"),
 		field.String("reason").Optional().Default(""),
 		field.String("actor_type").Optional().Default("system"),
 		field.String("actor_id").Optional().Default(""),
@@ -42,14 +42,14 @@ func (AlertInvestigationEvent) Edges() []ent.Edge {
 		edge.From("alert_investigation", AlertInvestigation.Type).
 			Ref("events").
 			Unique().
-			Field("alert_investigation_uuid").
+			Field("alert_investigation_id").
 			Required(),
 	}
 }
 
 func (AlertInvestigationEvent) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("alert_investigation_uuid", "created_at"),
+		index.Fields("alert_investigation_id", "created_at"),
 		index.Fields("event_type"),
 	}
 }

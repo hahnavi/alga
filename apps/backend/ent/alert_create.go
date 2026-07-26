@@ -33,13 +33,13 @@ func (_c *AlertCreate) SetFingerprint(v string) *AlertCreate {
 }
 
 // SetStatus sets the "status" field.
-func (_c *AlertCreate) SetStatus(v string) *AlertCreate {
+func (_c *AlertCreate) SetStatus(v alert.Status) *AlertCreate {
 	_c.mutation.SetStatus(v)
 	return _c
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_c *AlertCreate) SetNillableStatus(v *string) *AlertCreate {
+func (_c *AlertCreate) SetNillableStatus(v *alert.Status) *AlertCreate {
 	if v != nil {
 		_c.SetStatus(*v)
 	}
@@ -415,6 +415,11 @@ func (_c *AlertCreate) check() error {
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "Alert.status"`)}
 	}
+	if v, ok := _c.mutation.Status(); ok {
+		if err := alert.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Alert.status": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Acknowledged(); !ok {
 		return &ValidationError{Name: "acknowledged", err: errors.New(`ent: missing required field "Alert.acknowledged"`)}
 	}
@@ -481,7 +486,7 @@ func (_c *AlertCreate) createSpec() (*Alert, *sqlgraph.CreateSpec) {
 		_node.Fingerprint = value
 	}
 	if value, ok := _c.mutation.Status(); ok {
-		_spec.SetField(alert.FieldStatus, field.TypeString, value)
+		_spec.SetField(alert.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
 	}
 	if value, ok := _c.mutation.Acknowledged(); ok {

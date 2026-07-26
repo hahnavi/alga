@@ -59,13 +59,13 @@ func (_u *ActionItemUpdate) SetNillableDescription(v *string) *ActionItemUpdate 
 }
 
 // SetType sets the "type" field.
-func (_u *ActionItemUpdate) SetType(v string) *ActionItemUpdate {
+func (_u *ActionItemUpdate) SetType(v actionitem.Type) *ActionItemUpdate {
 	_u.mutation.SetType(v)
 	return _u
 }
 
 // SetNillableType sets the "type" field if the given value is not nil.
-func (_u *ActionItemUpdate) SetNillableType(v *string) *ActionItemUpdate {
+func (_u *ActionItemUpdate) SetNillableType(v *actionitem.Type) *ActionItemUpdate {
 	if v != nil {
 		_u.SetType(*v)
 	}
@@ -113,13 +113,13 @@ func (_u *ActionItemUpdate) ClearAssigneeID() *ActionItemUpdate {
 }
 
 // SetStatus sets the "status" field.
-func (_u *ActionItemUpdate) SetStatus(v string) *ActionItemUpdate {
+func (_u *ActionItemUpdate) SetStatus(v actionitem.Status) *ActionItemUpdate {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *ActionItemUpdate) SetNillableStatus(v *string) *ActionItemUpdate {
+func (_u *ActionItemUpdate) SetNillableStatus(v *actionitem.Status) *ActionItemUpdate {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -127,13 +127,13 @@ func (_u *ActionItemUpdate) SetNillableStatus(v *string) *ActionItemUpdate {
 }
 
 // SetPriority sets the "priority" field.
-func (_u *ActionItemUpdate) SetPriority(v string) *ActionItemUpdate {
+func (_u *ActionItemUpdate) SetPriority(v actionitem.Priority) *ActionItemUpdate {
 	_u.mutation.SetPriority(v)
 	return _u
 }
 
 // SetNillablePriority sets the "priority" field if the given value is not nil.
-func (_u *ActionItemUpdate) SetNillablePriority(v *string) *ActionItemUpdate {
+func (_u *ActionItemUpdate) SetNillablePriority(v *actionitem.Priority) *ActionItemUpdate {
 	if v != nil {
 		_u.SetPriority(*v)
 	}
@@ -239,6 +239,21 @@ func (_u *ActionItemUpdate) check() error {
 			return &ValidationError{Name: "description", err: fmt.Errorf(`ent: validator failed for field "ActionItem.description": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.GetType(); ok {
+		if err := actionitem.TypeValidator(v); err != nil {
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "ActionItem.type": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := actionitem.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "ActionItem.status": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Priority(); ok {
+		if err := actionitem.PriorityValidator(v); err != nil {
+			return &ValidationError{Name: "priority", err: fmt.Errorf(`ent: validator failed for field "ActionItem.priority": %w`, err)}
+		}
+	}
 	if _u.mutation.PostMortemCleared() && len(_u.mutation.PostMortemIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ActionItem.post_mortem"`)
 	}
@@ -261,7 +276,7 @@ func (_u *ActionItemUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 		_spec.SetField(actionitem.FieldDescription, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.GetType(); ok {
-		_spec.SetField(actionitem.FieldType, field.TypeString, value)
+		_spec.SetField(actionitem.FieldType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.AssigneeName(); ok {
 		_spec.SetField(actionitem.FieldAssigneeName, field.TypeString, value)
@@ -276,10 +291,10 @@ func (_u *ActionItemUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 		_spec.ClearField(actionitem.FieldAssigneeID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(actionitem.FieldStatus, field.TypeString, value)
+		_spec.SetField(actionitem.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Priority(); ok {
-		_spec.SetField(actionitem.FieldPriority, field.TypeString, value)
+		_spec.SetField(actionitem.FieldPriority, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.DueDate(); ok {
 		_spec.SetField(actionitem.FieldDueDate, field.TypeTime, value)
@@ -371,13 +386,13 @@ func (_u *ActionItemUpdateOne) SetNillableDescription(v *string) *ActionItemUpda
 }
 
 // SetType sets the "type" field.
-func (_u *ActionItemUpdateOne) SetType(v string) *ActionItemUpdateOne {
+func (_u *ActionItemUpdateOne) SetType(v actionitem.Type) *ActionItemUpdateOne {
 	_u.mutation.SetType(v)
 	return _u
 }
 
 // SetNillableType sets the "type" field if the given value is not nil.
-func (_u *ActionItemUpdateOne) SetNillableType(v *string) *ActionItemUpdateOne {
+func (_u *ActionItemUpdateOne) SetNillableType(v *actionitem.Type) *ActionItemUpdateOne {
 	if v != nil {
 		_u.SetType(*v)
 	}
@@ -425,13 +440,13 @@ func (_u *ActionItemUpdateOne) ClearAssigneeID() *ActionItemUpdateOne {
 }
 
 // SetStatus sets the "status" field.
-func (_u *ActionItemUpdateOne) SetStatus(v string) *ActionItemUpdateOne {
+func (_u *ActionItemUpdateOne) SetStatus(v actionitem.Status) *ActionItemUpdateOne {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *ActionItemUpdateOne) SetNillableStatus(v *string) *ActionItemUpdateOne {
+func (_u *ActionItemUpdateOne) SetNillableStatus(v *actionitem.Status) *ActionItemUpdateOne {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -439,13 +454,13 @@ func (_u *ActionItemUpdateOne) SetNillableStatus(v *string) *ActionItemUpdateOne
 }
 
 // SetPriority sets the "priority" field.
-func (_u *ActionItemUpdateOne) SetPriority(v string) *ActionItemUpdateOne {
+func (_u *ActionItemUpdateOne) SetPriority(v actionitem.Priority) *ActionItemUpdateOne {
 	_u.mutation.SetPriority(v)
 	return _u
 }
 
 // SetNillablePriority sets the "priority" field if the given value is not nil.
-func (_u *ActionItemUpdateOne) SetNillablePriority(v *string) *ActionItemUpdateOne {
+func (_u *ActionItemUpdateOne) SetNillablePriority(v *actionitem.Priority) *ActionItemUpdateOne {
 	if v != nil {
 		_u.SetPriority(*v)
 	}
@@ -564,6 +579,21 @@ func (_u *ActionItemUpdateOne) check() error {
 			return &ValidationError{Name: "description", err: fmt.Errorf(`ent: validator failed for field "ActionItem.description": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.GetType(); ok {
+		if err := actionitem.TypeValidator(v); err != nil {
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "ActionItem.type": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := actionitem.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "ActionItem.status": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Priority(); ok {
+		if err := actionitem.PriorityValidator(v); err != nil {
+			return &ValidationError{Name: "priority", err: fmt.Errorf(`ent: validator failed for field "ActionItem.priority": %w`, err)}
+		}
+	}
 	if _u.mutation.PostMortemCleared() && len(_u.mutation.PostMortemIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ActionItem.post_mortem"`)
 	}
@@ -603,7 +633,7 @@ func (_u *ActionItemUpdateOne) sqlSave(ctx context.Context) (_node *ActionItem, 
 		_spec.SetField(actionitem.FieldDescription, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.GetType(); ok {
-		_spec.SetField(actionitem.FieldType, field.TypeString, value)
+		_spec.SetField(actionitem.FieldType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.AssigneeName(); ok {
 		_spec.SetField(actionitem.FieldAssigneeName, field.TypeString, value)
@@ -618,10 +648,10 @@ func (_u *ActionItemUpdateOne) sqlSave(ctx context.Context) (_node *ActionItem, 
 		_spec.ClearField(actionitem.FieldAssigneeID, field.TypeUUID)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(actionitem.FieldStatus, field.TypeString, value)
+		_spec.SetField(actionitem.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Priority(); ok {
-		_spec.SetField(actionitem.FieldPriority, field.TypeString, value)
+		_spec.SetField(actionitem.FieldPriority, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.DueDate(); ok {
 		_spec.SetField(actionitem.FieldDueDate, field.TypeTime, value)

@@ -74,13 +74,13 @@ func (_u *StatusPageUpdate) SetNillableDescription(v *string) *StatusPageUpdate 
 }
 
 // SetVisibility sets the "visibility" field.
-func (_u *StatusPageUpdate) SetVisibility(v string) *StatusPageUpdate {
+func (_u *StatusPageUpdate) SetVisibility(v statuspage.Visibility) *StatusPageUpdate {
 	_u.mutation.SetVisibility(v)
 	return _u
 }
 
 // SetNillableVisibility sets the "visibility" field if the given value is not nil.
-func (_u *StatusPageUpdate) SetNillableVisibility(v *string) *StatusPageUpdate {
+func (_u *StatusPageUpdate) SetNillableVisibility(v *statuspage.Visibility) *StatusPageUpdate {
 	if v != nil {
 		_u.SetVisibility(*v)
 	}
@@ -241,6 +241,11 @@ func (_u *StatusPageUpdate) check() error {
 			return &ValidationError{Name: "slug", err: fmt.Errorf(`ent: validator failed for field "StatusPage.slug": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Visibility(); ok {
+		if err := statuspage.VisibilityValidator(v); err != nil {
+			return &ValidationError{Name: "visibility", err: fmt.Errorf(`ent: validator failed for field "StatusPage.visibility": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -266,7 +271,7 @@ func (_u *StatusPageUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 		_spec.SetField(statuspage.FieldDescription, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Visibility(); ok {
-		_spec.SetField(statuspage.FieldVisibility, field.TypeString, value)
+		_spec.SetField(statuspage.FieldVisibility, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Enabled(); ok {
 		_spec.SetField(statuspage.FieldEnabled, field.TypeBool, value)
@@ -414,13 +419,13 @@ func (_u *StatusPageUpdateOne) SetNillableDescription(v *string) *StatusPageUpda
 }
 
 // SetVisibility sets the "visibility" field.
-func (_u *StatusPageUpdateOne) SetVisibility(v string) *StatusPageUpdateOne {
+func (_u *StatusPageUpdateOne) SetVisibility(v statuspage.Visibility) *StatusPageUpdateOne {
 	_u.mutation.SetVisibility(v)
 	return _u
 }
 
 // SetNillableVisibility sets the "visibility" field if the given value is not nil.
-func (_u *StatusPageUpdateOne) SetNillableVisibility(v *string) *StatusPageUpdateOne {
+func (_u *StatusPageUpdateOne) SetNillableVisibility(v *statuspage.Visibility) *StatusPageUpdateOne {
 	if v != nil {
 		_u.SetVisibility(*v)
 	}
@@ -594,6 +599,11 @@ func (_u *StatusPageUpdateOne) check() error {
 			return &ValidationError{Name: "slug", err: fmt.Errorf(`ent: validator failed for field "StatusPage.slug": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Visibility(); ok {
+		if err := statuspage.VisibilityValidator(v); err != nil {
+			return &ValidationError{Name: "visibility", err: fmt.Errorf(`ent: validator failed for field "StatusPage.visibility": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -636,7 +646,7 @@ func (_u *StatusPageUpdateOne) sqlSave(ctx context.Context) (_node *StatusPage, 
 		_spec.SetField(statuspage.FieldDescription, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Visibility(); ok {
-		_spec.SetField(statuspage.FieldVisibility, field.TypeString, value)
+		_spec.SetField(statuspage.FieldVisibility, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Enabled(); ok {
 		_spec.SetField(statuspage.FieldEnabled, field.TypeBool, value)

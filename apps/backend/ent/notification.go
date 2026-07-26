@@ -21,7 +21,7 @@ type Notification struct {
 	// UserID holds the value of the "user_id" field.
 	UserID string `json:"user_id,omitempty"`
 	// Type holds the value of the "type" field.
-	Type string `json:"type,omitempty"`
+	Type notification.Type `json:"type,omitempty"`
 	// Title holds the value of the "title" field.
 	Title string `json:"title,omitempty"`
 	// Message holds the value of the "message" field.
@@ -29,7 +29,7 @@ type Notification struct {
 	// Read holds the value of the "read" field.
 	Read bool `json:"read,omitempty"`
 	// ResourceType holds the value of the "resource_type" field.
-	ResourceType string `json:"resource_type,omitempty"`
+	ResourceType *notification.ResourceType `json:"resource_type,omitempty"`
 	// ResourceID holds the value of the "resource_id" field.
 	ResourceID string `json:"resource_id,omitempty"`
 	// TriggeredByUserID holds the value of the "triggered_by_user_id" field.
@@ -85,7 +85,7 @@ func (_m *Notification) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field type", values[i])
 			} else if value.Valid {
-				_m.Type = value.String
+				_m.Type = notification.Type(value.String)
 			}
 		case notification.FieldTitle:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -109,7 +109,8 @@ func (_m *Notification) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field resource_type", values[i])
 			} else if value.Valid {
-				_m.ResourceType = value.String
+				_m.ResourceType = new(notification.ResourceType)
+				*_m.ResourceType = notification.ResourceType(value.String)
 			}
 		case notification.FieldResourceID:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -175,7 +176,7 @@ func (_m *Notification) String() string {
 	builder.WriteString(_m.UserID)
 	builder.WriteString(", ")
 	builder.WriteString("type=")
-	builder.WriteString(_m.Type)
+	builder.WriteString(fmt.Sprintf("%v", _m.Type))
 	builder.WriteString(", ")
 	builder.WriteString("title=")
 	builder.WriteString(_m.Title)
@@ -186,8 +187,10 @@ func (_m *Notification) String() string {
 	builder.WriteString("read=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Read))
 	builder.WriteString(", ")
-	builder.WriteString("resource_type=")
-	builder.WriteString(_m.ResourceType)
+	if v := _m.ResourceType; v != nil {
+		builder.WriteString("resource_type=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("resource_id=")
 	builder.WriteString(_m.ResourceID)

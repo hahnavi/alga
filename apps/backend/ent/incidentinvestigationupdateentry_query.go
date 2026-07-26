@@ -299,12 +299,12 @@ func (_q *IncidentInvestigationUpdateEntryQuery) WithIncidentInvestigation(opts 
 // Example:
 //
 //	var v []struct {
-//		IncidentInvestigationUUID uuid.UUID `json:"incident_investigation_uuid,omitempty"`
+//		IncidentInvestigationID uuid.UUID `json:"incident_investigation_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.IncidentInvestigationUpdateEntry.Query().
-//		GroupBy(incidentinvestigationupdateentry.FieldIncidentInvestigationUUID).
+//		GroupBy(incidentinvestigationupdateentry.FieldIncidentInvestigationID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *IncidentInvestigationUpdateEntryQuery) GroupBy(field string, fields ...string) *IncidentInvestigationUpdateEntryGroupBy {
@@ -322,11 +322,11 @@ func (_q *IncidentInvestigationUpdateEntryQuery) GroupBy(field string, fields ..
 // Example:
 //
 //	var v []struct {
-//		IncidentInvestigationUUID uuid.UUID `json:"incident_investigation_uuid,omitempty"`
+//		IncidentInvestigationID uuid.UUID `json:"incident_investigation_id,omitempty"`
 //	}
 //
 //	client.IncidentInvestigationUpdateEntry.Query().
-//		Select(incidentinvestigationupdateentry.FieldIncidentInvestigationUUID).
+//		Select(incidentinvestigationupdateentry.FieldIncidentInvestigationID).
 //		Scan(ctx, &v)
 func (_q *IncidentInvestigationUpdateEntryQuery) Select(fields ...string) *IncidentInvestigationUpdateEntrySelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
@@ -406,7 +406,7 @@ func (_q *IncidentInvestigationUpdateEntryQuery) loadIncidentInvestigation(ctx c
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*IncidentInvestigationUpdateEntry)
 	for i := range nodes {
-		fk := nodes[i].IncidentInvestigationUUID
+		fk := nodes[i].IncidentInvestigationID
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -423,7 +423,7 @@ func (_q *IncidentInvestigationUpdateEntryQuery) loadIncidentInvestigation(ctx c
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "incident_investigation_uuid" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "incident_investigation_id" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
@@ -458,7 +458,7 @@ func (_q *IncidentInvestigationUpdateEntryQuery) querySpec() *sqlgraph.QuerySpec
 			}
 		}
 		if _q.withIncidentInvestigation != nil {
-			_spec.Node.AddColumnOnce(incidentinvestigationupdateentry.FieldIncidentInvestigationUUID)
+			_spec.Node.AddColumnOnce(incidentinvestigationupdateentry.FieldIncidentInvestigationID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

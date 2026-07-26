@@ -27,7 +27,7 @@ type IncidentInvestigation struct {
 	// IncidentID holds the value of the "incident_id" field.
 	IncidentID *uuid.UUID `json:"incident_id,omitempty"`
 	// Status holds the value of the "status" field.
-	Status string `json:"status,omitempty"`
+	Status incidentinvestigation.Status `json:"status,omitempty"`
 	// AgentID holds the value of the "agent_id" field.
 	AgentID string `json:"agent_id,omitempty"`
 	// AgentName holds the value of the "agent_name" field.
@@ -65,7 +65,7 @@ type IncidentInvestigation struct {
 	// ParentInvestigationID holds the value of the "parent_investigation_id" field.
 	ParentInvestigationID *uuid.UUID `json:"parent_investigation_id,omitempty"`
 	// AssigneeType holds the value of the "assignee_type" field.
-	AssigneeType string `json:"assignee_type,omitempty"`
+	AssigneeType incidentinvestigation.AssigneeType `json:"assignee_type,omitempty"`
 	// AssigneeID holds the value of the "assignee_id" field.
 	AssigneeID *uuid.UUID `json:"assignee_id,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -219,7 +219,7 @@ func (_m *IncidentInvestigation) assignValues(columns []string, values []any) er
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
-				_m.Status = value.String
+				_m.Status = incidentinvestigation.Status(value.String)
 			}
 		case incidentinvestigation.FieldAgentID:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -343,7 +343,7 @@ func (_m *IncidentInvestigation) assignValues(columns []string, values []any) er
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field assignee_type", values[i])
 			} else if value.Valid {
-				_m.AssigneeType = value.String
+				_m.AssigneeType = incidentinvestigation.AssigneeType(value.String)
 			}
 		case incidentinvestigation.FieldAssigneeID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -432,7 +432,7 @@ func (_m *IncidentInvestigation) String() string {
 	}
 	builder.WriteString(", ")
 	builder.WriteString("status=")
-	builder.WriteString(_m.Status)
+	builder.WriteString(fmt.Sprintf("%v", _m.Status))
 	builder.WriteString(", ")
 	builder.WriteString("agent_id=")
 	builder.WriteString(_m.AgentID)
@@ -497,7 +497,7 @@ func (_m *IncidentInvestigation) String() string {
 	}
 	builder.WriteString(", ")
 	builder.WriteString("assignee_type=")
-	builder.WriteString(_m.AssigneeType)
+	builder.WriteString(fmt.Sprintf("%v", _m.AssigneeType))
 	builder.WriteString(", ")
 	if v := _m.AssigneeID; v != nil {
 		builder.WriteString("assignee_id=")

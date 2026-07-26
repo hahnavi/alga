@@ -63,18 +63,18 @@ type AlertInvestigationRecord struct {
 }
 
 type AlertInvestigationEvent struct {
-	ID                     uuid.UUID      `json:"id"`
-	AlertInvestigationUUID uuid.UUID      `json:"alert_investigation_uuid"`
-	EventType              string         `json:"event_type"`
-	Reason                 string         `json:"reason,omitempty"`
-	ActorType              string         `json:"actor_type,omitempty"`
-	ActorID                string         `json:"actor_id,omitempty"`
-	ActorName              string         `json:"actor_name,omitempty"`
-	AgentID                string         `json:"agent_id,omitempty"`
-	AgentName              string         `json:"agent_name,omitempty"`
-	AgentType              string         `json:"agent_type,omitempty"`
-	Metadata               map[string]any `json:"metadata,omitempty"`
-	CreatedAt              time.Time      `json:"created_at"`
+	ID                   uuid.UUID      `json:"id"`
+	AlertInvestigationID uuid.UUID      `json:"alert_investigation_id"`
+	EventType            string         `json:"event_type"`
+	Reason               string         `json:"reason,omitempty"`
+	ActorType            string         `json:"actor_type,omitempty"`
+	ActorID              string         `json:"actor_id,omitempty"`
+	ActorName            string         `json:"actor_name,omitempty"`
+	AgentID              string         `json:"agent_id,omitempty"`
+	AgentName            string         `json:"agent_name,omitempty"`
+	AgentType            string         `json:"agent_type,omitempty"`
+	Metadata             map[string]any `json:"metadata,omitempty"`
+	CreatedAt            time.Time      `json:"created_at"`
 }
 
 // AlertInvestigationSummary is a slim, list-friendly view of the current
@@ -199,6 +199,9 @@ func (s *pgAlertInvestigationStore) CreateAlertInvestigation(ctx context.Context
 	if record.Status == "" {
 		record.Status = AlertInvestigationStatusPending
 	}
+	if record.AssigneeType == "" {
+		record.AssigneeType = "agent"
+	}
 	if record.AlertInvestigationID == "" {
 		record.AlertInvestigationID = uuid.NewString()
 	}
@@ -212,7 +215,7 @@ func (s *pgAlertInvestigationStore) CreateAlertInvestigation(ctx context.Context
 	b := tx.Client().AlertInvestigation.Create().
 		SetAlertInvestigationID(record.AlertInvestigationID).
 		SetCorrelationKey(record.CorrelationKey).
-		SetStatus(record.Status).
+		SetStatus(alertinvestigation.Status(record.Status)).
 		SetAgentID(record.AgentID).
 		SetAgentName(record.AgentName).
 		SetAgentType(record.AgentType).
@@ -227,7 +230,7 @@ func (s *pgAlertInvestigationStore) CreateAlertInvestigation(ctx context.Context
 		SetPrimaryAlertFingerprint(record.PrimaryAlertFingerprint).
 		SetEscalationLevel(record.EscalationLevel).
 		SetTriageDecision(record.TriageDecision).
-		SetAssigneeType(record.AssigneeType)
+		SetAssigneeType(alertinvestigation.AssigneeType(record.AssigneeType))
 
 	if record.PromotedIncidentID != nil {
 		b.SetPromotedIncidentID(*record.PromotedIncidentID)
@@ -370,18 +373,18 @@ func (s *pgAlertInvestigationStore) toAlertInvestigationRecord(ctx context.Conte
 	investigationEvents := make([]AlertInvestigationEvent, 0, len(events))
 	for _, event := range events {
 		investigationEvents = append(investigationEvents, AlertInvestigationEvent{
-			ID:                     event.ID,
-			AlertInvestigationUUID: event.AlertInvestigationUUID,
-			EventType:              event.EventType,
-			Reason:                 event.Reason,
-			ActorType:              event.ActorType,
-			ActorID:                event.ActorID,
-			ActorName:              event.ActorName,
-			AgentID:                event.AgentID,
-			AgentName:              event.AgentName,
-			AgentType:              event.AgentType,
-			Metadata:               event.Metadata,
-			CreatedAt:              event.CreatedAt,
+			ID:                   event.ID,
+			AlertInvestigationID: event.AlertInvestigationID,
+			EventType:            string(event.EventType),
+			Reason:               event.Reason,
+			ActorType:            event.ActorType,
+			ActorID:              event.ActorID,
+			ActorName:            event.ActorName,
+			AgentID:              event.AgentID,
+			AgentName:            event.AgentName,
+			AgentType:            event.AgentType,
+			Metadata:             event.Metadata,
+			CreatedAt:            event.CreatedAt,
 		})
 	}
 
@@ -390,7 +393,7 @@ func (s *pgAlertInvestigationStore) toAlertInvestigationRecord(ctx context.Conte
 		AlertInvestigationID:            inv.AlertInvestigationID,
 		Alerts:                          correlatedAlerts,
 		CorrelationKey:                  inv.CorrelationKey,
-		Status:                          inv.Status,
+		Status:                          string(inv.Status),
 		AgentID:                         inv.AgentID,
 		AgentName:                       inv.AgentName,
 		AgentType:                       inv.AgentType,
@@ -410,7 +413,7 @@ func (s *pgAlertInvestigationStore) toAlertInvestigationRecord(ctx context.Conte
 		TriageResultID:                  inv.TriageResultID,
 		TriageDecision:                  inv.TriageDecision,
 		TriageEnrichment:                inv.TriageEnrichment,
-		AssigneeType:                    inv.AssigneeType,
+		AssigneeType:                    string(inv.AssigneeType),
 		AssigneeID:                      inv.AssigneeID,
 		Updates:                         investigationUpdates,
 		CreatedAt:                       inv.CreatedAt,
@@ -462,7 +465,7 @@ func createAlertInvestigationEvent(ctx context.Context, client *ent.Client, aler
 
 	b := client.AlertInvestigationEvent.Create().
 		SetAlertInvestigationID(alertInvestigationID).
-		SetEventType(event.EventType).
+		SetEventType(alertinvestigationevent.EventType(event.EventType)).
 		SetReason(event.Reason).
 		SetActorType(event.ActorType).
 		SetActorID(event.ActorID).
@@ -530,10 +533,14 @@ func (s *pgAlertInvestigationStore) ListAlertInvestigations(ctx context.Context,
 
 	var preds []predicate.AlertInvestigation
 	if v, ok := filter["status"].(string); ok && v != "" {
-		preds = append(preds, alertinvestigation.StatusEQ(v))
+		preds = append(preds, alertinvestigation.StatusEQ(alertinvestigation.Status(v)))
 	}
 	if v, ok := filter["status_in"].([]string); ok && len(v) > 0 {
-		preds = append(preds, alertinvestigation.StatusIn(v...))
+		entStatuses := make([]alertinvestigation.Status, len(v))
+		for i, s := range v {
+			entStatuses[i] = alertinvestigation.Status(s)
+		}
+		preds = append(preds, alertinvestigation.StatusIn(entStatuses...))
 	}
 	if v, ok := filter["correlation_key"].(string); ok && v != "" {
 		preds = append(preds, alertinvestigation.CorrelationKeyEQ(v))
@@ -679,11 +686,11 @@ func (s *pgAlertInvestigationStore) GetCurrentAlertInvestigationSummariesByAlert
 		inv := row.Edges.AlertInvestigation
 		summary := AlertInvestigationSummary{
 			AlertInvestigationID: inv.AlertInvestigationID,
-			Status:               inv.Status,
+			Status:               string(inv.Status),
 			AgentID:              inv.AgentID,
 			AgentName:            inv.AgentName,
 			AgentType:            inv.AgentType,
-			AssigneeType:         inv.AssigneeType,
+			AssigneeType:         string(inv.AssigneeType),
 		}
 		if inv.PromotedIncidentID != nil {
 			summary.PromotedIncidentID = inv.PromotedIncidentID.String()
@@ -707,9 +714,9 @@ func (s *pgAlertInvestigationStore) GetActiveAlertInvestigationByCorrelationKey(
 	return s.getAlertInvestigationBy(ctx,
 		alertinvestigation.CorrelationKey(correlationKey),
 		alertinvestigation.StatusIn(
-			AlertInvestigationStatusPending,
-			AlertInvestigationStatusAssigned,
-			AlertInvestigationStatusInvestigating,
+			alertinvestigation.Status(AlertInvestigationStatusPending),
+			alertinvestigation.Status(AlertInvestigationStatusAssigned),
+			alertinvestigation.Status(AlertInvestigationStatusInvestigating),
 		),
 	)
 }

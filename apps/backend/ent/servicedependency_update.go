@@ -59,13 +59,13 @@ func (_u *ServiceDependencyUpdate) SetNillableDependentOnServiceID(v *uuid.UUID)
 }
 
 // SetDependencyType sets the "dependency_type" field.
-func (_u *ServiceDependencyUpdate) SetDependencyType(v string) *ServiceDependencyUpdate {
+func (_u *ServiceDependencyUpdate) SetDependencyType(v servicedependency.DependencyType) *ServiceDependencyUpdate {
 	_u.mutation.SetDependencyType(v)
 	return _u
 }
 
 // SetNillableDependencyType sets the "dependency_type" field if the given value is not nil.
-func (_u *ServiceDependencyUpdate) SetNillableDependencyType(v *string) *ServiceDependencyUpdate {
+func (_u *ServiceDependencyUpdate) SetNillableDependencyType(v *servicedependency.DependencyType) *ServiceDependencyUpdate {
 	if v != nil {
 		_u.SetDependencyType(*v)
 	}
@@ -142,6 +142,11 @@ func (_u *ServiceDependencyUpdate) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *ServiceDependencyUpdate) check() error {
+	if v, ok := _u.mutation.DependencyType(); ok {
+		if err := servicedependency.DependencyTypeValidator(v); err != nil {
+			return &ValidationError{Name: "dependency_type", err: fmt.Errorf(`ent: validator failed for field "ServiceDependency.dependency_type": %w`, err)}
+		}
+	}
 	if _u.mutation.ServiceCleared() && len(_u.mutation.ServiceIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ServiceDependency.service"`)
 	}
@@ -164,7 +169,7 @@ func (_u *ServiceDependencyUpdate) sqlSave(ctx context.Context) (_node int, err 
 		}
 	}
 	if value, ok := _u.mutation.DependencyType(); ok {
-		_spec.SetField(servicedependency.FieldDependencyType, field.TypeString, value)
+		_spec.SetField(servicedependency.FieldDependencyType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.CreatedAt(); ok {
 		_spec.SetField(servicedependency.FieldCreatedAt, field.TypeTime, value)
@@ -276,13 +281,13 @@ func (_u *ServiceDependencyUpdateOne) SetNillableDependentOnServiceID(v *uuid.UU
 }
 
 // SetDependencyType sets the "dependency_type" field.
-func (_u *ServiceDependencyUpdateOne) SetDependencyType(v string) *ServiceDependencyUpdateOne {
+func (_u *ServiceDependencyUpdateOne) SetDependencyType(v servicedependency.DependencyType) *ServiceDependencyUpdateOne {
 	_u.mutation.SetDependencyType(v)
 	return _u
 }
 
 // SetNillableDependencyType sets the "dependency_type" field if the given value is not nil.
-func (_u *ServiceDependencyUpdateOne) SetNillableDependencyType(v *string) *ServiceDependencyUpdateOne {
+func (_u *ServiceDependencyUpdateOne) SetNillableDependencyType(v *servicedependency.DependencyType) *ServiceDependencyUpdateOne {
 	if v != nil {
 		_u.SetDependencyType(*v)
 	}
@@ -372,6 +377,11 @@ func (_u *ServiceDependencyUpdateOne) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *ServiceDependencyUpdateOne) check() error {
+	if v, ok := _u.mutation.DependencyType(); ok {
+		if err := servicedependency.DependencyTypeValidator(v); err != nil {
+			return &ValidationError{Name: "dependency_type", err: fmt.Errorf(`ent: validator failed for field "ServiceDependency.dependency_type": %w`, err)}
+		}
+	}
 	if _u.mutation.ServiceCleared() && len(_u.mutation.ServiceIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ServiceDependency.service"`)
 	}
@@ -411,7 +421,7 @@ func (_u *ServiceDependencyUpdateOne) sqlSave(ctx context.Context) (_node *Servi
 		}
 	}
 	if value, ok := _u.mutation.DependencyType(); ok {
-		_spec.SetField(servicedependency.FieldDependencyType, field.TypeString, value)
+		_spec.SetField(servicedependency.FieldDependencyType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.CreatedAt(); ok {
 		_spec.SetField(servicedependency.FieldCreatedAt, field.TypeTime, value)

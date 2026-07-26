@@ -150,11 +150,11 @@ type ActionItemMutation struct {
 	typ                string
 	id                 *uuid.UUID
 	description        *string
-	_type              *string
+	_type              *actionitem.Type
 	assignee_name      *string
 	assignee_id        *uuid.UUID
-	status             *string
-	priority           *string
+	status             *actionitem.Status
+	priority           *actionitem.Priority
 	due_date           *time.Time
 	created_at         *time.Time
 	updated_at         *time.Time
@@ -343,12 +343,12 @@ func (m *ActionItemMutation) ResetDescription() {
 }
 
 // SetType sets the "type" field.
-func (m *ActionItemMutation) SetType(s string) {
-	m._type = &s
+func (m *ActionItemMutation) SetType(a actionitem.Type) {
+	m._type = &a
 }
 
 // GetType returns the value of the "type" field in the mutation.
-func (m *ActionItemMutation) GetType() (r string, exists bool) {
+func (m *ActionItemMutation) GetType() (r actionitem.Type, exists bool) {
 	v := m._type
 	if v == nil {
 		return
@@ -359,7 +359,7 @@ func (m *ActionItemMutation) GetType() (r string, exists bool) {
 // OldType returns the old "type" field's value of the ActionItem entity.
 // If the ActionItem object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ActionItemMutation) OldType(ctx context.Context) (v string, err error) {
+func (m *ActionItemMutation) OldType(ctx context.Context) (v actionitem.Type, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldType is only allowed on UpdateOne operations")
 	}
@@ -477,12 +477,12 @@ func (m *ActionItemMutation) ResetAssigneeID() {
 }
 
 // SetStatus sets the "status" field.
-func (m *ActionItemMutation) SetStatus(s string) {
-	m.status = &s
+func (m *ActionItemMutation) SetStatus(a actionitem.Status) {
+	m.status = &a
 }
 
 // Status returns the value of the "status" field in the mutation.
-func (m *ActionItemMutation) Status() (r string, exists bool) {
+func (m *ActionItemMutation) Status() (r actionitem.Status, exists bool) {
 	v := m.status
 	if v == nil {
 		return
@@ -493,7 +493,7 @@ func (m *ActionItemMutation) Status() (r string, exists bool) {
 // OldStatus returns the old "status" field's value of the ActionItem entity.
 // If the ActionItem object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ActionItemMutation) OldStatus(ctx context.Context) (v string, err error) {
+func (m *ActionItemMutation) OldStatus(ctx context.Context) (v actionitem.Status, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
 	}
@@ -513,12 +513,12 @@ func (m *ActionItemMutation) ResetStatus() {
 }
 
 // SetPriority sets the "priority" field.
-func (m *ActionItemMutation) SetPriority(s string) {
-	m.priority = &s
+func (m *ActionItemMutation) SetPriority(a actionitem.Priority) {
+	m.priority = &a
 }
 
 // Priority returns the value of the "priority" field in the mutation.
-func (m *ActionItemMutation) Priority() (r string, exists bool) {
+func (m *ActionItemMutation) Priority() (r actionitem.Priority, exists bool) {
 	v := m.priority
 	if v == nil {
 		return
@@ -529,7 +529,7 @@ func (m *ActionItemMutation) Priority() (r string, exists bool) {
 // OldPriority returns the old "priority" field's value of the ActionItem entity.
 // If the ActionItem object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ActionItemMutation) OldPriority(ctx context.Context) (v string, err error) {
+func (m *ActionItemMutation) OldPriority(ctx context.Context) (v actionitem.Priority, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldPriority is only allowed on UpdateOne operations")
 	}
@@ -842,7 +842,7 @@ func (m *ActionItemMutation) SetField(name string, value ent.Value) error {
 		m.SetDescription(v)
 		return nil
 	case actionitem.FieldType:
-		v, ok := value.(string)
+		v, ok := value.(actionitem.Type)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -863,14 +863,14 @@ func (m *ActionItemMutation) SetField(name string, value ent.Value) error {
 		m.SetAssigneeID(v)
 		return nil
 	case actionitem.FieldStatus:
-		v, ok := value.(string)
+		v, ok := value.(actionitem.Status)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetStatus(v)
 		return nil
 	case actionitem.FieldPriority:
-		v, ok := value.(string)
+		v, ok := value.(actionitem.Priority)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -1082,13 +1082,13 @@ type AgentAskMutation struct {
 	typ                     string
 	id                      *uuid.UUID
 	from_agent_name         *string
-	from_agent_type         *string
+	from_agent_type         *agentask.FromAgentType
 	investigation_id        *string
-	to_agent_type           *string
+	to_agent_type           *agentask.ToAgentType
 	question                *string
 	reply                   *string
 	replied_by_agent_name   *string
-	status                  *string
+	status                  *agentask.Status
 	expires_at              *time.Time
 	created_at              *time.Time
 	answered_at             *time.Time
@@ -1281,12 +1281,12 @@ func (m *AgentAskMutation) ResetFromAgentName() {
 }
 
 // SetFromAgentType sets the "from_agent_type" field.
-func (m *AgentAskMutation) SetFromAgentType(s string) {
-	m.from_agent_type = &s
+func (m *AgentAskMutation) SetFromAgentType(aat agentask.FromAgentType) {
+	m.from_agent_type = &aat
 }
 
 // FromAgentType returns the value of the "from_agent_type" field in the mutation.
-func (m *AgentAskMutation) FromAgentType() (r string, exists bool) {
+func (m *AgentAskMutation) FromAgentType() (r agentask.FromAgentType, exists bool) {
 	v := m.from_agent_type
 	if v == nil {
 		return
@@ -1297,7 +1297,7 @@ func (m *AgentAskMutation) FromAgentType() (r string, exists bool) {
 // OldFromAgentType returns the old "from_agent_type" field's value of the AgentAsk entity.
 // If the AgentAsk object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AgentAskMutation) OldFromAgentType(ctx context.Context) (v string, err error) {
+func (m *AgentAskMutation) OldFromAgentType(ctx context.Context) (v agentask.FromAgentType, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldFromAgentType is only allowed on UpdateOne operations")
 	}
@@ -1415,12 +1415,12 @@ func (m *AgentAskMutation) ResetToAgentID() {
 }
 
 // SetToAgentType sets the "to_agent_type" field.
-func (m *AgentAskMutation) SetToAgentType(s string) {
-	m.to_agent_type = &s
+func (m *AgentAskMutation) SetToAgentType(aat agentask.ToAgentType) {
+	m.to_agent_type = &aat
 }
 
 // ToAgentType returns the value of the "to_agent_type" field in the mutation.
-func (m *AgentAskMutation) ToAgentType() (r string, exists bool) {
+func (m *AgentAskMutation) ToAgentType() (r agentask.ToAgentType, exists bool) {
 	v := m.to_agent_type
 	if v == nil {
 		return
@@ -1431,7 +1431,7 @@ func (m *AgentAskMutation) ToAgentType() (r string, exists bool) {
 // OldToAgentType returns the old "to_agent_type" field's value of the AgentAsk entity.
 // If the AgentAsk object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AgentAskMutation) OldToAgentType(ctx context.Context) (v string, err error) {
+func (m *AgentAskMutation) OldToAgentType(ctx context.Context) (v *agentask.ToAgentType, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldToAgentType is only allowed on UpdateOne operations")
 	}
@@ -1647,12 +1647,12 @@ func (m *AgentAskMutation) ResetRepliedByAgentName() {
 }
 
 // SetStatus sets the "status" field.
-func (m *AgentAskMutation) SetStatus(s string) {
-	m.status = &s
+func (m *AgentAskMutation) SetStatus(a agentask.Status) {
+	m.status = &a
 }
 
 // Status returns the value of the "status" field in the mutation.
-func (m *AgentAskMutation) Status() (r string, exists bool) {
+func (m *AgentAskMutation) Status() (r agentask.Status, exists bool) {
 	v := m.status
 	if v == nil {
 		return
@@ -1663,7 +1663,7 @@ func (m *AgentAskMutation) Status() (r string, exists bool) {
 // OldStatus returns the old "status" field's value of the AgentAsk entity.
 // If the AgentAsk object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AgentAskMutation) OldStatus(ctx context.Context) (v string, err error) {
+func (m *AgentAskMutation) OldStatus(ctx context.Context) (v agentask.Status, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
 	}
@@ -2058,7 +2058,7 @@ func (m *AgentAskMutation) SetField(name string, value ent.Value) error {
 		m.SetFromAgentName(v)
 		return nil
 	case agentask.FieldFromAgentType:
-		v, ok := value.(string)
+		v, ok := value.(agentask.FromAgentType)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -2079,7 +2079,7 @@ func (m *AgentAskMutation) SetField(name string, value ent.Value) error {
 		m.SetToAgentID(v)
 		return nil
 	case agentask.FieldToAgentType:
-		v, ok := value.(string)
+		v, ok := value.(agentask.ToAgentType)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -2114,7 +2114,7 @@ func (m *AgentAskMutation) SetField(name string, value ent.Value) error {
 		m.SetRepliedByAgentName(v)
 		return nil
 	case agentask.FieldStatus:
-		v, ok := value.(string)
+		v, ok := value.(agentask.Status)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -2398,7 +2398,7 @@ type AgentDMMessageMutation struct {
 	typ                string
 	id                 *uuid.UUID
 	chat_id            *string
-	role               *string
+	role               *agentdmmessage.Role
 	body               *string
 	user_id            *string
 	username           *string
@@ -2554,12 +2554,12 @@ func (m *AgentDMMessageMutation) ResetChatID() {
 }
 
 // SetRole sets the "role" field.
-func (m *AgentDMMessageMutation) SetRole(s string) {
-	m.role = &s
+func (m *AgentDMMessageMutation) SetRole(a agentdmmessage.Role) {
+	m.role = &a
 }
 
 // Role returns the value of the "role" field in the mutation.
-func (m *AgentDMMessageMutation) Role() (r string, exists bool) {
+func (m *AgentDMMessageMutation) Role() (r agentdmmessage.Role, exists bool) {
 	v := m.role
 	if v == nil {
 		return
@@ -2570,7 +2570,7 @@ func (m *AgentDMMessageMutation) Role() (r string, exists bool) {
 // OldRole returns the old "role" field's value of the AgentDMMessage entity.
 // If the AgentDMMessage object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AgentDMMessageMutation) OldRole(ctx context.Context) (v string, err error) {
+func (m *AgentDMMessageMutation) OldRole(ctx context.Context) (v agentdmmessage.Role, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldRole is only allowed on UpdateOne operations")
 	}
@@ -3026,7 +3026,7 @@ func (m *AgentDMMessageMutation) SetField(name string, value ent.Value) error {
 		m.SetChatID(v)
 		return nil
 	case agentdmmessage.FieldRole:
-		v, ok := value.(string)
+		v, ok := value.(agentdmmessage.Role)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -3257,7 +3257,7 @@ type AgentMemoryMutation struct {
 	typ              string
 	id               *uuid.UUID
 	content          *string
-	memory_type      *string
+	memory_type      *agentmemory.MemoryType
 	hash             *string
 	embedding        *[]float32
 	appendembedding  []float32
@@ -3425,12 +3425,12 @@ func (m *AgentMemoryMutation) ResetContent() {
 }
 
 // SetMemoryType sets the "memory_type" field.
-func (m *AgentMemoryMutation) SetMemoryType(s string) {
-	m.memory_type = &s
+func (m *AgentMemoryMutation) SetMemoryType(at agentmemory.MemoryType) {
+	m.memory_type = &at
 }
 
 // MemoryType returns the value of the "memory_type" field in the mutation.
-func (m *AgentMemoryMutation) MemoryType() (r string, exists bool) {
+func (m *AgentMemoryMutation) MemoryType() (r agentmemory.MemoryType, exists bool) {
 	v := m.memory_type
 	if v == nil {
 		return
@@ -3441,7 +3441,7 @@ func (m *AgentMemoryMutation) MemoryType() (r string, exists bool) {
 // OldMemoryType returns the old "memory_type" field's value of the AgentMemory entity.
 // If the AgentMemory object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AgentMemoryMutation) OldMemoryType(ctx context.Context) (v string, err error) {
+func (m *AgentMemoryMutation) OldMemoryType(ctx context.Context) (v agentmemory.MemoryType, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldMemoryType is only allowed on UpdateOne operations")
 	}
@@ -4431,7 +4431,7 @@ func (m *AgentMemoryMutation) SetField(name string, value ent.Value) error {
 		m.SetContent(v)
 		return nil
 	case agentmemory.FieldMemoryType:
-		v, ok := value.(string)
+		v, ok := value.(agentmemory.MemoryType)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -4823,7 +4823,7 @@ type AgentTokenMutation struct {
 	typ                       string
 	id                        *uuid.UUID
 	name                      *string
-	agent_type                *string
+	agent_type                *agenttoken.AgentType
 	token_hash                *string
 	lookup_prefix             *string
 	created_at                *time.Time
@@ -5002,12 +5002,12 @@ func (m *AgentTokenMutation) ResetName() {
 }
 
 // SetAgentType sets the "agent_type" field.
-func (m *AgentTokenMutation) SetAgentType(s string) {
-	m.agent_type = &s
+func (m *AgentTokenMutation) SetAgentType(at agenttoken.AgentType) {
+	m.agent_type = &at
 }
 
 // AgentType returns the value of the "agent_type" field in the mutation.
-func (m *AgentTokenMutation) AgentType() (r string, exists bool) {
+func (m *AgentTokenMutation) AgentType() (r agenttoken.AgentType, exists bool) {
 	v := m.agent_type
 	if v == nil {
 		return
@@ -5018,7 +5018,7 @@ func (m *AgentTokenMutation) AgentType() (r string, exists bool) {
 // OldAgentType returns the old "agent_type" field's value of the AgentToken entity.
 // If the AgentToken object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AgentTokenMutation) OldAgentType(ctx context.Context) (v string, err error) {
+func (m *AgentTokenMutation) OldAgentType(ctx context.Context) (v agenttoken.AgentType, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldAgentType is only allowed on UpdateOne operations")
 	}
@@ -6027,7 +6027,7 @@ func (m *AgentTokenMutation) SetField(name string, value ent.Value) error {
 		m.SetName(v)
 		return nil
 	case agenttoken.FieldAgentType:
-		v, ok := value.(string)
+		v, ok := value.(agenttoken.AgentType)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -6462,7 +6462,7 @@ type AlertMutation struct {
 	typ                               string
 	id                                *uuid.UUID
 	fingerprint                       *string
-	status                            *string
+	status                            *alert.Status
 	acknowledged                      *bool
 	silenced                          *bool
 	labels                            *map[string]string
@@ -6640,12 +6640,12 @@ func (m *AlertMutation) ResetFingerprint() {
 }
 
 // SetStatus sets the "status" field.
-func (m *AlertMutation) SetStatus(s string) {
-	m.status = &s
+func (m *AlertMutation) SetStatus(a alert.Status) {
+	m.status = &a
 }
 
 // Status returns the value of the "status" field in the mutation.
-func (m *AlertMutation) Status() (r string, exists bool) {
+func (m *AlertMutation) Status() (r alert.Status, exists bool) {
 	v := m.status
 	if v == nil {
 		return
@@ -6656,7 +6656,7 @@ func (m *AlertMutation) Status() (r string, exists bool) {
 // OldStatus returns the old "status" field's value of the Alert entity.
 // If the Alert object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AlertMutation) OldStatus(ctx context.Context) (v string, err error) {
+func (m *AlertMutation) OldStatus(ctx context.Context) (v alert.Status, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
 	}
@@ -7827,7 +7827,7 @@ func (m *AlertMutation) SetField(name string, value ent.Value) error {
 		m.SetFingerprint(v)
 		return nil
 	case alert.FieldStatus:
-		v, ok := value.(string)
+		v, ok := value.(alert.Status)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -9101,7 +9101,7 @@ type AlertInvestigationMutation struct {
 	id                                     *uuid.UUID
 	alert_investigation_id                 *string
 	correlation_key                        *string
-	status                                 *string
+	status                                 *alertinvestigation.Status
 	agent_id                               *string
 	agent_name                             *string
 	agent_type                             *string
@@ -9131,7 +9131,7 @@ type AlertInvestigationMutation struct {
 	escalation_level                       *string
 	triage_decision                        *string
 	triage_enrichment                      *map[string]interface{}
-	assignee_type                          *string
+	assignee_type                          *alertinvestigation.AssigneeType
 	assignee_id                            *uuid.UUID
 	clearedFields                          map[string]struct{}
 	alerts                                 map[uuid.UUID]struct{}
@@ -9347,12 +9347,12 @@ func (m *AlertInvestigationMutation) ResetCorrelationKey() {
 }
 
 // SetStatus sets the "status" field.
-func (m *AlertInvestigationMutation) SetStatus(s string) {
-	m.status = &s
+func (m *AlertInvestigationMutation) SetStatus(a alertinvestigation.Status) {
+	m.status = &a
 }
 
 // Status returns the value of the "status" field in the mutation.
-func (m *AlertInvestigationMutation) Status() (r string, exists bool) {
+func (m *AlertInvestigationMutation) Status() (r alertinvestigation.Status, exists bool) {
 	v := m.status
 	if v == nil {
 		return
@@ -9363,7 +9363,7 @@ func (m *AlertInvestigationMutation) Status() (r string, exists bool) {
 // OldStatus returns the old "status" field's value of the AlertInvestigation entity.
 // If the AlertInvestigation object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AlertInvestigationMutation) OldStatus(ctx context.Context) (v string, err error) {
+func (m *AlertInvestigationMutation) OldStatus(ctx context.Context) (v alertinvestigation.Status, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
 	}
@@ -10790,12 +10790,12 @@ func (m *AlertInvestigationMutation) ResetTriageEnrichment() {
 }
 
 // SetAssigneeType sets the "assignee_type" field.
-func (m *AlertInvestigationMutation) SetAssigneeType(s string) {
-	m.assignee_type = &s
+func (m *AlertInvestigationMutation) SetAssigneeType(at alertinvestigation.AssigneeType) {
+	m.assignee_type = &at
 }
 
 // AssigneeType returns the value of the "assignee_type" field in the mutation.
-func (m *AlertInvestigationMutation) AssigneeType() (r string, exists bool) {
+func (m *AlertInvestigationMutation) AssigneeType() (r alertinvestigation.AssigneeType, exists bool) {
 	v := m.assignee_type
 	if v == nil {
 		return
@@ -10806,7 +10806,7 @@ func (m *AlertInvestigationMutation) AssigneeType() (r string, exists bool) {
 // OldAssigneeType returns the old "assignee_type" field's value of the AlertInvestigation entity.
 // If the AlertInvestigation object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AlertInvestigationMutation) OldAssigneeType(ctx context.Context) (v string, err error) {
+func (m *AlertInvestigationMutation) OldAssigneeType(ctx context.Context) (v alertinvestigation.AssigneeType, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldAssigneeType is only allowed on UpdateOne operations")
 	}
@@ -11478,7 +11478,7 @@ func (m *AlertInvestigationMutation) SetField(name string, value ent.Value) erro
 		m.SetCorrelationKey(v)
 		return nil
 	case alertinvestigation.FieldStatus:
-		v, ok := value.(string)
+		v, ok := value.(alertinvestigation.Status)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -11681,7 +11681,7 @@ func (m *AlertInvestigationMutation) SetField(name string, value ent.Value) erro
 		m.SetTriageEnrichment(v)
 		return nil
 	case alertinvestigation.FieldAssigneeType:
-		v, ok := value.(string)
+		v, ok := value.(alertinvestigation.AssigneeType)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -12387,13 +12387,13 @@ func (m *AlertInvestigationAlertMutation) IDs(ctx context.Context) ([]uuid.UUID,
 	}
 }
 
-// SetAlertInvestigationUUID sets the "alert_investigation_uuid" field.
-func (m *AlertInvestigationAlertMutation) SetAlertInvestigationUUID(u uuid.UUID) {
+// SetAlertInvestigationID sets the "alert_investigation_id" field.
+func (m *AlertInvestigationAlertMutation) SetAlertInvestigationID(u uuid.UUID) {
 	m.alert_investigation = &u
 }
 
-// AlertInvestigationUUID returns the value of the "alert_investigation_uuid" field in the mutation.
-func (m *AlertInvestigationAlertMutation) AlertInvestigationUUID() (r uuid.UUID, exists bool) {
+// AlertInvestigationID returns the value of the "alert_investigation_id" field in the mutation.
+func (m *AlertInvestigationAlertMutation) AlertInvestigationID() (r uuid.UUID, exists bool) {
 	v := m.alert_investigation
 	if v == nil {
 		return
@@ -12401,25 +12401,25 @@ func (m *AlertInvestigationAlertMutation) AlertInvestigationUUID() (r uuid.UUID,
 	return *v, true
 }
 
-// OldAlertInvestigationUUID returns the old "alert_investigation_uuid" field's value of the AlertInvestigationAlert entity.
+// OldAlertInvestigationID returns the old "alert_investigation_id" field's value of the AlertInvestigationAlert entity.
 // If the AlertInvestigationAlert object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AlertInvestigationAlertMutation) OldAlertInvestigationUUID(ctx context.Context) (v uuid.UUID, err error) {
+func (m *AlertInvestigationAlertMutation) OldAlertInvestigationID(ctx context.Context) (v uuid.UUID, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldAlertInvestigationUUID is only allowed on UpdateOne operations")
+		return v, errors.New("OldAlertInvestigationID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldAlertInvestigationUUID requires an ID field in the mutation")
+		return v, errors.New("OldAlertInvestigationID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldAlertInvestigationUUID: %w", err)
+		return v, fmt.Errorf("querying old value for OldAlertInvestigationID: %w", err)
 	}
-	return oldValue.AlertInvestigationUUID, nil
+	return oldValue.AlertInvestigationID, nil
 }
 
-// ResetAlertInvestigationUUID resets all changes to the "alert_investigation_uuid" field.
-func (m *AlertInvestigationAlertMutation) ResetAlertInvestigationUUID() {
+// ResetAlertInvestigationID resets all changes to the "alert_investigation_id" field.
+func (m *AlertInvestigationAlertMutation) ResetAlertInvestigationID() {
 	m.alert_investigation = nil
 }
 
@@ -13055,28 +13055,15 @@ func (m *AlertInvestigationAlertMutation) ResetCurrent() {
 	m.current = nil
 }
 
-// SetAlertInvestigationID sets the "alert_investigation" edge to the AlertInvestigation entity by id.
-func (m *AlertInvestigationAlertMutation) SetAlertInvestigationID(id uuid.UUID) {
-	m.alert_investigation = &id
-}
-
 // ClearAlertInvestigation clears the "alert_investigation" edge to the AlertInvestigation entity.
 func (m *AlertInvestigationAlertMutation) ClearAlertInvestigation() {
 	m.clearedalert_investigation = true
-	m.clearedFields[alertinvestigationalert.FieldAlertInvestigationUUID] = struct{}{}
+	m.clearedFields[alertinvestigationalert.FieldAlertInvestigationID] = struct{}{}
 }
 
 // AlertInvestigationCleared reports if the "alert_investigation" edge to the AlertInvestigation entity was cleared.
 func (m *AlertInvestigationAlertMutation) AlertInvestigationCleared() bool {
 	return m.clearedalert_investigation
-}
-
-// AlertInvestigationID returns the "alert_investigation" edge ID in the mutation.
-func (m *AlertInvestigationAlertMutation) AlertInvestigationID() (id uuid.UUID, exists bool) {
-	if m.alert_investigation != nil {
-		return *m.alert_investigation, true
-	}
-	return
 }
 
 // AlertInvestigationIDs returns the "alert_investigation" edge IDs in the mutation.
@@ -13158,7 +13145,7 @@ func (m *AlertInvestigationAlertMutation) Type() string {
 func (m *AlertInvestigationAlertMutation) Fields() []string {
 	fields := make([]string, 0, 14)
 	if m.alert_investigation != nil {
-		fields = append(fields, alertinvestigationalert.FieldAlertInvestigationUUID)
+		fields = append(fields, alertinvestigationalert.FieldAlertInvestigationID)
 	}
 	if m.alert != nil {
 		fields = append(fields, alertinvestigationalert.FieldAlertID)
@@ -13207,8 +13194,8 @@ func (m *AlertInvestigationAlertMutation) Fields() []string {
 // schema.
 func (m *AlertInvestigationAlertMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case alertinvestigationalert.FieldAlertInvestigationUUID:
-		return m.AlertInvestigationUUID()
+	case alertinvestigationalert.FieldAlertInvestigationID:
+		return m.AlertInvestigationID()
 	case alertinvestigationalert.FieldAlertID:
 		return m.AlertID()
 	case alertinvestigationalert.FieldFingerprint:
@@ -13244,8 +13231,8 @@ func (m *AlertInvestigationAlertMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *AlertInvestigationAlertMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case alertinvestigationalert.FieldAlertInvestigationUUID:
-		return m.OldAlertInvestigationUUID(ctx)
+	case alertinvestigationalert.FieldAlertInvestigationID:
+		return m.OldAlertInvestigationID(ctx)
 	case alertinvestigationalert.FieldAlertID:
 		return m.OldAlertID(ctx)
 	case alertinvestigationalert.FieldFingerprint:
@@ -13281,12 +13268,12 @@ func (m *AlertInvestigationAlertMutation) OldField(ctx context.Context, name str
 // type.
 func (m *AlertInvestigationAlertMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case alertinvestigationalert.FieldAlertInvestigationUUID:
+	case alertinvestigationalert.FieldAlertInvestigationID:
 		v, ok := value.(uuid.UUID)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetAlertInvestigationUUID(v)
+		m.SetAlertInvestigationID(v)
 		return nil
 	case alertinvestigationalert.FieldAlertID:
 		v, ok := value.(uuid.UUID)
@@ -13512,8 +13499,8 @@ func (m *AlertInvestigationAlertMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *AlertInvestigationAlertMutation) ResetField(name string) error {
 	switch name {
-	case alertinvestigationalert.FieldAlertInvestigationUUID:
-		m.ResetAlertInvestigationUUID()
+	case alertinvestigationalert.FieldAlertInvestigationID:
+		m.ResetAlertInvestigationID()
 		return nil
 	case alertinvestigationalert.FieldAlertID:
 		m.ResetAlertID()
@@ -13656,7 +13643,7 @@ type AlertInvestigationEventMutation struct {
 	op                         Op
 	typ                        string
 	id                         *uuid.UUID
-	event_type                 *string
+	event_type                 *alertinvestigationevent.EventType
 	reason                     *string
 	actor_type                 *string
 	actor_id                   *string
@@ -13778,13 +13765,13 @@ func (m *AlertInvestigationEventMutation) IDs(ctx context.Context) ([]uuid.UUID,
 	}
 }
 
-// SetAlertInvestigationUUID sets the "alert_investigation_uuid" field.
-func (m *AlertInvestigationEventMutation) SetAlertInvestigationUUID(u uuid.UUID) {
+// SetAlertInvestigationID sets the "alert_investigation_id" field.
+func (m *AlertInvestigationEventMutation) SetAlertInvestigationID(u uuid.UUID) {
 	m.alert_investigation = &u
 }
 
-// AlertInvestigationUUID returns the value of the "alert_investigation_uuid" field in the mutation.
-func (m *AlertInvestigationEventMutation) AlertInvestigationUUID() (r uuid.UUID, exists bool) {
+// AlertInvestigationID returns the value of the "alert_investigation_id" field in the mutation.
+func (m *AlertInvestigationEventMutation) AlertInvestigationID() (r uuid.UUID, exists bool) {
 	v := m.alert_investigation
 	if v == nil {
 		return
@@ -13792,35 +13779,35 @@ func (m *AlertInvestigationEventMutation) AlertInvestigationUUID() (r uuid.UUID,
 	return *v, true
 }
 
-// OldAlertInvestigationUUID returns the old "alert_investigation_uuid" field's value of the AlertInvestigationEvent entity.
+// OldAlertInvestigationID returns the old "alert_investigation_id" field's value of the AlertInvestigationEvent entity.
 // If the AlertInvestigationEvent object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AlertInvestigationEventMutation) OldAlertInvestigationUUID(ctx context.Context) (v uuid.UUID, err error) {
+func (m *AlertInvestigationEventMutation) OldAlertInvestigationID(ctx context.Context) (v uuid.UUID, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldAlertInvestigationUUID is only allowed on UpdateOne operations")
+		return v, errors.New("OldAlertInvestigationID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldAlertInvestigationUUID requires an ID field in the mutation")
+		return v, errors.New("OldAlertInvestigationID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldAlertInvestigationUUID: %w", err)
+		return v, fmt.Errorf("querying old value for OldAlertInvestigationID: %w", err)
 	}
-	return oldValue.AlertInvestigationUUID, nil
+	return oldValue.AlertInvestigationID, nil
 }
 
-// ResetAlertInvestigationUUID resets all changes to the "alert_investigation_uuid" field.
-func (m *AlertInvestigationEventMutation) ResetAlertInvestigationUUID() {
+// ResetAlertInvestigationID resets all changes to the "alert_investigation_id" field.
+func (m *AlertInvestigationEventMutation) ResetAlertInvestigationID() {
 	m.alert_investigation = nil
 }
 
 // SetEventType sets the "event_type" field.
-func (m *AlertInvestigationEventMutation) SetEventType(s string) {
-	m.event_type = &s
+func (m *AlertInvestigationEventMutation) SetEventType(at alertinvestigationevent.EventType) {
+	m.event_type = &at
 }
 
 // EventType returns the value of the "event_type" field in the mutation.
-func (m *AlertInvestigationEventMutation) EventType() (r string, exists bool) {
+func (m *AlertInvestigationEventMutation) EventType() (r alertinvestigationevent.EventType, exists bool) {
 	v := m.event_type
 	if v == nil {
 		return
@@ -13831,7 +13818,7 @@ func (m *AlertInvestigationEventMutation) EventType() (r string, exists bool) {
 // OldEventType returns the old "event_type" field's value of the AlertInvestigationEvent entity.
 // If the AlertInvestigationEvent object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AlertInvestigationEventMutation) OldEventType(ctx context.Context) (v string, err error) {
+func (m *AlertInvestigationEventMutation) OldEventType(ctx context.Context) (v alertinvestigationevent.EventType, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldEventType is only allowed on UpdateOne operations")
 	}
@@ -14278,28 +14265,15 @@ func (m *AlertInvestigationEventMutation) ResetCreatedAt() {
 	m.created_at = nil
 }
 
-// SetAlertInvestigationID sets the "alert_investigation" edge to the AlertInvestigation entity by id.
-func (m *AlertInvestigationEventMutation) SetAlertInvestigationID(id uuid.UUID) {
-	m.alert_investigation = &id
-}
-
 // ClearAlertInvestigation clears the "alert_investigation" edge to the AlertInvestigation entity.
 func (m *AlertInvestigationEventMutation) ClearAlertInvestigation() {
 	m.clearedalert_investigation = true
-	m.clearedFields[alertinvestigationevent.FieldAlertInvestigationUUID] = struct{}{}
+	m.clearedFields[alertinvestigationevent.FieldAlertInvestigationID] = struct{}{}
 }
 
 // AlertInvestigationCleared reports if the "alert_investigation" edge to the AlertInvestigation entity was cleared.
 func (m *AlertInvestigationEventMutation) AlertInvestigationCleared() bool {
 	return m.clearedalert_investigation
-}
-
-// AlertInvestigationID returns the "alert_investigation" edge ID in the mutation.
-func (m *AlertInvestigationEventMutation) AlertInvestigationID() (id uuid.UUID, exists bool) {
-	if m.alert_investigation != nil {
-		return *m.alert_investigation, true
-	}
-	return
 }
 
 // AlertInvestigationIDs returns the "alert_investigation" edge IDs in the mutation.
@@ -14354,7 +14328,7 @@ func (m *AlertInvestigationEventMutation) Type() string {
 func (m *AlertInvestigationEventMutation) Fields() []string {
 	fields := make([]string, 0, 11)
 	if m.alert_investigation != nil {
-		fields = append(fields, alertinvestigationevent.FieldAlertInvestigationUUID)
+		fields = append(fields, alertinvestigationevent.FieldAlertInvestigationID)
 	}
 	if m.event_type != nil {
 		fields = append(fields, alertinvestigationevent.FieldEventType)
@@ -14394,8 +14368,8 @@ func (m *AlertInvestigationEventMutation) Fields() []string {
 // schema.
 func (m *AlertInvestigationEventMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case alertinvestigationevent.FieldAlertInvestigationUUID:
-		return m.AlertInvestigationUUID()
+	case alertinvestigationevent.FieldAlertInvestigationID:
+		return m.AlertInvestigationID()
 	case alertinvestigationevent.FieldEventType:
 		return m.EventType()
 	case alertinvestigationevent.FieldReason:
@@ -14425,8 +14399,8 @@ func (m *AlertInvestigationEventMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *AlertInvestigationEventMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case alertinvestigationevent.FieldAlertInvestigationUUID:
-		return m.OldAlertInvestigationUUID(ctx)
+	case alertinvestigationevent.FieldAlertInvestigationID:
+		return m.OldAlertInvestigationID(ctx)
 	case alertinvestigationevent.FieldEventType:
 		return m.OldEventType(ctx)
 	case alertinvestigationevent.FieldReason:
@@ -14456,15 +14430,15 @@ func (m *AlertInvestigationEventMutation) OldField(ctx context.Context, name str
 // type.
 func (m *AlertInvestigationEventMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case alertinvestigationevent.FieldAlertInvestigationUUID:
+	case alertinvestigationevent.FieldAlertInvestigationID:
 		v, ok := value.(uuid.UUID)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetAlertInvestigationUUID(v)
+		m.SetAlertInvestigationID(v)
 		return nil
 	case alertinvestigationevent.FieldEventType:
-		v, ok := value.(string)
+		v, ok := value.(alertinvestigationevent.EventType)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -14633,8 +14607,8 @@ func (m *AlertInvestigationEventMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *AlertInvestigationEventMutation) ResetField(name string) error {
 	switch name {
-	case alertinvestigationevent.FieldAlertInvestigationUUID:
-		m.ResetAlertInvestigationUUID()
+	case alertinvestigationevent.FieldAlertInvestigationID:
+		m.ResetAlertInvestigationID()
 		return nil
 	case alertinvestigationevent.FieldEventType:
 		m.ResetEventType()
@@ -14875,13 +14849,13 @@ func (m *AlertInvestigationUpdateEntryMutation) IDs(ctx context.Context) ([]uuid
 	}
 }
 
-// SetAlertInvestigationUUID sets the "alert_investigation_uuid" field.
-func (m *AlertInvestigationUpdateEntryMutation) SetAlertInvestigationUUID(u uuid.UUID) {
+// SetAlertInvestigationID sets the "alert_investigation_id" field.
+func (m *AlertInvestigationUpdateEntryMutation) SetAlertInvestigationID(u uuid.UUID) {
 	m.alert_investigation = &u
 }
 
-// AlertInvestigationUUID returns the value of the "alert_investigation_uuid" field in the mutation.
-func (m *AlertInvestigationUpdateEntryMutation) AlertInvestigationUUID() (r uuid.UUID, exists bool) {
+// AlertInvestigationID returns the value of the "alert_investigation_id" field in the mutation.
+func (m *AlertInvestigationUpdateEntryMutation) AlertInvestigationID() (r uuid.UUID, exists bool) {
 	v := m.alert_investigation
 	if v == nil {
 		return
@@ -14889,25 +14863,25 @@ func (m *AlertInvestigationUpdateEntryMutation) AlertInvestigationUUID() (r uuid
 	return *v, true
 }
 
-// OldAlertInvestigationUUID returns the old "alert_investigation_uuid" field's value of the AlertInvestigationUpdateEntry entity.
+// OldAlertInvestigationID returns the old "alert_investigation_id" field's value of the AlertInvestigationUpdateEntry entity.
 // If the AlertInvestigationUpdateEntry object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AlertInvestigationUpdateEntryMutation) OldAlertInvestigationUUID(ctx context.Context) (v uuid.UUID, err error) {
+func (m *AlertInvestigationUpdateEntryMutation) OldAlertInvestigationID(ctx context.Context) (v uuid.UUID, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldAlertInvestigationUUID is only allowed on UpdateOne operations")
+		return v, errors.New("OldAlertInvestigationID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldAlertInvestigationUUID requires an ID field in the mutation")
+		return v, errors.New("OldAlertInvestigationID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldAlertInvestigationUUID: %w", err)
+		return v, fmt.Errorf("querying old value for OldAlertInvestigationID: %w", err)
 	}
-	return oldValue.AlertInvestigationUUID, nil
+	return oldValue.AlertInvestigationID, nil
 }
 
-// ResetAlertInvestigationUUID resets all changes to the "alert_investigation_uuid" field.
-func (m *AlertInvestigationUpdateEntryMutation) ResetAlertInvestigationUUID() {
+// ResetAlertInvestigationID resets all changes to the "alert_investigation_id" field.
+func (m *AlertInvestigationUpdateEntryMutation) ResetAlertInvestigationID() {
 	m.alert_investigation = nil
 }
 
@@ -15437,28 +15411,15 @@ func (m *AlertInvestigationUpdateEntryMutation) ResetCreatedAt() {
 	m.created_at = nil
 }
 
-// SetAlertInvestigationID sets the "alert_investigation" edge to the AlertInvestigation entity by id.
-func (m *AlertInvestigationUpdateEntryMutation) SetAlertInvestigationID(id uuid.UUID) {
-	m.alert_investigation = &id
-}
-
 // ClearAlertInvestigation clears the "alert_investigation" edge to the AlertInvestigation entity.
 func (m *AlertInvestigationUpdateEntryMutation) ClearAlertInvestigation() {
 	m.clearedalert_investigation = true
-	m.clearedFields[alertinvestigationupdateentry.FieldAlertInvestigationUUID] = struct{}{}
+	m.clearedFields[alertinvestigationupdateentry.FieldAlertInvestigationID] = struct{}{}
 }
 
 // AlertInvestigationCleared reports if the "alert_investigation" edge to the AlertInvestigation entity was cleared.
 func (m *AlertInvestigationUpdateEntryMutation) AlertInvestigationCleared() bool {
 	return m.clearedalert_investigation
-}
-
-// AlertInvestigationID returns the "alert_investigation" edge ID in the mutation.
-func (m *AlertInvestigationUpdateEntryMutation) AlertInvestigationID() (id uuid.UUID, exists bool) {
-	if m.alert_investigation != nil {
-		return *m.alert_investigation, true
-	}
-	return
 }
 
 // AlertInvestigationIDs returns the "alert_investigation" edge IDs in the mutation.
@@ -15513,7 +15474,7 @@ func (m *AlertInvestigationUpdateEntryMutation) Type() string {
 func (m *AlertInvestigationUpdateEntryMutation) Fields() []string {
 	fields := make([]string, 0, 13)
 	if m.alert_investigation != nil {
-		fields = append(fields, alertinvestigationupdateentry.FieldAlertInvestigationUUID)
+		fields = append(fields, alertinvestigationupdateentry.FieldAlertInvestigationID)
 	}
 	if m._type != nil {
 		fields = append(fields, alertinvestigationupdateentry.FieldType)
@@ -15559,8 +15520,8 @@ func (m *AlertInvestigationUpdateEntryMutation) Fields() []string {
 // schema.
 func (m *AlertInvestigationUpdateEntryMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case alertinvestigationupdateentry.FieldAlertInvestigationUUID:
-		return m.AlertInvestigationUUID()
+	case alertinvestigationupdateentry.FieldAlertInvestigationID:
+		return m.AlertInvestigationID()
 	case alertinvestigationupdateentry.FieldType:
 		return m.GetType()
 	case alertinvestigationupdateentry.FieldMessage:
@@ -15594,8 +15555,8 @@ func (m *AlertInvestigationUpdateEntryMutation) Field(name string) (ent.Value, b
 // database failed.
 func (m *AlertInvestigationUpdateEntryMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case alertinvestigationupdateentry.FieldAlertInvestigationUUID:
-		return m.OldAlertInvestigationUUID(ctx)
+	case alertinvestigationupdateentry.FieldAlertInvestigationID:
+		return m.OldAlertInvestigationID(ctx)
 	case alertinvestigationupdateentry.FieldType:
 		return m.OldType(ctx)
 	case alertinvestigationupdateentry.FieldMessage:
@@ -15629,12 +15590,12 @@ func (m *AlertInvestigationUpdateEntryMutation) OldField(ctx context.Context, na
 // type.
 func (m *AlertInvestigationUpdateEntryMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case alertinvestigationupdateentry.FieldAlertInvestigationUUID:
+	case alertinvestigationupdateentry.FieldAlertInvestigationID:
 		v, ok := value.(uuid.UUID)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetAlertInvestigationUUID(v)
+		m.SetAlertInvestigationID(v)
 		return nil
 	case alertinvestigationupdateentry.FieldType:
 		v, ok := value.(string)
@@ -15808,8 +15769,8 @@ func (m *AlertInvestigationUpdateEntryMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *AlertInvestigationUpdateEntryMutation) ResetField(name string) error {
 	switch name {
-	case alertinvestigationupdateentry.FieldAlertInvestigationUUID:
-		m.ResetAlertInvestigationUUID()
+	case alertinvestigationupdateentry.FieldAlertInvestigationID:
+		m.ResetAlertInvestigationID()
 		return nil
 	case alertinvestigationupdateentry.FieldType:
 		m.ResetType()
@@ -16958,15 +16919,15 @@ type CoordinationTaskMutation struct {
 	op                          Op
 	typ                         string
 	id                          *uuid.UUID
-	kind                        *string
-	assignee_role               *string
+	kind                        *coordinationtask.Kind
+	assignee_role               *coordinationtask.AssigneeRole
 	assignee_agent_id           *string
 	assignee_agent_name         *string
 	goal                        *string
 	input_context               *map[string]interface{}
 	result                      *map[string]interface{}
 	result_schema               *map[string]interface{}
-	status                      *string
+	status                      *coordinationtask.Status
 	priority                    *int
 	addpriority                 *int
 	due_at                      *time.Time
@@ -17197,12 +17158,12 @@ func (m *CoordinationTaskMutation) ResetParentTaskID() {
 }
 
 // SetKind sets the "kind" field.
-func (m *CoordinationTaskMutation) SetKind(s string) {
-	m.kind = &s
+func (m *CoordinationTaskMutation) SetKind(c coordinationtask.Kind) {
+	m.kind = &c
 }
 
 // Kind returns the value of the "kind" field in the mutation.
-func (m *CoordinationTaskMutation) Kind() (r string, exists bool) {
+func (m *CoordinationTaskMutation) Kind() (r coordinationtask.Kind, exists bool) {
 	v := m.kind
 	if v == nil {
 		return
@@ -17213,7 +17174,7 @@ func (m *CoordinationTaskMutation) Kind() (r string, exists bool) {
 // OldKind returns the old "kind" field's value of the CoordinationTask entity.
 // If the CoordinationTask object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CoordinationTaskMutation) OldKind(ctx context.Context) (v string, err error) {
+func (m *CoordinationTaskMutation) OldKind(ctx context.Context) (v coordinationtask.Kind, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldKind is only allowed on UpdateOne operations")
 	}
@@ -17233,12 +17194,12 @@ func (m *CoordinationTaskMutation) ResetKind() {
 }
 
 // SetAssigneeRole sets the "assignee_role" field.
-func (m *CoordinationTaskMutation) SetAssigneeRole(s string) {
-	m.assignee_role = &s
+func (m *CoordinationTaskMutation) SetAssigneeRole(cr coordinationtask.AssigneeRole) {
+	m.assignee_role = &cr
 }
 
 // AssigneeRole returns the value of the "assignee_role" field in the mutation.
-func (m *CoordinationTaskMutation) AssigneeRole() (r string, exists bool) {
+func (m *CoordinationTaskMutation) AssigneeRole() (r coordinationtask.AssigneeRole, exists bool) {
 	v := m.assignee_role
 	if v == nil {
 		return
@@ -17249,7 +17210,7 @@ func (m *CoordinationTaskMutation) AssigneeRole() (r string, exists bool) {
 // OldAssigneeRole returns the old "assignee_role" field's value of the CoordinationTask entity.
 // If the CoordinationTask object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CoordinationTaskMutation) OldAssigneeRole(ctx context.Context) (v string, err error) {
+func (m *CoordinationTaskMutation) OldAssigneeRole(ctx context.Context) (v coordinationtask.AssigneeRole, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldAssigneeRole is only allowed on UpdateOne operations")
 	}
@@ -17586,12 +17547,12 @@ func (m *CoordinationTaskMutation) ResetLinkedInvestigationID() {
 }
 
 // SetStatus sets the "status" field.
-func (m *CoordinationTaskMutation) SetStatus(s string) {
-	m.status = &s
+func (m *CoordinationTaskMutation) SetStatus(c coordinationtask.Status) {
+	m.status = &c
 }
 
 // Status returns the value of the "status" field in the mutation.
-func (m *CoordinationTaskMutation) Status() (r string, exists bool) {
+func (m *CoordinationTaskMutation) Status() (r coordinationtask.Status, exists bool) {
 	v := m.status
 	if v == nil {
 		return
@@ -17602,7 +17563,7 @@ func (m *CoordinationTaskMutation) Status() (r string, exists bool) {
 // OldStatus returns the old "status" field's value of the CoordinationTask entity.
 // If the CoordinationTask object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CoordinationTaskMutation) OldStatus(ctx context.Context) (v string, err error) {
+func (m *CoordinationTaskMutation) OldStatus(ctx context.Context) (v coordinationtask.Status, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
 	}
@@ -18464,14 +18425,14 @@ func (m *CoordinationTaskMutation) SetField(name string, value ent.Value) error 
 		m.SetParentTaskID(v)
 		return nil
 	case coordinationtask.FieldKind:
-		v, ok := value.(string)
+		v, ok := value.(coordinationtask.Kind)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetKind(v)
 		return nil
 	case coordinationtask.FieldAssigneeRole:
-		v, ok := value.(string)
+		v, ok := value.(coordinationtask.AssigneeRole)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -18527,7 +18488,7 @@ func (m *CoordinationTaskMutation) SetField(name string, value ent.Value) error 
 		m.SetLinkedInvestigationID(v)
 		return nil
 	case coordinationtask.FieldStatus:
-		v, ok := value.(string)
+		v, ok := value.(coordinationtask.Status)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -19343,7 +19304,7 @@ type CredentialProviderMutation struct {
 	typ                   string
 	id                    *uuid.UUID
 	name                  *string
-	_type                 *string
+	_type                 *credentialprovider.Type
 	config_encrypted      *string
 	enabled               *bool
 	system                *bool
@@ -19499,12 +19460,12 @@ func (m *CredentialProviderMutation) ResetName() {
 }
 
 // SetType sets the "type" field.
-func (m *CredentialProviderMutation) SetType(s string) {
-	m._type = &s
+func (m *CredentialProviderMutation) SetType(c credentialprovider.Type) {
+	m._type = &c
 }
 
 // GetType returns the value of the "type" field in the mutation.
-func (m *CredentialProviderMutation) GetType() (r string, exists bool) {
+func (m *CredentialProviderMutation) GetType() (r credentialprovider.Type, exists bool) {
 	v := m._type
 	if v == nil {
 		return
@@ -19515,7 +19476,7 @@ func (m *CredentialProviderMutation) GetType() (r string, exists bool) {
 // OldType returns the old "type" field's value of the CredentialProvider entity.
 // If the CredentialProvider object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CredentialProviderMutation) OldType(ctx context.Context) (v string, err error) {
+func (m *CredentialProviderMutation) OldType(ctx context.Context) (v credentialprovider.Type, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldType is only allowed on UpdateOne operations")
 	}
@@ -19886,7 +19847,7 @@ func (m *CredentialProviderMutation) SetField(name string, value ent.Value) erro
 		m.SetName(v)
 		return nil
 	case credentialprovider.FieldType:
-		v, ok := value.(string)
+		v, ok := value.(credentialprovider.Type)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -20091,7 +20052,7 @@ type DeliveryTargetMutation struct {
 	op            Op
 	typ           string
 	id            *uuid.UUID
-	provider      *string
+	provider      *deliverytarget.Provider
 	channel       *string
 	channel_name  *string
 	post_id       *string
@@ -20208,12 +20169,12 @@ func (m *DeliveryTargetMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 }
 
 // SetProvider sets the "provider" field.
-func (m *DeliveryTargetMutation) SetProvider(s string) {
-	m.provider = &s
+func (m *DeliveryTargetMutation) SetProvider(d deliverytarget.Provider) {
+	m.provider = &d
 }
 
 // Provider returns the value of the "provider" field in the mutation.
-func (m *DeliveryTargetMutation) Provider() (r string, exists bool) {
+func (m *DeliveryTargetMutation) Provider() (r deliverytarget.Provider, exists bool) {
 	v := m.provider
 	if v == nil {
 		return
@@ -20224,7 +20185,7 @@ func (m *DeliveryTargetMutation) Provider() (r string, exists bool) {
 // OldProvider returns the old "provider" field's value of the DeliveryTarget entity.
 // If the DeliveryTarget object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *DeliveryTargetMutation) OldProvider(ctx context.Context) (v string, err error) {
+func (m *DeliveryTargetMutation) OldProvider(ctx context.Context) (v deliverytarget.Provider, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldProvider is only allowed on UpdateOne operations")
 	}
@@ -20537,7 +20498,7 @@ func (m *DeliveryTargetMutation) OldField(ctx context.Context, name string) (ent
 func (m *DeliveryTargetMutation) SetField(name string, value ent.Value) error {
 	switch name {
 	case deliverytarget.FieldProvider:
-		v, ok := value.(string)
+		v, ok := value.(deliverytarget.Provider)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -22706,8 +22667,8 @@ type HeartbeatMutation struct {
 	grace_seconds       *int
 	addgrace_seconds    *int
 	enabled             *bool
-	status              *string
-	severity            *string
+	status              *heartbeat.Status
+	severity            *heartbeat.Severity
 	labels              *map[string]string
 	ping_token_hash     *string
 	lookup_prefix       *string
@@ -23099,12 +23060,12 @@ func (m *HeartbeatMutation) ResetOwnerTeamID() {
 }
 
 // SetStatus sets the "status" field.
-func (m *HeartbeatMutation) SetStatus(s string) {
-	m.status = &s
+func (m *HeartbeatMutation) SetStatus(h heartbeat.Status) {
+	m.status = &h
 }
 
 // Status returns the value of the "status" field in the mutation.
-func (m *HeartbeatMutation) Status() (r string, exists bool) {
+func (m *HeartbeatMutation) Status() (r heartbeat.Status, exists bool) {
 	v := m.status
 	if v == nil {
 		return
@@ -23115,7 +23076,7 @@ func (m *HeartbeatMutation) Status() (r string, exists bool) {
 // OldStatus returns the old "status" field's value of the Heartbeat entity.
 // If the Heartbeat object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *HeartbeatMutation) OldStatus(ctx context.Context) (v string, err error) {
+func (m *HeartbeatMutation) OldStatus(ctx context.Context) (v heartbeat.Status, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
 	}
@@ -23135,12 +23096,12 @@ func (m *HeartbeatMutation) ResetStatus() {
 }
 
 // SetSeverity sets the "severity" field.
-func (m *HeartbeatMutation) SetSeverity(s string) {
-	m.severity = &s
+func (m *HeartbeatMutation) SetSeverity(h heartbeat.Severity) {
+	m.severity = &h
 }
 
 // Severity returns the value of the "severity" field in the mutation.
-func (m *HeartbeatMutation) Severity() (r string, exists bool) {
+func (m *HeartbeatMutation) Severity() (r heartbeat.Severity, exists bool) {
 	v := m.severity
 	if v == nil {
 		return
@@ -23151,7 +23112,7 @@ func (m *HeartbeatMutation) Severity() (r string, exists bool) {
 // OldSeverity returns the old "severity" field's value of the Heartbeat entity.
 // If the Heartbeat object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *HeartbeatMutation) OldSeverity(ctx context.Context) (v string, err error) {
+func (m *HeartbeatMutation) OldSeverity(ctx context.Context) (v heartbeat.Severity, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldSeverity is only allowed on UpdateOne operations")
 	}
@@ -23809,14 +23770,14 @@ func (m *HeartbeatMutation) SetField(name string, value ent.Value) error {
 		m.SetOwnerTeamID(v)
 		return nil
 	case heartbeat.FieldStatus:
-		v, ok := value.(string)
+		v, ok := value.(heartbeat.Status)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetStatus(v)
 		return nil
 	case heartbeat.FieldSeverity:
-		v, ok := value.(string)
+		v, ok := value.(heartbeat.Severity)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -24135,11 +24096,11 @@ type ICSRoleAssignmentMutation struct {
 	op                 Op
 	typ                string
 	id                 *uuid.UUID
-	role_type          *string
-	status             *string
-	assignee_type      *string
+	role_type          *icsroleassignment.RoleType
+	status             *icsroleassignment.Status
+	assignee_type      *icsroleassignment.AssigneeType
 	scope_description  *string
-	ended_reason       *string
+	ended_reason       *icsroleassignment.EndedReason
 	started_at         *time.Time
 	ended_at           *time.Time
 	clearedFields      map[string]struct{}
@@ -24447,12 +24408,12 @@ func (m *ICSRoleAssignmentMutation) ResetAgentTokenID() {
 }
 
 // SetRoleType sets the "role_type" field.
-func (m *ICSRoleAssignmentMutation) SetRoleType(s string) {
-	m.role_type = &s
+func (m *ICSRoleAssignmentMutation) SetRoleType(it icsroleassignment.RoleType) {
+	m.role_type = &it
 }
 
 // RoleType returns the value of the "role_type" field in the mutation.
-func (m *ICSRoleAssignmentMutation) RoleType() (r string, exists bool) {
+func (m *ICSRoleAssignmentMutation) RoleType() (r icsroleassignment.RoleType, exists bool) {
 	v := m.role_type
 	if v == nil {
 		return
@@ -24463,7 +24424,7 @@ func (m *ICSRoleAssignmentMutation) RoleType() (r string, exists bool) {
 // OldRoleType returns the old "role_type" field's value of the ICSRoleAssignment entity.
 // If the ICSRoleAssignment object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ICSRoleAssignmentMutation) OldRoleType(ctx context.Context) (v string, err error) {
+func (m *ICSRoleAssignmentMutation) OldRoleType(ctx context.Context) (v icsroleassignment.RoleType, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldRoleType is only allowed on UpdateOne operations")
 	}
@@ -24483,12 +24444,12 @@ func (m *ICSRoleAssignmentMutation) ResetRoleType() {
 }
 
 // SetStatus sets the "status" field.
-func (m *ICSRoleAssignmentMutation) SetStatus(s string) {
-	m.status = &s
+func (m *ICSRoleAssignmentMutation) SetStatus(i icsroleassignment.Status) {
+	m.status = &i
 }
 
 // Status returns the value of the "status" field in the mutation.
-func (m *ICSRoleAssignmentMutation) Status() (r string, exists bool) {
+func (m *ICSRoleAssignmentMutation) Status() (r icsroleassignment.Status, exists bool) {
 	v := m.status
 	if v == nil {
 		return
@@ -24499,7 +24460,7 @@ func (m *ICSRoleAssignmentMutation) Status() (r string, exists bool) {
 // OldStatus returns the old "status" field's value of the ICSRoleAssignment entity.
 // If the ICSRoleAssignment object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ICSRoleAssignmentMutation) OldStatus(ctx context.Context) (v string, err error) {
+func (m *ICSRoleAssignmentMutation) OldStatus(ctx context.Context) (v icsroleassignment.Status, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
 	}
@@ -24519,12 +24480,12 @@ func (m *ICSRoleAssignmentMutation) ResetStatus() {
 }
 
 // SetAssigneeType sets the "assignee_type" field.
-func (m *ICSRoleAssignmentMutation) SetAssigneeType(s string) {
-	m.assignee_type = &s
+func (m *ICSRoleAssignmentMutation) SetAssigneeType(it icsroleassignment.AssigneeType) {
+	m.assignee_type = &it
 }
 
 // AssigneeType returns the value of the "assignee_type" field in the mutation.
-func (m *ICSRoleAssignmentMutation) AssigneeType() (r string, exists bool) {
+func (m *ICSRoleAssignmentMutation) AssigneeType() (r icsroleassignment.AssigneeType, exists bool) {
 	v := m.assignee_type
 	if v == nil {
 		return
@@ -24535,7 +24496,7 @@ func (m *ICSRoleAssignmentMutation) AssigneeType() (r string, exists bool) {
 // OldAssigneeType returns the old "assignee_type" field's value of the ICSRoleAssignment entity.
 // If the ICSRoleAssignment object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ICSRoleAssignmentMutation) OldAssigneeType(ctx context.Context) (v string, err error) {
+func (m *ICSRoleAssignmentMutation) OldAssigneeType(ctx context.Context) (v icsroleassignment.AssigneeType, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldAssigneeType is only allowed on UpdateOne operations")
 	}
@@ -24604,12 +24565,12 @@ func (m *ICSRoleAssignmentMutation) ResetScopeDescription() {
 }
 
 // SetEndedReason sets the "ended_reason" field.
-func (m *ICSRoleAssignmentMutation) SetEndedReason(s string) {
-	m.ended_reason = &s
+func (m *ICSRoleAssignmentMutation) SetEndedReason(ir icsroleassignment.EndedReason) {
+	m.ended_reason = &ir
 }
 
 // EndedReason returns the value of the "ended_reason" field in the mutation.
-func (m *ICSRoleAssignmentMutation) EndedReason() (r string, exists bool) {
+func (m *ICSRoleAssignmentMutation) EndedReason() (r icsroleassignment.EndedReason, exists bool) {
 	v := m.ended_reason
 	if v == nil {
 		return
@@ -24620,7 +24581,7 @@ func (m *ICSRoleAssignmentMutation) EndedReason() (r string, exists bool) {
 // OldEndedReason returns the old "ended_reason" field's value of the ICSRoleAssignment entity.
 // If the ICSRoleAssignment object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ICSRoleAssignmentMutation) OldEndedReason(ctx context.Context) (v *string, err error) {
+func (m *ICSRoleAssignmentMutation) OldEndedReason(ctx context.Context) (v *icsroleassignment.EndedReason, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldEndedReason is only allowed on UpdateOne operations")
 	}
@@ -25066,21 +25027,21 @@ func (m *ICSRoleAssignmentMutation) SetField(name string, value ent.Value) error
 		m.SetAgentTokenID(v)
 		return nil
 	case icsroleassignment.FieldRoleType:
-		v, ok := value.(string)
+		v, ok := value.(icsroleassignment.RoleType)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetRoleType(v)
 		return nil
 	case icsroleassignment.FieldStatus:
-		v, ok := value.(string)
+		v, ok := value.(icsroleassignment.Status)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetStatus(v)
 		return nil
 	case icsroleassignment.FieldAssigneeType:
-		v, ok := value.(string)
+		v, ok := value.(icsroleassignment.AssigneeType)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -25094,7 +25055,7 @@ func (m *ICSRoleAssignmentMutation) SetField(name string, value ent.Value) error
 		m.SetScopeDescription(v)
 		return nil
 	case icsroleassignment.FieldEndedReason:
-		v, ok := value.(string)
+		v, ok := value.(icsroleassignment.EndedReason)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -25406,13 +25367,13 @@ type IncidentMutation struct {
 	title                                *string
 	description                          *string
 	summary                              *string
-	status                               *string
-	severity                             *string
-	impact_level                         *string
-	priority                             *string
-	incident_type                        *string
-	commander_assignee_type              *string
-	communicator_assignee_type           *string
+	status                               *incident.Status
+	severity                             *incident.Severity
+	impact_level                         *incident.ImpactLevel
+	priority                             *incident.Priority
+	incident_type                        *incident.IncidentType
+	commander_assignee_type              *incident.CommanderAssigneeType
+	communicator_assignee_type           *incident.CommunicatorAssigneeType
 	conference_url                       *string
 	slack_channel_id                     *string
 	slack_channel_name                   *string
@@ -25762,12 +25723,12 @@ func (m *IncidentMutation) ResetSummary() {
 }
 
 // SetStatus sets the "status" field.
-func (m *IncidentMutation) SetStatus(s string) {
-	m.status = &s
+func (m *IncidentMutation) SetStatus(i incident.Status) {
+	m.status = &i
 }
 
 // Status returns the value of the "status" field in the mutation.
-func (m *IncidentMutation) Status() (r string, exists bool) {
+func (m *IncidentMutation) Status() (r incident.Status, exists bool) {
 	v := m.status
 	if v == nil {
 		return
@@ -25778,7 +25739,7 @@ func (m *IncidentMutation) Status() (r string, exists bool) {
 // OldStatus returns the old "status" field's value of the Incident entity.
 // If the Incident object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *IncidentMutation) OldStatus(ctx context.Context) (v string, err error) {
+func (m *IncidentMutation) OldStatus(ctx context.Context) (v incident.Status, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
 	}
@@ -25798,12 +25759,12 @@ func (m *IncidentMutation) ResetStatus() {
 }
 
 // SetSeverity sets the "severity" field.
-func (m *IncidentMutation) SetSeverity(s string) {
-	m.severity = &s
+func (m *IncidentMutation) SetSeverity(i incident.Severity) {
+	m.severity = &i
 }
 
 // Severity returns the value of the "severity" field in the mutation.
-func (m *IncidentMutation) Severity() (r string, exists bool) {
+func (m *IncidentMutation) Severity() (r incident.Severity, exists bool) {
 	v := m.severity
 	if v == nil {
 		return
@@ -25814,7 +25775,7 @@ func (m *IncidentMutation) Severity() (r string, exists bool) {
 // OldSeverity returns the old "severity" field's value of the Incident entity.
 // If the Incident object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *IncidentMutation) OldSeverity(ctx context.Context) (v string, err error) {
+func (m *IncidentMutation) OldSeverity(ctx context.Context) (v incident.Severity, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldSeverity is only allowed on UpdateOne operations")
 	}
@@ -25834,12 +25795,12 @@ func (m *IncidentMutation) ResetSeverity() {
 }
 
 // SetImpactLevel sets the "impact_level" field.
-func (m *IncidentMutation) SetImpactLevel(s string) {
-	m.impact_level = &s
+func (m *IncidentMutation) SetImpactLevel(il incident.ImpactLevel) {
+	m.impact_level = &il
 }
 
 // ImpactLevel returns the value of the "impact_level" field in the mutation.
-func (m *IncidentMutation) ImpactLevel() (r string, exists bool) {
+func (m *IncidentMutation) ImpactLevel() (r incident.ImpactLevel, exists bool) {
 	v := m.impact_level
 	if v == nil {
 		return
@@ -25850,7 +25811,7 @@ func (m *IncidentMutation) ImpactLevel() (r string, exists bool) {
 // OldImpactLevel returns the old "impact_level" field's value of the Incident entity.
 // If the Incident object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *IncidentMutation) OldImpactLevel(ctx context.Context) (v string, err error) {
+func (m *IncidentMutation) OldImpactLevel(ctx context.Context) (v incident.ImpactLevel, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldImpactLevel is only allowed on UpdateOne operations")
 	}
@@ -25870,12 +25831,12 @@ func (m *IncidentMutation) ResetImpactLevel() {
 }
 
 // SetPriority sets the "priority" field.
-func (m *IncidentMutation) SetPriority(s string) {
-	m.priority = &s
+func (m *IncidentMutation) SetPriority(i incident.Priority) {
+	m.priority = &i
 }
 
 // Priority returns the value of the "priority" field in the mutation.
-func (m *IncidentMutation) Priority() (r string, exists bool) {
+func (m *IncidentMutation) Priority() (r incident.Priority, exists bool) {
 	v := m.priority
 	if v == nil {
 		return
@@ -25886,7 +25847,7 @@ func (m *IncidentMutation) Priority() (r string, exists bool) {
 // OldPriority returns the old "priority" field's value of the Incident entity.
 // If the Incident object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *IncidentMutation) OldPriority(ctx context.Context) (v string, err error) {
+func (m *IncidentMutation) OldPriority(ctx context.Context) (v incident.Priority, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldPriority is only allowed on UpdateOne operations")
 	}
@@ -25906,12 +25867,12 @@ func (m *IncidentMutation) ResetPriority() {
 }
 
 // SetIncidentType sets the "incident_type" field.
-func (m *IncidentMutation) SetIncidentType(s string) {
-	m.incident_type = &s
+func (m *IncidentMutation) SetIncidentType(it incident.IncidentType) {
+	m.incident_type = &it
 }
 
 // IncidentType returns the value of the "incident_type" field in the mutation.
-func (m *IncidentMutation) IncidentType() (r string, exists bool) {
+func (m *IncidentMutation) IncidentType() (r incident.IncidentType, exists bool) {
 	v := m.incident_type
 	if v == nil {
 		return
@@ -25922,7 +25883,7 @@ func (m *IncidentMutation) IncidentType() (r string, exists bool) {
 // OldIncidentType returns the old "incident_type" field's value of the Incident entity.
 // If the Incident object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *IncidentMutation) OldIncidentType(ctx context.Context) (v string, err error) {
+func (m *IncidentMutation) OldIncidentType(ctx context.Context) (v incident.IncidentType, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldIncidentType is only allowed on UpdateOne operations")
 	}
@@ -26089,12 +26050,12 @@ func (m *IncidentMutation) ResetOnCallResponderID() {
 }
 
 // SetCommanderAssigneeType sets the "commander_assignee_type" field.
-func (m *IncidentMutation) SetCommanderAssigneeType(s string) {
-	m.commander_assignee_type = &s
+func (m *IncidentMutation) SetCommanderAssigneeType(iat incident.CommanderAssigneeType) {
+	m.commander_assignee_type = &iat
 }
 
 // CommanderAssigneeType returns the value of the "commander_assignee_type" field in the mutation.
-func (m *IncidentMutation) CommanderAssigneeType() (r string, exists bool) {
+func (m *IncidentMutation) CommanderAssigneeType() (r incident.CommanderAssigneeType, exists bool) {
 	v := m.commander_assignee_type
 	if v == nil {
 		return
@@ -26105,7 +26066,7 @@ func (m *IncidentMutation) CommanderAssigneeType() (r string, exists bool) {
 // OldCommanderAssigneeType returns the old "commander_assignee_type" field's value of the Incident entity.
 // If the Incident object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *IncidentMutation) OldCommanderAssigneeType(ctx context.Context) (v string, err error) {
+func (m *IncidentMutation) OldCommanderAssigneeType(ctx context.Context) (v incident.CommanderAssigneeType, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldCommanderAssigneeType is only allowed on UpdateOne operations")
 	}
@@ -26138,12 +26099,12 @@ func (m *IncidentMutation) ResetCommanderAssigneeType() {
 }
 
 // SetCommunicatorAssigneeType sets the "communicator_assignee_type" field.
-func (m *IncidentMutation) SetCommunicatorAssigneeType(s string) {
-	m.communicator_assignee_type = &s
+func (m *IncidentMutation) SetCommunicatorAssigneeType(iat incident.CommunicatorAssigneeType) {
+	m.communicator_assignee_type = &iat
 }
 
 // CommunicatorAssigneeType returns the value of the "communicator_assignee_type" field in the mutation.
-func (m *IncidentMutation) CommunicatorAssigneeType() (r string, exists bool) {
+func (m *IncidentMutation) CommunicatorAssigneeType() (r incident.CommunicatorAssigneeType, exists bool) {
 	v := m.communicator_assignee_type
 	if v == nil {
 		return
@@ -26154,7 +26115,7 @@ func (m *IncidentMutation) CommunicatorAssigneeType() (r string, exists bool) {
 // OldCommunicatorAssigneeType returns the old "communicator_assignee_type" field's value of the Incident entity.
 // If the Incident object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *IncidentMutation) OldCommunicatorAssigneeType(ctx context.Context) (v string, err error) {
+func (m *IncidentMutation) OldCommunicatorAssigneeType(ctx context.Context) (v incident.CommunicatorAssigneeType, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldCommunicatorAssigneeType is only allowed on UpdateOne operations")
 	}
@@ -28360,35 +28321,35 @@ func (m *IncidentMutation) SetField(name string, value ent.Value) error {
 		m.SetSummary(v)
 		return nil
 	case incident.FieldStatus:
-		v, ok := value.(string)
+		v, ok := value.(incident.Status)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetStatus(v)
 		return nil
 	case incident.FieldSeverity:
-		v, ok := value.(string)
+		v, ok := value.(incident.Severity)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetSeverity(v)
 		return nil
 	case incident.FieldImpactLevel:
-		v, ok := value.(string)
+		v, ok := value.(incident.ImpactLevel)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetImpactLevel(v)
 		return nil
 	case incident.FieldPriority:
-		v, ok := value.(string)
+		v, ok := value.(incident.Priority)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetPriority(v)
 		return nil
 	case incident.FieldIncidentType:
-		v, ok := value.(string)
+		v, ok := value.(incident.IncidentType)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -28416,14 +28377,14 @@ func (m *IncidentMutation) SetField(name string, value ent.Value) error {
 		m.SetOnCallResponderID(v)
 		return nil
 	case incident.FieldCommanderAssigneeType:
-		v, ok := value.(string)
+		v, ok := value.(incident.CommanderAssigneeType)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetCommanderAssigneeType(v)
 		return nil
 	case incident.FieldCommunicatorAssigneeType:
-		v, ok := value.(string)
+		v, ok := value.(incident.CommunicatorAssigneeType)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -31702,7 +31663,7 @@ type IncidentInvestigationMutation struct {
 	typ                                  string
 	id                                   *uuid.UUID
 	incident_investigation_id            *string
-	status                               *string
+	status                               *incidentinvestigation.Status
 	agent_id                             *string
 	agent_name                           *string
 	agent_type                           *string
@@ -31722,7 +31683,7 @@ type IncidentInvestigationMutation struct {
 	started_at                           *time.Time
 	investigating_duration_ms            *int64
 	addinvestigating_duration_ms         *int64
-	assignee_type                        *string
+	assignee_type                        *incidentinvestigation.AssigneeType
 	assignee_id                          *uuid.UUID
 	clearedFields                        map[string]struct{}
 	updates                              map[uuid.UUID]struct{}
@@ -31938,12 +31899,12 @@ func (m *IncidentInvestigationMutation) ResetIncidentID() {
 }
 
 // SetStatus sets the "status" field.
-func (m *IncidentInvestigationMutation) SetStatus(s string) {
-	m.status = &s
+func (m *IncidentInvestigationMutation) SetStatus(i incidentinvestigation.Status) {
+	m.status = &i
 }
 
 // Status returns the value of the "status" field in the mutation.
-func (m *IncidentInvestigationMutation) Status() (r string, exists bool) {
+func (m *IncidentInvestigationMutation) Status() (r incidentinvestigation.Status, exists bool) {
 	v := m.status
 	if v == nil {
 		return
@@ -31954,7 +31915,7 @@ func (m *IncidentInvestigationMutation) Status() (r string, exists bool) {
 // OldStatus returns the old "status" field's value of the IncidentInvestigation entity.
 // If the IncidentInvestigation object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *IncidentInvestigationMutation) OldStatus(ctx context.Context) (v string, err error) {
+func (m *IncidentInvestigationMutation) OldStatus(ctx context.Context) (v incidentinvestigation.Status, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
 	}
@@ -32883,12 +32844,12 @@ func (m *IncidentInvestigationMutation) ResetParentInvestigationID() {
 }
 
 // SetAssigneeType sets the "assignee_type" field.
-func (m *IncidentInvestigationMutation) SetAssigneeType(s string) {
-	m.assignee_type = &s
+func (m *IncidentInvestigationMutation) SetAssigneeType(it incidentinvestigation.AssigneeType) {
+	m.assignee_type = &it
 }
 
 // AssigneeType returns the value of the "assignee_type" field in the mutation.
-func (m *IncidentInvestigationMutation) AssigneeType() (r string, exists bool) {
+func (m *IncidentInvestigationMutation) AssigneeType() (r incidentinvestigation.AssigneeType, exists bool) {
 	v := m.assignee_type
 	if v == nil {
 		return
@@ -32899,7 +32860,7 @@ func (m *IncidentInvestigationMutation) AssigneeType() (r string, exists bool) {
 // OldAssigneeType returns the old "assignee_type" field's value of the IncidentInvestigation entity.
 // If the IncidentInvestigation object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *IncidentInvestigationMutation) OldAssigneeType(ctx context.Context) (v string, err error) {
+func (m *IncidentInvestigationMutation) OldAssigneeType(ctx context.Context) (v incidentinvestigation.AssigneeType, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldAssigneeType is only allowed on UpdateOne operations")
 	}
@@ -33501,7 +33462,7 @@ func (m *IncidentInvestigationMutation) SetField(name string, value ent.Value) e
 		m.SetIncidentID(v)
 		return nil
 	case incidentinvestigation.FieldStatus:
-		v, ok := value.(string)
+		v, ok := value.(incidentinvestigation.Status)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -33634,7 +33595,7 @@ func (m *IncidentInvestigationMutation) SetField(name string, value ent.Value) e
 		m.SetParentInvestigationID(v)
 		return nil
 	case incidentinvestigation.FieldAssigneeType:
-		v, ok := value.(string)
+		v, ok := value.(incidentinvestigation.AssigneeType)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -34242,13 +34203,13 @@ func (m *IncidentInvestigationUpdateEntryMutation) IDs(ctx context.Context) ([]u
 	}
 }
 
-// SetIncidentInvestigationUUID sets the "incident_investigation_uuid" field.
-func (m *IncidentInvestigationUpdateEntryMutation) SetIncidentInvestigationUUID(u uuid.UUID) {
+// SetIncidentInvestigationID sets the "incident_investigation_id" field.
+func (m *IncidentInvestigationUpdateEntryMutation) SetIncidentInvestigationID(u uuid.UUID) {
 	m.incident_investigation = &u
 }
 
-// IncidentInvestigationUUID returns the value of the "incident_investigation_uuid" field in the mutation.
-func (m *IncidentInvestigationUpdateEntryMutation) IncidentInvestigationUUID() (r uuid.UUID, exists bool) {
+// IncidentInvestigationID returns the value of the "incident_investigation_id" field in the mutation.
+func (m *IncidentInvestigationUpdateEntryMutation) IncidentInvestigationID() (r uuid.UUID, exists bool) {
 	v := m.incident_investigation
 	if v == nil {
 		return
@@ -34256,25 +34217,25 @@ func (m *IncidentInvestigationUpdateEntryMutation) IncidentInvestigationUUID() (
 	return *v, true
 }
 
-// OldIncidentInvestigationUUID returns the old "incident_investigation_uuid" field's value of the IncidentInvestigationUpdateEntry entity.
+// OldIncidentInvestigationID returns the old "incident_investigation_id" field's value of the IncidentInvestigationUpdateEntry entity.
 // If the IncidentInvestigationUpdateEntry object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *IncidentInvestigationUpdateEntryMutation) OldIncidentInvestigationUUID(ctx context.Context) (v uuid.UUID, err error) {
+func (m *IncidentInvestigationUpdateEntryMutation) OldIncidentInvestigationID(ctx context.Context) (v uuid.UUID, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldIncidentInvestigationUUID is only allowed on UpdateOne operations")
+		return v, errors.New("OldIncidentInvestigationID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldIncidentInvestigationUUID requires an ID field in the mutation")
+		return v, errors.New("OldIncidentInvestigationID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldIncidentInvestigationUUID: %w", err)
+		return v, fmt.Errorf("querying old value for OldIncidentInvestigationID: %w", err)
 	}
-	return oldValue.IncidentInvestigationUUID, nil
+	return oldValue.IncidentInvestigationID, nil
 }
 
-// ResetIncidentInvestigationUUID resets all changes to the "incident_investigation_uuid" field.
-func (m *IncidentInvestigationUpdateEntryMutation) ResetIncidentInvestigationUUID() {
+// ResetIncidentInvestigationID resets all changes to the "incident_investigation_id" field.
+func (m *IncidentInvestigationUpdateEntryMutation) ResetIncidentInvestigationID() {
 	m.incident_investigation = nil
 }
 
@@ -34804,28 +34765,15 @@ func (m *IncidentInvestigationUpdateEntryMutation) ResetCreatedAt() {
 	m.created_at = nil
 }
 
-// SetIncidentInvestigationID sets the "incident_investigation" edge to the IncidentInvestigation entity by id.
-func (m *IncidentInvestigationUpdateEntryMutation) SetIncidentInvestigationID(id uuid.UUID) {
-	m.incident_investigation = &id
-}
-
 // ClearIncidentInvestigation clears the "incident_investigation" edge to the IncidentInvestigation entity.
 func (m *IncidentInvestigationUpdateEntryMutation) ClearIncidentInvestigation() {
 	m.clearedincident_investigation = true
-	m.clearedFields[incidentinvestigationupdateentry.FieldIncidentInvestigationUUID] = struct{}{}
+	m.clearedFields[incidentinvestigationupdateentry.FieldIncidentInvestigationID] = struct{}{}
 }
 
 // IncidentInvestigationCleared reports if the "incident_investigation" edge to the IncidentInvestigation entity was cleared.
 func (m *IncidentInvestigationUpdateEntryMutation) IncidentInvestigationCleared() bool {
 	return m.clearedincident_investigation
-}
-
-// IncidentInvestigationID returns the "incident_investigation" edge ID in the mutation.
-func (m *IncidentInvestigationUpdateEntryMutation) IncidentInvestigationID() (id uuid.UUID, exists bool) {
-	if m.incident_investigation != nil {
-		return *m.incident_investigation, true
-	}
-	return
 }
 
 // IncidentInvestigationIDs returns the "incident_investigation" edge IDs in the mutation.
@@ -34880,7 +34828,7 @@ func (m *IncidentInvestigationUpdateEntryMutation) Type() string {
 func (m *IncidentInvestigationUpdateEntryMutation) Fields() []string {
 	fields := make([]string, 0, 13)
 	if m.incident_investigation != nil {
-		fields = append(fields, incidentinvestigationupdateentry.FieldIncidentInvestigationUUID)
+		fields = append(fields, incidentinvestigationupdateentry.FieldIncidentInvestigationID)
 	}
 	if m._type != nil {
 		fields = append(fields, incidentinvestigationupdateentry.FieldType)
@@ -34926,8 +34874,8 @@ func (m *IncidentInvestigationUpdateEntryMutation) Fields() []string {
 // schema.
 func (m *IncidentInvestigationUpdateEntryMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case incidentinvestigationupdateentry.FieldIncidentInvestigationUUID:
-		return m.IncidentInvestigationUUID()
+	case incidentinvestigationupdateentry.FieldIncidentInvestigationID:
+		return m.IncidentInvestigationID()
 	case incidentinvestigationupdateentry.FieldType:
 		return m.GetType()
 	case incidentinvestigationupdateentry.FieldMessage:
@@ -34961,8 +34909,8 @@ func (m *IncidentInvestigationUpdateEntryMutation) Field(name string) (ent.Value
 // database failed.
 func (m *IncidentInvestigationUpdateEntryMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case incidentinvestigationupdateentry.FieldIncidentInvestigationUUID:
-		return m.OldIncidentInvestigationUUID(ctx)
+	case incidentinvestigationupdateentry.FieldIncidentInvestigationID:
+		return m.OldIncidentInvestigationID(ctx)
 	case incidentinvestigationupdateentry.FieldType:
 		return m.OldType(ctx)
 	case incidentinvestigationupdateentry.FieldMessage:
@@ -34996,12 +34944,12 @@ func (m *IncidentInvestigationUpdateEntryMutation) OldField(ctx context.Context,
 // type.
 func (m *IncidentInvestigationUpdateEntryMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case incidentinvestigationupdateentry.FieldIncidentInvestigationUUID:
+	case incidentinvestigationupdateentry.FieldIncidentInvestigationID:
 		v, ok := value.(uuid.UUID)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetIncidentInvestigationUUID(v)
+		m.SetIncidentInvestigationID(v)
 		return nil
 	case incidentinvestigationupdateentry.FieldType:
 		v, ok := value.(string)
@@ -35175,8 +35123,8 @@ func (m *IncidentInvestigationUpdateEntryMutation) ClearField(name string) error
 // It returns an error if the field is not defined in the schema.
 func (m *IncidentInvestigationUpdateEntryMutation) ResetField(name string) error {
 	switch name {
-	case incidentinvestigationupdateentry.FieldIncidentInvestigationUUID:
-		m.ResetIncidentInvestigationUUID()
+	case incidentinvestigationupdateentry.FieldIncidentInvestigationID:
+		m.ResetIncidentInvestigationID()
 		return nil
 	case incidentinvestigationupdateentry.FieldType:
 		m.ResetType()
@@ -36128,7 +36076,7 @@ type IntegrationMutation struct {
 	telnyx_tts_voice           *string
 	telnyx_tts_language        *string
 	telnyx_tts_api_key_ref     *string
-	voice_provider             *string
+	voice_provider             *integration.VoiceProvider
 	hermes_platform_url        *string
 	hermes_platform_token      *string
 	updated_at                 *time.Time
@@ -37416,12 +37364,12 @@ func (m *IntegrationMutation) ResetTelnyxTtsAPIKeyRef() {
 }
 
 // SetVoiceProvider sets the "voice_provider" field.
-func (m *IntegrationMutation) SetVoiceProvider(s string) {
-	m.voice_provider = &s
+func (m *IntegrationMutation) SetVoiceProvider(ip integration.VoiceProvider) {
+	m.voice_provider = &ip
 }
 
 // VoiceProvider returns the value of the "voice_provider" field in the mutation.
-func (m *IntegrationMutation) VoiceProvider() (r string, exists bool) {
+func (m *IntegrationMutation) VoiceProvider() (r integration.VoiceProvider, exists bool) {
 	v := m.voice_provider
 	if v == nil {
 		return
@@ -37432,7 +37380,7 @@ func (m *IntegrationMutation) VoiceProvider() (r string, exists bool) {
 // OldVoiceProvider returns the old "voice_provider" field's value of the Integration entity.
 // If the Integration object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *IntegrationMutation) OldVoiceProvider(ctx context.Context) (v string, err error) {
+func (m *IntegrationMutation) OldVoiceProvider(ctx context.Context) (v integration.VoiceProvider, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldVoiceProvider is only allowed on UpdateOne operations")
 	}
@@ -38038,7 +37986,7 @@ func (m *IntegrationMutation) SetField(name string, value ent.Value) error {
 		m.SetTelnyxTtsAPIKeyRef(v)
 		return nil
 	case integration.FieldVoiceProvider:
-		v, ok := value.(string)
+		v, ok := value.(integration.VoiceProvider)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -39174,13 +39122,13 @@ func (m *InvestigationThreadMessageMutation) IDs(ctx context.Context) ([]uuid.UU
 	}
 }
 
-// SetThreadUUID sets the "thread_uuid" field.
-func (m *InvestigationThreadMessageMutation) SetThreadUUID(u uuid.UUID) {
+// SetThreadID sets the "thread_id" field.
+func (m *InvestigationThreadMessageMutation) SetThreadID(u uuid.UUID) {
 	m.thread = &u
 }
 
-// ThreadUUID returns the value of the "thread_uuid" field in the mutation.
-func (m *InvestigationThreadMessageMutation) ThreadUUID() (r uuid.UUID, exists bool) {
+// ThreadID returns the value of the "thread_id" field in the mutation.
+func (m *InvestigationThreadMessageMutation) ThreadID() (r uuid.UUID, exists bool) {
 	v := m.thread
 	if v == nil {
 		return
@@ -39188,25 +39136,25 @@ func (m *InvestigationThreadMessageMutation) ThreadUUID() (r uuid.UUID, exists b
 	return *v, true
 }
 
-// OldThreadUUID returns the old "thread_uuid" field's value of the InvestigationThreadMessage entity.
+// OldThreadID returns the old "thread_id" field's value of the InvestigationThreadMessage entity.
 // If the InvestigationThreadMessage object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *InvestigationThreadMessageMutation) OldThreadUUID(ctx context.Context) (v uuid.UUID, err error) {
+func (m *InvestigationThreadMessageMutation) OldThreadID(ctx context.Context) (v uuid.UUID, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldThreadUUID is only allowed on UpdateOne operations")
+		return v, errors.New("OldThreadID is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldThreadUUID requires an ID field in the mutation")
+		return v, errors.New("OldThreadID requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldThreadUUID: %w", err)
+		return v, fmt.Errorf("querying old value for OldThreadID: %w", err)
 	}
-	return oldValue.ThreadUUID, nil
+	return oldValue.ThreadID, nil
 }
 
-// ResetThreadUUID resets all changes to the "thread_uuid" field.
-func (m *InvestigationThreadMessageMutation) ResetThreadUUID() {
+// ResetThreadID resets all changes to the "thread_id" field.
+func (m *InvestigationThreadMessageMutation) ResetThreadID() {
 	m.thread = nil
 }
 
@@ -39821,28 +39769,15 @@ func (m *InvestigationThreadMessageMutation) ResetUpdatedAt() {
 	m.updated_at = nil
 }
 
-// SetThreadID sets the "thread" edge to the InvestigationThread entity by id.
-func (m *InvestigationThreadMessageMutation) SetThreadID(id uuid.UUID) {
-	m.thread = &id
-}
-
 // ClearThread clears the "thread" edge to the InvestigationThread entity.
 func (m *InvestigationThreadMessageMutation) ClearThread() {
 	m.clearedthread = true
-	m.clearedFields[investigationthreadmessage.FieldThreadUUID] = struct{}{}
+	m.clearedFields[investigationthreadmessage.FieldThreadID] = struct{}{}
 }
 
 // ThreadCleared reports if the "thread" edge to the InvestigationThread entity was cleared.
 func (m *InvestigationThreadMessageMutation) ThreadCleared() bool {
 	return m.clearedthread
-}
-
-// ThreadID returns the "thread" edge ID in the mutation.
-func (m *InvestigationThreadMessageMutation) ThreadID() (id uuid.UUID, exists bool) {
-	if m.thread != nil {
-		return *m.thread, true
-	}
-	return
 }
 
 // ThreadIDs returns the "thread" edge IDs in the mutation.
@@ -39897,7 +39832,7 @@ func (m *InvestigationThreadMessageMutation) Type() string {
 func (m *InvestigationThreadMessageMutation) Fields() []string {
 	fields := make([]string, 0, 15)
 	if m.thread != nil {
-		fields = append(fields, investigationthreadmessage.FieldThreadUUID)
+		fields = append(fields, investigationthreadmessage.FieldThreadID)
 	}
 	if m._type != nil {
 		fields = append(fields, investigationthreadmessage.FieldType)
@@ -39949,8 +39884,8 @@ func (m *InvestigationThreadMessageMutation) Fields() []string {
 // schema.
 func (m *InvestigationThreadMessageMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case investigationthreadmessage.FieldThreadUUID:
-		return m.ThreadUUID()
+	case investigationthreadmessage.FieldThreadID:
+		return m.ThreadID()
 	case investigationthreadmessage.FieldType:
 		return m.GetType()
 	case investigationthreadmessage.FieldSource:
@@ -39988,8 +39923,8 @@ func (m *InvestigationThreadMessageMutation) Field(name string) (ent.Value, bool
 // database failed.
 func (m *InvestigationThreadMessageMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case investigationthreadmessage.FieldThreadUUID:
-		return m.OldThreadUUID(ctx)
+	case investigationthreadmessage.FieldThreadID:
+		return m.OldThreadID(ctx)
 	case investigationthreadmessage.FieldType:
 		return m.OldType(ctx)
 	case investigationthreadmessage.FieldSource:
@@ -40027,12 +39962,12 @@ func (m *InvestigationThreadMessageMutation) OldField(ctx context.Context, name 
 // type.
 func (m *InvestigationThreadMessageMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case investigationthreadmessage.FieldThreadUUID:
+	case investigationthreadmessage.FieldThreadID:
 		v, ok := value.(uuid.UUID)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetThreadUUID(v)
+		m.SetThreadID(v)
 		return nil
 	case investigationthreadmessage.FieldType:
 		v, ok := value.(string)
@@ -40226,8 +40161,8 @@ func (m *InvestigationThreadMessageMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *InvestigationThreadMessageMutation) ResetField(name string) error {
 	switch name {
-	case investigationthreadmessage.FieldThreadUUID:
-		m.ResetThreadUUID()
+	case investigationthreadmessage.FieldThreadID:
+		m.ResetThreadID()
 		return nil
 	case investigationthreadmessage.FieldType:
 		m.ResetType()
@@ -40355,14 +40290,14 @@ type KnowledgeNoteMutation struct {
 	op                      Op
 	typ                     string
 	id                      *uuid.UUID
-	kind                    *string
+	kind                    *knowledgenote.Kind
 	title                   *string
 	body_markdown           *string
 	tags                    *[]string
 	appendtags              []string
 	selectors               *[]schema.RouteCondition
 	appendselectors         []schema.RouteCondition
-	author_type             *string
+	author_type             *knowledgenote.AuthorType
 	author_name             *string
 	source_investigation_id *string
 	confidence              *float64
@@ -40483,12 +40418,12 @@ func (m *KnowledgeNoteMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 }
 
 // SetKind sets the "kind" field.
-func (m *KnowledgeNoteMutation) SetKind(s string) {
-	m.kind = &s
+func (m *KnowledgeNoteMutation) SetKind(k knowledgenote.Kind) {
+	m.kind = &k
 }
 
 // Kind returns the value of the "kind" field in the mutation.
-func (m *KnowledgeNoteMutation) Kind() (r string, exists bool) {
+func (m *KnowledgeNoteMutation) Kind() (r knowledgenote.Kind, exists bool) {
 	v := m.kind
 	if v == nil {
 		return
@@ -40499,7 +40434,7 @@ func (m *KnowledgeNoteMutation) Kind() (r string, exists bool) {
 // OldKind returns the old "kind" field's value of the KnowledgeNote entity.
 // If the KnowledgeNote object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *KnowledgeNoteMutation) OldKind(ctx context.Context) (v string, err error) {
+func (m *KnowledgeNoteMutation) OldKind(ctx context.Context) (v knowledgenote.Kind, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldKind is only allowed on UpdateOne operations")
 	}
@@ -40770,12 +40705,12 @@ func (m *KnowledgeNoteMutation) ResetAuthorID() {
 }
 
 // SetAuthorType sets the "author_type" field.
-func (m *KnowledgeNoteMutation) SetAuthorType(s string) {
-	m.author_type = &s
+func (m *KnowledgeNoteMutation) SetAuthorType(kt knowledgenote.AuthorType) {
+	m.author_type = &kt
 }
 
 // AuthorType returns the value of the "author_type" field in the mutation.
-func (m *KnowledgeNoteMutation) AuthorType() (r string, exists bool) {
+func (m *KnowledgeNoteMutation) AuthorType() (r knowledgenote.AuthorType, exists bool) {
 	v := m.author_type
 	if v == nil {
 		return
@@ -40786,7 +40721,7 @@ func (m *KnowledgeNoteMutation) AuthorType() (r string, exists bool) {
 // OldAuthorType returns the old "author_type" field's value of the KnowledgeNote entity.
 // If the KnowledgeNote object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *KnowledgeNoteMutation) OldAuthorType(ctx context.Context) (v string, err error) {
+func (m *KnowledgeNoteMutation) OldAuthorType(ctx context.Context) (v knowledgenote.AuthorType, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldAuthorType is only allowed on UpdateOne operations")
 	}
@@ -41274,7 +41209,7 @@ func (m *KnowledgeNoteMutation) OldField(ctx context.Context, name string) (ent.
 func (m *KnowledgeNoteMutation) SetField(name string, value ent.Value) error {
 	switch name {
 	case knowledgenote.FieldKind:
-		v, ok := value.(string)
+		v, ok := value.(knowledgenote.Kind)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -41316,7 +41251,7 @@ func (m *KnowledgeNoteMutation) SetField(name string, value ent.Value) error {
 		m.SetAuthorID(v)
 		return nil
 	case knowledgenote.FieldAuthorType:
-		v, ok := value.(string)
+		v, ok := value.(knowledgenote.AuthorType)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -42348,11 +42283,11 @@ type NotificationMutation struct {
 	typ                       string
 	id                        *uuid.UUID
 	user_id                   *string
-	_type                     *string
+	_type                     *notification.Type
 	title                     *string
 	message                   *string
 	read                      *bool
-	resource_type             *string
+	resource_type             *notification.ResourceType
 	resource_id               *string
 	triggered_by_user_id      *string
 	triggered_by_display_name *string
@@ -42504,12 +42439,12 @@ func (m *NotificationMutation) ResetUserID() {
 }
 
 // SetType sets the "type" field.
-func (m *NotificationMutation) SetType(s string) {
-	m._type = &s
+func (m *NotificationMutation) SetType(n notification.Type) {
+	m._type = &n
 }
 
 // GetType returns the value of the "type" field in the mutation.
-func (m *NotificationMutation) GetType() (r string, exists bool) {
+func (m *NotificationMutation) GetType() (r notification.Type, exists bool) {
 	v := m._type
 	if v == nil {
 		return
@@ -42520,7 +42455,7 @@ func (m *NotificationMutation) GetType() (r string, exists bool) {
 // OldType returns the old "type" field's value of the Notification entity.
 // If the Notification object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *NotificationMutation) OldType(ctx context.Context) (v string, err error) {
+func (m *NotificationMutation) OldType(ctx context.Context) (v notification.Type, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldType is only allowed on UpdateOne operations")
 	}
@@ -42648,12 +42583,12 @@ func (m *NotificationMutation) ResetRead() {
 }
 
 // SetResourceType sets the "resource_type" field.
-func (m *NotificationMutation) SetResourceType(s string) {
-	m.resource_type = &s
+func (m *NotificationMutation) SetResourceType(nt notification.ResourceType) {
+	m.resource_type = &nt
 }
 
 // ResourceType returns the value of the "resource_type" field in the mutation.
-func (m *NotificationMutation) ResourceType() (r string, exists bool) {
+func (m *NotificationMutation) ResourceType() (r notification.ResourceType, exists bool) {
 	v := m.resource_type
 	if v == nil {
 		return
@@ -42664,7 +42599,7 @@ func (m *NotificationMutation) ResourceType() (r string, exists bool) {
 // OldResourceType returns the old "resource_type" field's value of the Notification entity.
 // If the Notification object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *NotificationMutation) OldResourceType(ctx context.Context) (v string, err error) {
+func (m *NotificationMutation) OldResourceType(ctx context.Context) (v *notification.ResourceType, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldResourceType is only allowed on UpdateOne operations")
 	}
@@ -43018,7 +42953,7 @@ func (m *NotificationMutation) SetField(name string, value ent.Value) error {
 		m.SetUserID(v)
 		return nil
 	case notification.FieldType:
-		v, ok := value.(string)
+		v, ok := value.(notification.Type)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -43046,7 +42981,7 @@ func (m *NotificationMutation) SetField(name string, value ent.Value) error {
 		m.SetRead(v)
 		return nil
 	case notification.FieldResourceType:
-		v, ok := value.(string)
+		v, ok := value.(notification.ResourceType)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -43246,9 +43181,9 @@ type NotificationDeliveryLogMutation struct {
 	id                *uuid.UUID
 	user_id           *uuid.UUID
 	incident_id       *uuid.UUID
-	notification_type *string
-	channel           *string
-	status            *string
+	notification_type *notificationdeliverylog.NotificationType
+	channel           *notificationdeliverylog.Channel
+	status            *notificationdeliverylog.Status
 	error_message     *string
 	created_at        *time.Time
 	clearedFields     map[string]struct{}
@@ -43447,12 +43382,12 @@ func (m *NotificationDeliveryLogMutation) ResetIncidentID() {
 }
 
 // SetNotificationType sets the "notification_type" field.
-func (m *NotificationDeliveryLogMutation) SetNotificationType(s string) {
-	m.notification_type = &s
+func (m *NotificationDeliveryLogMutation) SetNotificationType(nt notificationdeliverylog.NotificationType) {
+	m.notification_type = &nt
 }
 
 // NotificationType returns the value of the "notification_type" field in the mutation.
-func (m *NotificationDeliveryLogMutation) NotificationType() (r string, exists bool) {
+func (m *NotificationDeliveryLogMutation) NotificationType() (r notificationdeliverylog.NotificationType, exists bool) {
 	v := m.notification_type
 	if v == nil {
 		return
@@ -43463,7 +43398,7 @@ func (m *NotificationDeliveryLogMutation) NotificationType() (r string, exists b
 // OldNotificationType returns the old "notification_type" field's value of the NotificationDeliveryLog entity.
 // If the NotificationDeliveryLog object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *NotificationDeliveryLogMutation) OldNotificationType(ctx context.Context) (v string, err error) {
+func (m *NotificationDeliveryLogMutation) OldNotificationType(ctx context.Context) (v notificationdeliverylog.NotificationType, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldNotificationType is only allowed on UpdateOne operations")
 	}
@@ -43483,12 +43418,12 @@ func (m *NotificationDeliveryLogMutation) ResetNotificationType() {
 }
 
 // SetChannel sets the "channel" field.
-func (m *NotificationDeliveryLogMutation) SetChannel(s string) {
-	m.channel = &s
+func (m *NotificationDeliveryLogMutation) SetChannel(n notificationdeliverylog.Channel) {
+	m.channel = &n
 }
 
 // Channel returns the value of the "channel" field in the mutation.
-func (m *NotificationDeliveryLogMutation) Channel() (r string, exists bool) {
+func (m *NotificationDeliveryLogMutation) Channel() (r notificationdeliverylog.Channel, exists bool) {
 	v := m.channel
 	if v == nil {
 		return
@@ -43499,7 +43434,7 @@ func (m *NotificationDeliveryLogMutation) Channel() (r string, exists bool) {
 // OldChannel returns the old "channel" field's value of the NotificationDeliveryLog entity.
 // If the NotificationDeliveryLog object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *NotificationDeliveryLogMutation) OldChannel(ctx context.Context) (v string, err error) {
+func (m *NotificationDeliveryLogMutation) OldChannel(ctx context.Context) (v notificationdeliverylog.Channel, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldChannel is only allowed on UpdateOne operations")
 	}
@@ -43519,12 +43454,12 @@ func (m *NotificationDeliveryLogMutation) ResetChannel() {
 }
 
 // SetStatus sets the "status" field.
-func (m *NotificationDeliveryLogMutation) SetStatus(s string) {
-	m.status = &s
+func (m *NotificationDeliveryLogMutation) SetStatus(n notificationdeliverylog.Status) {
+	m.status = &n
 }
 
 // Status returns the value of the "status" field in the mutation.
-func (m *NotificationDeliveryLogMutation) Status() (r string, exists bool) {
+func (m *NotificationDeliveryLogMutation) Status() (r notificationdeliverylog.Status, exists bool) {
 	v := m.status
 	if v == nil {
 		return
@@ -43535,7 +43470,7 @@ func (m *NotificationDeliveryLogMutation) Status() (r string, exists bool) {
 // OldStatus returns the old "status" field's value of the NotificationDeliveryLog entity.
 // If the NotificationDeliveryLog object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *NotificationDeliveryLogMutation) OldStatus(ctx context.Context) (v string, err error) {
+func (m *NotificationDeliveryLogMutation) OldStatus(ctx context.Context) (v notificationdeliverylog.Status, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
 	}
@@ -43764,21 +43699,21 @@ func (m *NotificationDeliveryLogMutation) SetField(name string, value ent.Value)
 		m.SetIncidentID(v)
 		return nil
 	case notificationdeliverylog.FieldNotificationType:
-		v, ok := value.(string)
+		v, ok := value.(notificationdeliverylog.NotificationType)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetNotificationType(v)
 		return nil
 	case notificationdeliverylog.FieldChannel:
-		v, ok := value.(string)
+		v, ok := value.(notificationdeliverylog.Channel)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetChannel(v)
 		return nil
 	case notificationdeliverylog.FieldStatus:
-		v, ok := value.(string)
+		v, ok := value.(notificationdeliverylog.Status)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -50562,7 +50497,7 @@ type PostMortemMutation struct {
 	typ                        string
 	id                         *uuid.UUID
 	title                      *string
-	status                     *string
+	status                     *postmortem.Status
 	summary                    *string
 	timeline                   *[]map[string]interface{}
 	appendtimeline             []map[string]interface{}
@@ -50768,12 +50703,12 @@ func (m *PostMortemMutation) ResetTitle() {
 }
 
 // SetStatus sets the "status" field.
-func (m *PostMortemMutation) SetStatus(s string) {
-	m.status = &s
+func (m *PostMortemMutation) SetStatus(po postmortem.Status) {
+	m.status = &po
 }
 
 // Status returns the value of the "status" field in the mutation.
-func (m *PostMortemMutation) Status() (r string, exists bool) {
+func (m *PostMortemMutation) Status() (r postmortem.Status, exists bool) {
 	v := m.status
 	if v == nil {
 		return
@@ -50784,7 +50719,7 @@ func (m *PostMortemMutation) Status() (r string, exists bool) {
 // OldStatus returns the old "status" field's value of the PostMortem entity.
 // If the PostMortem object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *PostMortemMutation) OldStatus(ctx context.Context) (v string, err error) {
+func (m *PostMortemMutation) OldStatus(ctx context.Context) (v postmortem.Status, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
 	}
@@ -51694,7 +51629,7 @@ func (m *PostMortemMutation) SetField(name string, value ent.Value) error {
 		m.SetTitle(v)
 		return nil
 	case postmortem.FieldStatus:
-		v, ok := value.(string)
+		v, ok := value.(postmortem.Status)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -52481,7 +52416,7 @@ type ScheduleLayerMutation struct {
 	typ                  string
 	id                   *uuid.UUID
 	name                 *string
-	rotation_type        *string
+	rotation_type        *schedulelayer.RotationType
 	rotation_interval    *int
 	addrotation_interval *int
 	start_date           *time.Time
@@ -52682,12 +52617,12 @@ func (m *ScheduleLayerMutation) ResetName() {
 }
 
 // SetRotationType sets the "rotation_type" field.
-func (m *ScheduleLayerMutation) SetRotationType(s string) {
-	m.rotation_type = &s
+func (m *ScheduleLayerMutation) SetRotationType(st schedulelayer.RotationType) {
+	m.rotation_type = &st
 }
 
 // RotationType returns the value of the "rotation_type" field in the mutation.
-func (m *ScheduleLayerMutation) RotationType() (r string, exists bool) {
+func (m *ScheduleLayerMutation) RotationType() (r schedulelayer.RotationType, exists bool) {
 	v := m.rotation_type
 	if v == nil {
 		return
@@ -52698,7 +52633,7 @@ func (m *ScheduleLayerMutation) RotationType() (r string, exists bool) {
 // OldRotationType returns the old "rotation_type" field's value of the ScheduleLayer entity.
 // If the ScheduleLayer object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ScheduleLayerMutation) OldRotationType(ctx context.Context) (v string, err error) {
+func (m *ScheduleLayerMutation) OldRotationType(ctx context.Context) (v schedulelayer.RotationType, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldRotationType is only allowed on UpdateOne operations")
 	}
@@ -53397,7 +53332,7 @@ func (m *ScheduleLayerMutation) SetField(name string, value ent.Value) error {
 		m.SetName(v)
 		return nil
 	case schedulelayer.FieldRotationType:
-		v, ok := value.(string)
+		v, ok := value.(schedulelayer.RotationType)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -54424,7 +54359,7 @@ type ServiceMutation struct {
 	addsla_response_minutes       *int
 	sla_resolve_minutes           *int
 	addsla_resolve_minutes        *int
-	status                        *string
+	status                        *service.Status
 	created_at                    *time.Time
 	updated_at                    *time.Time
 	clearedFields                 map[string]struct{}
@@ -54923,12 +54858,12 @@ func (m *ServiceMutation) ResetSLAResolveMinutes() {
 }
 
 // SetStatus sets the "status" field.
-func (m *ServiceMutation) SetStatus(s string) {
+func (m *ServiceMutation) SetStatus(s service.Status) {
 	m.status = &s
 }
 
 // Status returns the value of the "status" field in the mutation.
-func (m *ServiceMutation) Status() (r string, exists bool) {
+func (m *ServiceMutation) Status() (r service.Status, exists bool) {
 	v := m.status
 	if v == nil {
 		return
@@ -54939,7 +54874,7 @@ func (m *ServiceMutation) Status() (r string, exists bool) {
 // OldStatus returns the old "status" field's value of the Service entity.
 // If the Service object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ServiceMutation) OldStatus(ctx context.Context) (v string, err error) {
+func (m *ServiceMutation) OldStatus(ctx context.Context) (v service.Status, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
 	}
@@ -55495,7 +55430,7 @@ func (m *ServiceMutation) SetField(name string, value ent.Value) error {
 		m.SetSLAResolveMinutes(v)
 		return nil
 	case service.FieldStatus:
-		v, ok := value.(string)
+		v, ok := value.(service.Status)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -55847,7 +55782,7 @@ type ServiceDependencyMutation struct {
 	op                          Op
 	typ                         string
 	id                          *uuid.UUID
-	dependency_type             *string
+	dependency_type             *servicedependency.DependencyType
 	created_at                  *time.Time
 	clearedFields               map[string]struct{}
 	service                     *uuid.UUID
@@ -56036,12 +55971,12 @@ func (m *ServiceDependencyMutation) ResetDependentOnServiceID() {
 }
 
 // SetDependencyType sets the "dependency_type" field.
-func (m *ServiceDependencyMutation) SetDependencyType(s string) {
-	m.dependency_type = &s
+func (m *ServiceDependencyMutation) SetDependencyType(st servicedependency.DependencyType) {
+	m.dependency_type = &st
 }
 
 // DependencyType returns the value of the "dependency_type" field in the mutation.
-func (m *ServiceDependencyMutation) DependencyType() (r string, exists bool) {
+func (m *ServiceDependencyMutation) DependencyType() (r servicedependency.DependencyType, exists bool) {
 	v := m.dependency_type
 	if v == nil {
 		return
@@ -56052,7 +55987,7 @@ func (m *ServiceDependencyMutation) DependencyType() (r string, exists bool) {
 // OldDependencyType returns the old "dependency_type" field's value of the ServiceDependency entity.
 // If the ServiceDependency object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ServiceDependencyMutation) OldDependencyType(ctx context.Context) (v string, err error) {
+func (m *ServiceDependencyMutation) OldDependencyType(ctx context.Context) (v servicedependency.DependencyType, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldDependencyType is only allowed on UpdateOne operations")
 	}
@@ -56265,7 +56200,7 @@ func (m *ServiceDependencyMutation) SetField(name string, value ent.Value) error
 		m.SetDependentOnServiceID(v)
 		return nil
 	case servicedependency.FieldDependencyType:
-		v, ok := value.(string)
+		v, ok := value.(servicedependency.DependencyType)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -58323,7 +58258,7 @@ type StatusPageMutation struct {
 	name              *string
 	slug              *string
 	description       *string
-	visibility        *string
+	visibility        *statuspage.Visibility
 	enabled           *bool
 	created_at        *time.Time
 	updated_at        *time.Time
@@ -58551,12 +58486,12 @@ func (m *StatusPageMutation) ResetDescription() {
 }
 
 // SetVisibility sets the "visibility" field.
-func (m *StatusPageMutation) SetVisibility(s string) {
+func (m *StatusPageMutation) SetVisibility(s statuspage.Visibility) {
 	m.visibility = &s
 }
 
 // Visibility returns the value of the "visibility" field in the mutation.
-func (m *StatusPageMutation) Visibility() (r string, exists bool) {
+func (m *StatusPageMutation) Visibility() (r statuspage.Visibility, exists bool) {
 	v := m.visibility
 	if v == nil {
 		return
@@ -58567,7 +58502,7 @@ func (m *StatusPageMutation) Visibility() (r string, exists bool) {
 // OldVisibility returns the old "visibility" field's value of the StatusPage entity.
 // If the StatusPage object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *StatusPageMutation) OldVisibility(ctx context.Context) (v string, err error) {
+func (m *StatusPageMutation) OldVisibility(ctx context.Context) (v statuspage.Visibility, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldVisibility is only allowed on UpdateOne operations")
 	}
@@ -58963,7 +58898,7 @@ func (m *StatusPageMutation) SetField(name string, value ent.Value) error {
 		m.SetDescription(v)
 		return nil
 	case statuspage.FieldVisibility:
-		v, ok := value.(string)
+		v, ok := value.(statuspage.Visibility)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -59195,7 +59130,7 @@ type StatusPageComponentMutation struct {
 	description        *string
 	display_order      *int
 	adddisplay_order   *int
-	status             *string
+	status             *statuspagecomponent.Status
 	created_at         *time.Time
 	updated_at         *time.Time
 	clearedFields      map[string]struct{}
@@ -59526,12 +59461,12 @@ func (m *StatusPageComponentMutation) ResetDisplayOrder() {
 }
 
 // SetStatus sets the "status" field.
-func (m *StatusPageComponentMutation) SetStatus(s string) {
+func (m *StatusPageComponentMutation) SetStatus(s statuspagecomponent.Status) {
 	m.status = &s
 }
 
 // Status returns the value of the "status" field in the mutation.
-func (m *StatusPageComponentMutation) Status() (r string, exists bool) {
+func (m *StatusPageComponentMutation) Status() (r statuspagecomponent.Status, exists bool) {
 	v := m.status
 	if v == nil {
 		return
@@ -59542,7 +59477,7 @@ func (m *StatusPageComponentMutation) Status() (r string, exists bool) {
 // OldStatus returns the old "status" field's value of the StatusPageComponent entity.
 // If the StatusPageComponent object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *StatusPageComponentMutation) OldStatus(ctx context.Context) (v string, err error) {
+func (m *StatusPageComponentMutation) OldStatus(ctx context.Context) (v statuspagecomponent.Status, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
 	}
@@ -59840,7 +59775,7 @@ func (m *StatusPageComponentMutation) SetField(name string, value ent.Value) err
 		m.SetDisplayOrder(v)
 		return nil
 	case statuspagecomponent.FieldStatus:
-		v, ok := value.(string)
+		v, ok := value.(statuspagecomponent.Status)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -61386,7 +61321,7 @@ type TeamMemberMutation struct {
 	op            Op
 	typ           string
 	id            *uuid.UUID
-	role          *string
+	role          *teammember.Role
 	created_at    *time.Time
 	clearedFields map[string]struct{}
 	team          *uuid.UUID
@@ -61575,12 +61510,12 @@ func (m *TeamMemberMutation) ResetUserID() {
 }
 
 // SetRole sets the "role" field.
-func (m *TeamMemberMutation) SetRole(s string) {
-	m.role = &s
+func (m *TeamMemberMutation) SetRole(t teammember.Role) {
+	m.role = &t
 }
 
 // Role returns the value of the "role" field in the mutation.
-func (m *TeamMemberMutation) Role() (r string, exists bool) {
+func (m *TeamMemberMutation) Role() (r teammember.Role, exists bool) {
 	v := m.role
 	if v == nil {
 		return
@@ -61591,7 +61526,7 @@ func (m *TeamMemberMutation) Role() (r string, exists bool) {
 // OldRole returns the old "role" field's value of the TeamMember entity.
 // If the TeamMember object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TeamMemberMutation) OldRole(ctx context.Context) (v string, err error) {
+func (m *TeamMemberMutation) OldRole(ctx context.Context) (v teammember.Role, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldRole is only allowed on UpdateOne operations")
 	}
@@ -61804,7 +61739,7 @@ func (m *TeamMemberMutation) SetField(name string, value ent.Value) error {
 		m.SetUserID(v)
 		return nil
 	case teammember.FieldRole:
-		v, ok := value.(string)
+		v, ok := value.(teammember.Role)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -61988,19 +61923,19 @@ type TriageResultMutation struct {
 	alert_fingerprints          *[]string
 	appendalert_fingerprints    []string
 	alert_labels                *map[string]string
-	severity_input              *string
-	decision                    *string
+	severity_input              *triageresult.SeverityInput
+	decision                    *triageresult.Decision
 	confidence                  *float64
 	addconfidence               *float64
-	severity_classified         *string
-	category                    *string
+	severity_classified         *triageresult.SeverityClassified
+	category                    *triageresult.Category
 	reasoning                   *string
 	suggested_actions           *[]string
 	appendsuggested_actions     []string
 	enrichment                  *map[string]interface{}
 	context_used                *map[string]interface{}
-	outcome                     *string
-	overridden_to               *string
+	outcome                     *triageresult.Outcome
+	overridden_to               *triageresult.OverriddenTo
 	overridden_at               *time.Time
 	model_used                  *string
 	triage_duration_ms          *int64
@@ -62389,12 +62324,12 @@ func (m *TriageResultMutation) ResetAlertLabels() {
 }
 
 // SetSeverityInput sets the "severity_input" field.
-func (m *TriageResultMutation) SetSeverityInput(s string) {
-	m.severity_input = &s
+func (m *TriageResultMutation) SetSeverityInput(ti triageresult.SeverityInput) {
+	m.severity_input = &ti
 }
 
 // SeverityInput returns the value of the "severity_input" field in the mutation.
-func (m *TriageResultMutation) SeverityInput() (r string, exists bool) {
+func (m *TriageResultMutation) SeverityInput() (r triageresult.SeverityInput, exists bool) {
 	v := m.severity_input
 	if v == nil {
 		return
@@ -62405,7 +62340,7 @@ func (m *TriageResultMutation) SeverityInput() (r string, exists bool) {
 // OldSeverityInput returns the old "severity_input" field's value of the TriageResult entity.
 // If the TriageResult object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TriageResultMutation) OldSeverityInput(ctx context.Context) (v string, err error) {
+func (m *TriageResultMutation) OldSeverityInput(ctx context.Context) (v *triageresult.SeverityInput, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldSeverityInput is only allowed on UpdateOne operations")
 	}
@@ -62438,12 +62373,12 @@ func (m *TriageResultMutation) ResetSeverityInput() {
 }
 
 // SetDecision sets the "decision" field.
-func (m *TriageResultMutation) SetDecision(s string) {
-	m.decision = &s
+func (m *TriageResultMutation) SetDecision(t triageresult.Decision) {
+	m.decision = &t
 }
 
 // Decision returns the value of the "decision" field in the mutation.
-func (m *TriageResultMutation) Decision() (r string, exists bool) {
+func (m *TriageResultMutation) Decision() (r triageresult.Decision, exists bool) {
 	v := m.decision
 	if v == nil {
 		return
@@ -62454,7 +62389,7 @@ func (m *TriageResultMutation) Decision() (r string, exists bool) {
 // OldDecision returns the old "decision" field's value of the TriageResult entity.
 // If the TriageResult object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TriageResultMutation) OldDecision(ctx context.Context) (v string, err error) {
+func (m *TriageResultMutation) OldDecision(ctx context.Context) (v triageresult.Decision, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldDecision is only allowed on UpdateOne operations")
 	}
@@ -62530,12 +62465,12 @@ func (m *TriageResultMutation) ResetConfidence() {
 }
 
 // SetSeverityClassified sets the "severity_classified" field.
-func (m *TriageResultMutation) SetSeverityClassified(s string) {
-	m.severity_classified = &s
+func (m *TriageResultMutation) SetSeverityClassified(tc triageresult.SeverityClassified) {
+	m.severity_classified = &tc
 }
 
 // SeverityClassified returns the value of the "severity_classified" field in the mutation.
-func (m *TriageResultMutation) SeverityClassified() (r string, exists bool) {
+func (m *TriageResultMutation) SeverityClassified() (r triageresult.SeverityClassified, exists bool) {
 	v := m.severity_classified
 	if v == nil {
 		return
@@ -62546,7 +62481,7 @@ func (m *TriageResultMutation) SeverityClassified() (r string, exists bool) {
 // OldSeverityClassified returns the old "severity_classified" field's value of the TriageResult entity.
 // If the TriageResult object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TriageResultMutation) OldSeverityClassified(ctx context.Context) (v string, err error) {
+func (m *TriageResultMutation) OldSeverityClassified(ctx context.Context) (v *triageresult.SeverityClassified, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldSeverityClassified is only allowed on UpdateOne operations")
 	}
@@ -62579,12 +62514,12 @@ func (m *TriageResultMutation) ResetSeverityClassified() {
 }
 
 // SetCategory sets the "category" field.
-func (m *TriageResultMutation) SetCategory(s string) {
-	m.category = &s
+func (m *TriageResultMutation) SetCategory(t triageresult.Category) {
+	m.category = &t
 }
 
 // Category returns the value of the "category" field in the mutation.
-func (m *TriageResultMutation) Category() (r string, exists bool) {
+func (m *TriageResultMutation) Category() (r triageresult.Category, exists bool) {
 	v := m.category
 	if v == nil {
 		return
@@ -62595,7 +62530,7 @@ func (m *TriageResultMutation) Category() (r string, exists bool) {
 // OldCategory returns the old "category" field's value of the TriageResult entity.
 // If the TriageResult object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TriageResultMutation) OldCategory(ctx context.Context) (v string, err error) {
+func (m *TriageResultMutation) OldCategory(ctx context.Context) (v *triageresult.Category, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldCategory is only allowed on UpdateOne operations")
 	}
@@ -62840,12 +62775,12 @@ func (m *TriageResultMutation) ResetContextUsed() {
 }
 
 // SetOutcome sets the "outcome" field.
-func (m *TriageResultMutation) SetOutcome(s string) {
-	m.outcome = &s
+func (m *TriageResultMutation) SetOutcome(t triageresult.Outcome) {
+	m.outcome = &t
 }
 
 // Outcome returns the value of the "outcome" field in the mutation.
-func (m *TriageResultMutation) Outcome() (r string, exists bool) {
+func (m *TriageResultMutation) Outcome() (r triageresult.Outcome, exists bool) {
 	v := m.outcome
 	if v == nil {
 		return
@@ -62856,7 +62791,7 @@ func (m *TriageResultMutation) Outcome() (r string, exists bool) {
 // OldOutcome returns the old "outcome" field's value of the TriageResult entity.
 // If the TriageResult object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TriageResultMutation) OldOutcome(ctx context.Context) (v string, err error) {
+func (m *TriageResultMutation) OldOutcome(ctx context.Context) (v triageresult.Outcome, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldOutcome is only allowed on UpdateOne operations")
 	}
@@ -62876,12 +62811,12 @@ func (m *TriageResultMutation) ResetOutcome() {
 }
 
 // SetOverriddenTo sets the "overridden_to" field.
-func (m *TriageResultMutation) SetOverriddenTo(s string) {
-	m.overridden_to = &s
+func (m *TriageResultMutation) SetOverriddenTo(tt triageresult.OverriddenTo) {
+	m.overridden_to = &tt
 }
 
 // OverriddenTo returns the value of the "overridden_to" field in the mutation.
-func (m *TriageResultMutation) OverriddenTo() (r string, exists bool) {
+func (m *TriageResultMutation) OverriddenTo() (r triageresult.OverriddenTo, exists bool) {
 	v := m.overridden_to
 	if v == nil {
 		return
@@ -62892,7 +62827,7 @@ func (m *TriageResultMutation) OverriddenTo() (r string, exists bool) {
 // OldOverriddenTo returns the old "overridden_to" field's value of the TriageResult entity.
 // If the TriageResult object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TriageResultMutation) OldOverriddenTo(ctx context.Context) (v string, err error) {
+func (m *TriageResultMutation) OldOverriddenTo(ctx context.Context) (v *triageresult.OverriddenTo, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldOverriddenTo is only allowed on UpdateOne operations")
 	}
@@ -63654,14 +63589,14 @@ func (m *TriageResultMutation) SetField(name string, value ent.Value) error {
 		m.SetAlertLabels(v)
 		return nil
 	case triageresult.FieldSeverityInput:
-		v, ok := value.(string)
+		v, ok := value.(triageresult.SeverityInput)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetSeverityInput(v)
 		return nil
 	case triageresult.FieldDecision:
-		v, ok := value.(string)
+		v, ok := value.(triageresult.Decision)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -63675,14 +63610,14 @@ func (m *TriageResultMutation) SetField(name string, value ent.Value) error {
 		m.SetConfidence(v)
 		return nil
 	case triageresult.FieldSeverityClassified:
-		v, ok := value.(string)
+		v, ok := value.(triageresult.SeverityClassified)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetSeverityClassified(v)
 		return nil
 	case triageresult.FieldCategory:
-		v, ok := value.(string)
+		v, ok := value.(triageresult.Category)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -63717,14 +63652,14 @@ func (m *TriageResultMutation) SetField(name string, value ent.Value) error {
 		m.SetContextUsed(v)
 		return nil
 	case triageresult.FieldOutcome:
-		v, ok := value.(string)
+		v, ok := value.(triageresult.Outcome)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetOutcome(v)
 		return nil
 	case triageresult.FieldOverriddenTo:
-		v, ok := value.(string)
+		v, ok := value.(triageresult.OverriddenTo)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -64177,10 +64112,10 @@ type TriageRuleMutation struct {
 	description            *string
 	conditions             *[]map[string]interface{}
 	appendconditions       []map[string]interface{}
-	match_mode             *string
-	decision               *string
-	severity               *string
-	category               *string
+	match_mode             *triagerule.MatchMode
+	decision               *triagerule.Decision
+	severity               *triagerule.Severity
+	category               *triagerule.Category
 	enrichment             *map[string]interface{}
 	priority               *int
 	addpriority            *int
@@ -64450,12 +64385,12 @@ func (m *TriageRuleMutation) ResetConditions() {
 }
 
 // SetMatchMode sets the "match_mode" field.
-func (m *TriageRuleMutation) SetMatchMode(s string) {
-	m.match_mode = &s
+func (m *TriageRuleMutation) SetMatchMode(tm triagerule.MatchMode) {
+	m.match_mode = &tm
 }
 
 // MatchMode returns the value of the "match_mode" field in the mutation.
-func (m *TriageRuleMutation) MatchMode() (r string, exists bool) {
+func (m *TriageRuleMutation) MatchMode() (r triagerule.MatchMode, exists bool) {
 	v := m.match_mode
 	if v == nil {
 		return
@@ -64466,7 +64401,7 @@ func (m *TriageRuleMutation) MatchMode() (r string, exists bool) {
 // OldMatchMode returns the old "match_mode" field's value of the TriageRule entity.
 // If the TriageRule object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TriageRuleMutation) OldMatchMode(ctx context.Context) (v string, err error) {
+func (m *TriageRuleMutation) OldMatchMode(ctx context.Context) (v triagerule.MatchMode, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldMatchMode is only allowed on UpdateOne operations")
 	}
@@ -64486,12 +64421,12 @@ func (m *TriageRuleMutation) ResetMatchMode() {
 }
 
 // SetDecision sets the "decision" field.
-func (m *TriageRuleMutation) SetDecision(s string) {
-	m.decision = &s
+func (m *TriageRuleMutation) SetDecision(t triagerule.Decision) {
+	m.decision = &t
 }
 
 // Decision returns the value of the "decision" field in the mutation.
-func (m *TriageRuleMutation) Decision() (r string, exists bool) {
+func (m *TriageRuleMutation) Decision() (r triagerule.Decision, exists bool) {
 	v := m.decision
 	if v == nil {
 		return
@@ -64502,7 +64437,7 @@ func (m *TriageRuleMutation) Decision() (r string, exists bool) {
 // OldDecision returns the old "decision" field's value of the TriageRule entity.
 // If the TriageRule object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TriageRuleMutation) OldDecision(ctx context.Context) (v string, err error) {
+func (m *TriageRuleMutation) OldDecision(ctx context.Context) (v triagerule.Decision, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldDecision is only allowed on UpdateOne operations")
 	}
@@ -64522,12 +64457,12 @@ func (m *TriageRuleMutation) ResetDecision() {
 }
 
 // SetSeverity sets the "severity" field.
-func (m *TriageRuleMutation) SetSeverity(s string) {
-	m.severity = &s
+func (m *TriageRuleMutation) SetSeverity(t triagerule.Severity) {
+	m.severity = &t
 }
 
 // Severity returns the value of the "severity" field in the mutation.
-func (m *TriageRuleMutation) Severity() (r string, exists bool) {
+func (m *TriageRuleMutation) Severity() (r triagerule.Severity, exists bool) {
 	v := m.severity
 	if v == nil {
 		return
@@ -64538,7 +64473,7 @@ func (m *TriageRuleMutation) Severity() (r string, exists bool) {
 // OldSeverity returns the old "severity" field's value of the TriageRule entity.
 // If the TriageRule object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TriageRuleMutation) OldSeverity(ctx context.Context) (v string, err error) {
+func (m *TriageRuleMutation) OldSeverity(ctx context.Context) (v *triagerule.Severity, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldSeverity is only allowed on UpdateOne operations")
 	}
@@ -64571,12 +64506,12 @@ func (m *TriageRuleMutation) ResetSeverity() {
 }
 
 // SetCategory sets the "category" field.
-func (m *TriageRuleMutation) SetCategory(s string) {
-	m.category = &s
+func (m *TriageRuleMutation) SetCategory(t triagerule.Category) {
+	m.category = &t
 }
 
 // Category returns the value of the "category" field in the mutation.
-func (m *TriageRuleMutation) Category() (r string, exists bool) {
+func (m *TriageRuleMutation) Category() (r triagerule.Category, exists bool) {
 	v := m.category
 	if v == nil {
 		return
@@ -64587,7 +64522,7 @@ func (m *TriageRuleMutation) Category() (r string, exists bool) {
 // OldCategory returns the old "category" field's value of the TriageRule entity.
 // If the TriageRule object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TriageRuleMutation) OldCategory(ctx context.Context) (v string, err error) {
+func (m *TriageRuleMutation) OldCategory(ctx context.Context) (v *triagerule.Category, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldCategory is only allowed on UpdateOne operations")
 	}
@@ -65095,28 +65030,28 @@ func (m *TriageRuleMutation) SetField(name string, value ent.Value) error {
 		m.SetConditions(v)
 		return nil
 	case triagerule.FieldMatchMode:
-		v, ok := value.(string)
+		v, ok := value.(triagerule.MatchMode)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetMatchMode(v)
 		return nil
 	case triagerule.FieldDecision:
-		v, ok := value.(string)
+		v, ok := value.(triagerule.Decision)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetDecision(v)
 		return nil
 	case triagerule.FieldSeverity:
-		v, ok := value.(string)
+		v, ok := value.(triagerule.Severity)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetSeverity(v)
 		return nil
 	case triagerule.FieldCategory:
-		v, ok := value.(string)
+		v, ok := value.(triagerule.Category)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -65392,7 +65327,7 @@ type UserMutation struct {
 	id                            *uuid.UUID
 	email                         *string
 	password                      *string
-	role                          *string
+	role                          *user.Role
 	full_name                     *string
 	phone                         *string
 	phone_country                 *string
@@ -65643,12 +65578,12 @@ func (m *UserMutation) ResetPassword() {
 }
 
 // SetRole sets the "role" field.
-func (m *UserMutation) SetRole(s string) {
-	m.role = &s
+func (m *UserMutation) SetRole(u user.Role) {
+	m.role = &u
 }
 
 // Role returns the value of the "role" field in the mutation.
-func (m *UserMutation) Role() (r string, exists bool) {
+func (m *UserMutation) Role() (r user.Role, exists bool) {
 	v := m.role
 	if v == nil {
 		return
@@ -65659,7 +65594,7 @@ func (m *UserMutation) Role() (r string, exists bool) {
 // OldRole returns the old "role" field's value of the User entity.
 // If the User object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UserMutation) OldRole(ctx context.Context) (v string, err error) {
+func (m *UserMutation) OldRole(ctx context.Context) (v user.Role, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldRole is only allowed on UpdateOne operations")
 	}
@@ -67501,7 +67436,7 @@ func (m *UserMutation) SetField(name string, value ent.Value) error {
 		m.SetPassword(v)
 		return nil
 	case user.FieldRole:
-		v, ok := value.(string)
+		v, ok := value.(user.Role)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}

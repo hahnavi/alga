@@ -66,11 +66,6 @@ func DependentOnServiceID(v uuid.UUID) predicate.ServiceDependency {
 	return predicate.ServiceDependency(sql.FieldEQ(FieldDependentOnServiceID, v))
 }
 
-// DependencyType applies equality check predicate on the "dependency_type" field. It's identical to DependencyTypeEQ.
-func DependencyType(v string) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldEQ(FieldDependencyType, v))
-}
-
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.ServiceDependency {
 	return predicate.ServiceDependency(sql.FieldEQ(FieldCreatedAt, v))
@@ -117,68 +112,23 @@ func DependentOnServiceIDNotIn(vs ...uuid.UUID) predicate.ServiceDependency {
 }
 
 // DependencyTypeEQ applies the EQ predicate on the "dependency_type" field.
-func DependencyTypeEQ(v string) predicate.ServiceDependency {
+func DependencyTypeEQ(v DependencyType) predicate.ServiceDependency {
 	return predicate.ServiceDependency(sql.FieldEQ(FieldDependencyType, v))
 }
 
 // DependencyTypeNEQ applies the NEQ predicate on the "dependency_type" field.
-func DependencyTypeNEQ(v string) predicate.ServiceDependency {
+func DependencyTypeNEQ(v DependencyType) predicate.ServiceDependency {
 	return predicate.ServiceDependency(sql.FieldNEQ(FieldDependencyType, v))
 }
 
 // DependencyTypeIn applies the In predicate on the "dependency_type" field.
-func DependencyTypeIn(vs ...string) predicate.ServiceDependency {
+func DependencyTypeIn(vs ...DependencyType) predicate.ServiceDependency {
 	return predicate.ServiceDependency(sql.FieldIn(FieldDependencyType, vs...))
 }
 
 // DependencyTypeNotIn applies the NotIn predicate on the "dependency_type" field.
-func DependencyTypeNotIn(vs ...string) predicate.ServiceDependency {
+func DependencyTypeNotIn(vs ...DependencyType) predicate.ServiceDependency {
 	return predicate.ServiceDependency(sql.FieldNotIn(FieldDependencyType, vs...))
-}
-
-// DependencyTypeGT applies the GT predicate on the "dependency_type" field.
-func DependencyTypeGT(v string) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldGT(FieldDependencyType, v))
-}
-
-// DependencyTypeGTE applies the GTE predicate on the "dependency_type" field.
-func DependencyTypeGTE(v string) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldGTE(FieldDependencyType, v))
-}
-
-// DependencyTypeLT applies the LT predicate on the "dependency_type" field.
-func DependencyTypeLT(v string) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldLT(FieldDependencyType, v))
-}
-
-// DependencyTypeLTE applies the LTE predicate on the "dependency_type" field.
-func DependencyTypeLTE(v string) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldLTE(FieldDependencyType, v))
-}
-
-// DependencyTypeContains applies the Contains predicate on the "dependency_type" field.
-func DependencyTypeContains(v string) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldContains(FieldDependencyType, v))
-}
-
-// DependencyTypeHasPrefix applies the HasPrefix predicate on the "dependency_type" field.
-func DependencyTypeHasPrefix(v string) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldHasPrefix(FieldDependencyType, v))
-}
-
-// DependencyTypeHasSuffix applies the HasSuffix predicate on the "dependency_type" field.
-func DependencyTypeHasSuffix(v string) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldHasSuffix(FieldDependencyType, v))
-}
-
-// DependencyTypeEqualFold applies the EqualFold predicate on the "dependency_type" field.
-func DependencyTypeEqualFold(v string) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldEqualFold(FieldDependencyType, v))
-}
-
-// DependencyTypeContainsFold applies the ContainsFold predicate on the "dependency_type" field.
-func DependencyTypeContainsFold(v string) predicate.ServiceDependency {
-	return predicate.ServiceDependency(sql.FieldContainsFold(FieldDependencyType, v))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

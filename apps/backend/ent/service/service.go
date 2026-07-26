@@ -3,6 +3,7 @@
 package service
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -138,8 +139,6 @@ var (
 	DefaultSLAResolveMinutes int
 	// SLAResolveMinutesValidator is a validator for the "sla_resolve_minutes" field. It is called by the builders before save.
 	SLAResolveMinutesValidator func(int) error
-	// DefaultStatus holds the default value on creation for the "status" field.
-	DefaultStatus string
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
@@ -149,6 +148,35 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// Status defines the type for the "status" enum field.
+type Status string
+
+// StatusOperational is the default value of the Status enum.
+const DefaultStatus = StatusOperational
+
+// Status values.
+const (
+	StatusOperational   Status = "operational"
+	StatusDegraded      Status = "degraded"
+	StatusPartialOutage Status = "partial_outage"
+	StatusMajorOutage   Status = "major_outage"
+	StatusMaintenance   Status = "maintenance"
+)
+
+func (s Status) String() string {
+	return string(s)
+}
+
+// StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
+func StatusValidator(s Status) error {
+	switch s {
+	case StatusOperational, StatusDegraded, StatusPartialOutage, StatusMajorOutage, StatusMaintenance:
+		return nil
+	default:
+		return fmt.Errorf("service: invalid enum value for status field: %q", s)
+	}
+}
 
 // OrderOption defines the ordering options for the Service queries.
 type OrderOption func(*sql.Selector)

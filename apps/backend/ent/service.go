@@ -38,7 +38,7 @@ type Service struct {
 	// SLAResolveMinutes holds the value of the "sla_resolve_minutes" field.
 	SLAResolveMinutes int `json:"sla_resolve_minutes,omitempty"`
 	// Status holds the value of the "status" field.
-	Status string `json:"status,omitempty"`
+	Status service.Status `json:"status,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
@@ -220,7 +220,7 @@ func (_m *Service) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
-				_m.Status = value.String
+				_m.Status = service.Status(value.String)
 			}
 		case service.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -329,7 +329,7 @@ func (_m *Service) String() string {
 	builder.WriteString(fmt.Sprintf("%v", _m.SLAResolveMinutes))
 	builder.WriteString(", ")
 	builder.WriteString("status=")
-	builder.WriteString(_m.Status)
+	builder.WriteString(fmt.Sprintf("%v", _m.Status))
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

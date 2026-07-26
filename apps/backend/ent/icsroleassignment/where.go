@@ -76,29 +76,9 @@ func AgentTokenID(v uuid.UUID) predicate.ICSRoleAssignment {
 	return predicate.ICSRoleAssignment(sql.FieldEQ(FieldAgentTokenID, v))
 }
 
-// RoleType applies equality check predicate on the "role_type" field. It's identical to RoleTypeEQ.
-func RoleType(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldEQ(FieldRoleType, v))
-}
-
-// Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
-func Status(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldEQ(FieldStatus, v))
-}
-
-// AssigneeType applies equality check predicate on the "assignee_type" field. It's identical to AssigneeTypeEQ.
-func AssigneeType(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldEQ(FieldAssigneeType, v))
-}
-
 // ScopeDescription applies equality check predicate on the "scope_description" field. It's identical to ScopeDescriptionEQ.
 func ScopeDescription(v string) predicate.ICSRoleAssignment {
 	return predicate.ICSRoleAssignment(sql.FieldEQ(FieldScopeDescription, v))
-}
-
-// EndedReason applies equality check predicate on the "ended_reason" field. It's identical to EndedReasonEQ.
-func EndedReason(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldEQ(FieldEndedReason, v))
 }
 
 // StartedAt applies equality check predicate on the "started_at" field. It's identical to StartedAtEQ.
@@ -222,198 +202,63 @@ func AgentTokenIDNotNil() predicate.ICSRoleAssignment {
 }
 
 // RoleTypeEQ applies the EQ predicate on the "role_type" field.
-func RoleTypeEQ(v string) predicate.ICSRoleAssignment {
+func RoleTypeEQ(v RoleType) predicate.ICSRoleAssignment {
 	return predicate.ICSRoleAssignment(sql.FieldEQ(FieldRoleType, v))
 }
 
 // RoleTypeNEQ applies the NEQ predicate on the "role_type" field.
-func RoleTypeNEQ(v string) predicate.ICSRoleAssignment {
+func RoleTypeNEQ(v RoleType) predicate.ICSRoleAssignment {
 	return predicate.ICSRoleAssignment(sql.FieldNEQ(FieldRoleType, v))
 }
 
 // RoleTypeIn applies the In predicate on the "role_type" field.
-func RoleTypeIn(vs ...string) predicate.ICSRoleAssignment {
+func RoleTypeIn(vs ...RoleType) predicate.ICSRoleAssignment {
 	return predicate.ICSRoleAssignment(sql.FieldIn(FieldRoleType, vs...))
 }
 
 // RoleTypeNotIn applies the NotIn predicate on the "role_type" field.
-func RoleTypeNotIn(vs ...string) predicate.ICSRoleAssignment {
+func RoleTypeNotIn(vs ...RoleType) predicate.ICSRoleAssignment {
 	return predicate.ICSRoleAssignment(sql.FieldNotIn(FieldRoleType, vs...))
 }
 
-// RoleTypeGT applies the GT predicate on the "role_type" field.
-func RoleTypeGT(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldGT(FieldRoleType, v))
-}
-
-// RoleTypeGTE applies the GTE predicate on the "role_type" field.
-func RoleTypeGTE(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldGTE(FieldRoleType, v))
-}
-
-// RoleTypeLT applies the LT predicate on the "role_type" field.
-func RoleTypeLT(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldLT(FieldRoleType, v))
-}
-
-// RoleTypeLTE applies the LTE predicate on the "role_type" field.
-func RoleTypeLTE(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldLTE(FieldRoleType, v))
-}
-
-// RoleTypeContains applies the Contains predicate on the "role_type" field.
-func RoleTypeContains(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldContains(FieldRoleType, v))
-}
-
-// RoleTypeHasPrefix applies the HasPrefix predicate on the "role_type" field.
-func RoleTypeHasPrefix(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldHasPrefix(FieldRoleType, v))
-}
-
-// RoleTypeHasSuffix applies the HasSuffix predicate on the "role_type" field.
-func RoleTypeHasSuffix(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldHasSuffix(FieldRoleType, v))
-}
-
-// RoleTypeEqualFold applies the EqualFold predicate on the "role_type" field.
-func RoleTypeEqualFold(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldEqualFold(FieldRoleType, v))
-}
-
-// RoleTypeContainsFold applies the ContainsFold predicate on the "role_type" field.
-func RoleTypeContainsFold(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldContainsFold(FieldRoleType, v))
-}
-
 // StatusEQ applies the EQ predicate on the "status" field.
-func StatusEQ(v string) predicate.ICSRoleAssignment {
+func StatusEQ(v Status) predicate.ICSRoleAssignment {
 	return predicate.ICSRoleAssignment(sql.FieldEQ(FieldStatus, v))
 }
 
 // StatusNEQ applies the NEQ predicate on the "status" field.
-func StatusNEQ(v string) predicate.ICSRoleAssignment {
+func StatusNEQ(v Status) predicate.ICSRoleAssignment {
 	return predicate.ICSRoleAssignment(sql.FieldNEQ(FieldStatus, v))
 }
 
 // StatusIn applies the In predicate on the "status" field.
-func StatusIn(vs ...string) predicate.ICSRoleAssignment {
+func StatusIn(vs ...Status) predicate.ICSRoleAssignment {
 	return predicate.ICSRoleAssignment(sql.FieldIn(FieldStatus, vs...))
 }
 
 // StatusNotIn applies the NotIn predicate on the "status" field.
-func StatusNotIn(vs ...string) predicate.ICSRoleAssignment {
+func StatusNotIn(vs ...Status) predicate.ICSRoleAssignment {
 	return predicate.ICSRoleAssignment(sql.FieldNotIn(FieldStatus, vs...))
 }
 
-// StatusGT applies the GT predicate on the "status" field.
-func StatusGT(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldGT(FieldStatus, v))
-}
-
-// StatusGTE applies the GTE predicate on the "status" field.
-func StatusGTE(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldGTE(FieldStatus, v))
-}
-
-// StatusLT applies the LT predicate on the "status" field.
-func StatusLT(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldLT(FieldStatus, v))
-}
-
-// StatusLTE applies the LTE predicate on the "status" field.
-func StatusLTE(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldLTE(FieldStatus, v))
-}
-
-// StatusContains applies the Contains predicate on the "status" field.
-func StatusContains(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldContains(FieldStatus, v))
-}
-
-// StatusHasPrefix applies the HasPrefix predicate on the "status" field.
-func StatusHasPrefix(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldHasPrefix(FieldStatus, v))
-}
-
-// StatusHasSuffix applies the HasSuffix predicate on the "status" field.
-func StatusHasSuffix(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldHasSuffix(FieldStatus, v))
-}
-
-// StatusEqualFold applies the EqualFold predicate on the "status" field.
-func StatusEqualFold(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldEqualFold(FieldStatus, v))
-}
-
-// StatusContainsFold applies the ContainsFold predicate on the "status" field.
-func StatusContainsFold(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldContainsFold(FieldStatus, v))
-}
-
 // AssigneeTypeEQ applies the EQ predicate on the "assignee_type" field.
-func AssigneeTypeEQ(v string) predicate.ICSRoleAssignment {
+func AssigneeTypeEQ(v AssigneeType) predicate.ICSRoleAssignment {
 	return predicate.ICSRoleAssignment(sql.FieldEQ(FieldAssigneeType, v))
 }
 
 // AssigneeTypeNEQ applies the NEQ predicate on the "assignee_type" field.
-func AssigneeTypeNEQ(v string) predicate.ICSRoleAssignment {
+func AssigneeTypeNEQ(v AssigneeType) predicate.ICSRoleAssignment {
 	return predicate.ICSRoleAssignment(sql.FieldNEQ(FieldAssigneeType, v))
 }
 
 // AssigneeTypeIn applies the In predicate on the "assignee_type" field.
-func AssigneeTypeIn(vs ...string) predicate.ICSRoleAssignment {
+func AssigneeTypeIn(vs ...AssigneeType) predicate.ICSRoleAssignment {
 	return predicate.ICSRoleAssignment(sql.FieldIn(FieldAssigneeType, vs...))
 }
 
 // AssigneeTypeNotIn applies the NotIn predicate on the "assignee_type" field.
-func AssigneeTypeNotIn(vs ...string) predicate.ICSRoleAssignment {
+func AssigneeTypeNotIn(vs ...AssigneeType) predicate.ICSRoleAssignment {
 	return predicate.ICSRoleAssignment(sql.FieldNotIn(FieldAssigneeType, vs...))
-}
-
-// AssigneeTypeGT applies the GT predicate on the "assignee_type" field.
-func AssigneeTypeGT(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldGT(FieldAssigneeType, v))
-}
-
-// AssigneeTypeGTE applies the GTE predicate on the "assignee_type" field.
-func AssigneeTypeGTE(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldGTE(FieldAssigneeType, v))
-}
-
-// AssigneeTypeLT applies the LT predicate on the "assignee_type" field.
-func AssigneeTypeLT(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldLT(FieldAssigneeType, v))
-}
-
-// AssigneeTypeLTE applies the LTE predicate on the "assignee_type" field.
-func AssigneeTypeLTE(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldLTE(FieldAssigneeType, v))
-}
-
-// AssigneeTypeContains applies the Contains predicate on the "assignee_type" field.
-func AssigneeTypeContains(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldContains(FieldAssigneeType, v))
-}
-
-// AssigneeTypeHasPrefix applies the HasPrefix predicate on the "assignee_type" field.
-func AssigneeTypeHasPrefix(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldHasPrefix(FieldAssigneeType, v))
-}
-
-// AssigneeTypeHasSuffix applies the HasSuffix predicate on the "assignee_type" field.
-func AssigneeTypeHasSuffix(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldHasSuffix(FieldAssigneeType, v))
-}
-
-// AssigneeTypeEqualFold applies the EqualFold predicate on the "assignee_type" field.
-func AssigneeTypeEqualFold(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldEqualFold(FieldAssigneeType, v))
-}
-
-// AssigneeTypeContainsFold applies the ContainsFold predicate on the "assignee_type" field.
-func AssigneeTypeContainsFold(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldContainsFold(FieldAssigneeType, v))
 }
 
 // ScopeDescriptionEQ applies the EQ predicate on the "scope_description" field.
@@ -492,58 +337,23 @@ func ScopeDescriptionContainsFold(v string) predicate.ICSRoleAssignment {
 }
 
 // EndedReasonEQ applies the EQ predicate on the "ended_reason" field.
-func EndedReasonEQ(v string) predicate.ICSRoleAssignment {
+func EndedReasonEQ(v EndedReason) predicate.ICSRoleAssignment {
 	return predicate.ICSRoleAssignment(sql.FieldEQ(FieldEndedReason, v))
 }
 
 // EndedReasonNEQ applies the NEQ predicate on the "ended_reason" field.
-func EndedReasonNEQ(v string) predicate.ICSRoleAssignment {
+func EndedReasonNEQ(v EndedReason) predicate.ICSRoleAssignment {
 	return predicate.ICSRoleAssignment(sql.FieldNEQ(FieldEndedReason, v))
 }
 
 // EndedReasonIn applies the In predicate on the "ended_reason" field.
-func EndedReasonIn(vs ...string) predicate.ICSRoleAssignment {
+func EndedReasonIn(vs ...EndedReason) predicate.ICSRoleAssignment {
 	return predicate.ICSRoleAssignment(sql.FieldIn(FieldEndedReason, vs...))
 }
 
 // EndedReasonNotIn applies the NotIn predicate on the "ended_reason" field.
-func EndedReasonNotIn(vs ...string) predicate.ICSRoleAssignment {
+func EndedReasonNotIn(vs ...EndedReason) predicate.ICSRoleAssignment {
 	return predicate.ICSRoleAssignment(sql.FieldNotIn(FieldEndedReason, vs...))
-}
-
-// EndedReasonGT applies the GT predicate on the "ended_reason" field.
-func EndedReasonGT(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldGT(FieldEndedReason, v))
-}
-
-// EndedReasonGTE applies the GTE predicate on the "ended_reason" field.
-func EndedReasonGTE(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldGTE(FieldEndedReason, v))
-}
-
-// EndedReasonLT applies the LT predicate on the "ended_reason" field.
-func EndedReasonLT(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldLT(FieldEndedReason, v))
-}
-
-// EndedReasonLTE applies the LTE predicate on the "ended_reason" field.
-func EndedReasonLTE(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldLTE(FieldEndedReason, v))
-}
-
-// EndedReasonContains applies the Contains predicate on the "ended_reason" field.
-func EndedReasonContains(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldContains(FieldEndedReason, v))
-}
-
-// EndedReasonHasPrefix applies the HasPrefix predicate on the "ended_reason" field.
-func EndedReasonHasPrefix(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldHasPrefix(FieldEndedReason, v))
-}
-
-// EndedReasonHasSuffix applies the HasSuffix predicate on the "ended_reason" field.
-func EndedReasonHasSuffix(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldHasSuffix(FieldEndedReason, v))
 }
 
 // EndedReasonIsNil applies the IsNil predicate on the "ended_reason" field.
@@ -554,16 +364,6 @@ func EndedReasonIsNil() predicate.ICSRoleAssignment {
 // EndedReasonNotNil applies the NotNil predicate on the "ended_reason" field.
 func EndedReasonNotNil() predicate.ICSRoleAssignment {
 	return predicate.ICSRoleAssignment(sql.FieldNotNull(FieldEndedReason))
-}
-
-// EndedReasonEqualFold applies the EqualFold predicate on the "ended_reason" field.
-func EndedReasonEqualFold(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldEqualFold(FieldEndedReason, v))
-}
-
-// EndedReasonContainsFold applies the ContainsFold predicate on the "ended_reason" field.
-func EndedReasonContainsFold(v string) predicate.ICSRoleAssignment {
-	return predicate.ICSRoleAssignment(sql.FieldContainsFold(FieldEndedReason, v))
 }
 
 // StartedAtEQ applies the EQ predicate on the "started_at" field.

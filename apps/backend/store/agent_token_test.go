@@ -6,6 +6,7 @@ import (
 
 	"alga/crypto"
 	"alga/ent"
+	"alga/ent/agentdmmessage"
 )
 
 // newAgentTokenEntTestClient wraps newTestEntClient so the agent-token tests
@@ -51,7 +52,7 @@ func TestRevokeTokenPreservesFKProtectedRows(t *testing.T) {
 	// the real PostgreSQL FK is protecting.
 	if _, err := client.AgentDMMessage.Create().
 		SetAgentTokenID(id).
-		SetRole(string(AgentDMRoleUser)).
+		SetRole(agentdmmessage.Role(AgentDMRoleUser)).
 		SetBody("hello").
 		Save(t.Context()); err != nil {
 		t.Fatalf("create agent_dm_message: %v", err)

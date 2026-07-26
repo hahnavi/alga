@@ -3,6 +3,7 @@
 package schedulelayer
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -88,8 +89,6 @@ func ValidColumn(column string) bool {
 var (
 	// DefaultName holds the default value on creation for the "name" field.
 	DefaultName string
-	// DefaultRotationType holds the default value on creation for the "rotation_type" field.
-	DefaultRotationType string
 	// DefaultRotationInterval holds the default value on creation for the "rotation_interval" field.
 	DefaultRotationInterval int
 	// RotationIntervalValidator is a validator for the "rotation_interval" field. It is called by the builders before save.
@@ -119,6 +118,33 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// RotationType defines the type for the "rotation_type" enum field.
+type RotationType string
+
+// RotationTypeWeekly is the default value of the RotationType enum.
+const DefaultRotationType = RotationTypeWeekly
+
+// RotationType values.
+const (
+	RotationTypeDaily  RotationType = "daily"
+	RotationTypeWeekly RotationType = "weekly"
+	RotationTypeCustom RotationType = "custom"
+)
+
+func (rt RotationType) String() string {
+	return string(rt)
+}
+
+// RotationTypeValidator is a validator for the "rotation_type" field enum values. It is called by the builders before save.
+func RotationTypeValidator(rt RotationType) error {
+	switch rt {
+	case RotationTypeDaily, RotationTypeWeekly, RotationTypeCustom:
+		return nil
+	default:
+		return fmt.Errorf("schedulelayer: invalid enum value for rotation_type field: %q", rt)
+	}
+}
 
 // OrderOption defines the ordering options for the ScheduleLayer queries.
 type OrderOption func(*sql.Selector)

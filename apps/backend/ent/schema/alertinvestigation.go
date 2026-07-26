@@ -25,7 +25,7 @@ func (AlertInvestigation) Fields() []ent.Field {
 		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
 		field.String("alert_investigation_id").Unique().NotEmpty(),
 		field.String("correlation_key").Optional().Default(""),
-		field.String("status").Default("pending"),
+		field.Enum("status").Values("pending", "assigned", "investigating", "promoted", "complete", "failed", "cancelled", "timed_out", "paused").Default("pending"),
 		field.String("agent_id").Optional().Default(""),
 		field.String("agent_name").Optional().Default(""),
 		field.String("agent_type").Optional().Default(""),
@@ -54,7 +54,7 @@ func (AlertInvestigation) Fields() []ent.Field {
 		field.UUID("triage_result_id", uuid.UUID{}).Optional().Nillable(),
 		field.String("triage_decision").Optional().Default(""),
 		field.JSON("triage_enrichment", map[string]any{}).Optional(),
-		field.String("assignee_type").Default("agent"),
+		field.Enum("assignee_type").Values("agent", "user", "system", "grafana").Default("agent"),
 		field.UUID("assignee_id", uuid.UUID{}).Optional().Nillable(),
 	}
 }

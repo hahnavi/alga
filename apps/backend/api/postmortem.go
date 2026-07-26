@@ -360,11 +360,6 @@ func (s *Server) deletePostMortem(w http.ResponseWriter, r *http.Request, incide
 		return
 	}
 
-	if err := s.actionItemStore.DeleteByPostMortemID(r.Context(), existing.ID); err != nil {
-		writeInternalError(w, err, "failed to delete action items")
-		return
-	}
-
 	if err := s.postmortemStore.Delete(r.Context(), existing.ID); err != nil {
 		writeInternalError(w, err, "failed to delete post-mortem")
 		return

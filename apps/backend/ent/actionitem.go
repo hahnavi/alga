@@ -24,15 +24,15 @@ type ActionItem struct {
 	// Description holds the value of the "description" field.
 	Description string `json:"description,omitempty"`
 	// Type holds the value of the "type" field.
-	Type string `json:"type,omitempty"`
+	Type actionitem.Type `json:"type,omitempty"`
 	// AssigneeName holds the value of the "assignee_name" field.
 	AssigneeName string `json:"assignee_name,omitempty"`
 	// AssigneeID holds the value of the "assignee_id" field.
 	AssigneeID *uuid.UUID `json:"assignee_id,omitempty"`
 	// Status holds the value of the "status" field.
-	Status string `json:"status,omitempty"`
+	Status actionitem.Status `json:"status,omitempty"`
 	// Priority holds the value of the "priority" field.
-	Priority string `json:"priority,omitempty"`
+	Priority actionitem.Priority `json:"priority,omitempty"`
 	// DueDate holds the value of the "due_date" field.
 	DueDate *time.Time `json:"due_date,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -115,7 +115,7 @@ func (_m *ActionItem) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field type", values[i])
 			} else if value.Valid {
-				_m.Type = value.String
+				_m.Type = actionitem.Type(value.String)
 			}
 		case actionitem.FieldAssigneeName:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -134,13 +134,13 @@ func (_m *ActionItem) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
-				_m.Status = value.String
+				_m.Status = actionitem.Status(value.String)
 			}
 		case actionitem.FieldPriority:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field priority", values[i])
 			} else if value.Valid {
-				_m.Priority = value.String
+				_m.Priority = actionitem.Priority(value.String)
 			}
 		case actionitem.FieldDueDate:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -209,7 +209,7 @@ func (_m *ActionItem) String() string {
 	builder.WriteString(_m.Description)
 	builder.WriteString(", ")
 	builder.WriteString("type=")
-	builder.WriteString(_m.Type)
+	builder.WriteString(fmt.Sprintf("%v", _m.Type))
 	builder.WriteString(", ")
 	builder.WriteString("assignee_name=")
 	builder.WriteString(_m.AssigneeName)
@@ -220,10 +220,10 @@ func (_m *ActionItem) String() string {
 	}
 	builder.WriteString(", ")
 	builder.WriteString("status=")
-	builder.WriteString(_m.Status)
+	builder.WriteString(fmt.Sprintf("%v", _m.Status))
 	builder.WriteString(", ")
 	builder.WriteString("priority=")
-	builder.WriteString(_m.Priority)
+	builder.WriteString(fmt.Sprintf("%v", _m.Priority))
 	builder.WriteString(", ")
 	if v := _m.DueDate; v != nil {
 		builder.WriteString("due_date=")

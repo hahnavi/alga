@@ -8,6 +8,7 @@ import (
 
 	"alga/config"
 	"alga/ent"
+	"alga/ent/integration"
 
 	algacrypto "alga/crypto"
 )
@@ -137,7 +138,7 @@ func (s *pgIntegrationStore) Get() (*IntegrationConfig, error) {
 		TelnyxTTSVoice:           cfg.TelnyxTtsVoice,
 		TelnyxTTSLanguage:        cfg.TelnyxTtsLanguage,
 		TelnyxTTSAPIKeyRef:       cfg.TelnyxTtsAPIKeyRef,
-		VoiceProvider:            config.NormalizeVoiceProvider(cfg.VoiceProvider),
+		VoiceProvider:            config.NormalizeVoiceProvider(string(cfg.VoiceProvider)),
 		HermesPlatformURL:        cfg.HermesPlatformURL,
 		HermesPlatformToken:      cfg.HermesPlatformToken,
 		UpdatedAt:                cfg.UpdatedAt,
@@ -193,7 +194,7 @@ func (s *pgIntegrationStore) Save(cfg IntegrationConfig) error {
 			SetTelnyxTtsVoice(encrypted.TelnyxTTSVoice).
 			SetTelnyxTtsLanguage(encrypted.TelnyxTTSLanguage).
 			SetTelnyxTtsAPIKeyRef(encrypted.TelnyxTTSAPIKeyRef).
-			SetVoiceProvider(config.NormalizeVoiceProvider(encrypted.VoiceProvider)).
+			SetVoiceProvider(integration.VoiceProvider(config.NormalizeVoiceProvider(encrypted.VoiceProvider))).
 			SetHermesPlatformURL(encrypted.HermesPlatformURL).
 			SetHermesPlatformToken(encrypted.HermesPlatformToken).
 			SetUpdatedAt(encrypted.UpdatedAt).
@@ -226,7 +227,7 @@ func (s *pgIntegrationStore) Save(cfg IntegrationConfig) error {
 			SetTelnyxTtsVoice(encrypted.TelnyxTTSVoice).
 			SetTelnyxTtsLanguage(encrypted.TelnyxTTSLanguage).
 			SetTelnyxTtsAPIKeyRef(encrypted.TelnyxTTSAPIKeyRef).
-			SetVoiceProvider(config.NormalizeVoiceProvider(encrypted.VoiceProvider)).
+			SetVoiceProvider(integration.VoiceProvider(config.NormalizeVoiceProvider(encrypted.VoiceProvider))).
 			SetHermesPlatformURL(encrypted.HermesPlatformURL).
 			SetHermesPlatformToken(encrypted.HermesPlatformToken).
 			SetUpdatedAt(encrypted.UpdatedAt).

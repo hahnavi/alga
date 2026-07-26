@@ -33,13 +33,13 @@ func (_c *AgentTokenCreate) SetName(v string) *AgentTokenCreate {
 }
 
 // SetAgentType sets the "agent_type" field.
-func (_c *AgentTokenCreate) SetAgentType(v string) *AgentTokenCreate {
+func (_c *AgentTokenCreate) SetAgentType(v agenttoken.AgentType) *AgentTokenCreate {
 	_c.mutation.SetAgentType(v)
 	return _c
 }
 
 // SetNillableAgentType sets the "agent_type" field if the given value is not nil.
-func (_c *AgentTokenCreate) SetNillableAgentType(v *string) *AgentTokenCreate {
+func (_c *AgentTokenCreate) SetNillableAgentType(v *agenttoken.AgentType) *AgentTokenCreate {
 	if v != nil {
 		_c.SetAgentType(*v)
 	}
@@ -354,6 +354,11 @@ func (_c *AgentTokenCreate) check() error {
 	if _, ok := _c.mutation.AgentType(); !ok {
 		return &ValidationError{Name: "agent_type", err: errors.New(`ent: missing required field "AgentToken.agent_type"`)}
 	}
+	if v, ok := _c.mutation.AgentType(); ok {
+		if err := agenttoken.AgentTypeValidator(v); err != nil {
+			return &ValidationError{Name: "agent_type", err: fmt.Errorf(`ent: validator failed for field "AgentToken.agent_type": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.TokenHash(); !ok {
 		return &ValidationError{Name: "token_hash", err: errors.New(`ent: missing required field "AgentToken.token_hash"`)}
 	}
@@ -419,7 +424,7 @@ func (_c *AgentTokenCreate) createSpec() (*AgentToken, *sqlgraph.CreateSpec) {
 		_node.Name = value
 	}
 	if value, ok := _c.mutation.AgentType(); ok {
-		_spec.SetField(agenttoken.FieldAgentType, field.TypeString, value)
+		_spec.SetField(agenttoken.FieldAgentType, field.TypeEnum, value)
 		_node.AgentType = value
 	}
 	if value, ok := _c.mutation.TokenHash(); ok {

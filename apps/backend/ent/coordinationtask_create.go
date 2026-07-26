@@ -52,13 +52,13 @@ func (_c *CoordinationTaskCreate) SetNillableParentTaskID(v *uuid.UUID) *Coordin
 }
 
 // SetKind sets the "kind" field.
-func (_c *CoordinationTaskCreate) SetKind(v string) *CoordinationTaskCreate {
+func (_c *CoordinationTaskCreate) SetKind(v coordinationtask.Kind) *CoordinationTaskCreate {
 	_c.mutation.SetKind(v)
 	return _c
 }
 
 // SetNillableKind sets the "kind" field if the given value is not nil.
-func (_c *CoordinationTaskCreate) SetNillableKind(v *string) *CoordinationTaskCreate {
+func (_c *CoordinationTaskCreate) SetNillableKind(v *coordinationtask.Kind) *CoordinationTaskCreate {
 	if v != nil {
 		_c.SetKind(*v)
 	}
@@ -66,13 +66,13 @@ func (_c *CoordinationTaskCreate) SetNillableKind(v *string) *CoordinationTaskCr
 }
 
 // SetAssigneeRole sets the "assignee_role" field.
-func (_c *CoordinationTaskCreate) SetAssigneeRole(v string) *CoordinationTaskCreate {
+func (_c *CoordinationTaskCreate) SetAssigneeRole(v coordinationtask.AssigneeRole) *CoordinationTaskCreate {
 	_c.mutation.SetAssigneeRole(v)
 	return _c
 }
 
 // SetNillableAssigneeRole sets the "assignee_role" field if the given value is not nil.
-func (_c *CoordinationTaskCreate) SetNillableAssigneeRole(v *string) *CoordinationTaskCreate {
+func (_c *CoordinationTaskCreate) SetNillableAssigneeRole(v *coordinationtask.AssigneeRole) *CoordinationTaskCreate {
 	if v != nil {
 		_c.SetAssigneeRole(*v)
 	}
@@ -146,13 +146,13 @@ func (_c *CoordinationTaskCreate) SetNillableLinkedInvestigationID(v *uuid.UUID)
 }
 
 // SetStatus sets the "status" field.
-func (_c *CoordinationTaskCreate) SetStatus(v string) *CoordinationTaskCreate {
+func (_c *CoordinationTaskCreate) SetStatus(v coordinationtask.Status) *CoordinationTaskCreate {
 	_c.mutation.SetStatus(v)
 	return _c
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_c *CoordinationTaskCreate) SetNillableStatus(v *string) *CoordinationTaskCreate {
+func (_c *CoordinationTaskCreate) SetNillableStatus(v *coordinationtask.Status) *CoordinationTaskCreate {
 	if v != nil {
 		_c.SetStatus(*v)
 	}
@@ -441,8 +441,18 @@ func (_c *CoordinationTaskCreate) check() error {
 	if _, ok := _c.mutation.Kind(); !ok {
 		return &ValidationError{Name: "kind", err: errors.New(`ent: missing required field "CoordinationTask.kind"`)}
 	}
+	if v, ok := _c.mutation.Kind(); ok {
+		if err := coordinationtask.KindValidator(v); err != nil {
+			return &ValidationError{Name: "kind", err: fmt.Errorf(`ent: validator failed for field "CoordinationTask.kind": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.AssigneeRole(); !ok {
 		return &ValidationError{Name: "assignee_role", err: errors.New(`ent: missing required field "CoordinationTask.assignee_role"`)}
+	}
+	if v, ok := _c.mutation.AssigneeRole(); ok {
+		if err := coordinationtask.AssigneeRoleValidator(v); err != nil {
+			return &ValidationError{Name: "assignee_role", err: fmt.Errorf(`ent: validator failed for field "CoordinationTask.assignee_role": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.Goal(); !ok {
 		return &ValidationError{Name: "goal", err: errors.New(`ent: missing required field "CoordinationTask.goal"`)}
@@ -457,6 +467,11 @@ func (_c *CoordinationTaskCreate) check() error {
 	}
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "CoordinationTask.status"`)}
+	}
+	if v, ok := _c.mutation.Status(); ok {
+		if err := coordinationtask.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "CoordinationTask.status": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.Priority(); !ok {
 		return &ValidationError{Name: "priority", err: errors.New(`ent: missing required field "CoordinationTask.priority"`)}
@@ -516,11 +531,11 @@ func (_c *CoordinationTaskCreate) createSpec() (*CoordinationTask, *sqlgraph.Cre
 		_spec.ID.Value = &id
 	}
 	if value, ok := _c.mutation.Kind(); ok {
-		_spec.SetField(coordinationtask.FieldKind, field.TypeString, value)
+		_spec.SetField(coordinationtask.FieldKind, field.TypeEnum, value)
 		_node.Kind = value
 	}
 	if value, ok := _c.mutation.AssigneeRole(); ok {
-		_spec.SetField(coordinationtask.FieldAssigneeRole, field.TypeString, value)
+		_spec.SetField(coordinationtask.FieldAssigneeRole, field.TypeEnum, value)
 		_node.AssigneeRole = value
 	}
 	if value, ok := _c.mutation.AssigneeAgentID(); ok {
@@ -548,7 +563,7 @@ func (_c *CoordinationTaskCreate) createSpec() (*CoordinationTask, *sqlgraph.Cre
 		_node.ResultSchema = value
 	}
 	if value, ok := _c.mutation.Status(); ok {
-		_spec.SetField(coordinationtask.FieldStatus, field.TypeString, value)
+		_spec.SetField(coordinationtask.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
 	}
 	if value, ok := _c.mutation.Priority(); ok {

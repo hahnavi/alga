@@ -65,10 +65,14 @@ func newPGPostMortemStore(client *ent.Client, actionItemStore ActionItemStore) P
 func (s *pgPostMortemStore) Create(ctx context.Context, record *PostMortemRecord) (*PostMortemRecord, error) {
 	now := time.Now().UTC()
 
+	if record.Status == "" {
+		record.Status = "draft"
+	}
+
 	b := s.client.PostMortem.Create().
 		SetIncidentID(record.IncidentID).
 		SetTitle(record.Title).
-		SetStatus(record.Status).
+		SetStatus(entpostmortem.Status(record.Status)).
 		SetSummary(record.Summary).
 		SetRootCause(record.RootCause).
 		SetImpact(record.Impact).
@@ -119,7 +123,7 @@ func (s *pgPostMortemStore) GetByID(ctx context.Context, id uuid.UUID) (*PostMor
 func (s *pgPostMortemStore) Update(ctx context.Context, id uuid.UUID, record *PostMortemRecord) (*PostMortemRecord, error) {
 	b := s.client.PostMortem.UpdateOneID(id).
 		SetTitle(record.Title).
-		SetStatus(record.Status).
+		SetStatus(entpostmortem.Status(record.Status)).
 		SetSummary(record.Summary).
 		SetRootCause(record.RootCause).
 		SetImpact(record.Impact).
@@ -152,7 +156,7 @@ func (s *pgPostMortemStore) Update(ctx context.Context, id uuid.UUID, record *Po
 
 func (s *pgPostMortemStore) UpdateStatus(ctx context.Context, id uuid.UUID, status string, approvedBy *uuid.UUID) (*PostMortemRecord, error) {
 	b := s.client.PostMortem.UpdateOneID(id).
-		SetStatus(status).
+		SetStatus(entpostmortem.Status(status)).
 		SetUpdatedAt(time.Now().UTC())
 
 	if approvedBy != nil {
@@ -185,7 +189,7 @@ func (s *pgPostMortemStore) List(ctx context.Context, filter PostMortemListFilte
 
 	var preds []predicate.PostMortem
 	if filter.Status != "" {
-		preds = append(preds, entpostmortem.StatusEQ(filter.Status))
+		preds = append(preds, entpostmortem.StatusEQ(entpostmortem.Status(filter.Status)))
 	}
 
 	total, err := s.client.PostMortem.Query().Where(preds...).Count(ctx)
@@ -228,7 +232,7 @@ func (s *pgPostMortemStore) toRecord(ctx context.Context, pm *ent.PostMortem) (*
 		ID:                  pm.ID,
 		IncidentID:          pm.IncidentID,
 		Title:               pm.Title,
-		Status:              pm.Status,
+		Status:              string(pm.Status),
 		Summary:             pm.Summary,
 		Timeline:            pm.Timeline,
 		RootCause:           pm.RootCause,

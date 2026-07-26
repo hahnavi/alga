@@ -25,7 +25,7 @@ func (TeamMember) Fields() []ent.Field {
 		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
 		field.UUID("team_id", uuid.UUID{}),
 		field.UUID("user_id", uuid.UUID{}),
-		field.String("role").Default("member"),
+		field.Enum("role").Values("member", "lead").Default("member"),
 		field.Time("created_at").Default(timeNow),
 	}
 }

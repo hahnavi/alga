@@ -31,16 +31,16 @@ func (_u *InvestigationThreadMessageUpdate) Where(ps ...predicate.InvestigationT
 	return _u
 }
 
-// SetThreadUUID sets the "thread_uuid" field.
-func (_u *InvestigationThreadMessageUpdate) SetThreadUUID(v uuid.UUID) *InvestigationThreadMessageUpdate {
-	_u.mutation.SetThreadUUID(v)
+// SetThreadID sets the "thread_id" field.
+func (_u *InvestigationThreadMessageUpdate) SetThreadID(v uuid.UUID) *InvestigationThreadMessageUpdate {
+	_u.mutation.SetThreadID(v)
 	return _u
 }
 
-// SetNillableThreadUUID sets the "thread_uuid" field if the given value is not nil.
-func (_u *InvestigationThreadMessageUpdate) SetNillableThreadUUID(v *uuid.UUID) *InvestigationThreadMessageUpdate {
+// SetNillableThreadID sets the "thread_id" field if the given value is not nil.
+func (_u *InvestigationThreadMessageUpdate) SetNillableThreadID(v *uuid.UUID) *InvestigationThreadMessageUpdate {
 	if v != nil {
-		_u.SetThreadUUID(*v)
+		_u.SetThreadID(*v)
 	}
 	return _u
 }
@@ -273,12 +273,6 @@ func (_u *InvestigationThreadMessageUpdate) SetUpdatedAt(v time.Time) *Investiga
 	return _u
 }
 
-// SetThreadID sets the "thread" edge to the InvestigationThread entity by ID.
-func (_u *InvestigationThreadMessageUpdate) SetThreadID(id uuid.UUID) *InvestigationThreadMessageUpdate {
-	_u.mutation.SetThreadID(id)
-	return _u
-}
-
 // SetThread sets the "thread" edge to the InvestigationThread entity.
 func (_u *InvestigationThreadMessageUpdate) SetThread(v *InvestigationThread) *InvestigationThreadMessageUpdate {
 	return _u.SetThreadID(v.ID)
@@ -473,16 +467,16 @@ type InvestigationThreadMessageUpdateOne struct {
 	mutation *InvestigationThreadMessageMutation
 }
 
-// SetThreadUUID sets the "thread_uuid" field.
-func (_u *InvestigationThreadMessageUpdateOne) SetThreadUUID(v uuid.UUID) *InvestigationThreadMessageUpdateOne {
-	_u.mutation.SetThreadUUID(v)
+// SetThreadID sets the "thread_id" field.
+func (_u *InvestigationThreadMessageUpdateOne) SetThreadID(v uuid.UUID) *InvestigationThreadMessageUpdateOne {
+	_u.mutation.SetThreadID(v)
 	return _u
 }
 
-// SetNillableThreadUUID sets the "thread_uuid" field if the given value is not nil.
-func (_u *InvestigationThreadMessageUpdateOne) SetNillableThreadUUID(v *uuid.UUID) *InvestigationThreadMessageUpdateOne {
+// SetNillableThreadID sets the "thread_id" field if the given value is not nil.
+func (_u *InvestigationThreadMessageUpdateOne) SetNillableThreadID(v *uuid.UUID) *InvestigationThreadMessageUpdateOne {
 	if v != nil {
-		_u.SetThreadUUID(*v)
+		_u.SetThreadID(*v)
 	}
 	return _u
 }
@@ -712,12 +706,6 @@ func (_u *InvestigationThreadMessageUpdateOne) SetNillableCreatedAt(v *time.Time
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *InvestigationThreadMessageUpdateOne) SetUpdatedAt(v time.Time) *InvestigationThreadMessageUpdateOne {
 	_u.mutation.SetUpdatedAt(v)
-	return _u
-}
-
-// SetThreadID sets the "thread" edge to the InvestigationThread entity by ID.
-func (_u *InvestigationThreadMessageUpdateOne) SetThreadID(id uuid.UUID) *InvestigationThreadMessageUpdateOne {
-	_u.mutation.SetThreadID(id)
 	return _u
 }
 

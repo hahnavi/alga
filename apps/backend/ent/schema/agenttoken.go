@@ -24,7 +24,7 @@ func (AgentToken) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
 		field.String("name").NotEmpty(),
-		field.String("agent_type").Default("hermes"),
+		field.Enum("agent_type").Values("hermes", "openclaw", "other").Default("hermes"),
 		field.String("token_hash").Unique().NotEmpty().Sensitive(),
 		field.String("lookup_prefix").NotEmpty(),
 		field.Time("created_at").Default(timeNow),

@@ -29,7 +29,7 @@ func (CredentialProvider) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
 		field.String("name").NotEmpty(),
-		field.String("type").Default("internal"),
+		field.Enum("type").Values("internal", "hashicorp_vault", "aws_secrets_manager", "gcp_secret_manager", "azure_key_vault").Default("internal"),
 		// config_encrypted holds the provider-specific connection config as an
 		// encrypted JSON blob (e.g. vault address + token, aws region). The
 		// "internal" provider leaves this empty.

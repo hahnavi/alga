@@ -25,7 +25,7 @@ func (User) Fields() []ent.Field {
 		field.UUID("id", uuid.UUID{}).Default(func() uuid.UUID { return uuid.Must(uuid.NewV7()) }).StorageKey("id"),
 		field.String("email").Unique().NotEmpty(),
 		field.String("password").Sensitive().NotEmpty(),
-		field.String("role").Default("viewer"),
+		field.Enum("role").Values("admin", "operator", "viewer").Default("viewer"),
 		field.String("full_name").Optional().Default(""),
 		field.String("phone").Optional().Default(""),
 		field.String("phone_country").Optional().Default(""),

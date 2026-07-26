@@ -71,11 +71,6 @@ func Description(v string) predicate.StatusPage {
 	return predicate.StatusPage(sql.FieldEQ(FieldDescription, v))
 }
 
-// Visibility applies equality check predicate on the "visibility" field. It's identical to VisibilityEQ.
-func Visibility(v string) predicate.StatusPage {
-	return predicate.StatusPage(sql.FieldEQ(FieldVisibility, v))
-}
-
 // Enabled applies equality check predicate on the "enabled" field. It's identical to EnabledEQ.
 func Enabled(v bool) predicate.StatusPage {
 	return predicate.StatusPage(sql.FieldEQ(FieldEnabled, v))
@@ -292,68 +287,23 @@ func DescriptionContainsFold(v string) predicate.StatusPage {
 }
 
 // VisibilityEQ applies the EQ predicate on the "visibility" field.
-func VisibilityEQ(v string) predicate.StatusPage {
+func VisibilityEQ(v Visibility) predicate.StatusPage {
 	return predicate.StatusPage(sql.FieldEQ(FieldVisibility, v))
 }
 
 // VisibilityNEQ applies the NEQ predicate on the "visibility" field.
-func VisibilityNEQ(v string) predicate.StatusPage {
+func VisibilityNEQ(v Visibility) predicate.StatusPage {
 	return predicate.StatusPage(sql.FieldNEQ(FieldVisibility, v))
 }
 
 // VisibilityIn applies the In predicate on the "visibility" field.
-func VisibilityIn(vs ...string) predicate.StatusPage {
+func VisibilityIn(vs ...Visibility) predicate.StatusPage {
 	return predicate.StatusPage(sql.FieldIn(FieldVisibility, vs...))
 }
 
 // VisibilityNotIn applies the NotIn predicate on the "visibility" field.
-func VisibilityNotIn(vs ...string) predicate.StatusPage {
+func VisibilityNotIn(vs ...Visibility) predicate.StatusPage {
 	return predicate.StatusPage(sql.FieldNotIn(FieldVisibility, vs...))
-}
-
-// VisibilityGT applies the GT predicate on the "visibility" field.
-func VisibilityGT(v string) predicate.StatusPage {
-	return predicate.StatusPage(sql.FieldGT(FieldVisibility, v))
-}
-
-// VisibilityGTE applies the GTE predicate on the "visibility" field.
-func VisibilityGTE(v string) predicate.StatusPage {
-	return predicate.StatusPage(sql.FieldGTE(FieldVisibility, v))
-}
-
-// VisibilityLT applies the LT predicate on the "visibility" field.
-func VisibilityLT(v string) predicate.StatusPage {
-	return predicate.StatusPage(sql.FieldLT(FieldVisibility, v))
-}
-
-// VisibilityLTE applies the LTE predicate on the "visibility" field.
-func VisibilityLTE(v string) predicate.StatusPage {
-	return predicate.StatusPage(sql.FieldLTE(FieldVisibility, v))
-}
-
-// VisibilityContains applies the Contains predicate on the "visibility" field.
-func VisibilityContains(v string) predicate.StatusPage {
-	return predicate.StatusPage(sql.FieldContains(FieldVisibility, v))
-}
-
-// VisibilityHasPrefix applies the HasPrefix predicate on the "visibility" field.
-func VisibilityHasPrefix(v string) predicate.StatusPage {
-	return predicate.StatusPage(sql.FieldHasPrefix(FieldVisibility, v))
-}
-
-// VisibilityHasSuffix applies the HasSuffix predicate on the "visibility" field.
-func VisibilityHasSuffix(v string) predicate.StatusPage {
-	return predicate.StatusPage(sql.FieldHasSuffix(FieldVisibility, v))
-}
-
-// VisibilityEqualFold applies the EqualFold predicate on the "visibility" field.
-func VisibilityEqualFold(v string) predicate.StatusPage {
-	return predicate.StatusPage(sql.FieldEqualFold(FieldVisibility, v))
-}
-
-// VisibilityContainsFold applies the ContainsFold predicate on the "visibility" field.
-func VisibilityContainsFold(v string) predicate.StatusPage {
-	return predicate.StatusPage(sql.FieldContainsFold(FieldVisibility, v))
 }
 
 // EnabledEQ applies the EQ predicate on the "enabled" field.

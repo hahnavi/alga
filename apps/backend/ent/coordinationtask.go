@@ -26,9 +26,9 @@ type CoordinationTask struct {
 	// ParentTaskID holds the value of the "parent_task_id" field.
 	ParentTaskID *uuid.UUID `json:"parent_task_id,omitempty"`
 	// Kind holds the value of the "kind" field.
-	Kind string `json:"kind,omitempty"`
+	Kind coordinationtask.Kind `json:"kind,omitempty"`
 	// AssigneeRole holds the value of the "assignee_role" field.
-	AssigneeRole string `json:"assignee_role,omitempty"`
+	AssigneeRole coordinationtask.AssigneeRole `json:"assignee_role,omitempty"`
 	// AssigneeAgentID holds the value of the "assignee_agent_id" field.
 	AssigneeAgentID string `json:"assignee_agent_id,omitempty"`
 	// AssigneeAgentName holds the value of the "assignee_agent_name" field.
@@ -44,7 +44,7 @@ type CoordinationTask struct {
 	// LinkedInvestigationID holds the value of the "linked_investigation_id" field.
 	LinkedInvestigationID *uuid.UUID `json:"linked_investigation_id,omitempty"`
 	// Status holds the value of the "status" field.
-	Status string `json:"status,omitempty"`
+	Status coordinationtask.Status `json:"status,omitempty"`
 	// Priority holds the value of the "priority" field.
 	Priority int `json:"priority,omitempty"`
 	// DueAt holds the value of the "due_at" field.
@@ -184,13 +184,13 @@ func (_m *CoordinationTask) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field kind", values[i])
 			} else if value.Valid {
-				_m.Kind = value.String
+				_m.Kind = coordinationtask.Kind(value.String)
 			}
 		case coordinationtask.FieldAssigneeRole:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field assignee_role", values[i])
 			} else if value.Valid {
-				_m.AssigneeRole = value.String
+				_m.AssigneeRole = coordinationtask.AssigneeRole(value.String)
 			}
 		case coordinationtask.FieldAssigneeAgentID:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -245,7 +245,7 @@ func (_m *CoordinationTask) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
-				_m.Status = value.String
+				_m.Status = coordinationtask.Status(value.String)
 			}
 		case coordinationtask.FieldPriority:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -377,10 +377,10 @@ func (_m *CoordinationTask) String() string {
 	}
 	builder.WriteString(", ")
 	builder.WriteString("kind=")
-	builder.WriteString(_m.Kind)
+	builder.WriteString(fmt.Sprintf("%v", _m.Kind))
 	builder.WriteString(", ")
 	builder.WriteString("assignee_role=")
-	builder.WriteString(_m.AssigneeRole)
+	builder.WriteString(fmt.Sprintf("%v", _m.AssigneeRole))
 	builder.WriteString(", ")
 	builder.WriteString("assignee_agent_id=")
 	builder.WriteString(_m.AssigneeAgentID)
@@ -406,7 +406,7 @@ func (_m *CoordinationTask) String() string {
 	}
 	builder.WriteString(", ")
 	builder.WriteString("status=")
-	builder.WriteString(_m.Status)
+	builder.WriteString(fmt.Sprintf("%v", _m.Status))
 	builder.WriteString(", ")
 	builder.WriteString("priority=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Priority))

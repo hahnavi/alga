@@ -50,13 +50,13 @@ func (_u *AgentTokenUpdate) SetNillableName(v *string) *AgentTokenUpdate {
 }
 
 // SetAgentType sets the "agent_type" field.
-func (_u *AgentTokenUpdate) SetAgentType(v string) *AgentTokenUpdate {
+func (_u *AgentTokenUpdate) SetAgentType(v agenttoken.AgentType) *AgentTokenUpdate {
 	_u.mutation.SetAgentType(v)
 	return _u
 }
 
 // SetNillableAgentType sets the "agent_type" field if the given value is not nil.
-func (_u *AgentTokenUpdate) SetNillableAgentType(v *string) *AgentTokenUpdate {
+func (_u *AgentTokenUpdate) SetNillableAgentType(v *agenttoken.AgentType) *AgentTokenUpdate {
 	if v != nil {
 		_u.SetAgentType(*v)
 	}
@@ -504,6 +504,11 @@ func (_u *AgentTokenUpdate) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "AgentToken.name": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.AgentType(); ok {
+		if err := agenttoken.AgentTypeValidator(v); err != nil {
+			return &ValidationError{Name: "agent_type", err: fmt.Errorf(`ent: validator failed for field "AgentToken.agent_type": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.TokenHash(); ok {
 		if err := agenttoken.TokenHashValidator(v); err != nil {
 			return &ValidationError{Name: "token_hash", err: fmt.Errorf(`ent: validator failed for field "AgentToken.token_hash": %w`, err)}
@@ -533,7 +538,7 @@ func (_u *AgentTokenUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 		_spec.SetField(agenttoken.FieldName, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.AgentType(); ok {
-		_spec.SetField(agenttoken.FieldAgentType, field.TypeString, value)
+		_spec.SetField(agenttoken.FieldAgentType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.TokenHash(); ok {
 		_spec.SetField(agenttoken.FieldTokenHash, field.TypeString, value)
@@ -901,13 +906,13 @@ func (_u *AgentTokenUpdateOne) SetNillableName(v *string) *AgentTokenUpdateOne {
 }
 
 // SetAgentType sets the "agent_type" field.
-func (_u *AgentTokenUpdateOne) SetAgentType(v string) *AgentTokenUpdateOne {
+func (_u *AgentTokenUpdateOne) SetAgentType(v agenttoken.AgentType) *AgentTokenUpdateOne {
 	_u.mutation.SetAgentType(v)
 	return _u
 }
 
 // SetNillableAgentType sets the "agent_type" field if the given value is not nil.
-func (_u *AgentTokenUpdateOne) SetNillableAgentType(v *string) *AgentTokenUpdateOne {
+func (_u *AgentTokenUpdateOne) SetNillableAgentType(v *agenttoken.AgentType) *AgentTokenUpdateOne {
 	if v != nil {
 		_u.SetAgentType(*v)
 	}
@@ -1368,6 +1373,11 @@ func (_u *AgentTokenUpdateOne) check() error {
 			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "AgentToken.name": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.AgentType(); ok {
+		if err := agenttoken.AgentTypeValidator(v); err != nil {
+			return &ValidationError{Name: "agent_type", err: fmt.Errorf(`ent: validator failed for field "AgentToken.agent_type": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.TokenHash(); ok {
 		if err := agenttoken.TokenHashValidator(v); err != nil {
 			return &ValidationError{Name: "token_hash", err: fmt.Errorf(`ent: validator failed for field "AgentToken.token_hash": %w`, err)}
@@ -1414,7 +1424,7 @@ func (_u *AgentTokenUpdateOne) sqlSave(ctx context.Context) (_node *AgentToken, 
 		_spec.SetField(agenttoken.FieldName, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.AgentType(); ok {
-		_spec.SetField(agenttoken.FieldAgentType, field.TypeString, value)
+		_spec.SetField(agenttoken.FieldAgentType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.TokenHash(); ok {
 		_spec.SetField(agenttoken.FieldTokenHash, field.TypeString, value)

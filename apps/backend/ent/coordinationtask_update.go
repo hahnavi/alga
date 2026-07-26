@@ -72,13 +72,13 @@ func (_u *CoordinationTaskUpdate) ClearParentTaskID() *CoordinationTaskUpdate {
 }
 
 // SetKind sets the "kind" field.
-func (_u *CoordinationTaskUpdate) SetKind(v string) *CoordinationTaskUpdate {
+func (_u *CoordinationTaskUpdate) SetKind(v coordinationtask.Kind) *CoordinationTaskUpdate {
 	_u.mutation.SetKind(v)
 	return _u
 }
 
 // SetNillableKind sets the "kind" field if the given value is not nil.
-func (_u *CoordinationTaskUpdate) SetNillableKind(v *string) *CoordinationTaskUpdate {
+func (_u *CoordinationTaskUpdate) SetNillableKind(v *coordinationtask.Kind) *CoordinationTaskUpdate {
 	if v != nil {
 		_u.SetKind(*v)
 	}
@@ -86,13 +86,13 @@ func (_u *CoordinationTaskUpdate) SetNillableKind(v *string) *CoordinationTaskUp
 }
 
 // SetAssigneeRole sets the "assignee_role" field.
-func (_u *CoordinationTaskUpdate) SetAssigneeRole(v string) *CoordinationTaskUpdate {
+func (_u *CoordinationTaskUpdate) SetAssigneeRole(v coordinationtask.AssigneeRole) *CoordinationTaskUpdate {
 	_u.mutation.SetAssigneeRole(v)
 	return _u
 }
 
 // SetNillableAssigneeRole sets the "assignee_role" field if the given value is not nil.
-func (_u *CoordinationTaskUpdate) SetNillableAssigneeRole(v *string) *CoordinationTaskUpdate {
+func (_u *CoordinationTaskUpdate) SetNillableAssigneeRole(v *coordinationtask.AssigneeRole) *CoordinationTaskUpdate {
 	if v != nil {
 		_u.SetAssigneeRole(*v)
 	}
@@ -204,13 +204,13 @@ func (_u *CoordinationTaskUpdate) ClearLinkedInvestigationID() *CoordinationTask
 }
 
 // SetStatus sets the "status" field.
-func (_u *CoordinationTaskUpdate) SetStatus(v string) *CoordinationTaskUpdate {
+func (_u *CoordinationTaskUpdate) SetStatus(v coordinationtask.Status) *CoordinationTaskUpdate {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *CoordinationTaskUpdate) SetNillableStatus(v *string) *CoordinationTaskUpdate {
+func (_u *CoordinationTaskUpdate) SetNillableStatus(v *coordinationtask.Status) *CoordinationTaskUpdate {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -511,9 +511,24 @@ func (_u *CoordinationTaskUpdate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *CoordinationTaskUpdate) check() error {
+	if v, ok := _u.mutation.Kind(); ok {
+		if err := coordinationtask.KindValidator(v); err != nil {
+			return &ValidationError{Name: "kind", err: fmt.Errorf(`ent: validator failed for field "CoordinationTask.kind": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.AssigneeRole(); ok {
+		if err := coordinationtask.AssigneeRoleValidator(v); err != nil {
+			return &ValidationError{Name: "assignee_role", err: fmt.Errorf(`ent: validator failed for field "CoordinationTask.assignee_role": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Goal(); ok {
 		if err := coordinationtask.GoalValidator(v); err != nil {
 			return &ValidationError{Name: "goal", err: fmt.Errorf(`ent: validator failed for field "CoordinationTask.goal": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := coordinationtask.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "CoordinationTask.status": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.Priority(); ok {
@@ -542,10 +557,10 @@ func (_u *CoordinationTaskUpdate) sqlSave(ctx context.Context) (_node int, err e
 		}
 	}
 	if value, ok := _u.mutation.Kind(); ok {
-		_spec.SetField(coordinationtask.FieldKind, field.TypeString, value)
+		_spec.SetField(coordinationtask.FieldKind, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.AssigneeRole(); ok {
-		_spec.SetField(coordinationtask.FieldAssigneeRole, field.TypeString, value)
+		_spec.SetField(coordinationtask.FieldAssigneeRole, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.AssigneeAgentID(); ok {
 		_spec.SetField(coordinationtask.FieldAssigneeAgentID, field.TypeString, value)
@@ -578,7 +593,7 @@ func (_u *CoordinationTaskUpdate) sqlSave(ctx context.Context) (_node int, err e
 		_spec.ClearField(coordinationtask.FieldResultSchema, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(coordinationtask.FieldStatus, field.TypeString, value)
+		_spec.SetField(coordinationtask.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Priority(); ok {
 		_spec.SetField(coordinationtask.FieldPriority, field.TypeInt, value)
@@ -827,13 +842,13 @@ func (_u *CoordinationTaskUpdateOne) ClearParentTaskID() *CoordinationTaskUpdate
 }
 
 // SetKind sets the "kind" field.
-func (_u *CoordinationTaskUpdateOne) SetKind(v string) *CoordinationTaskUpdateOne {
+func (_u *CoordinationTaskUpdateOne) SetKind(v coordinationtask.Kind) *CoordinationTaskUpdateOne {
 	_u.mutation.SetKind(v)
 	return _u
 }
 
 // SetNillableKind sets the "kind" field if the given value is not nil.
-func (_u *CoordinationTaskUpdateOne) SetNillableKind(v *string) *CoordinationTaskUpdateOne {
+func (_u *CoordinationTaskUpdateOne) SetNillableKind(v *coordinationtask.Kind) *CoordinationTaskUpdateOne {
 	if v != nil {
 		_u.SetKind(*v)
 	}
@@ -841,13 +856,13 @@ func (_u *CoordinationTaskUpdateOne) SetNillableKind(v *string) *CoordinationTas
 }
 
 // SetAssigneeRole sets the "assignee_role" field.
-func (_u *CoordinationTaskUpdateOne) SetAssigneeRole(v string) *CoordinationTaskUpdateOne {
+func (_u *CoordinationTaskUpdateOne) SetAssigneeRole(v coordinationtask.AssigneeRole) *CoordinationTaskUpdateOne {
 	_u.mutation.SetAssigneeRole(v)
 	return _u
 }
 
 // SetNillableAssigneeRole sets the "assignee_role" field if the given value is not nil.
-func (_u *CoordinationTaskUpdateOne) SetNillableAssigneeRole(v *string) *CoordinationTaskUpdateOne {
+func (_u *CoordinationTaskUpdateOne) SetNillableAssigneeRole(v *coordinationtask.AssigneeRole) *CoordinationTaskUpdateOne {
 	if v != nil {
 		_u.SetAssigneeRole(*v)
 	}
@@ -959,13 +974,13 @@ func (_u *CoordinationTaskUpdateOne) ClearLinkedInvestigationID() *CoordinationT
 }
 
 // SetStatus sets the "status" field.
-func (_u *CoordinationTaskUpdateOne) SetStatus(v string) *CoordinationTaskUpdateOne {
+func (_u *CoordinationTaskUpdateOne) SetStatus(v coordinationtask.Status) *CoordinationTaskUpdateOne {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *CoordinationTaskUpdateOne) SetNillableStatus(v *string) *CoordinationTaskUpdateOne {
+func (_u *CoordinationTaskUpdateOne) SetNillableStatus(v *coordinationtask.Status) *CoordinationTaskUpdateOne {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -1279,9 +1294,24 @@ func (_u *CoordinationTaskUpdateOne) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *CoordinationTaskUpdateOne) check() error {
+	if v, ok := _u.mutation.Kind(); ok {
+		if err := coordinationtask.KindValidator(v); err != nil {
+			return &ValidationError{Name: "kind", err: fmt.Errorf(`ent: validator failed for field "CoordinationTask.kind": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.AssigneeRole(); ok {
+		if err := coordinationtask.AssigneeRoleValidator(v); err != nil {
+			return &ValidationError{Name: "assignee_role", err: fmt.Errorf(`ent: validator failed for field "CoordinationTask.assignee_role": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Goal(); ok {
 		if err := coordinationtask.GoalValidator(v); err != nil {
 			return &ValidationError{Name: "goal", err: fmt.Errorf(`ent: validator failed for field "CoordinationTask.goal": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := coordinationtask.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "CoordinationTask.status": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.Priority(); ok {
@@ -1327,10 +1357,10 @@ func (_u *CoordinationTaskUpdateOne) sqlSave(ctx context.Context) (_node *Coordi
 		}
 	}
 	if value, ok := _u.mutation.Kind(); ok {
-		_spec.SetField(coordinationtask.FieldKind, field.TypeString, value)
+		_spec.SetField(coordinationtask.FieldKind, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.AssigneeRole(); ok {
-		_spec.SetField(coordinationtask.FieldAssigneeRole, field.TypeString, value)
+		_spec.SetField(coordinationtask.FieldAssigneeRole, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.AssigneeAgentID(); ok {
 		_spec.SetField(coordinationtask.FieldAssigneeAgentID, field.TypeString, value)
@@ -1363,7 +1393,7 @@ func (_u *CoordinationTaskUpdateOne) sqlSave(ctx context.Context) (_node *Coordi
 		_spec.ClearField(coordinationtask.FieldResultSchema, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(coordinationtask.FieldStatus, field.TypeString, value)
+		_spec.SetField(coordinationtask.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Priority(); ok {
 		_spec.SetField(coordinationtask.FieldPriority, field.TypeInt, value)

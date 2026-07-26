@@ -115,13 +115,13 @@ func (_u *StatusPageComponentUpdate) AddDisplayOrder(v int) *StatusPageComponent
 }
 
 // SetStatus sets the "status" field.
-func (_u *StatusPageComponentUpdate) SetStatus(v string) *StatusPageComponentUpdate {
+func (_u *StatusPageComponentUpdate) SetStatus(v statuspagecomponent.Status) *StatusPageComponentUpdate {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *StatusPageComponentUpdate) SetNillableStatus(v *string) *StatusPageComponentUpdate {
+func (_u *StatusPageComponentUpdate) SetNillableStatus(v *statuspagecomponent.Status) *StatusPageComponentUpdate {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -223,6 +223,11 @@ func (_u *StatusPageComponentUpdate) check() error {
 			return &ValidationError{Name: "display_order", err: fmt.Errorf(`ent: validator failed for field "StatusPageComponent.display_order": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := statuspagecomponent.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "StatusPageComponent.status": %w`, err)}
+		}
+	}
 	if _u.mutation.StatusPageCleared() && len(_u.mutation.StatusPageIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "StatusPageComponent.status_page"`)
 	}
@@ -254,7 +259,7 @@ func (_u *StatusPageComponentUpdate) sqlSave(ctx context.Context) (_node int, er
 		_spec.AddField(statuspagecomponent.FieldDisplayOrder, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(statuspagecomponent.FieldStatus, field.TypeString, value)
+		_spec.SetField(statuspagecomponent.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.CreatedAt(); ok {
 		_spec.SetField(statuspagecomponent.FieldCreatedAt, field.TypeTime, value)
@@ -424,13 +429,13 @@ func (_u *StatusPageComponentUpdateOne) AddDisplayOrder(v int) *StatusPageCompon
 }
 
 // SetStatus sets the "status" field.
-func (_u *StatusPageComponentUpdateOne) SetStatus(v string) *StatusPageComponentUpdateOne {
+func (_u *StatusPageComponentUpdateOne) SetStatus(v statuspagecomponent.Status) *StatusPageComponentUpdateOne {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *StatusPageComponentUpdateOne) SetNillableStatus(v *string) *StatusPageComponentUpdateOne {
+func (_u *StatusPageComponentUpdateOne) SetNillableStatus(v *statuspagecomponent.Status) *StatusPageComponentUpdateOne {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -545,6 +550,11 @@ func (_u *StatusPageComponentUpdateOne) check() error {
 			return &ValidationError{Name: "display_order", err: fmt.Errorf(`ent: validator failed for field "StatusPageComponent.display_order": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := statuspagecomponent.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "StatusPageComponent.status": %w`, err)}
+		}
+	}
 	if _u.mutation.StatusPageCleared() && len(_u.mutation.StatusPageIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "StatusPageComponent.status_page"`)
 	}
@@ -593,7 +603,7 @@ func (_u *StatusPageComponentUpdateOne) sqlSave(ctx context.Context) (_node *Sta
 		_spec.AddField(statuspagecomponent.FieldDisplayOrder, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(statuspagecomponent.FieldStatus, field.TypeString, value)
+		_spec.SetField(statuspagecomponent.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.CreatedAt(); ok {
 		_spec.SetField(statuspagecomponent.FieldCreatedAt, field.TypeTime, value)

@@ -3,6 +3,7 @@
 package agentask
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -106,25 +107,98 @@ func ValidColumn(column string) bool {
 var (
 	// FromAgentNameValidator is a validator for the "from_agent_name" field. It is called by the builders before save.
 	FromAgentNameValidator func(string) error
-	// DefaultFromAgentType holds the default value on creation for the "from_agent_type" field.
-	DefaultFromAgentType string
 	// DefaultInvestigationID holds the default value on creation for the "investigation_id" field.
 	DefaultInvestigationID string
-	// DefaultToAgentType holds the default value on creation for the "to_agent_type" field.
-	DefaultToAgentType string
 	// QuestionValidator is a validator for the "question" field. It is called by the builders before save.
 	QuestionValidator func(string) error
 	// DefaultReply holds the default value on creation for the "reply" field.
 	DefaultReply string
 	// DefaultRepliedByAgentName holds the default value on creation for the "replied_by_agent_name" field.
 	DefaultRepliedByAgentName string
-	// DefaultStatus holds the default value on creation for the "status" field.
-	DefaultStatus string
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// FromAgentType defines the type for the "from_agent_type" enum field.
+type FromAgentType string
+
+// FromAgentTypeHermes is the default value of the FromAgentType enum.
+const DefaultFromAgentType = FromAgentTypeHermes
+
+// FromAgentType values.
+const (
+	FromAgentTypeHermes   FromAgentType = "hermes"
+	FromAgentTypeOpenclaw FromAgentType = "openclaw"
+	FromAgentTypeOther    FromAgentType = "other"
+)
+
+func (fat FromAgentType) String() string {
+	return string(fat)
+}
+
+// FromAgentTypeValidator is a validator for the "from_agent_type" field enum values. It is called by the builders before save.
+func FromAgentTypeValidator(fat FromAgentType) error {
+	switch fat {
+	case FromAgentTypeHermes, FromAgentTypeOpenclaw, FromAgentTypeOther:
+		return nil
+	default:
+		return fmt.Errorf("agentask: invalid enum value for from_agent_type field: %q", fat)
+	}
+}
+
+// ToAgentType defines the type for the "to_agent_type" enum field.
+type ToAgentType string
+
+// ToAgentType values.
+const (
+	ToAgentTypeHermes   ToAgentType = "hermes"
+	ToAgentTypeOpenclaw ToAgentType = "openclaw"
+	ToAgentTypeOther    ToAgentType = "other"
+)
+
+func (tat ToAgentType) String() string {
+	return string(tat)
+}
+
+// ToAgentTypeValidator is a validator for the "to_agent_type" field enum values. It is called by the builders before save.
+func ToAgentTypeValidator(tat ToAgentType) error {
+	switch tat {
+	case ToAgentTypeHermes, ToAgentTypeOpenclaw, ToAgentTypeOther:
+		return nil
+	default:
+		return fmt.Errorf("agentask: invalid enum value for to_agent_type field: %q", tat)
+	}
+}
+
+// Status defines the type for the "status" enum field.
+type Status string
+
+// StatusPending is the default value of the Status enum.
+const DefaultStatus = StatusPending
+
+// Status values.
+const (
+	StatusPending   Status = "pending"
+	StatusAnswered  Status = "answered"
+	StatusExpired   Status = "expired"
+	StatusCancelled Status = "cancelled"
+)
+
+func (s Status) String() string {
+	return string(s)
+}
+
+// StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
+func StatusValidator(s Status) error {
+	switch s {
+	case StatusPending, StatusAnswered, StatusExpired, StatusCancelled:
+		return nil
+	default:
+		return fmt.Errorf("agentask: invalid enum value for status field: %q", s)
+	}
+}
 
 // OrderOption defines the ordering options for the AgentAsk queries.
 type OrderOption func(*sql.Selector)

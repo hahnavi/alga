@@ -56,14 +56,9 @@ func IDLTE(id uuid.UUID) predicate.AlertInvestigationEvent {
 	return predicate.AlertInvestigationEvent(sql.FieldLTE(FieldID, id))
 }
 
-// AlertInvestigationUUID applies equality check predicate on the "alert_investigation_uuid" field. It's identical to AlertInvestigationUUIDEQ.
-func AlertInvestigationUUID(v uuid.UUID) predicate.AlertInvestigationEvent {
-	return predicate.AlertInvestigationEvent(sql.FieldEQ(FieldAlertInvestigationUUID, v))
-}
-
-// EventType applies equality check predicate on the "event_type" field. It's identical to EventTypeEQ.
-func EventType(v string) predicate.AlertInvestigationEvent {
-	return predicate.AlertInvestigationEvent(sql.FieldEQ(FieldEventType, v))
+// AlertInvestigationID applies equality check predicate on the "alert_investigation_id" field. It's identical to AlertInvestigationIDEQ.
+func AlertInvestigationID(v uuid.UUID) predicate.AlertInvestigationEvent {
+	return predicate.AlertInvestigationEvent(sql.FieldEQ(FieldAlertInvestigationID, v))
 }
 
 // Reason applies equality check predicate on the "reason" field. It's identical to ReasonEQ.
@@ -106,89 +101,44 @@ func CreatedAt(v time.Time) predicate.AlertInvestigationEvent {
 	return predicate.AlertInvestigationEvent(sql.FieldEQ(FieldCreatedAt, v))
 }
 
-// AlertInvestigationUUIDEQ applies the EQ predicate on the "alert_investigation_uuid" field.
-func AlertInvestigationUUIDEQ(v uuid.UUID) predicate.AlertInvestigationEvent {
-	return predicate.AlertInvestigationEvent(sql.FieldEQ(FieldAlertInvestigationUUID, v))
+// AlertInvestigationIDEQ applies the EQ predicate on the "alert_investigation_id" field.
+func AlertInvestigationIDEQ(v uuid.UUID) predicate.AlertInvestigationEvent {
+	return predicate.AlertInvestigationEvent(sql.FieldEQ(FieldAlertInvestigationID, v))
 }
 
-// AlertInvestigationUUIDNEQ applies the NEQ predicate on the "alert_investigation_uuid" field.
-func AlertInvestigationUUIDNEQ(v uuid.UUID) predicate.AlertInvestigationEvent {
-	return predicate.AlertInvestigationEvent(sql.FieldNEQ(FieldAlertInvestigationUUID, v))
+// AlertInvestigationIDNEQ applies the NEQ predicate on the "alert_investigation_id" field.
+func AlertInvestigationIDNEQ(v uuid.UUID) predicate.AlertInvestigationEvent {
+	return predicate.AlertInvestigationEvent(sql.FieldNEQ(FieldAlertInvestigationID, v))
 }
 
-// AlertInvestigationUUIDIn applies the In predicate on the "alert_investigation_uuid" field.
-func AlertInvestigationUUIDIn(vs ...uuid.UUID) predicate.AlertInvestigationEvent {
-	return predicate.AlertInvestigationEvent(sql.FieldIn(FieldAlertInvestigationUUID, vs...))
+// AlertInvestigationIDIn applies the In predicate on the "alert_investigation_id" field.
+func AlertInvestigationIDIn(vs ...uuid.UUID) predicate.AlertInvestigationEvent {
+	return predicate.AlertInvestigationEvent(sql.FieldIn(FieldAlertInvestigationID, vs...))
 }
 
-// AlertInvestigationUUIDNotIn applies the NotIn predicate on the "alert_investigation_uuid" field.
-func AlertInvestigationUUIDNotIn(vs ...uuid.UUID) predicate.AlertInvestigationEvent {
-	return predicate.AlertInvestigationEvent(sql.FieldNotIn(FieldAlertInvestigationUUID, vs...))
+// AlertInvestigationIDNotIn applies the NotIn predicate on the "alert_investigation_id" field.
+func AlertInvestigationIDNotIn(vs ...uuid.UUID) predicate.AlertInvestigationEvent {
+	return predicate.AlertInvestigationEvent(sql.FieldNotIn(FieldAlertInvestigationID, vs...))
 }
 
 // EventTypeEQ applies the EQ predicate on the "event_type" field.
-func EventTypeEQ(v string) predicate.AlertInvestigationEvent {
+func EventTypeEQ(v EventType) predicate.AlertInvestigationEvent {
 	return predicate.AlertInvestigationEvent(sql.FieldEQ(FieldEventType, v))
 }
 
 // EventTypeNEQ applies the NEQ predicate on the "event_type" field.
-func EventTypeNEQ(v string) predicate.AlertInvestigationEvent {
+func EventTypeNEQ(v EventType) predicate.AlertInvestigationEvent {
 	return predicate.AlertInvestigationEvent(sql.FieldNEQ(FieldEventType, v))
 }
 
 // EventTypeIn applies the In predicate on the "event_type" field.
-func EventTypeIn(vs ...string) predicate.AlertInvestigationEvent {
+func EventTypeIn(vs ...EventType) predicate.AlertInvestigationEvent {
 	return predicate.AlertInvestigationEvent(sql.FieldIn(FieldEventType, vs...))
 }
 
 // EventTypeNotIn applies the NotIn predicate on the "event_type" field.
-func EventTypeNotIn(vs ...string) predicate.AlertInvestigationEvent {
+func EventTypeNotIn(vs ...EventType) predicate.AlertInvestigationEvent {
 	return predicate.AlertInvestigationEvent(sql.FieldNotIn(FieldEventType, vs...))
-}
-
-// EventTypeGT applies the GT predicate on the "event_type" field.
-func EventTypeGT(v string) predicate.AlertInvestigationEvent {
-	return predicate.AlertInvestigationEvent(sql.FieldGT(FieldEventType, v))
-}
-
-// EventTypeGTE applies the GTE predicate on the "event_type" field.
-func EventTypeGTE(v string) predicate.AlertInvestigationEvent {
-	return predicate.AlertInvestigationEvent(sql.FieldGTE(FieldEventType, v))
-}
-
-// EventTypeLT applies the LT predicate on the "event_type" field.
-func EventTypeLT(v string) predicate.AlertInvestigationEvent {
-	return predicate.AlertInvestigationEvent(sql.FieldLT(FieldEventType, v))
-}
-
-// EventTypeLTE applies the LTE predicate on the "event_type" field.
-func EventTypeLTE(v string) predicate.AlertInvestigationEvent {
-	return predicate.AlertInvestigationEvent(sql.FieldLTE(FieldEventType, v))
-}
-
-// EventTypeContains applies the Contains predicate on the "event_type" field.
-func EventTypeContains(v string) predicate.AlertInvestigationEvent {
-	return predicate.AlertInvestigationEvent(sql.FieldContains(FieldEventType, v))
-}
-
-// EventTypeHasPrefix applies the HasPrefix predicate on the "event_type" field.
-func EventTypeHasPrefix(v string) predicate.AlertInvestigationEvent {
-	return predicate.AlertInvestigationEvent(sql.FieldHasPrefix(FieldEventType, v))
-}
-
-// EventTypeHasSuffix applies the HasSuffix predicate on the "event_type" field.
-func EventTypeHasSuffix(v string) predicate.AlertInvestigationEvent {
-	return predicate.AlertInvestigationEvent(sql.FieldHasSuffix(FieldEventType, v))
-}
-
-// EventTypeEqualFold applies the EqualFold predicate on the "event_type" field.
-func EventTypeEqualFold(v string) predicate.AlertInvestigationEvent {
-	return predicate.AlertInvestigationEvent(sql.FieldEqualFold(FieldEventType, v))
-}
-
-// EventTypeContainsFold applies the ContainsFold predicate on the "event_type" field.
-func EventTypeContainsFold(v string) predicate.AlertInvestigationEvent {
-	return predicate.AlertInvestigationEvent(sql.FieldContainsFold(FieldEventType, v))
 }
 
 // ReasonEQ applies the EQ predicate on the "reason" field.

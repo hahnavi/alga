@@ -3,6 +3,7 @@
 package agenttoken
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -130,8 +131,6 @@ func ValidColumn(column string) bool {
 var (
 	// NameValidator is a validator for the "name" field. It is called by the builders before save.
 	NameValidator func(string) error
-	// DefaultAgentType holds the default value on creation for the "agent_type" field.
-	DefaultAgentType string
 	// TokenHashValidator is a validator for the "token_hash" field. It is called by the builders before save.
 	TokenHashValidator func(string) error
 	// LookupPrefixValidator is a validator for the "lookup_prefix" field. It is called by the builders before save.
@@ -151,6 +150,33 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// AgentType defines the type for the "agent_type" enum field.
+type AgentType string
+
+// AgentTypeHermes is the default value of the AgentType enum.
+const DefaultAgentType = AgentTypeHermes
+
+// AgentType values.
+const (
+	AgentTypeHermes   AgentType = "hermes"
+	AgentTypeOpenclaw AgentType = "openclaw"
+	AgentTypeOther    AgentType = "other"
+)
+
+func (at AgentType) String() string {
+	return string(at)
+}
+
+// AgentTypeValidator is a validator for the "agent_type" field enum values. It is called by the builders before save.
+func AgentTypeValidator(at AgentType) error {
+	switch at {
+	case AgentTypeHermes, AgentTypeOpenclaw, AgentTypeOther:
+		return nil
+	default:
+		return fmt.Errorf("agenttoken: invalid enum value for agent_type field: %q", at)
+	}
+}
 
 // OrderOption defines the ordering options for the AgentToken queries.
 type OrderOption func(*sql.Selector)

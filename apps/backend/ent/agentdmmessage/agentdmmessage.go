@@ -3,6 +3,7 @@
 package agentdmmessage
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -73,8 +74,6 @@ func ValidColumn(column string) bool {
 var (
 	// DefaultChatID holds the default value on creation for the "chat_id" field.
 	DefaultChatID string
-	// RoleValidator is a validator for the "role" field. It is called by the builders before save.
-	RoleValidator func(string) error
 	// BodyValidator is a validator for the "body" field. It is called by the builders before save.
 	BodyValidator func(string) error
 	// DefaultEdited holds the default value on creation for the "edited" field.
@@ -88,6 +87,29 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// Role defines the type for the "role" enum field.
+type Role string
+
+// Role values.
+const (
+	RoleUser  Role = "user"
+	RoleAgent Role = "agent"
+)
+
+func (r Role) String() string {
+	return string(r)
+}
+
+// RoleValidator is a validator for the "role" field enum values. It is called by the builders before save.
+func RoleValidator(r Role) error {
+	switch r {
+	case RoleUser, RoleAgent:
+		return nil
+	default:
+		return fmt.Errorf("agentdmmessage: invalid enum value for role field: %q", r)
+	}
+}
 
 // OrderOption defines the ordering options for the AgentDMMessage queries.
 type OrderOption func(*sql.Selector)

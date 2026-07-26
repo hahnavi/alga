@@ -180,11 +180,6 @@ func TelnyxTtsAPIKeyRef(v string) predicate.Integration {
 	return predicate.Integration(sql.FieldEQ(FieldTelnyxTtsAPIKeyRef, v))
 }
 
-// VoiceProvider applies equality check predicate on the "voice_provider" field. It's identical to VoiceProviderEQ.
-func VoiceProvider(v string) predicate.Integration {
-	return predicate.Integration(sql.FieldEQ(FieldVoiceProvider, v))
-}
-
 // HermesPlatformURL applies equality check predicate on the "hermes_platform_url" field. It's identical to HermesPlatformURLEQ.
 func HermesPlatformURL(v string) predicate.Integration {
 	return predicate.Integration(sql.FieldEQ(FieldHermesPlatformURL, v))
@@ -1816,58 +1811,23 @@ func TelnyxTtsAPIKeyRefContainsFold(v string) predicate.Integration {
 }
 
 // VoiceProviderEQ applies the EQ predicate on the "voice_provider" field.
-func VoiceProviderEQ(v string) predicate.Integration {
+func VoiceProviderEQ(v VoiceProvider) predicate.Integration {
 	return predicate.Integration(sql.FieldEQ(FieldVoiceProvider, v))
 }
 
 // VoiceProviderNEQ applies the NEQ predicate on the "voice_provider" field.
-func VoiceProviderNEQ(v string) predicate.Integration {
+func VoiceProviderNEQ(v VoiceProvider) predicate.Integration {
 	return predicate.Integration(sql.FieldNEQ(FieldVoiceProvider, v))
 }
 
 // VoiceProviderIn applies the In predicate on the "voice_provider" field.
-func VoiceProviderIn(vs ...string) predicate.Integration {
+func VoiceProviderIn(vs ...VoiceProvider) predicate.Integration {
 	return predicate.Integration(sql.FieldIn(FieldVoiceProvider, vs...))
 }
 
 // VoiceProviderNotIn applies the NotIn predicate on the "voice_provider" field.
-func VoiceProviderNotIn(vs ...string) predicate.Integration {
+func VoiceProviderNotIn(vs ...VoiceProvider) predicate.Integration {
 	return predicate.Integration(sql.FieldNotIn(FieldVoiceProvider, vs...))
-}
-
-// VoiceProviderGT applies the GT predicate on the "voice_provider" field.
-func VoiceProviderGT(v string) predicate.Integration {
-	return predicate.Integration(sql.FieldGT(FieldVoiceProvider, v))
-}
-
-// VoiceProviderGTE applies the GTE predicate on the "voice_provider" field.
-func VoiceProviderGTE(v string) predicate.Integration {
-	return predicate.Integration(sql.FieldGTE(FieldVoiceProvider, v))
-}
-
-// VoiceProviderLT applies the LT predicate on the "voice_provider" field.
-func VoiceProviderLT(v string) predicate.Integration {
-	return predicate.Integration(sql.FieldLT(FieldVoiceProvider, v))
-}
-
-// VoiceProviderLTE applies the LTE predicate on the "voice_provider" field.
-func VoiceProviderLTE(v string) predicate.Integration {
-	return predicate.Integration(sql.FieldLTE(FieldVoiceProvider, v))
-}
-
-// VoiceProviderContains applies the Contains predicate on the "voice_provider" field.
-func VoiceProviderContains(v string) predicate.Integration {
-	return predicate.Integration(sql.FieldContains(FieldVoiceProvider, v))
-}
-
-// VoiceProviderHasPrefix applies the HasPrefix predicate on the "voice_provider" field.
-func VoiceProviderHasPrefix(v string) predicate.Integration {
-	return predicate.Integration(sql.FieldHasPrefix(FieldVoiceProvider, v))
-}
-
-// VoiceProviderHasSuffix applies the HasSuffix predicate on the "voice_provider" field.
-func VoiceProviderHasSuffix(v string) predicate.Integration {
-	return predicate.Integration(sql.FieldHasSuffix(FieldVoiceProvider, v))
 }
 
 // VoiceProviderIsNil applies the IsNil predicate on the "voice_provider" field.
@@ -1878,16 +1838,6 @@ func VoiceProviderIsNil() predicate.Integration {
 // VoiceProviderNotNil applies the NotNil predicate on the "voice_provider" field.
 func VoiceProviderNotNil() predicate.Integration {
 	return predicate.Integration(sql.FieldNotNull(FieldVoiceProvider))
-}
-
-// VoiceProviderEqualFold applies the EqualFold predicate on the "voice_provider" field.
-func VoiceProviderEqualFold(v string) predicate.Integration {
-	return predicate.Integration(sql.FieldEqualFold(FieldVoiceProvider, v))
-}
-
-// VoiceProviderContainsFold applies the ContainsFold predicate on the "voice_provider" field.
-func VoiceProviderContainsFold(v string) predicate.Integration {
-	return predicate.Integration(sql.FieldContainsFold(FieldVoiceProvider, v))
 }
 
 // HermesPlatformURLEQ applies the EQ predicate on the "hermes_platform_url" field.

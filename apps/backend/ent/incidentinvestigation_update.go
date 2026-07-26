@@ -70,13 +70,13 @@ func (_u *IncidentInvestigationUpdate) ClearIncidentID() *IncidentInvestigationU
 }
 
 // SetStatus sets the "status" field.
-func (_u *IncidentInvestigationUpdate) SetStatus(v string) *IncidentInvestigationUpdate {
+func (_u *IncidentInvestigationUpdate) SetStatus(v incidentinvestigation.Status) *IncidentInvestigationUpdate {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *IncidentInvestigationUpdate) SetNillableStatus(v *string) *IncidentInvestigationUpdate {
+func (_u *IncidentInvestigationUpdate) SetNillableStatus(v *incidentinvestigation.Status) *IncidentInvestigationUpdate {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -419,13 +419,13 @@ func (_u *IncidentInvestigationUpdate) ClearParentInvestigationID() *IncidentInv
 }
 
 // SetAssigneeType sets the "assignee_type" field.
-func (_u *IncidentInvestigationUpdate) SetAssigneeType(v string) *IncidentInvestigationUpdate {
+func (_u *IncidentInvestigationUpdate) SetAssigneeType(v incidentinvestigation.AssigneeType) *IncidentInvestigationUpdate {
 	_u.mutation.SetAssigneeType(v)
 	return _u
 }
 
 // SetNillableAssigneeType sets the "assignee_type" field if the given value is not nil.
-func (_u *IncidentInvestigationUpdate) SetNillableAssigneeType(v *string) *IncidentInvestigationUpdate {
+func (_u *IncidentInvestigationUpdate) SetNillableAssigneeType(v *incidentinvestigation.AssigneeType) *IncidentInvestigationUpdate {
 	if v != nil {
 		_u.SetAssigneeType(*v)
 	}
@@ -677,6 +677,16 @@ func (_u *IncidentInvestigationUpdate) check() error {
 			return &ValidationError{Name: "incident_investigation_id", err: fmt.Errorf(`ent: validator failed for field "IncidentInvestigation.incident_investigation_id": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := incidentinvestigation.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "IncidentInvestigation.status": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.AssigneeType(); ok {
+		if err := incidentinvestigation.AssigneeTypeValidator(v); err != nil {
+			return &ValidationError{Name: "assignee_type", err: fmt.Errorf(`ent: validator failed for field "IncidentInvestigation.assignee_type": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -696,7 +706,7 @@ func (_u *IncidentInvestigationUpdate) sqlSave(ctx context.Context) (_node int, 
 		_spec.SetField(incidentinvestigation.FieldIncidentInvestigationID, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(incidentinvestigation.FieldStatus, field.TypeString, value)
+		_spec.SetField(incidentinvestigation.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.AgentID(); ok {
 		_spec.SetField(incidentinvestigation.FieldAgentID, field.TypeString, value)
@@ -802,7 +812,7 @@ func (_u *IncidentInvestigationUpdate) sqlSave(ctx context.Context) (_node int, 
 		_spec.ClearField(incidentinvestigation.FieldInvestigatingDurationMs, field.TypeInt64)
 	}
 	if value, ok := _u.mutation.AssigneeType(); ok {
-		_spec.SetField(incidentinvestigation.FieldAssigneeType, field.TypeString, value)
+		_spec.SetField(incidentinvestigation.FieldAssigneeType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.AssigneeID(); ok {
 		_spec.SetField(incidentinvestigation.FieldAssigneeID, field.TypeUUID, value)
@@ -1132,13 +1142,13 @@ func (_u *IncidentInvestigationUpdateOne) ClearIncidentID() *IncidentInvestigati
 }
 
 // SetStatus sets the "status" field.
-func (_u *IncidentInvestigationUpdateOne) SetStatus(v string) *IncidentInvestigationUpdateOne {
+func (_u *IncidentInvestigationUpdateOne) SetStatus(v incidentinvestigation.Status) *IncidentInvestigationUpdateOne {
 	_u.mutation.SetStatus(v)
 	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_u *IncidentInvestigationUpdateOne) SetNillableStatus(v *string) *IncidentInvestigationUpdateOne {
+func (_u *IncidentInvestigationUpdateOne) SetNillableStatus(v *incidentinvestigation.Status) *IncidentInvestigationUpdateOne {
 	if v != nil {
 		_u.SetStatus(*v)
 	}
@@ -1481,13 +1491,13 @@ func (_u *IncidentInvestigationUpdateOne) ClearParentInvestigationID() *Incident
 }
 
 // SetAssigneeType sets the "assignee_type" field.
-func (_u *IncidentInvestigationUpdateOne) SetAssigneeType(v string) *IncidentInvestigationUpdateOne {
+func (_u *IncidentInvestigationUpdateOne) SetAssigneeType(v incidentinvestigation.AssigneeType) *IncidentInvestigationUpdateOne {
 	_u.mutation.SetAssigneeType(v)
 	return _u
 }
 
 // SetNillableAssigneeType sets the "assignee_type" field if the given value is not nil.
-func (_u *IncidentInvestigationUpdateOne) SetNillableAssigneeType(v *string) *IncidentInvestigationUpdateOne {
+func (_u *IncidentInvestigationUpdateOne) SetNillableAssigneeType(v *incidentinvestigation.AssigneeType) *IncidentInvestigationUpdateOne {
 	if v != nil {
 		_u.SetAssigneeType(*v)
 	}
@@ -1752,6 +1762,16 @@ func (_u *IncidentInvestigationUpdateOne) check() error {
 			return &ValidationError{Name: "incident_investigation_id", err: fmt.Errorf(`ent: validator failed for field "IncidentInvestigation.incident_investigation_id": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Status(); ok {
+		if err := incidentinvestigation.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "IncidentInvestigation.status": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.AssigneeType(); ok {
+		if err := incidentinvestigation.AssigneeTypeValidator(v); err != nil {
+			return &ValidationError{Name: "assignee_type", err: fmt.Errorf(`ent: validator failed for field "IncidentInvestigation.assignee_type": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -1788,7 +1808,7 @@ func (_u *IncidentInvestigationUpdateOne) sqlSave(ctx context.Context) (_node *I
 		_spec.SetField(incidentinvestigation.FieldIncidentInvestigationID, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Status(); ok {
-		_spec.SetField(incidentinvestigation.FieldStatus, field.TypeString, value)
+		_spec.SetField(incidentinvestigation.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.AgentID(); ok {
 		_spec.SetField(incidentinvestigation.FieldAgentID, field.TypeString, value)
@@ -1894,7 +1914,7 @@ func (_u *IncidentInvestigationUpdateOne) sqlSave(ctx context.Context) (_node *I
 		_spec.ClearField(incidentinvestigation.FieldInvestigatingDurationMs, field.TypeInt64)
 	}
 	if value, ok := _u.mutation.AssigneeType(); ok {
-		_spec.SetField(incidentinvestigation.FieldAssigneeType, field.TypeString, value)
+		_spec.SetField(incidentinvestigation.FieldAssigneeType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.AssigneeID(); ok {
 		_spec.SetField(incidentinvestigation.FieldAssigneeID, field.TypeUUID, value)

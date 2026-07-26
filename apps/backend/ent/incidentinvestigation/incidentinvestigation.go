@@ -3,6 +3,7 @@
 package incidentinvestigation
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -83,7 +84,7 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "incidentinvestigationupdateentry" package.
 	UpdatesInverseTable = "incident_investigation_updates"
 	// UpdatesColumn is the table column denoting the updates relation/edge.
-	UpdatesColumn = "incident_investigation_uuid"
+	UpdatesColumn = "incident_investigation_id"
 	// PromotedAlertInvestigationsTable is the table that holds the promoted_alert_investigations relation/edge.
 	PromotedAlertInvestigationsTable = "alert_investigations"
 	// PromotedAlertInvestigationsInverseTable is the table name for the AlertInvestigation entity.
@@ -163,8 +164,6 @@ func ValidColumn(column string) bool {
 var (
 	// IncidentInvestigationIDValidator is a validator for the "incident_investigation_id" field. It is called by the builders before save.
 	IncidentInvestigationIDValidator func(string) error
-	// DefaultStatus holds the default value on creation for the "status" field.
-	DefaultStatus string
 	// DefaultAgentID holds the default value on creation for the "agent_id" field.
 	DefaultAgentID string
 	// DefaultAgentName holds the default value on creation for the "agent_name" field.
@@ -189,11 +188,68 @@ var (
 	UpdateDefaultUpdatedAt func() time.Time
 	// DefaultInvestigatingDurationMs holds the default value on creation for the "investigating_duration_ms" field.
 	DefaultInvestigatingDurationMs int64
-	// DefaultAssigneeType holds the default value on creation for the "assignee_type" field.
-	DefaultAssigneeType string
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// Status defines the type for the "status" enum field.
+type Status string
+
+// StatusPending is the default value of the Status enum.
+const DefaultStatus = StatusPending
+
+// Status values.
+const (
+	StatusPending       Status = "pending"
+	StatusAssigned      Status = "assigned"
+	StatusInvestigating Status = "investigating"
+	StatusPaused        Status = "paused"
+	StatusComplete      Status = "complete"
+	StatusCancelled     Status = "cancelled"
+	StatusCoordinating  Status = "coordinating"
+)
+
+func (s Status) String() string {
+	return string(s)
+}
+
+// StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
+func StatusValidator(s Status) error {
+	switch s {
+	case StatusPending, StatusAssigned, StatusInvestigating, StatusPaused, StatusComplete, StatusCancelled, StatusCoordinating:
+		return nil
+	default:
+		return fmt.Errorf("incidentinvestigation: invalid enum value for status field: %q", s)
+	}
+}
+
+// AssigneeType defines the type for the "assignee_type" enum field.
+type AssigneeType string
+
+// AssigneeTypeAgent is the default value of the AssigneeType enum.
+const DefaultAssigneeType = AssigneeTypeAgent
+
+// AssigneeType values.
+const (
+	AssigneeTypeAgent   AssigneeType = "agent"
+	AssigneeTypeUser    AssigneeType = "user"
+	AssigneeTypeSystem  AssigneeType = "system"
+	AssigneeTypeGrafana AssigneeType = "grafana"
+)
+
+func (at AssigneeType) String() string {
+	return string(at)
+}
+
+// AssigneeTypeValidator is a validator for the "assignee_type" field enum values. It is called by the builders before save.
+func AssigneeTypeValidator(at AssigneeType) error {
+	switch at {
+	case AssigneeTypeAgent, AssigneeTypeUser, AssigneeTypeSystem, AssigneeTypeGrafana:
+		return nil
+	default:
+		return fmt.Errorf("incidentinvestigation: invalid enum value for assignee_type field: %q", at)
+	}
+}
 
 // OrderOption defines the ordering options for the IncidentInvestigation queries.
 type OrderOption func(*sql.Selector)

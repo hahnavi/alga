@@ -49,13 +49,13 @@ func (_c *AlertInvestigationCreate) SetNillableCorrelationKey(v *string) *AlertI
 }
 
 // SetStatus sets the "status" field.
-func (_c *AlertInvestigationCreate) SetStatus(v string) *AlertInvestigationCreate {
+func (_c *AlertInvestigationCreate) SetStatus(v alertinvestigation.Status) *AlertInvestigationCreate {
 	_c.mutation.SetStatus(v)
 	return _c
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (_c *AlertInvestigationCreate) SetNillableStatus(v *string) *AlertInvestigationCreate {
+func (_c *AlertInvestigationCreate) SetNillableStatus(v *alertinvestigation.Status) *AlertInvestigationCreate {
 	if v != nil {
 		_c.SetStatus(*v)
 	}
@@ -423,13 +423,13 @@ func (_c *AlertInvestigationCreate) SetTriageEnrichment(v map[string]interface{}
 }
 
 // SetAssigneeType sets the "assignee_type" field.
-func (_c *AlertInvestigationCreate) SetAssigneeType(v string) *AlertInvestigationCreate {
+func (_c *AlertInvestigationCreate) SetAssigneeType(v alertinvestigation.AssigneeType) *AlertInvestigationCreate {
 	_c.mutation.SetAssigneeType(v)
 	return _c
 }
 
 // SetNillableAssigneeType sets the "assignee_type" field if the given value is not nil.
-func (_c *AlertInvestigationCreate) SetNillableAssigneeType(v *string) *AlertInvestigationCreate {
+func (_c *AlertInvestigationCreate) SetNillableAssigneeType(v *alertinvestigation.AssigneeType) *AlertInvestigationCreate {
 	if v != nil {
 		_c.SetAssigneeType(*v)
 	}
@@ -677,6 +677,11 @@ func (_c *AlertInvestigationCreate) check() error {
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "AlertInvestigation.status"`)}
 	}
+	if v, ok := _c.mutation.Status(); ok {
+		if err := alertinvestigation.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "AlertInvestigation.status": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "AlertInvestigation.created_at"`)}
 	}
@@ -693,6 +698,11 @@ func (_c *AlertInvestigationCreate) check() error {
 	}
 	if _, ok := _c.mutation.AssigneeType(); !ok {
 		return &ValidationError{Name: "assignee_type", err: errors.New(`ent: missing required field "AlertInvestigation.assignee_type"`)}
+	}
+	if v, ok := _c.mutation.AssigneeType(); ok {
+		if err := alertinvestigation.AssigneeTypeValidator(v); err != nil {
+			return &ValidationError{Name: "assignee_type", err: fmt.Errorf(`ent: validator failed for field "AlertInvestigation.assignee_type": %w`, err)}
+		}
 	}
 	return nil
 }
@@ -738,7 +748,7 @@ func (_c *AlertInvestigationCreate) createSpec() (*AlertInvestigation, *sqlgraph
 		_node.CorrelationKey = value
 	}
 	if value, ok := _c.mutation.Status(); ok {
-		_spec.SetField(alertinvestigation.FieldStatus, field.TypeString, value)
+		_spec.SetField(alertinvestigation.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
 	}
 	if value, ok := _c.mutation.AgentID(); ok {
@@ -842,7 +852,7 @@ func (_c *AlertInvestigationCreate) createSpec() (*AlertInvestigation, *sqlgraph
 		_node.TriageEnrichment = value
 	}
 	if value, ok := _c.mutation.AssigneeType(); ok {
-		_spec.SetField(alertinvestigation.FieldAssigneeType, field.TypeString, value)
+		_spec.SetField(alertinvestigation.FieldAssigneeType, field.TypeEnum, value)
 		_node.AssigneeType = value
 	}
 	if value, ok := _c.mutation.AssigneeID(); ok {

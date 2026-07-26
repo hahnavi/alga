@@ -22,7 +22,7 @@ type KnowledgeNote struct {
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
 	// Kind holds the value of the "kind" field.
-	Kind string `json:"kind,omitempty"`
+	Kind knowledgenote.Kind `json:"kind,omitempty"`
 	// Title holds the value of the "title" field.
 	Title string `json:"title,omitempty"`
 	// BodyMarkdown holds the value of the "body_markdown" field.
@@ -34,7 +34,7 @@ type KnowledgeNote struct {
 	// AuthorID holds the value of the "author_id" field.
 	AuthorID *uuid.UUID `json:"author_id,omitempty"`
 	// AuthorType holds the value of the "author_type" field.
-	AuthorType string `json:"author_type,omitempty"`
+	AuthorType knowledgenote.AuthorType `json:"author_type,omitempty"`
 	// AuthorName holds the value of the "author_name" field.
 	AuthorName string `json:"author_name,omitempty"`
 	// SourceInvestigationID holds the value of the "source_investigation_id" field.
@@ -115,7 +115,7 @@ func (_m *KnowledgeNote) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field kind", values[i])
 			} else if value.Valid {
-				_m.Kind = value.String
+				_m.Kind = knowledgenote.Kind(value.String)
 			}
 		case knowledgenote.FieldTitle:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -156,7 +156,7 @@ func (_m *KnowledgeNote) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field author_type", values[i])
 			} else if value.Valid {
-				_m.AuthorType = value.String
+				_m.AuthorType = knowledgenote.AuthorType(value.String)
 			}
 		case knowledgenote.FieldAuthorName:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -238,7 +238,7 @@ func (_m *KnowledgeNote) String() string {
 	builder.WriteString("KnowledgeNote(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("kind=")
-	builder.WriteString(_m.Kind)
+	builder.WriteString(fmt.Sprintf("%v", _m.Kind))
 	builder.WriteString(", ")
 	builder.WriteString("title=")
 	builder.WriteString(_m.Title)
@@ -258,7 +258,7 @@ func (_m *KnowledgeNote) String() string {
 	}
 	builder.WriteString(", ")
 	builder.WriteString("author_type=")
-	builder.WriteString(_m.AuthorType)
+	builder.WriteString(fmt.Sprintf("%v", _m.AuthorType))
 	builder.WriteString(", ")
 	builder.WriteString("author_name=")
 	builder.WriteString(_m.AuthorName)

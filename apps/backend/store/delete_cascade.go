@@ -54,17 +54,17 @@ func hardDeleteAlertCascade(ctx context.Context, tx *ent.Tx, a *ent.Alert) error
 	}
 
 	if _, err := tx.Client().AlertInvestigationAlert.Delete().
-		Where(alertinvestigationalert.AlertInvestigationUUIDIn(invUUIDs...)).
+		Where(alertinvestigationalert.AlertInvestigationIDIn(invUUIDs...)).
 		Exec(ctx); err != nil {
 		return fmt.Errorf("delete alert investigation alerts: %w", err)
 	}
 	if _, err := tx.Client().AlertInvestigationUpdateEntry.Delete().
-		Where(alertinvestigationupdateentry.AlertInvestigationUUIDIn(invUUIDs...)).
+		Where(alertinvestigationupdateentry.AlertInvestigationIDIn(invUUIDs...)).
 		Exec(ctx); err != nil {
 		return fmt.Errorf("delete alert investigation updates: %w", err)
 	}
 	if _, err := tx.Client().AlertInvestigationEvent.Delete().
-		Where(alertinvestigationevent.AlertInvestigationUUIDIn(invUUIDs...)).
+		Where(alertinvestigationevent.AlertInvestigationIDIn(invUUIDs...)).
 		Exec(ctx); err != nil {
 		return fmt.Errorf("delete alert investigation events: %w", err)
 	}
@@ -112,7 +112,7 @@ func hardDeleteIncidentCascade(ctx context.Context, tx *ent.Tx, inc *ent.Inciden
 			invStrIDs = append(invStrIDs, inv.IncidentInvestigationID)
 		}
 		if _, err := tx.Client().IncidentInvestigationUpdateEntry.Delete().
-			Where(incidentinvestigationupdateentry.IncidentInvestigationUUIDIn(invUUIDs...)).
+			Where(incidentinvestigationupdateentry.IncidentInvestigationIDIn(invUUIDs...)).
 			Exec(ctx); err != nil {
 			return fmt.Errorf("delete incident investigation updates: %w", err)
 		}
@@ -147,7 +147,7 @@ func deleteOwnerThreadInTx(ctx context.Context, tx *ent.Tx, ownerType, ownerID s
 		return nil
 	}
 	if _, err := tx.Client().InvestigationThreadMessage.Delete().
-		Where(investigationthreadmessage.ThreadUUIDIn(threadIDs...)).
+		Where(investigationthreadmessage.ThreadIDIn(threadIDs...)).
 		Exec(ctx); err != nil {
 		return fmt.Errorf("delete thread messages: %w", err)
 	}

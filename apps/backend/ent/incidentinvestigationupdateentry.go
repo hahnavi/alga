@@ -20,8 +20,8 @@ type IncidentInvestigationUpdateEntry struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
-	// IncidentInvestigationUUID holds the value of the "incident_investigation_uuid" field.
-	IncidentInvestigationUUID uuid.UUID `json:"incident_investigation_uuid,omitempty"`
+	// IncidentInvestigationID holds the value of the "incident_investigation_id" field.
+	IncidentInvestigationID uuid.UUID `json:"incident_investigation_id,omitempty"`
 	// Type holds the value of the "type" field.
 	Type string `json:"type,omitempty"`
 	// Message holds the value of the "message" field.
@@ -85,7 +85,7 @@ func (*IncidentInvestigationUpdateEntry) scanValues(columns []string) ([]any, er
 			values[i] = new(sql.NullString)
 		case incidentinvestigationupdateentry.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
-		case incidentinvestigationupdateentry.FieldID, incidentinvestigationupdateentry.FieldIncidentInvestigationUUID:
+		case incidentinvestigationupdateentry.FieldID, incidentinvestigationupdateentry.FieldIncidentInvestigationID:
 			values[i] = new(uuid.UUID)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -108,11 +108,11 @@ func (_m *IncidentInvestigationUpdateEntry) assignValues(columns []string, value
 			} else if value != nil {
 				_m.ID = *value
 			}
-		case incidentinvestigationupdateentry.FieldIncidentInvestigationUUID:
+		case incidentinvestigationupdateentry.FieldIncidentInvestigationID:
 			if value, ok := values[i].(*uuid.UUID); !ok {
-				return fmt.Errorf("unexpected type %T for field incident_investigation_uuid", values[i])
+				return fmt.Errorf("unexpected type %T for field incident_investigation_id", values[i])
 			} else if value != nil {
-				_m.IncidentInvestigationUUID = *value
+				_m.IncidentInvestigationID = *value
 			}
 		case incidentinvestigationupdateentry.FieldType:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -232,8 +232,8 @@ func (_m *IncidentInvestigationUpdateEntry) String() string {
 	var builder strings.Builder
 	builder.WriteString("IncidentInvestigationUpdateEntry(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
-	builder.WriteString("incident_investigation_uuid=")
-	builder.WriteString(fmt.Sprintf("%v", _m.IncidentInvestigationUUID))
+	builder.WriteString("incident_investigation_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.IncidentInvestigationID))
 	builder.WriteString(", ")
 	builder.WriteString("type=")
 	builder.WriteString(_m.Type)

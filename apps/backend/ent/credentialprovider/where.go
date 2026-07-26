@@ -61,11 +61,6 @@ func Name(v string) predicate.CredentialProvider {
 	return predicate.CredentialProvider(sql.FieldEQ(FieldName, v))
 }
 
-// Type applies equality check predicate on the "type" field. It's identical to TypeEQ.
-func Type(v string) predicate.CredentialProvider {
-	return predicate.CredentialProvider(sql.FieldEQ(FieldType, v))
-}
-
 // ConfigEncrypted applies equality check predicate on the "config_encrypted" field. It's identical to ConfigEncryptedEQ.
 func ConfigEncrypted(v string) predicate.CredentialProvider {
 	return predicate.CredentialProvider(sql.FieldEQ(FieldConfigEncrypted, v))
@@ -157,68 +152,23 @@ func NameContainsFold(v string) predicate.CredentialProvider {
 }
 
 // TypeEQ applies the EQ predicate on the "type" field.
-func TypeEQ(v string) predicate.CredentialProvider {
+func TypeEQ(v Type) predicate.CredentialProvider {
 	return predicate.CredentialProvider(sql.FieldEQ(FieldType, v))
 }
 
 // TypeNEQ applies the NEQ predicate on the "type" field.
-func TypeNEQ(v string) predicate.CredentialProvider {
+func TypeNEQ(v Type) predicate.CredentialProvider {
 	return predicate.CredentialProvider(sql.FieldNEQ(FieldType, v))
 }
 
 // TypeIn applies the In predicate on the "type" field.
-func TypeIn(vs ...string) predicate.CredentialProvider {
+func TypeIn(vs ...Type) predicate.CredentialProvider {
 	return predicate.CredentialProvider(sql.FieldIn(FieldType, vs...))
 }
 
 // TypeNotIn applies the NotIn predicate on the "type" field.
-func TypeNotIn(vs ...string) predicate.CredentialProvider {
+func TypeNotIn(vs ...Type) predicate.CredentialProvider {
 	return predicate.CredentialProvider(sql.FieldNotIn(FieldType, vs...))
-}
-
-// TypeGT applies the GT predicate on the "type" field.
-func TypeGT(v string) predicate.CredentialProvider {
-	return predicate.CredentialProvider(sql.FieldGT(FieldType, v))
-}
-
-// TypeGTE applies the GTE predicate on the "type" field.
-func TypeGTE(v string) predicate.CredentialProvider {
-	return predicate.CredentialProvider(sql.FieldGTE(FieldType, v))
-}
-
-// TypeLT applies the LT predicate on the "type" field.
-func TypeLT(v string) predicate.CredentialProvider {
-	return predicate.CredentialProvider(sql.FieldLT(FieldType, v))
-}
-
-// TypeLTE applies the LTE predicate on the "type" field.
-func TypeLTE(v string) predicate.CredentialProvider {
-	return predicate.CredentialProvider(sql.FieldLTE(FieldType, v))
-}
-
-// TypeContains applies the Contains predicate on the "type" field.
-func TypeContains(v string) predicate.CredentialProvider {
-	return predicate.CredentialProvider(sql.FieldContains(FieldType, v))
-}
-
-// TypeHasPrefix applies the HasPrefix predicate on the "type" field.
-func TypeHasPrefix(v string) predicate.CredentialProvider {
-	return predicate.CredentialProvider(sql.FieldHasPrefix(FieldType, v))
-}
-
-// TypeHasSuffix applies the HasSuffix predicate on the "type" field.
-func TypeHasSuffix(v string) predicate.CredentialProvider {
-	return predicate.CredentialProvider(sql.FieldHasSuffix(FieldType, v))
-}
-
-// TypeEqualFold applies the EqualFold predicate on the "type" field.
-func TypeEqualFold(v string) predicate.CredentialProvider {
-	return predicate.CredentialProvider(sql.FieldEqualFold(FieldType, v))
-}
-
-// TypeContainsFold applies the ContainsFold predicate on the "type" field.
-func TypeContainsFold(v string) predicate.CredentialProvider {
-	return predicate.CredentialProvider(sql.FieldContainsFold(FieldType, v))
 }
 
 // ConfigEncryptedEQ applies the EQ predicate on the "config_encrypted" field.

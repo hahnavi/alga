@@ -60,13 +60,13 @@ func (_u *TeamMemberUpdate) SetNillableUserID(v *uuid.UUID) *TeamMemberUpdate {
 }
 
 // SetRole sets the "role" field.
-func (_u *TeamMemberUpdate) SetRole(v string) *TeamMemberUpdate {
+func (_u *TeamMemberUpdate) SetRole(v teammember.Role) *TeamMemberUpdate {
 	_u.mutation.SetRole(v)
 	return _u
 }
 
 // SetNillableRole sets the "role" field if the given value is not nil.
-func (_u *TeamMemberUpdate) SetNillableRole(v *string) *TeamMemberUpdate {
+func (_u *TeamMemberUpdate) SetNillableRole(v *teammember.Role) *TeamMemberUpdate {
 	if v != nil {
 		_u.SetRole(*v)
 	}
@@ -143,6 +143,11 @@ func (_u *TeamMemberUpdate) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *TeamMemberUpdate) check() error {
+	if v, ok := _u.mutation.Role(); ok {
+		if err := teammember.RoleValidator(v); err != nil {
+			return &ValidationError{Name: "role", err: fmt.Errorf(`ent: validator failed for field "TeamMember.role": %w`, err)}
+		}
+	}
 	if _u.mutation.TeamCleared() && len(_u.mutation.TeamIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "TeamMember.team"`)
 	}
@@ -165,7 +170,7 @@ func (_u *TeamMemberUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 		}
 	}
 	if value, ok := _u.mutation.Role(); ok {
-		_spec.SetField(teammember.FieldRole, field.TypeString, value)
+		_spec.SetField(teammember.FieldRole, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.CreatedAt(); ok {
 		_spec.SetField(teammember.FieldCreatedAt, field.TypeTime, value)
@@ -277,13 +282,13 @@ func (_u *TeamMemberUpdateOne) SetNillableUserID(v *uuid.UUID) *TeamMemberUpdate
 }
 
 // SetRole sets the "role" field.
-func (_u *TeamMemberUpdateOne) SetRole(v string) *TeamMemberUpdateOne {
+func (_u *TeamMemberUpdateOne) SetRole(v teammember.Role) *TeamMemberUpdateOne {
 	_u.mutation.SetRole(v)
 	return _u
 }
 
 // SetNillableRole sets the "role" field if the given value is not nil.
-func (_u *TeamMemberUpdateOne) SetNillableRole(v *string) *TeamMemberUpdateOne {
+func (_u *TeamMemberUpdateOne) SetNillableRole(v *teammember.Role) *TeamMemberUpdateOne {
 	if v != nil {
 		_u.SetRole(*v)
 	}
@@ -373,6 +378,11 @@ func (_u *TeamMemberUpdateOne) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *TeamMemberUpdateOne) check() error {
+	if v, ok := _u.mutation.Role(); ok {
+		if err := teammember.RoleValidator(v); err != nil {
+			return &ValidationError{Name: "role", err: fmt.Errorf(`ent: validator failed for field "TeamMember.role": %w`, err)}
+		}
+	}
 	if _u.mutation.TeamCleared() && len(_u.mutation.TeamIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "TeamMember.team"`)
 	}
@@ -412,7 +422,7 @@ func (_u *TeamMemberUpdateOne) sqlSave(ctx context.Context) (_node *TeamMember, 
 		}
 	}
 	if value, ok := _u.mutation.Role(); ok {
-		_spec.SetField(teammember.FieldRole, field.TypeString, value)
+		_spec.SetField(teammember.FieldRole, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.CreatedAt(); ok {
 		_spec.SetField(teammember.FieldCreatedAt, field.TypeTime, value)

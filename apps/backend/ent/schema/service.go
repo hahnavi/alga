@@ -31,7 +31,7 @@ func (Service) Fields() []ent.Field {
 		field.JSON("label_matchers", []map[string]any{}).Default([]map[string]any{}),
 		field.Int("sla_response_minutes").Default(0).NonNegative(),
 		field.Int("sla_resolve_minutes").Default(0).NonNegative(),
-		field.String("status").Default("operational"),
+		field.Enum("status").Values("operational", "degraded", "partial_outage", "major_outage", "maintenance").Default("operational"),
 		field.Time("created_at").Default(timeNow),
 		field.Time("updated_at").Default(timeNow).UpdateDefault(timeNow),
 	}

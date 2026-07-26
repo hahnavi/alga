@@ -3,6 +3,7 @@
 package alert
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -140,8 +141,6 @@ func ValidColumn(column string) bool {
 var (
 	// FingerprintValidator is a validator for the "fingerprint" field. It is called by the builders before save.
 	FingerprintValidator func(string) error
-	// DefaultStatus holds the default value on creation for the "status" field.
-	DefaultStatus string
 	// DefaultAcknowledged holds the default value on creation for the "acknowledged" field.
 	DefaultAcknowledged bool
 	// DefaultSilenced holds the default value on creation for the "silenced" field.
@@ -169,6 +168,32 @@ var (
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
+
+// Status defines the type for the "status" enum field.
+type Status string
+
+// StatusFiring is the default value of the Status enum.
+const DefaultStatus = StatusFiring
+
+// Status values.
+const (
+	StatusFiring   Status = "firing"
+	StatusResolved Status = "resolved"
+)
+
+func (s Status) String() string {
+	return string(s)
+}
+
+// StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
+func StatusValidator(s Status) error {
+	switch s {
+	case StatusFiring, StatusResolved:
+		return nil
+	default:
+		return fmt.Errorf("alert: invalid enum value for status field: %q", s)
+	}
+}
 
 // OrderOption defines the ordering options for the Alert queries.
 type OrderOption func(*sql.Selector)

@@ -88,9 +88,11 @@ export const useAuthStore = defineStore("auth", () => {
     api.setCSRFToken(null);
     onboardingCompleted.value = null;
     needsSetup.value = null;
+    sessionChecked.value = false;
   }
 
   let pendingFetch: Promise<void> | null = null;
+  const sessionChecked = ref(false);
 
   async function fetchCurrentUser() {
     if (pendingFetch) return pendingFetch;
@@ -109,6 +111,7 @@ export const useAuthStore = defineStore("auth", () => {
         }
       } finally {
         loading.value = false;
+        sessionChecked.value = true;
         pendingFetch = null;
       }
     })();
@@ -149,6 +152,7 @@ export const useAuthStore = defineStore("auth", () => {
     loading,
     onboardingCompleted,
     needsSetup,
+    sessionChecked,
     isAdmin,
     isAuthenticated,
     permissions,

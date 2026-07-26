@@ -221,7 +221,7 @@ router.beforeEach(async (to) => {
   }
 
   if (to.meta.guestOnly) {
-    if (!auth.user) {
+    if (!auth.user && !auth.sessionChecked) {
       await auth.fetchCurrentUser();
     }
     if (auth.user) {
@@ -259,6 +259,15 @@ function setDocumentTitle(label: string): void {
 
 router.afterEach((to) => {
   setDocumentTitle(pageTitleForPath(to.path));
+});
+
+router.onError((error, to) => {
+  if (
+    error.message.includes("error loading dynamically imported module") ||
+    error.message.includes("Unable to preload CSS")
+  ) {
+    window.location.assign(to.fullPath);
+  }
 });
 
 export default router;

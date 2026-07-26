@@ -133,7 +133,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div
-    v-if="route.meta.public || route.path === '/onboarding'"
+    v-if="route.meta.public || route.path === '/onboarding' || route.path === '/setup'"
     class="bg-[var(--bg-primary)] text-[var(--text-primary)]"
   >
     <RouterView />

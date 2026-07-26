@@ -43,6 +43,17 @@ git tag --list 'v*' --sort=-v:refname | head -1
 
 Every chart release PR must set `appVersion` in `Chart.yaml` to this value, even if the app version hasn't changed since the last chart release — treat it as a mandatory sync step, not an optional update. Do not override `appVersion` at package time — `Chart.yaml` is the source of truth.
 
+### Image Tags
+
+`backend.image.tag` and `frontend.image.tag` in `values.yaml` must be pinned to the latest app release tag (the same value as `appVersion`, including the `v` prefix). Never use `latest` — it makes installs non-reproducible and silently drifts from the chart's declared `appVersion`.
+
+Every chart release PR must verify and, if stale, update both tags:
+
+```bash
+latest_app_tag=$(git tag --list 'v*' --sort=-v:refname | head -1)
+grep -n 'tag:' deploy/charts/alga/values.yaml   # confirm both match $latest_app_tag
+```
+
 ### Tag Format Constraints
 
 The tag is `chart-v<MAJOR>.<MINOR>.<PATCH>[-<prerelease>]` and the workflow **fails if the tag version does not equal `version` in Chart.yaml**. Order of operations is therefore fixed: bump `Chart.yaml`, merge to `main`, then tag the merge commit.
@@ -67,15 +78,16 @@ Run all of these before tagging. Stop and report if any fail.
 2. **On `main` and synced** — `git fetch origin && git status -uno` shows nothing to pull/push.
 3. **`Chart.yaml` version matches the tag you intend to push** — the workflow hard-fails on mismatch, leaving a dangling tag.
 4. **`appVersion` equals the latest app tag** — `git tag --list 'v*' --sort=-v:refname | head -1` must match `appVersion` in `Chart.yaml` (including the `v` prefix).
-5. **Chart lints and packages locally**:
+5. **Image tags are pinned** — `backend.image.tag` and `frontend.image.tag` in `values.yaml` equal the latest app tag (same value as `appVersion`). Neither may be `latest`.
+6. **Chart lints and packages locally**:
    ```bash
    helm lint deploy/charts/alga
    helm package deploy/charts/alga -d /tmp && rm /tmp/alga-*.tgz
    ```
    The "missing required values" warnings for `postgresql`/`valkey`/`rabbitmq` passwords are expected.
-6. **Tag does not already exist** — `git tag --list 'chart-v*'`.
-7. **Docs are synced** — `grep -rn 'charts/alga\|helm install' docs/` shows no stale version pin or values reference (see Docs Sync).
-8. **CI is green on the commit you'll tag** — `gh run list --branch main --limit 3`.
+7. **Tag does not already exist** — `git tag --list 'chart-v*'`.
+8. **Docs are synced** — `grep -rn 'charts/alga\|helm install' docs/` shows no stale version pin or values reference (see Docs Sync).
+9. **CI is green on the commit you'll tag** — `gh run list --branch main --limit 3`.
 
 ## Execute the Release
 

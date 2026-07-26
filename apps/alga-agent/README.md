@@ -27,6 +27,14 @@ channels — **Telegram** (human interface) and **Alga** (investigation threads)
 
 ## Quick Start
 
+### Install
+
+```bash
+# Latest release binary → ~/.local/bin (linux/darwin, amd64/arm64).
+# Adds ~/.local/bin to PATH for bash/zsh.
+curl -fsSL https://raw.githubusercontent.com/hahnavi/alga/main/scripts/install-agent.sh | bash
+```
+
 ### Option A — Interactive setup (recommended)
 
 ```bash

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, h, onMounted, onBeforeUnmount, ref, watch, type CSSProperties } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { RouterLink, useRoute, useRouter } from "vue-router";
 import {
   ChevronRight,
   CircleAlert,
@@ -1458,11 +1458,16 @@ onBeforeUnmount(() => {
               <div
                 v-for="alert in alerts"
                 :key="alert.alert_number ?? alert.fingerprint"
-                class="flex cursor-pointer items-center gap-3 rounded-md border border-[var(--border-primary)] px-3 py-2 transition-colors hover:bg-[var(--bg-secondary)]"
-                :class="{ 'opacity-50 italic': alert.deleted_at }"
+                class="flex items-center gap-3 rounded-md border border-[var(--border-primary)] px-3 py-2 transition-colors"
+                :class="
+                  alert.deleted_at
+                    ? 'cursor-default opacity-50 italic'
+                    : 'cursor-pointer hover:bg-[var(--bg-secondary)]'
+                "
               >
-                <RouterLink
-                  :to="`/alerts/${alert.alert_number}`"
+                <component
+                  :is="alert.deleted_at ? 'div' : RouterLink"
+                  :to="alert.deleted_at ? undefined : `/alerts/${alert.alert_number}`"
                   class="flex min-w-0 flex-1 items-center gap-3"
                 >
                   <CircleDot
@@ -1486,7 +1491,7 @@ onBeforeUnmount(() => {
                     class="shrink-0"
                     title="This alert was deleted"
                   />
-                </RouterLink>
+                </component>
                 <button
                   v-if="canWrite && alert.alert_number && !alert.deleted_at"
                   type="button"

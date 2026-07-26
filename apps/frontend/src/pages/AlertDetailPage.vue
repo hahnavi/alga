@@ -11,7 +11,7 @@ import {
   watch,
   type CSSProperties,
 } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { RouterLink, useRoute, useRouter } from "vue-router";
 import {
   Bot,
   CheckCircle,
@@ -1620,11 +1620,18 @@ onMounted(async () => {
                   <div class="mb-3 flex items-center gap-2">
                     <h3 class="field-label mb-0">Incident</h3>
                   </div>
-                  <RouterLink
-                    :to="`/incidents/${relatedIncident.incident_number}`"
+                  <component
+                    :is="relatedIncident.deleted_at ? 'div' : RouterLink"
+                    :to="
+                      relatedIncident.deleted_at
+                        ? undefined
+                        : `/incidents/${relatedIncident.incident_number}`
+                    "
                     :class="[
-                      'flex cursor-pointer items-center gap-3 rounded-md border border-[var(--border-primary)] px-3 py-2 transition-colors hover:bg-[var(--bg-secondary)]',
-                      relatedIncident.deleted_at ? 'opacity-50 italic' : '',
+                      'flex items-center gap-3 rounded-md border border-[var(--border-primary)] px-3 py-2 transition-colors',
+                      relatedIncident.deleted_at
+                        ? 'cursor-default opacity-50 italic'
+                        : 'cursor-pointer hover:bg-[var(--bg-secondary)]',
                     ]"
                   >
                     <CircleDot
@@ -1654,7 +1661,7 @@ onMounted(async () => {
                     >
                       {{ relatedIncident.status.replace("_", " ") }}
                     </span>
-                  </RouterLink>
+                  </component>
                 </Card>
               </template>
             </AlertDetailsSidebar>
@@ -1756,11 +1763,18 @@ onMounted(async () => {
               <div class="mb-3 flex items-center gap-2">
                 <h3 class="field-label mb-0">Incident</h3>
               </div>
-              <RouterLink
-                :to="`/incidents/${relatedIncident.incident_number}`"
+              <component
+                :is="relatedIncident.deleted_at ? 'div' : RouterLink"
+                :to="
+                  relatedIncident.deleted_at
+                    ? undefined
+                    : `/incidents/${relatedIncident.incident_number}`
+                "
                 :class="[
-                  'flex cursor-pointer items-center gap-3 rounded-md border border-[var(--border-primary)] px-3 py-2 transition-colors hover:bg-[var(--bg-secondary)]',
-                  relatedIncident.deleted_at ? 'opacity-50 italic' : '',
+                  'flex items-center gap-3 rounded-md border border-[var(--border-primary)] px-3 py-2 transition-colors',
+                  relatedIncident.deleted_at
+                    ? 'cursor-default opacity-50 italic'
+                    : 'cursor-pointer hover:bg-[var(--bg-secondary)]',
                 ]"
               >
                 <CircleDot
@@ -1790,7 +1804,7 @@ onMounted(async () => {
                 >
                   {{ relatedIncident.status.replace("_", " ") }}
                 </span>
-              </RouterLink>
+              </component>
             </Card>
           </template>
         </AlertDetailsSidebar>

@@ -77,12 +77,11 @@ Pass `group_by=user` to aggregate shifts per responder instead of per shift.
 
 > **Note:** Schedules are **auto-provisioned one-per-team**. Creating a team (`POST /api/v1/teams`) automatically creates its on-call schedule. Schedules **cannot be created directly** — `POST /api/v1/on-call/schedules` returns HTTP 405 with the message _"schedules are auto-created from teams and cannot be created directly."_ Only `GET` and `PATCH` work on `/api/v1/on-call/schedules/{id}`.
 
-| Method   | Path                             | Auth    | Permission     | Description              |
-| -------- | -------------------------------- | ------- | -------------- | ------------------------ |
-| `GET`    | `/api/v1/on-call/schedules`      | Session | `oncall:read`  | List schedules           |
-| `GET`    | `/api/v1/on-call/schedules/{id}` | Session | `oncall:read`  | Get schedule with layers |
-| `PATCH`  | `/api/v1/on-call/schedules/{id}` | Session | `oncall:write` | Update schedule          |
-| `DELETE` | `/api/v1/on-call/schedules/{id}` | Session | `oncall:write` | Delete schedule          |
+| Method  | Path                             | Auth    | Permission     | Description              |
+| ------- | -------------------------------- | ------- | -------------- | ------------------------ |
+| `GET`   | `/api/v1/on-call/schedules`      | Session | `oncall:read`  | List schedules           |
+| `GET`   | `/api/v1/on-call/schedules/{id}` | Session | `oncall:read`  | Get schedule with layers |
+| `PATCH` | `/api/v1/on-call/schedules/{id}` | Session | `oncall:write` | Update schedule          |
 
 ### On-Call Lookup
 

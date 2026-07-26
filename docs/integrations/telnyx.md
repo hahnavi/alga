@@ -17,17 +17,17 @@ When `VOICE_PROVIDER` is unset, the provider can be chosen from the **Integratio
 
 Credentials are managed in the DB via the Integrations UI (stored encrypted), the same model as Slack/Mattermost. When `TELNYX_API_KEY` is set via env, the UI fields are locked and the env values take precedence.
 
-| Variable                 | Default     | Required | Description                                                                                                                                                       |
-| ------------------------ | ----------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `VOICE_PROVIDER`         | `twilio`    | No       | `twilio` or `telnyx`                                                                                                                                              |
-| `TELNYX_API_KEY`         |             | No       | Telnyx API key                                                                                                                                                    |
-| `TELNYX_CONNECTION_ID`   |             | No       | Telnyx Call Control Application ID                                                                                                                                |
-| `TELNYX_FROM_NUMBER`     |             | No       | Telnyx outbound phone number                                                                                                                                      |
-| `TELNYX_PUBLIC_KEY`      |             | No*      | Ed25519 public key (base64) from the Telnyx portal. **Required** when `VOICE_PROVIDER=telnyx` — used to verify inbound webhook signatures                         |
-| `TELNYX_DISABLED`        | `false`     | No       | Disable Telnyx entirely                                                                                                                                           |
-| `TELNYX_TTS_VOICE`       | `KokoroTTS` | No       | TTS voice for spoken prompts. Provider-prefixed (e.g. `kokoro/af_something`, `Polly.Brian`, `Azure.en-CA-ClaraNeural`, `ElevenLabs.eleven_flash_v2_5.<voice_id>`) |
-| `TELNYX_TTS_LANGUAGE`    | `en-US`     | No       | TTS language                                                                                                                                                      |
-| `TELNYX_TTS_API_KEY_REF` |             | No       | Identifier of a Telnyx integration secret holding the ElevenLabs API key (BYOK). Required only when `TELNYX_TTS_VOICE` starts with `ElevenLabs.`                  |
+| Variable                 | Default     | Required    | Description                                                                                                                                                       |
+| ------------------------ | ----------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VOICE_PROVIDER`         | `twilio`    | No          | `twilio` or `telnyx`                                                                                                                                              |
+| `TELNYX_API_KEY`         |             | No          | Telnyx API key                                                                                                                                                    |
+| `TELNYX_CONNECTION_ID`   |             | No          | Telnyx Call Control Application ID                                                                                                                                |
+| `TELNYX_FROM_NUMBER`     |             | No          | Telnyx outbound phone number                                                                                                                                      |
+| `TELNYX_PUBLIC_KEY`      |             | Conditional | Ed25519 public key (base64) from the Telnyx portal. Required when `VOICE_PROVIDER=telnyx` — used to verify inbound webhook signatures                             |
+| `TELNYX_DISABLED`        | `false`     | No          | Disable Telnyx entirely                                                                                                                                           |
+| `TELNYX_TTS_VOICE`       | `KokoroTTS` | No          | TTS voice for spoken prompts. Provider-prefixed (e.g. `kokoro/af_something`, `Polly.Brian`, `Azure.en-CA-ClaraNeural`, `ElevenLabs.eleven_flash_v2_5.<voice_id>`) |
+| `TELNYX_TTS_LANGUAGE`    | `en-US`     | No          | TTS language                                                                                                                                                      |
+| `TELNYX_TTS_API_KEY_REF` |             | No          | Identifier of a Telnyx integration secret holding the ElevenLabs API key (BYOK). Required only when `TELNYX_TTS_VOICE` starts with `ElevenLabs.`                  |
 
 ## Callback Verification
 

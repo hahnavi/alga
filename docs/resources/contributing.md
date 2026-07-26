@@ -650,9 +650,9 @@ App.vue
 **Reporting Vulnerabilities:**
 
 - Do not report publicly
-- Email <security@example.com>
+- Report via [GitHub private vulnerability reporting](https://github.com/hahnavi/alga/security/advisories/new)
 - Include details and reproduction steps
-- Wait for confirmation before discussing publicly
+- Acknowledgement within 48 hours; fix target within 90 days
 
 **Security Best Practices:**
 

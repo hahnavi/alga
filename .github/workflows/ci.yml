@@ -98,6 +98,10 @@ jobs:
               - "docs/**"
               - "**.md"
               - "LICENSE"
+              - "package.json"
+              - "pnpm-lock.yaml"
+              - "pnpm-workspace.yaml"
+              - ".github/workflows/**"
 
   # ─────────────────────────────── Backend: format, lint, vet ────────────
   backend-lint:
@@ -276,7 +280,10 @@ jobs:
     name: Docker · Build & Scan Images
     runs-on: ubuntu-latest
     needs: [changes, backend-build, frontend-build]
-    if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true'
+    if: |
+      (needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true') &&
+      needs.backend-build.result != 'failure' && needs.backend-build.result != 'cancelled' &&
+      needs.frontend-build.result != 'failure' && needs.frontend-build.result != 'cancelled'
     permissions:
       contents: read
       actions: read          # upload-sarif reads run metadata
@@ -387,7 +394,7 @@ jobs:
   security-scan:
     name: Security · Vuln + Secret Scan
     runs-on: ubuntu-latest
-    needs: [changes, backend-lint, frontend-lint]
+    needs: [changes]
     if: needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true'
     permissions:
       contents: read

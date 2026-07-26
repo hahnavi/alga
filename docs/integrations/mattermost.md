@@ -45,11 +45,16 @@ MATTERMOST_DEFAULT_CHANNEL=alerts
 | `MATTERMOST_WEBHOOK_SECRET`  | Yes      | Shared secret used for both inbound webhook authentication and outbound plugin API authentication. Must match the value configured in the plugin settings. |
 | `MATTERMOST_TEAM`            | Yes      | Mattermost team slug for channel resolution (e.g., `engineering`).                                                                                         |
 | `MATTERMOST_DEFAULT_CHANNEL` | Yes      | Channel for alerts that don't match any routing rule (e.g., `alerts`).                                                                                     |
-| `MATTERMOST_DISABLED`        | No       | Disable Mattermost delivery. Only settable via YAML config or the Integrations API — **not** as an env var. Defaults to `false`.                           |
 
 ::: tip Generate a strong webhook secret
 Use `openssl rand -base64 32` to generate a secure `MATTERMOST_WEBHOOK_SECRET`. The same value must be entered in both the Alga env config and the Mattermost plugin settings.
 :::
+
+### YAML / Integrations API Configuration
+
+| Field                 | Default | Description                                                                                                         |
+| --------------------- | ------- | ------------------------------------------------------------------------------------------------------------------- |
+| `MATTERMOST_DISABLED` | `false` | Disable Mattermost delivery. Only configurable through YAML config or the Integrations API — **not** as an env var. |
 
 ## Plugin Installation
 

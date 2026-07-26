@@ -425,7 +425,8 @@ Yes! Alga works with:
 **Using pg_dump:**
 
 ```bash
-pg_dump postgresql://user:pass@localhost:5432/alga > backup.sql
+# Credentials resolved via ~/.pgpass or PGPASSWORD env (never inline in URIs)
+pg_dump -h localhost -U alga -p 5432 alga > backup.sql
 ```
 
 **Using Docker Compose:**

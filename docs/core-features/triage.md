@@ -223,21 +223,21 @@ Triage Stats:
 
 ## Configuration
 
-| Variable                              | Default | Description                                                                                        |
-| ------------------------------------- | ------- | -------------------------------------------------------------------------------------------------- |
-| `TRIAGE_ENABLED`                      | `true`  | Enable/disable the triage pipeline                                                                 |
-| `TRIAGE_LLM_URL`                      | —       | LLM endpoint URL for stage-2 evaluation                                                            |
-| `TRIAGE_LLM_API_KEY`                  | —       | API key for the LLM provider                                                                       |
-| `TRIAGE_LLM_MODEL`                    | —       | Model name to use for LLM triage                                                                   |
-| `TRIAGE_MAX_CONCURRENT`               | `3`     | Maximum concurrent LLM triage evaluations                                                          |
-| `TRIAGE_CONFIDENCE_THRESHOLD`         | `0.7`   | Minimum confidence for non-investigate decisions; below this, decisions downgrade to `enrich_only` |
-| `TRIAGE_AUTO_RESOLVE_ENABLED`         | `true`  | Gate for the `auto_resolve` decision                                                               |
-| `TRIAGE_SUPPRESS_ENABLED`             | `true`  | Gate for the `suppress` decision                                                                   |
-| `TRIAGE_CONTEXT_EPISODIC_LIMIT`       | `3`     | Max episodic memories injected into LLM context                                                    |
-| `TRIAGE_CONTEXT_NOTES_LIMIT`          | `3`     | Max knowledge notes injected into LLM context                                                      |
-| `TRIAGE_CONTEXT_MEMORIES_LIMIT`       | `5`     | Max agent memories injected into LLM context                                                       |
-| `TRIAGE_AUTO_PROMOTE_CONFIRMED_COUNT` | `3`     | After N confirmed decisions of the same type, auto-promote the triage pattern                      |
-| `MaxConcurrentTriage`                 | `5`     | Config-level concurrency cap for triage worker (config file default)                               |
+| Variable                              | Default | Description                                                                                                                                                                                        |
+| ------------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TRIAGE_ENABLED`                      | `true`  | Enable/disable the triage pipeline                                                                                                                                                                 |
+| `TRIAGE_LLM_URL`                      | —       | LLM endpoint URL for stage-2 evaluation                                                                                                                                                            |
+| `TRIAGE_LLM_API_KEY`                  | —       | API key for the LLM provider                                                                                                                                                                       |
+| `TRIAGE_LLM_MODEL`                    | —       | Model name to use for LLM triage                                                                                                                                                                   |
+| `TRIAGE_MAX_CONCURRENT`               | `3`     | Maximum concurrent LLM triage evaluations                                                                                                                                                          |
+| `TRIAGE_CONFIDENCE_THRESHOLD`         | `0.7`   | Minimum confidence for non-investigate decisions; below this, `auto_resolve`, `suppress`, and other non-`investigate` decisions downgrade to `enrich_only`. `investigate` decisions are unaffected |
+| `TRIAGE_AUTO_RESOLVE_ENABLED`         | `true`  | Gate for the `auto_resolve` decision                                                                                                                                                               |
+| `TRIAGE_SUPPRESS_ENABLED`             | `true`  | Gate for the `suppress` decision                                                                                                                                                                   |
+| `TRIAGE_CONTEXT_EPISODIC_LIMIT`       | `3`     | Max episodic memories injected into LLM context                                                                                                                                                    |
+| `TRIAGE_CONTEXT_NOTES_LIMIT`          | `3`     | Max knowledge notes injected into LLM context                                                                                                                                                      |
+| `TRIAGE_CONTEXT_MEMORIES_LIMIT`       | `5`     | Max agent memories injected into LLM context                                                                                                                                                       |
+| `TRIAGE_AUTO_PROMOTE_CONFIRMED_COUNT` | `3`     | After N confirmed decisions of the same type, auto-promote the triage pattern                                                                                                                      |
+| `MaxConcurrentTriage`                 | `5`     | Config-level concurrency cap for triage worker (config file default)                                                                                                                               |
 
 ### Context Injection
 

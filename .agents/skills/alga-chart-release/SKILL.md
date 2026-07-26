@@ -51,7 +51,13 @@ Every chart release PR must verify and, if stale, update both tags:
 
 ```bash
 latest_app_tag=$(git tag --list 'v*' --sort=-v:refname | head -1)
-grep -n 'tag:' deploy/charts/alga/values.yaml   # confirm both match $latest_app_tag
+grep -n 'tag:' deploy/charts/alga/values.yaml | while IFS= read -r line; do
+  tag=$(echo "$line" | sed 's/.*tag: *"\{0,1\}\([^"]*\)"\{0,1\}/\1/')
+  if [ "$tag" = "latest" ] || [ "$tag" != "$latest_app_tag" ]; then
+    echo "MISMATCH: $line (expected $latest_app_tag, got $tag)" >&2
+    exit 1
+  fi
+done
 ```
 
 ### Tag Format Constraints

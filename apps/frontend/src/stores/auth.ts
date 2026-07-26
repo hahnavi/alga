@@ -101,6 +101,7 @@ export const useAuthStore = defineStore("auth", () => {
       try {
         user.value = await api.getCurrentUser();
         await refreshOnboardingStatus();
+        sessionChecked.value = true;
       } catch (err) {
         // Only treat "Unauthorized" (raised by api.ts on 401 outside of safe
         // callback paths) as an auth failure. Network errors and 5xx leave the
@@ -108,10 +109,10 @@ export const useAuthStore = defineStore("auth", () => {
         if (err instanceof Error && err.message === "Unauthorized") {
           user.value = null;
           api.setCSRFToken(null);
+          sessionChecked.value = true;
         }
       } finally {
         loading.value = false;
-        sessionChecked.value = true;
         pendingFetch = null;
       }
     })();

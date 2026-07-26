@@ -52,7 +52,7 @@ const router = createRouter({
     {
       path: "/setup",
       component: () => import("@/pages/SetupPage.vue"),
-      meta: { guestOnly: true },
+      meta: { guestOnly: true, public: true },
     },
     {
       path: "/onboarding",
@@ -262,12 +262,16 @@ router.afterEach((to) => {
 });
 
 router.onError((error, to) => {
-  if (
-    error.message.includes("error loading dynamically imported module") ||
-    error.message.includes("Unable to preload CSS")
-  ) {
-    window.location.assign(to.fullPath);
-  }
+  const msg = error.message;
+  const isStaleChunk =
+    msg.includes("error loading dynamically imported module") ||
+    msg.includes("Failed to fetch dynamically imported module") ||
+    msg.includes("Unable to preload CSS");
+  if (!isStaleChunk) return;
+  const key = "alga_chunk_reload";
+  if (sessionStorage.getItem(key) === to.fullPath) return;
+  sessionStorage.setItem(key, to.fullPath);
+  window.location.assign(to.fullPath);
 });
 
 export default router;

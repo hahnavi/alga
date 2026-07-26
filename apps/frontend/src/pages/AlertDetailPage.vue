@@ -11,7 +11,7 @@ import {
   watch,
   type CSSProperties,
 } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { RouterLink, useRoute, useRouter } from "vue-router";
 import {
   Bot,
   CheckCircle,
@@ -33,6 +33,7 @@ import {
 } from "@lucide/vue";
 import {
   api,
+  ApiError,
   type AlertEvent,
   type AlertRecord,
   type DeliveryTarget,
@@ -130,10 +131,10 @@ const hasInvestigationDetails = computed(() => {
     (inv?.evidence && inv.evidence.length > 0),
   );
 });
-const investigationPrimaryLabel = computed(() => {
+const hasMeaningfulInvestigation = computed(() => {
   const inv = alertInvestigation.value;
-  if (!inv) return "No investigation";
-  return inv.agent_name?.trim() || inv.status;
+  if (!inv) return false;
+  return Boolean(inv.agent_name?.trim()) || hasInvestigationDetails.value;
 });
 const promotedIncidentID = computed(() => alertInvestigation.value?.promoted_incident_id ?? null);
 const investigationPromoted = computed(() =>
@@ -304,8 +305,13 @@ const thread = useChatThread<OwnerThreadMessage>({
   scope: "alert",
   targetId: toRef(() => String(alertNumber.value)),
   fetchThread: async (id) => {
-    const fresh = await api.getAlertThread(Number(id));
-    return fresh.messages ?? [];
+    try {
+      const fresh = await api.getAlertThread(Number(id));
+      return fresh.messages ?? [];
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) return [];
+      throw err;
+    }
   },
   extractMessage: (data) => (data as { message?: OwnerThreadMessage }).message,
   extractEdit: (data) => {
@@ -455,10 +461,18 @@ const chatParticipants = computed<ChatParticipant[]>(() => {
 
 const chatParticipantLabel = computed(() => {
   const participants = chatParticipants.value;
-  if (participants.length === 0) return investigationPrimaryLabel.value;
-  if (participants.length === 1) return participants[0].name;
-  const others = participants.length - 1;
-  return `${participants[0].name} and ${others} ${others === 1 ? "other" : "others"}`;
+  if (participants.length > 0) {
+    if (participants.length === 1) return participants[0].name;
+    const others = participants.length - 1;
+    return `${participants[0].name} and ${others} ${others === 1 ? "other" : "others"}`;
+  }
+  const inv = alertInvestigation.value;
+  if (!inv) return "No investigation";
+  const name = inv.agent_name?.trim();
+  if (name) return name;
+  if (!hasInvestigationDetails.value) return "No investigation";
+  const status = inv.status.charAt(0).toUpperCase() + inv.status.slice(1);
+  return `Investigation ${status}`;
 });
 
 type ChatThreadItem =
@@ -1355,7 +1369,13 @@ onMounted(async () => {
 
                 <button
                   type="button"
-                  class="flex w-full cursor-pointer items-center justify-between gap-3 border-t border-[var(--border-primary)] px-4 py-3 text-left transition-colors hover:bg-[var(--btn-default-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
+                  class="flex w-full items-center justify-between gap-3 border-t border-[var(--border-primary)] px-4 py-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
+                  :class="
+                    chatParticipants.length > 0 || hasMeaningfulInvestigation
+                      ? 'cursor-pointer hover:bg-[var(--btn-default-hover)]'
+                      : 'cursor-default'
+                  "
+                  :disabled="chatParticipants.length === 0 && !hasMeaningfulInvestigation"
                   :aria-expanded="showAlertThread"
                   aria-controls="alert-investigation-drawer"
                   @click="toggleAlertThread"
@@ -1379,7 +1399,7 @@ onMounted(async () => {
                         <span v-else>{{ participant.name.charAt(0).toUpperCase() }}</span>
                       </div>
                       <div
-                        v-if="chatParticipants.length === 0"
+                        v-if="chatParticipants.length === 0 && hasMeaningfulInvestigation"
                         class="flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--bg-secondary)]"
                       >
                         <img
@@ -1391,6 +1411,12 @@ onMounted(async () => {
                           loading="lazy"
                           decoding="async"
                         />
+                      </div>
+                      <div
+                        v-else-if="chatParticipants.length === 0"
+                        class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--bg-tertiary)] text-[var(--text-muted)]"
+                      >
+                        <MessageSquare class="h-3 w-3" />
                       </div>
                     </div>
                     <span class="truncate font-semibold text-[var(--text-secondary)]">
@@ -1407,6 +1433,7 @@ onMounted(async () => {
                       {{ totalChatCount }}
                     </span>
                     <ChevronRight
+                      v-if="chatParticipants.length > 0 || hasMeaningfulInvestigation"
                       class="h-5 w-5 text-[var(--text-muted)] transition-transform duration-200"
                       :class="showAlertThread ? 'rotate-180' : ''"
                     />
@@ -1593,11 +1620,18 @@ onMounted(async () => {
                   <div class="mb-3 flex items-center gap-2">
                     <h3 class="field-label mb-0">Incident</h3>
                   </div>
-                  <RouterLink
-                    :to="`/incidents/${relatedIncident.incident_number}`"
+                  <component
+                    :is="relatedIncident.deleted_at ? 'div' : RouterLink"
+                    :to="
+                      relatedIncident.deleted_at
+                        ? undefined
+                        : `/incidents/${relatedIncident.incident_number}`
+                    "
                     :class="[
-                      'flex cursor-pointer items-center gap-3 rounded-md border border-[var(--border-primary)] px-3 py-2 transition-colors hover:bg-[var(--bg-secondary)]',
-                      relatedIncident.deleted_at ? 'opacity-50 italic' : '',
+                      'flex items-center gap-3 rounded-md border border-[var(--border-primary)] px-3 py-2 transition-colors',
+                      relatedIncident.deleted_at
+                        ? 'cursor-default opacity-50 italic'
+                        : 'cursor-pointer hover:bg-[var(--bg-secondary)]',
                     ]"
                   >
                     <CircleDot
@@ -1627,7 +1661,7 @@ onMounted(async () => {
                     >
                       {{ relatedIncident.status.replace("_", " ") }}
                     </span>
-                  </RouterLink>
+                  </component>
                 </Card>
               </template>
             </AlertDetailsSidebar>
@@ -1729,11 +1763,18 @@ onMounted(async () => {
               <div class="mb-3 flex items-center gap-2">
                 <h3 class="field-label mb-0">Incident</h3>
               </div>
-              <RouterLink
-                :to="`/incidents/${relatedIncident.incident_number}`"
+              <component
+                :is="relatedIncident.deleted_at ? 'div' : RouterLink"
+                :to="
+                  relatedIncident.deleted_at
+                    ? undefined
+                    : `/incidents/${relatedIncident.incident_number}`
+                "
                 :class="[
-                  'flex cursor-pointer items-center gap-3 rounded-md border border-[var(--border-primary)] px-3 py-2 transition-colors hover:bg-[var(--bg-secondary)]',
-                  relatedIncident.deleted_at ? 'opacity-50 italic' : '',
+                  'flex items-center gap-3 rounded-md border border-[var(--border-primary)] px-3 py-2 transition-colors',
+                  relatedIncident.deleted_at
+                    ? 'cursor-default opacity-50 italic'
+                    : 'cursor-pointer hover:bg-[var(--bg-secondary)]',
                 ]"
               >
                 <CircleDot
@@ -1763,7 +1804,7 @@ onMounted(async () => {
                 >
                   {{ relatedIncident.status.replace("_", " ") }}
                 </span>
-              </RouterLink>
+              </component>
             </Card>
           </template>
         </AlertDetailsSidebar>

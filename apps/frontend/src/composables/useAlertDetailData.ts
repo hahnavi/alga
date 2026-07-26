@@ -61,7 +61,8 @@ export function useAlertDetailData(alertNumber: Ref<number>) {
   // Re-fetch related whenever the route's alert number changes.
   watch(
     alertNumber,
-    () => {
+    (next) => {
+      if (!Number.isFinite(next)) return;
       void loadRelated();
     },
     { immediate: false },

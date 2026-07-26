@@ -286,7 +286,10 @@ func (t *TelegramChannel) handleCommand(ctx context.Context, msg *tg.Message, te
 		_, _ = t.sendText(chatID, "Okay, I'll go quiet. Send me a message any time to resume.")
 		return true, true
 	case "clear":
-		t.router.agent.Store().Clear(SessionIDFor("telegram", chatID))
+		if err := t.router.agent.Store().Clear(SessionIDFor("telegram", chatID)); err != nil {
+			t.logger.Warn("failed to remove persisted session file; conversation may reload",
+				"chat_id", chatID, "err", err)
+		}
 		_, _ = t.sendText(chatID, "Conversation cleared.")
 		return true, true
 	case "help":

@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -89,6 +90,50 @@ func TestClearRemovesFile(t *testing.T) {
 	}
 	if ss.Has(id) {
 		t.Fatal("session should be gone from memory")
+	}
+}
+
+// TestPersistClearNoResurrection is a regression test for the durable-deletion
+// barrier: once Clear removes a session, an in-flight Persist that captured the
+// session before Clear must not rename its tmp file back over the deleted path.
+// Before the fix the rename was unconditional, so a Persist racing with Clear
+// could resurrect a cleared conversation on disk.
+func TestPersistClearNoResurrection(t *testing.T) {
+	dir := t.TempDir()
+	ss := NewSessionStore(20)
+	ss.EnablePersistence(dir)
+	id := "telegram:race"
+
+	const rounds = 20
+	for r := 0; r < rounds; r++ {
+		s := ss.Get(id)
+		s.AppendMessage(llm.Message{Role: "user", Content: "round"})
+		if err := ss.Persist(id); err != nil {
+			t.Fatalf("round %d seed Persist: %v", r, err)
+		}
+
+		// Spawn persists that capture the session before Clear fires.
+		const k = 16
+		var wg sync.WaitGroup
+		for i := 0; i < k; i++ {
+			wg.Add(1)
+			go func() { defer wg.Done(); _ = ss.Persist(id) }()
+		}
+		// Clear concurrently; any persist surviving past Clear must not
+		// resurrect the file. Persist never inserts into the map, so the
+		// session stays gone after Clear.
+		if err := ss.Clear(id); err != nil {
+			t.Fatalf("round %d Clear: %v", r, err)
+		}
+		wg.Wait()
+
+		path := filepath.Join(dir, sessionFilename(id))
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			t.Fatalf("round %d: session file resurrected after Clear (stat err=%v)", r, err)
+		}
+		if ss.Has(id) {
+			t.Fatalf("round %d: session still in memory after Clear", r)
+		}
 	}
 }
 

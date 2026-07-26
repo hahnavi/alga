@@ -4,6 +4,8 @@
 package agent
 
 import (
+	"errors"
+	"os"
 	"sync"
 	"time"
 
@@ -176,12 +178,18 @@ func (ss *SessionStore) Has(id string) bool {
 }
 
 // Clear removes the session for id (e.g. on /clear command), including its
-// persisted file — clearing means the conversation is forgotten.
-func (ss *SessionStore) Clear(id string) {
+// persisted file — clearing means the conversation is forgotten. The in-memory
+// session is always removed; if the persisted file cannot be deleted (other
+// than it already being absent), the error is returned so the caller knows the
+// conversation could reappear on the next Get (which reloads from disk).
+func (ss *SessionStore) Clear(id string) error {
 	ss.mu.Lock()
 	defer ss.mu.Unlock()
 	delete(ss.sessions, id)
-	ss.removeSessionFile(id)
+	if err := ss.removeSessionFile(id); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return nil
 }
 
 // Size returns the number of active sessions.

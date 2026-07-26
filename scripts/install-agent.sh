@@ -36,7 +36,7 @@ esac
 version="${1:-}"
 if [ -z "$version" ]; then
   info "Resolving latest agent release..."
-  version="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases?per_page=100" \
+  version="$(curl -fsSL --connect-timeout 10 --max-time 30 "https://api.github.com/repos/${REPO}/releases?per_page=100" \
     | grep -o '"tag_name": *"agent-v[^"]*"' \
     | sed 's/.*agent-v//; s/"$//' \
     | head -n1)"
@@ -53,11 +53,11 @@ info "Installing ${BIN_NAME} ${version} (${os}/${arch})"
 tmpdir="$(mktemp -d)"
 trap 'rm -rf "$tmpdir"' EXIT
 
-curl -fSL --progress-bar -o "${tmpdir}/${asset}" "${base_url}/${asset}" \
+curl -fSL --connect-timeout 10 --max-time 300 --progress-bar -o "${tmpdir}/${asset}" "${base_url}/${asset}" \
   || err "download failed: ${base_url}/${asset}"
 
 checksums="checksums-agent-${version}.txt"
-if curl -fsSL -o "${tmpdir}/${checksums}" "${base_url}/${checksums}"; then
+if curl -fsSL --connect-timeout 10 --max-time 30 -o "${tmpdir}/${checksums}" "${base_url}/${checksums}"; then
   if command -v sha256sum >/dev/null 2>&1; then
     (cd "$tmpdir" && grep " ${asset}\$" "$checksums" | sha256sum -c - >/dev/null) \
       || err "checksum verification failed for ${asset}"

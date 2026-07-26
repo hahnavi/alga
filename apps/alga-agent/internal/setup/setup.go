@@ -434,13 +434,18 @@ func promptModel(cfg *config.Config, r *bufio.Reader, w io.Writer) (string, erro
 	}
 
 	// Keep the current model selectable even when the fetched list omits it.
-	if !slices.Contains(choices, def) {
+	// An empty def (provider without curated models and no current model) is
+	// never added; the picker then defaults to the first fetched entry.
+	if def != "" && !slices.Contains(choices, def) {
 		choices = append([]string{def}, choices...)
 	}
 	const customLabel = "custom (type a model name)"
 	choices = append(choices, customLabel)
 
-	defIdx := slices.Index(choices, def)
+	defIdx := 0
+	if def != "" {
+		defIdx = slices.Index(choices, def)
+	}
 	idx, err := promptChoice(r, w, "Model:", choices, defIdx)
 	if err != nil {
 		return "", err

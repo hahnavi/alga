@@ -332,6 +332,16 @@ var providerKeyEnvVars = map[string][]string{
 	"alibaba-coding-plan": {"ALIBABA_CODING_PLAN_API_KEY", "DASHSCOPE_API_KEY"},
 }
 
+// apiKeyEnvHint returns the env var name(s) to surface in the missing-key
+// validation error for the given provider, defaulting to the generic
+// OpenRouter/OpenAI keys for providers without specific ones.
+func apiKeyEnvHint(provider string) string {
+	if vars := providerKeyEnvVars[provider]; len(vars) > 0 {
+		return strings.Join(vars, " / ")
+	}
+	return "OPENROUTER_API_KEY / OPENAI_API_KEY"
+}
+
 func (c *Config) applyDefaults() {
 	if c.Agent.Name == "" {
 		c.Agent.Name = "Alga Agent"
@@ -407,12 +417,17 @@ func (c *Config) applyDefaults() {
 // applyEnvOverrides applies environment variables over YAML values, per SPEC §8.2.
 // Environment variables always win, allowing secrets management out-of-band.
 func applyEnvOverrides(c *Config) {
-	if v := os.Getenv("OPENAI_API_KEY"); v != "" {
-		c.Model.APIKey = v
-	}
-	// OPENROUTER_API_KEY wins over OPENAI_API_KEY when both are set.
-	if v := os.Getenv("OPENROUTER_API_KEY"); v != "" {
-		c.Model.APIKey = v
+	// Generic OpenAI/OpenRouter keys only apply to the generic providers so a
+	// stray OPENROUTER_API_KEY is never used for, say, the alibaba provider.
+	switch c.Model.Provider {
+	case "", "openai", "openrouter":
+		if v := os.Getenv("OPENAI_API_KEY"); v != "" {
+			c.Model.APIKey = v
+		}
+		// OPENROUTER_API_KEY wins over OPENAI_API_KEY when both are set.
+		if v := os.Getenv("OPENROUTER_API_KEY"); v != "" {
+			c.Model.APIKey = v
+		}
 	}
 	// Provider-specific key env vars take precedence for their provider.
 	for _, name := range providerKeyEnvVars[c.Model.Provider] {
@@ -465,7 +480,7 @@ func (c *Config) Validate() error {
 	var errs []string
 
 	if c.Model.APIKey == "" {
-		errs = append(errs, "model.api_key (or OPENROUTER_API_KEY / OPENAI_API_KEY) is required")
+		errs = append(errs, fmt.Sprintf("model.api_key (or %s) is required", apiKeyEnvHint(c.Model.Provider)))
 	}
 	if c.Model.BaseURL == "" {
 		errs = append(errs, "model.base_url is required")

@@ -85,7 +85,18 @@ StandardError=journal
 
 [Install]
 WantedBy=default.target
-`, binPath, dataDir, dataDir)
+`, quoteExecStart(binPath), dataDir, dataDir)
+}
+
+// quoteExecStart wraps a binary path in double quotes when it contains
+// whitespace so systemd parses it as a single argv element. Paths without
+// whitespace are emitted verbatim. WorkingDirectory is a single-value
+// directive (not argv-split) so it needs no quoting.
+func quoteExecStart(p string) string {
+	if strings.ContainsAny(p, " \t") {
+		return fmt.Sprintf("%q", p)
+	}
+	return p
 }
 
 // checkSystemd verifies we are on Linux with a reachable per-user systemd

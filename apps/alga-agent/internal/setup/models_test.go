@@ -106,7 +106,11 @@ func TestDefaultModelForProvider(t *testing.T) {
 	if got := defaultModelForProvider("zai"); got != providerPresets["zai"].models[0] {
 		t.Errorf("zai default = %q, want first curated model", got)
 	}
-	if got := defaultModelForProvider("custom"); got != "openrouter/free" {
-		t.Errorf("custom default = %q, want openrouter/free fallback", got)
+	// Providers without a curated list return "" so the wizard never suggests an
+	// OpenRouter model for a non-OpenRouter provider.
+	for _, p := range []string{"custom", "openai"} {
+		if got := defaultModelForProvider(p); got != "" {
+			t.Errorf("%s default = %q, want empty", p, got)
+		}
 	}
 }

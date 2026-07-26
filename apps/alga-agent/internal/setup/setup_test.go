@@ -274,6 +274,29 @@ func TestSetupModel_PresetProvider(t *testing.T) {
 	}
 }
 
+func TestSetupModel_OpenAILiveFetchNoEmptyDefault(t *testing.T) {
+	stubFetchModels(t, []string{"gpt-5", "gpt-4o"}, nil)
+	cfg := config.Default()
+	//   Provider: "2" (openai) Enter
+	//   Base URL: Enter (keep canonical openai)
+	//   API key:  sk-openai Enter
+	//   Model:    Enter (no curated list; empty default must not be prepended,
+	//             picker defaults to the first fetched model)
+	//   Max:      Enter
+	//   Temp:     Enter
+	input := "2\n\nsk-openai\n\n\n\n"
+	_, _, err := runScript(t, cfg, []string{"model"}, input)
+	if err != nil {
+		t.Fatalf("runScript: %v", err)
+	}
+	if cfg.Model.Provider != "openai" {
+		t.Errorf("provider = %q, want openai", cfg.Model.Provider)
+	}
+	if cfg.Model.Model != "gpt-5" {
+		t.Errorf("model = %q, want first fetched gpt-5 (empty default must not be prepended)", cfg.Model.Model)
+	}
+}
+
 func TestSetupChannels_TelegramThenAlga(t *testing.T) {
 	cfg := config.Default()
 	// Channel menu:       1 (Telegram)

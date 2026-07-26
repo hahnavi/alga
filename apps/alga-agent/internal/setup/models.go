@@ -114,13 +114,14 @@ var providerPresets = map[string]providerPreset{
 	},
 }
 
-// defaultModelForProvider returns the first curated model for a provider,
-// falling back to the global wizard default.
+// defaultModelForProvider returns the first curated model for a provider, or
+// an empty string when the provider has no curated list (e.g. openai, which
+// relies on a live /models fetch). promptModel guards against the empty result.
 func defaultModelForProvider(provider string) string {
 	if p, ok := providerPresets[provider]; ok && len(p.models) > 0 {
 		return p.models[0]
 	}
-	return "openrouter/free"
+	return ""
 }
 
 // fetchModels retrieves model ids from an OpenAI-compatible {base_url}/models

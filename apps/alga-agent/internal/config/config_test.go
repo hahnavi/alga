@@ -205,6 +205,46 @@ telegram:
 	}
 }
 
+// A stray generic OPENROUTER_API_KEY must not be picked up for a provider with
+// its own key env vars (e.g. alibaba). Without the provider-specific key set,
+// the api_key stays empty and validation flags it.
+func TestLoad_GenericKeyIgnoredForNonGenericProvider(t *testing.T) {
+	os.Unsetenv("DASHSCOPE_API_KEY")
+	t.Setenv("OPENROUTER_API_KEY", "or-key")
+	path := writeTempConfig(t, `
+model:
+  provider: alibaba
+  model: "qwen3.7-max"
+telegram:
+  enabled: true
+  bot_token: "tok"
+`)
+	_, err := Load(path)
+	if err == nil {
+		t.Fatal("expected validation error for missing alibaba key, got nil")
+	}
+	if !strings.Contains(err.Error(), "DASHSCOPE_API_KEY") {
+		t.Errorf("error should mention DASHSCOPE_API_KEY for alibaba, got: %v", err)
+	}
+	if strings.Contains(err.Error(), "OPENROUTER_API_KEY") {
+		t.Errorf("error should not suggest generic key for alibaba, got: %v", err)
+	}
+}
+
+// The missing-key error surfaces the provider-specific env var so the user
+// knows which one to set for their chosen provider.
+func TestValidate_APIKeyHintPerProvider(t *testing.T) {
+	cfg := Default()
+	cfg.Model.Provider = "alibaba"
+	cfg.Model.APIKey = ""
+	cfg.Telegram.Enabled = true
+	cfg.Telegram.BotToken = "tok"
+	err := cfg.Validate()
+	if err == nil || !strings.Contains(err.Error(), "DASHSCOPE_API_KEY") {
+		t.Fatalf("expected DASHSCOPE_API_KEY hint, got: %v", err)
+	}
+}
+
 func TestValidate_RequiresAPIKey(t *testing.T) {
 	cfg := Default()
 	cfg.Telegram.Enabled = true

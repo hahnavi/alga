@@ -84,7 +84,22 @@ func (ss *SessionStore) Persist(id string) error {
 	if err := os.WriteFile(tmp, data, 0o600); err != nil {
 		return fmt.Errorf("write session file: %w", err)
 	}
-	if err := os.Rename(tmp, path); err != nil {
+	// Re-check under the store lock: Clear may have removed the session (and
+	// its file) while we marshalled and wrote the tmp file. Renaming now would
+	// resurrect a cleared conversation, so drop the tmp and abort. The
+	// check-then-rename is atomic with respect to Clear, which also holds
+	// ss.mu when deleting.
+	ss.mu.Lock()
+	_, present := ss.sessions[id]
+	if present {
+		err = os.Rename(tmp, path)
+	}
+	ss.mu.Unlock()
+	if !present {
+		_ = os.Remove(tmp)
+		return nil
+	}
+	if err != nil {
 		_ = os.Remove(tmp)
 		return fmt.Errorf("rename session file: %w", err)
 	}
@@ -117,12 +132,13 @@ func (ss *SessionStore) loadSession(id string) *Session {
 	return s
 }
 
-// removeSessionFile deletes the persisted file for id, if any.
-func (ss *SessionStore) removeSessionFile(id string) {
+// removeSessionFile deletes the persisted file for id, if any. A missing file
+// yields os.ErrNotExist; callers decide whether that is a failure.
+func (ss *SessionStore) removeSessionFile(id string) error {
 	if ss.persistDir == "" {
-		return
+		return nil
 	}
-	_ = os.Remove(filepath.Join(ss.persistDir, sessionFilename(id)))
+	return os.Remove(filepath.Join(ss.persistDir, sessionFilename(id)))
 }
 
 // PruneFiles deletes persisted session files whose last modification is older

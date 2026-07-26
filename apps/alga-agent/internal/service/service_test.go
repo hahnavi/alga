@@ -81,6 +81,19 @@ func TestGenerateUnit(t *testing.T) {
 	}
 }
 
+func TestGenerateUnit_QuotedSpacedPath(t *testing.T) {
+	unit := GenerateUnit("/home/my user/apps/alga-agent", "/home/my user/.alga")
+	// ExecStart must quote the spaced binary so systemd treats it as one argv.
+	if !strings.Contains(unit, `ExecStart="/home/my user/apps/alga-agent"`+"\n") {
+		t.Errorf("ExecStart not quoted for spaced path:\n%s", unit)
+	}
+	// A no-space path stays unquoted.
+	plain := GenerateUnit("/usr/local/bin/alga-agent", "/home/u/.alga")
+	if !strings.Contains(plain, "ExecStart=/usr/local/bin/alga-agent\n") {
+		t.Errorf("no-space path should stay unquoted:\n%s", plain)
+	}
+}
+
 func TestUnitPathRespectsXDGConfigHome(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", dir)

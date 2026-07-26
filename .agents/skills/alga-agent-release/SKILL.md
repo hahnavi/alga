@@ -7,7 +7,7 @@ tags: [release, agent, semver, ci, github, docker, ghcr]
 
 # Alga Agent Release
 
-Cut an agent release by pushing an `agent-v*` SemVer tag. The pipeline lives in `.github/workflows/agent-release.yml`: it validates the tag, builds and pushes `ghcr.io/<owner>/alga-agent` (tags: `latest`, `<version>`, `<commit-sha>`), cross-compiles binaries for linux/darwin (amd64/arm64) with SHA256 checksums, and opens a GitHub Release. This skill decides **which version to tag** and confirms the tree is ready.
+Cut an agent release by pushing an `agent-v*` SemVer tag. The pipeline lives in `.github/workflows/agent-release.yml`: it validates the tag, builds and pushes `ghcr.io/<owner>/alga-agent` (tags: `latest`, `v<version>`, `<commit-sha>`), cross-compiles binaries for linux/darwin (amd64/arm64) with SHA256 checksums, and opens a GitHub Release. This skill decides **which version to tag** and confirms the tree is ready.
 
 The agent is versioned **independently** of the application (`v*` tags, `alga-release` skill) and the Helm chart (`chart-v*` tags, `alga-chart-release` skill). Never bump the agent version just because the app released.
 
@@ -90,7 +90,7 @@ Never force-push or delete an agent tag that has been released. If the workflow 
 
 ## Post-Release Sanity
 
-- GitHub Release "Agent <X.Y.Z>" exists at the tag with four binaries and `checksums-agent-<version>.txt`.
-- Docker image appears at `ghcr.io/<owner>/alga-agent:<version>` (`<owner>` lowercase).
+- GitHub Release "Agent v<X.Y.Z>" exists at the tag with four binaries and `checksums-agent-v<version>.txt`.
+- Docker image appears at `ghcr.io/<owner>/alga-agent:v<X.Y.Z>` (`<owner>` lowercase; image tag includes the `v` prefix, matching the app release convention).
 - On first publish, set the `alga-agent` package visibility in GitHub Packages (private by default).
-- Version wiring check: the container logs `starting alga-agent` with `"version": "<version>"` (the agent logs its version at startup; there is no `version` subcommand).
+- Version wiring check: the container logs `starting alga-agent` with `"version": "v<version>"` (the agent logs its version at startup; there is no `version` subcommand).

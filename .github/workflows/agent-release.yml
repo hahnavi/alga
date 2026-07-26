@@ -9,7 +9,7 @@
 #
 # Produces:
 #   - Docker image ghcr.io/<owner>/alga-agent tagged with:
-#       latest, <version>, <commit-sha>
+#       latest, v<version>, <commit-sha>
 #   - Cross-compiled binaries (linux/darwin × amd64/arm64) with SHA256 checksums
 #   - GitHub Release with auto-generated notes
 name: Agent Release
@@ -42,14 +42,16 @@ jobs:
         id: semver
         run: |
           # Tag is pushed as refs/tags/agent-v<MAJOR>.<MINOR>.<PATCH>[-<pre>][+<build>]
-          TAG="${GITHUB_REF_NAME#agent-v}"
-          if ! echo "$TAG" | grep -qE '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'; then
-            echo "error: '$TAG' is not valid SemVer" >&2
+          # Validate the bare SemVer but output with v prefix so Docker image
+          # tags include it (e.g. v0.0.1), matching the app release convention.
+          BARE="${GITHUB_REF_NAME#agent-v}"
+          if ! echo "$BARE" | grep -qE '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'; then
+            echo "error: '$BARE' is not valid SemVer" >&2
             exit 1
           fi
-          echo "version=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=v${BARE}" >> "$GITHUB_OUTPUT"
           # A prerelease has a hyphen after the patch version.
-          if echo "$TAG" | grep -q '-'; then
+          if echo "$BARE" | grep -q '-'; then
             echo "is_prerelease=true"  >> "$GITHUB_OUTPUT"
           else
             echo "is_prerelease=false" >> "$GITHUB_OUTPUT"

@@ -113,7 +113,7 @@ Never force-push or delete a chart tag that has been released. If the workflow f
 
 ## Post-Release Sanity
 
-- GitHub Release "Helm Chart <X.Y.Z>" exists at the tag.
+- GitHub Release "Helm Chart v<X.Y.Z>" exists at the tag.
 - Chart is pullable and installable (`<owner>` lowercase):
   ```bash
   helm pull oci://ghcr.io/<owner>/charts/alga --version <X.Y.Z>

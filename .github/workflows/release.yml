@@ -6,7 +6,7 @@
 #
 # Produces:
 #   - Docker images for backend and frontend, tagged with:
-#       latest, <version>, <commit-sha>  (pushed to GHCR only)
+#       latest, v<version>, <commit-sha>  (pushed to GHCR only)
 #   - GitHub Release with auto-generated notes
 name: Release
 
@@ -36,14 +36,17 @@ jobs:
         id: semver
         run: |
           # Tag is pushed as refs/tags/v<MAJOR>.<MINOR>.<PATCH>[-<pre>][+<build>]
-          TAG="${GITHUB_REF_NAME#v}"
-          if ! echo "$TAG" | grep -qE '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'; then
-            echo "error: '$TAG' is not valid SemVer" >&2
+          # Validate the bare SemVer (without v) but output the full tag so
+          # Docker image tags include the v prefix (e.g. v0.0.3).
+          BARE="${GITHUB_REF_NAME#v}"
+          if ! echo "$BARE" | grep -qE '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'; then
+            echo "error: '$BARE' is not valid SemVer" >&2
             exit 1
           fi
-          echo "version=$TAG" >> "$GITHUB_OUTPUT"
-          # A prerelease has a hyphen after the patch version.
-          if echo "$TAG" | grep -q '-'; then
+          echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          # A prerelease has a hyphen after the patch version. Strip build
+          # metadata first so hyphens in `+<build>` don't count.
+          if echo "${BARE%%+*}" | grep -q '-'; then
             echo "is_prerelease=true"  >> "$GITHUB_OUTPUT"
           else
             echo "is_prerelease=false" >> "$GITHUB_OUTPUT"

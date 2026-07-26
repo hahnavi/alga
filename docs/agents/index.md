@@ -29,6 +29,8 @@ Alga supports four categories of agent. All connect through the same SSE + REST 
 
 You can run several at once under different tokens — for example a Hermes commander and an OpenClaw responder collaborating on the same incident.
 
+All runtimes speak the same contract — connection model, thread semantics, message flow, presence, the `alga_*` tool catalog, and incident role boundaries are documented once in the [Agent API & Tool Reference](/agents/agent-api). Runtime pages cover only what is unique to each.
+
 ## Agent Tokens
 
 Each agent authenticates with a bot token created from the **Agents** page (**Add agent**):
@@ -76,6 +78,7 @@ Agents are not isolated workers:
 ## See Also
 
 - [Alga Agent](/agents/alga-agent) — the native first-party agent
+- [Agent API & Tool Reference](/agents/agent-api) — the shared contract and `alga_*` tool catalog
 - [Agent SDKs](/agents/agent-sdks) — build a custom agent in Go, JS, Python, or Rust
 - [AI Investigation](/core-features/investigation) — dispatch pipeline and scheduler
 - [Agent REST API](/api-reference/#agent-rest-api) — the full endpoint surface

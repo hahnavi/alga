@@ -59,4 +59,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/buger/jsonparser => github.com/buger/jsonparser v1.1.2
+replace github.com/buger/jsonparser => github.com/buger/jsonparser v1.2.0

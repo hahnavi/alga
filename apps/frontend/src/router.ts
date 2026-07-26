@@ -52,7 +52,7 @@ const router = createRouter({
     {
       path: "/setup",
       component: () => import("@/pages/SetupPage.vue"),
-      meta: { guestOnly: true },
+      meta: { guestOnly: true, public: true },
     },
     {
       path: "/onboarding",
@@ -221,7 +221,7 @@ router.beforeEach(async (to) => {
   }
 
   if (to.meta.guestOnly) {
-    if (!auth.user) {
+    if (!auth.user && !auth.sessionChecked) {
       await auth.fetchCurrentUser();
     }
     if (auth.user) {
@@ -259,6 +259,19 @@ function setDocumentTitle(label: string): void {
 
 router.afterEach((to) => {
   setDocumentTitle(pageTitleForPath(to.path));
+});
+
+router.onError((error, to) => {
+  const msg = error.message;
+  const isStaleChunk =
+    msg.includes("error loading dynamically imported module") ||
+    msg.includes("Failed to fetch dynamically imported module") ||
+    msg.includes("Unable to preload CSS");
+  if (!isStaleChunk) return;
+  const key = "alga_chunk_reload";
+  if (sessionStorage.getItem(key) === to.fullPath) return;
+  sessionStorage.setItem(key, to.fullPath);
+  window.location.assign(to.fullPath);
 });
 
 export default router;

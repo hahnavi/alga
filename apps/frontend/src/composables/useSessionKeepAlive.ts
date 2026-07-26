@@ -70,9 +70,12 @@ export function useSessionKeepAlive() {
   watch(
     () => auth.user,
     (u) => {
+      // No immediate touch here: the session was just created (login) or
+      // validated (reload → /auth/me), and a forced refresh would rotate the
+      // session ID while the notification/SSE requests that fire on the same
+      // auth.user change are still in flight, 401-ing them.
       if (u) {
         start();
-        void touchSession(true);
       } else {
         stop();
       }

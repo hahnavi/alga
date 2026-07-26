@@ -1235,7 +1235,7 @@ function unwrapItems<T>(p: Promise<ItemsResponse<T>>): Promise<T[]> {
   return p.then((r) => r.items ?? []);
 }
 function unwrapData<T>(p: Promise<DataResponse<T>>): Promise<T[]> {
-  return p.then((r) => r.data);
+  return p.then((r) => r.data ?? []);
 }
 
 const base = import.meta.env.VITE_API_BASE_URL ?? "";

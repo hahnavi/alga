@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, ref, toRef } from "vue";
 import { Bot, Copy, HatGlasses, Link2, Reply, X } from "@lucide/vue";
 import {
   api,
+  ApiError,
   type OwnerThread,
   type OwnerThreadMessage,
   type UserInfo,
@@ -76,11 +77,16 @@ const {
   scope: props.ownerType,
   targetId: ownerIdRef,
   fetchThread: async (id) => {
-    const fresh =
-      props.ownerType === "alert"
-        ? await api.getAlertThread(Number(id))
-        : await api.getIncidentThread(id);
-    return fresh.messages ?? [];
+    try {
+      const fresh =
+        props.ownerType === "alert"
+          ? await api.getAlertThread(Number(id))
+          : await api.getIncidentThread(id);
+      return fresh.messages ?? [];
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) return [];
+      throw err;
+    }
   },
   extractMessage: (data) => (data as { message?: OwnerThreadMessage }).message,
   extractEdit: (data) => {

@@ -50,7 +50,7 @@ You can register multiple agents with different scopes. For example, one agent s
 
 Regardless of which runtime you choose, every agent needs a token:
 
-1. In the Alga web UI, go to **Integrations → Agents → Add agent**
+1. In the Alga web UI, go to **Automate → Agents → Add agent**
 2. Choose the **agent type** (`hermes`, `openclaw`, or `other`)
 3. Select **capabilities** (at minimum: `investigate`)
 4. Set the **scope** — `all` (default) or `labels` with label selectors

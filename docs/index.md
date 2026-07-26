@@ -90,7 +90,7 @@ Alga combines four traditionally separate tools into a single platform:
 Ingest alerts from any webhook source (Grafana, Prometheus, custom scripts). Automatic fingerprint-based deduplication ensures you never get paged twice for the same issue. Alerts are correlated by deployment events and alertname within configurable time windows, then routed to the right destination via first-match rules.
 
 ### 2. AI Investigation
-Every alert can trigger an autonomous investigation. Alga's scheduler atomically assigns work to an online agent (the native Alga Agent, Hermes, or OpenClaw), which receives the full alert context, queries the knowledge base, searches its own memories of past incidents, and produces a structured root-cause analysis — all visible to operators in real time through investigation threads.
+Every alert can trigger an autonomous investigation. Alga's scheduler atomically assigns work to an online agent (the native Alga Agent, Hermes, OpenClaw, or a custom SDK agent), which receives the full alert context, queries the knowledge base, searches its own memories of past incidents, and produces a structured root-cause analysis — all visible to operators in real time through investigation threads.
 
 ### 3. Incident Response
 When an alert warrants it, the agent or an operator promotes it to an incident. Incidents follow a formal lifecycle (`detected → triaging → active → mitigated → resolved → closed`) with ICS command roles (Incident Commander, Communications Lead, Responder), SLA tracking, automated escalation, Google Meet war rooms, and structured post-mortems.

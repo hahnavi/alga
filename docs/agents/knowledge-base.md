@@ -73,6 +73,8 @@ Agents query similar past investigations to find patterns and reuse solutions.
 
 ## API Endpoints
 
+All operator endpoints require an authenticated session; the Permission column lists the additional RBAC permission, if any.
+
 | Method | Path | Permission | Description |
 |--------|------|------------|-------------|
 | `GET` | `/api/v1/knowledge` | — | List/search notes |

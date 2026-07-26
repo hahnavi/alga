@@ -241,7 +241,7 @@ Alga refuses to start without encryption keys and secret pepper configured — i
 ## Where to Go Next
 
 - **Set up your first alert source** — [First Steps Guide](/getting-started/first-steps)
-- **Connect an AI agent** — [Hermes](/agents/hermes) or [OpenClaw](/agents/openclaw)
+- **Connect an AI agent** — [Alga Agent](/agents/alga-agent), [Hermes](/agents/hermes), or [OpenClaw](/agents/openclaw)
 - **Configure routing** — [Routing](/core-features/routing)
 - **Set up on-call** — [On-Call Schedules](/on-call/schedules)
 - **Understand investigations** — [AI Investigation](/core-features/investigation)

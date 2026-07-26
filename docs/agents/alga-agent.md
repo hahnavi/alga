@@ -121,7 +121,7 @@ The Alga channel adapter connects over the same agent API used by every other ru
 
 ### Conversation Loop
 
-```
+```text
 receive → load session → build prompt → call LLM
   → if tool_calls: execute → append results → repeat
   → else: stream final response → save session → send to channel

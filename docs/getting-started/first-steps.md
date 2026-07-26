@@ -70,12 +70,12 @@ Knowledge notes help standardize incident response and reduce mean time to resol
 
 ## 7. Explore Core Features
 
-| Feature | Where | What |
-|---------|-------|------|
-| **Alerts** | Alerts page | View, acknowledge, resolve alerts |
-| **Investigations** | Investigations page | AI-powered root cause analysis |
-| **Knowledge** | Knowledge page | Shared notes for operators and agents |
-| **Routing** | Routes page | Alert routing rules |
+| Feature            | Where               | What                                  |
+| ------------------ | ------------------- | ------------------------------------- |
+| **Alerts**         | Alerts page         | View, acknowledge, resolve alerts     |
+| **Investigations** | Investigations page | AI-powered root cause analysis        |
+| **Knowledge**      | Knowledge page      | Shared notes for operators and agents |
+| **Routing**        | Routes page         | Alert routing rules                   |
 
 ## 8. Set Up Incident Management
 

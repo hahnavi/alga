@@ -32,6 +32,7 @@ go run . db migrate
 ### Migration Process
 
 Ent auto-migration:
+
 1. Compares current schema with database state
 2. Creates missing tables and columns
 3. Creates missing indexes
@@ -46,21 +47,28 @@ For destructive changes, you need to handle them manually.
 1. **Review release notes** for breaking changes
 2. **Backup the database** before upgrading
 3. **Pull the latest code:**
+
    ```sh
    git pull
    ```
+
 4. **Install dependencies:**
+
    ```sh
    pnpm install --no-frozen-lockfile
    cd apps/backend && go mod tidy
    ```
+
 5. **Review configuration changes** — new env vars may be required
 6. **Pull new images and restart:**
+
    ```sh
    docker compose pull
    docker compose up -d
    ```
+
 7. **Verify:**
+
    ```sh
    curl http://localhost:8080/health
    curl http://localhost:8080/api/v1/readiness
@@ -74,6 +82,7 @@ For zero-downtime upgrades with multiple replicas:
 2. Wait for health check to pass
 3. Drain and update remaining replicas one at a time
 4. Use rolling updates in Kubernetes:
+
    ```yaml
    strategy:
      type: RollingUpdate
@@ -87,11 +96,13 @@ For zero-downtime upgrades with multiple replicas:
 If issues occur after upgrade:
 
 1. **Database rollback** — restore from pre-upgrade backup:
+
    ```sh
    cat backup_pre_upgrade.sql | docker compose exec -T postgres psql -U alga alga
    ```
 
 2. **Code rollback:**
+
    ```sh
    # Pin ALGA_VERSION=v1.2.3 in .env, then:
    docker compose pull
@@ -105,6 +116,7 @@ If issues occur after upgrade:
 ### When Breaking Changes Occur
 
 Alga follows semantic versioning:
+
 - **Patch** (1.2.x): Bug fixes, no breaking changes
 - **Minor** (1.x.0): New features, backward-compatible
 - **Major** (x.0.0): Breaking changes, migration required
@@ -131,11 +143,13 @@ When env variables change:
 To rotate encryption keys:
 
 1. Generate a new key:
+
    ```sh
    NEW_KEY=$(openssl rand -base64 32)
    ```
 
 2. Add to `ENCRYPTION_KEYS` with a higher `kid`:
+
    ```sh
    ENCRYPTION_KEYS="1:old_key_base64,2:$NEW_KEY"
    ```
@@ -143,6 +157,7 @@ To rotate encryption keys:
 3. The highest `kid` becomes the active encryption key. Older keys decrypt existing ciphertexts.
 
 4. After all secrets are re-encrypted (on next save), remove the old key:
+
    ```sh
    ENCRYPTION_KEYS="2:$NEW_KEY"
    ```

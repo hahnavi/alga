@@ -38,27 +38,27 @@ The plaintext ping token is shown **once** on create/regenerate. Store it secure
 
 Heartbeats have no environment variables; they are managed entirely through the API/UI.
 
-| Field | Description |
-|-------|-------------|
-| `name` | Human-readable identifier |
-| `description` | Optional context |
-| `interval_seconds` | Expected time between pings (positive) |
-| `grace_seconds` | Extra tolerance before breach (default 60) |
-| `severity` | Alert severity if breached: `critical`, `high`, `warning` (default), `info` |
-| `labels` | Label map attached to the generated alert (enables routing rules) |
-| `owner_team_id` | Owning team |
-| `enabled` | Toggle without deleting |
+| Field              | Description                                                                 |
+| ------------------ | --------------------------------------------------------------------------- |
+| `name`             | Human-readable identifier                                                   |
+| `description`      | Optional context                                                            |
+| `interval_seconds` | Expected time between pings (positive)                                      |
+| `grace_seconds`    | Extra tolerance before breach (default 60)                                  |
+| `severity`         | Alert severity if breached: `critical`, `high`, `warning` (default), `info` |
+| `labels`           | Label map attached to the generated alert (enables routing rules)           |
+| `owner_team_id`    | Owning team                                                                 |
+| `enabled`          | Toggle without deleting                                                     |
 
 The generated alert uses labels `{ alertname: "HeartbeatExpired", severity: <severity>, heartbeat: <name>, heartbeat_id: <id> }` (merged with the heartbeat's own labels), so it flows through your normal [routing](/core-features/routing), [escalation](/on-call/escalation-policies), and [notification](/core-features/notifications) setup.
 
 ## API
 
-| Method | Path | Permission | Description |
-|--------|------|------------|-------------|
-| `GET` | `/api/v1/heartbeats` | `heartbeats:read` | List heartbeats (query: enabled, status, search, owner_team_id) |
-| `POST` | `/api/v1/heartbeats` | `heartbeats:write` | Create heartbeat |
-| `GET` | `/api/v1/heartbeats/{id}` | `heartbeats:read` | Get heartbeat |
-| `PUT` | `/api/v1/heartbeats/{id}` | `heartbeats:write` | Update heartbeat |
-| `DELETE` | `/api/v1/heartbeats/{id}` | `heartbeats:delete` | Delete heartbeat |
-| `POST` | `/api/v1/heartbeats/{id}/regenerate-token` | `heartbeats:write` | Regenerate ping token |
-| `GET`/`HEAD` | `/api/v1/heartbeats/ping/{token}` | None | Record a ping |
+| Method       | Path                                       | Permission          | Description                                                     |
+| ------------ | ------------------------------------------ | ------------------- | --------------------------------------------------------------- |
+| `GET`        | `/api/v1/heartbeats`                       | `heartbeats:read`   | List heartbeats (query: enabled, status, search, owner_team_id) |
+| `POST`       | `/api/v1/heartbeats`                       | `heartbeats:write`  | Create heartbeat                                                |
+| `GET`        | `/api/v1/heartbeats/{id}`                  | `heartbeats:read`   | Get heartbeat                                                   |
+| `PUT`        | `/api/v1/heartbeats/{id}`                  | `heartbeats:write`  | Update heartbeat                                                |
+| `DELETE`     | `/api/v1/heartbeats/{id}`                  | `heartbeats:delete` | Delete heartbeat                                                |
+| `POST`       | `/api/v1/heartbeats/{id}/regenerate-token` | `heartbeats:write`  | Regenerate ping token                                           |
+| `GET`/`HEAD` | `/api/v1/heartbeats/ping/{token}`          | None                | Record a ping                                                   |

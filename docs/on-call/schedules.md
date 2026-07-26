@@ -13,18 +13,18 @@ A schedule's display name is **derived dynamically from its owning team** — no
 
 Each schedule has one or more **layers** that define rotating on-call coverage. A layer carries:
 
-| Field | Description |
-|-------|-------------|
-| `name` | Display name for the layer (e.g., "Primary", "Secondary") |
-| `rotation_type` | `weekly`, `daily`, or `custom` |
-| `rotation_interval` | How many units of `rotation_type` per shift (e.g., `2` for bi-weekly) |
-| `start_date` | When the rotation begins (RFC3339) |
-| `end_date` | Optional end; the layer stops resolving after this |
-| `timezone` | IANA timezone the layer's windows are interpreted in (default `UTC`) |
+| Field                     | Description                                                                                   |
+| ------------------------- | --------------------------------------------------------------------------------------------- |
+| `name`                    | Display name for the layer (e.g., "Primary", "Secondary")                                     |
+| `rotation_type`           | `weekly`, `daily`, or `custom`                                                                |
+| `rotation_interval`       | How many units of `rotation_type` per shift (e.g., `2` for bi-weekly)                         |
+| `start_date`              | When the rotation begins (RFC3339)                                                            |
+| `end_date`                | Optional end; the layer stops resolving after this                                            |
+| `timezone`                | IANA timezone the layer's windows are interpreted in (default `UTC`)                          |
 | `start_time` / `end_time` | Daily active window as `HH:MM` in the layer's timezone; empty `end_time` means active all day |
-| `days_of_week` | Active days (empty means every day) |
-| `priority` | Higher-priority layers win when multiple layers are active |
-| `user_ids` | Ordered list of users in the rotation |
+| `days_of_week`            | Active days (empty means every day)                                                           |
+| `priority`                | Higher-priority layers win when multiple layers are active                                    |
+| `user_ids`                | Ordered list of users in the rotation                                                         |
 
 When more than one layer is active at a given moment, the layer with the highest `priority` determines who is on call. Users added to a layer must be members of the schedule's team and must have a phone number on file.
 
@@ -39,11 +39,13 @@ Temporary schedule changes can be created via **overrides**. An override records
 ## Viewing On-Call Status
 
 ### Who is On-Call Now?
+
 - **Global**: `GET /api/v1/on-call/who-is-on-call` — All schedules' current on-call
 - **Per Schedule**: `GET /api/v1/on-call/schedules/{id}/current` — Specific schedule
 - **My Shifts**: `GET /api/v1/on-call/me` — Current/pending shifts for the logged-in user
 
 ### Timeline
+
 `GET /api/v1/on-call/schedules/{id}/timeline` — Shows next N rotations
 
 ## Handoffs
@@ -73,48 +75,51 @@ Pass `group_by=user` to aggregate shifts per responder instead of per shift.
 
 ### Schedule Management
 
-> **Note:** Schedules are **auto-provisioned one-per-team**. Creating a team (`POST /api/v1/teams`) automatically creates its on-call schedule. Schedules **cannot be created directly** — `POST /api/v1/on-call/schedules` returns HTTP 405 with the message *"schedules are auto-created from teams and cannot be created directly."* Only `GET` and `PATCH` work on `/api/v1/on-call/schedules/{id}`.
+> **Note:** Schedules are **auto-provisioned one-per-team**. Creating a team (`POST /api/v1/teams`) automatically creates its on-call schedule. Schedules **cannot be created directly** — `POST /api/v1/on-call/schedules` returns HTTP 405 with the message _"schedules are auto-created from teams and cannot be created directly."_ Only `GET` and `PATCH` work on `/api/v1/on-call/schedules/{id}`.
 
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `GET` | `/api/v1/on-call/schedules` | Session | `oncall:read` | List schedules |
-| `GET` | `/api/v1/on-call/schedules/{id}` | Session | `oncall:read` | Get schedule with layers |
-| `PATCH` | `/api/v1/on-call/schedules/{id}` | Session | `oncall:write` | Update schedule |
-| `DELETE` | `/api/v1/on-call/schedules/{id}` | Session | `oncall:write` | Delete schedule |
+| Method  | Path                             | Auth    | Permission     | Description              |
+| ------- | -------------------------------- | ------- | -------------- | ------------------------ |
+| `GET`   | `/api/v1/on-call/schedules`      | Session | `oncall:read`  | List schedules           |
+| `GET`   | `/api/v1/on-call/schedules/{id}` | Session | `oncall:read`  | Get schedule with layers |
+| `PATCH` | `/api/v1/on-call/schedules/{id}` | Session | `oncall:write` | Update schedule          |
 
 ### On-Call Lookup
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `GET` | `/api/v1/on-call/who-is-on-call` | Session | `oncall:read` | Global on-call status |
-| `GET` | `/api/v1/on-call/me` | Session | `oncall:read` | My current/pending shifts |
-| `GET` | `/api/v1/on-call/my-on-call` | Session | `oncall:read` | Alias for `/on-call/me` |
-| `GET` | `/api/v1/on-call/schedules/{id}/current` | Session | `oncall:read` | Current on-call for schedule |
-| `GET` | `/api/v1/on-call/schedules/{id}/timeline` | Session | `oncall:read` | Next N rotations |
-| `GET` | `/api/v1/on-call/schedules/{id}/ical` | Session | `oncall:read` | Export shifts as iCalendar (.ics) |
+
+| Method | Path                                      | Auth    | Permission    | Description                       |
+| ------ | ----------------------------------------- | ------- | ------------- | --------------------------------- |
+| `GET`  | `/api/v1/on-call/who-is-on-call`          | Session | `oncall:read` | Global on-call status             |
+| `GET`  | `/api/v1/on-call/me`                      | Session | `oncall:read` | My current/pending shifts         |
+| `GET`  | `/api/v1/on-call/my-on-call`              | Session | `oncall:read` | Alias for `/on-call/me`           |
+| `GET`  | `/api/v1/on-call/schedules/{id}/current`  | Session | `oncall:read` | Current on-call for schedule      |
+| `GET`  | `/api/v1/on-call/schedules/{id}/timeline` | Session | `oncall:read` | Next N rotations                  |
+| `GET`  | `/api/v1/on-call/schedules/{id}/ical`     | Session | `oncall:read` | Export shifts as iCalendar (.ics) |
 
 ### Overrides
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `GET` | `/api/v1/on-call/schedules/{id}/overrides` | Session | `oncall:read` | List overrides |
-| `POST` | `/api/v1/on-call/schedules/{id}/overrides` | Session | `oncall:write` | Create override |
-| `DELETE` | `/api/v1/on-call/overrides/{id}` | Session | `oncall:write` | Delete override |
+
+| Method   | Path                                       | Auth    | Permission     | Description     |
+| -------- | ------------------------------------------ | ------- | -------------- | --------------- |
+| `GET`    | `/api/v1/on-call/schedules/{id}/overrides` | Session | `oncall:read`  | List overrides  |
+| `POST`   | `/api/v1/on-call/schedules/{id}/overrides` | Session | `oncall:write` | Create override |
+| `DELETE` | `/api/v1/on-call/overrides/{id}`           | Session | `oncall:write` | Delete override |
 
 ### Handoffs
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `GET` | `/api/v1/on-call/handoffs` | Session | `oncall:read` | List handoffs |
-| `GET` | `/api/v1/on-call/handoffs/{id}` | Session | `oncall:read` | Get handoff |
-| `GET` | `/api/v1/on-call/handoffs/pending` | Session | `oncall:read` | Pending handoffs |
-| `POST` | `/api/v1/on-call/handoffs/{id}/notes` | Session | `oncall:write` | Save notes (outgoing_notes or incoming_notes) |
-| `POST` | `/api/v1/on-call/handoffs/{id}/acknowledge` | Session | `oncall:write` | Acknowledge |
+
+| Method | Path                                        | Auth    | Permission     | Description                                   |
+| ------ | ------------------------------------------- | ------- | -------------- | --------------------------------------------- |
+| `GET`  | `/api/v1/on-call/handoffs`                  | Session | `oncall:read`  | List handoffs                                 |
+| `GET`  | `/api/v1/on-call/handoffs/{id}`             | Session | `oncall:read`  | Get handoff                                   |
+| `GET`  | `/api/v1/on-call/handoffs/pending`          | Session | `oncall:read`  | Pending handoffs                              |
+| `POST` | `/api/v1/on-call/handoffs/{id}/notes`       | Session | `oncall:write` | Save notes (outgoing_notes or incoming_notes) |
+| `POST` | `/api/v1/on-call/handoffs/{id}/acknowledge` | Session | `oncall:write` | Acknowledge                                   |
 
 ### Pager Load Metrics
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `GET` | `/api/v1/on-call/metrics` | Session | `oncall:read` | Pager load metrics |
+
+| Method | Path                      | Auth    | Permission    | Description        |
+| ------ | ------------------------- | ------- | ------------- | ------------------ |
+| `GET`  | `/api/v1/on-call/metrics` | Session | `oncall:read` | Pager load metrics |
 
 ## Agent API
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `GET` | `/api/v1/agent/on-call/current` | Bearer | Who is on call |
+| Method | Path                            | Auth   | Description    |
+| ------ | ------------------------------- | ------ | -------------- |
+| `GET`  | `/api/v1/agent/on-call/current` | Bearer | Who is on call |

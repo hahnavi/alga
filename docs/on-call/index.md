@@ -57,22 +57,22 @@ Map teams to your service ownership. The `payments-team` owns payment services a
 
 ### Team Management
 
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `GET` | `/api/v1/teams` | Session | `oncall:read` | List teams |
-| `POST` | `/api/v1/teams` | Session | `oncall:write` | Create team |
-| `GET` | `/api/v1/teams/{id}` | Session | `oncall:read` | Get team |
-| `PATCH` | `/api/v1/teams/{id}` | Session | `oncall:write` | Update team |
+| Method   | Path                 | Auth    | Permission     | Description |
+| -------- | -------------------- | ------- | -------------- | ----------- |
+| `GET`    | `/api/v1/teams`      | Session | `oncall:read`  | List teams  |
+| `POST`   | `/api/v1/teams`      | Session | `oncall:write` | Create team |
+| `GET`    | `/api/v1/teams/{id}` | Session | `oncall:read`  | Get team    |
+| `PATCH`  | `/api/v1/teams/{id}` | Session | `oncall:write` | Update team |
 | `DELETE` | `/api/v1/teams/{id}` | Session | `oncall:write` | Delete team |
 
 ### Team Members
 
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `GET` | `/api/v1/teams/{id}/members` | Session | `oncall:read` | List members with roles |
-| `POST` | `/api/v1/teams/{id}/members` | Session | `oncall:write` | Add member (user_id, role) |
-| `PATCH` | `/api/v1/teams/{id}/members/{userId}` | Session | `oncall:write` | Update member role |
-| `DELETE` | `/api/v1/teams/{id}/members/{userId}` | Session | `oncall:write` | Remove member |
+| Method   | Path                                  | Auth    | Permission     | Description                |
+| -------- | ------------------------------------- | ------- | -------------- | -------------------------- |
+| `GET`    | `/api/v1/teams/{id}/members`          | Session | `oncall:read`  | List members with roles    |
+| `POST`   | `/api/v1/teams/{id}/members`          | Session | `oncall:write` | Add member (user_id, role) |
+| `PATCH`  | `/api/v1/teams/{id}/members/{userId}` | Session | `oncall:write` | Update member role         |
+| `DELETE` | `/api/v1/teams/{id}/members/{userId}` | Session | `oncall:write` | Remove member              |
 
 ## See Also
 

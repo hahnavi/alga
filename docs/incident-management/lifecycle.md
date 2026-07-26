@@ -22,15 +22,15 @@ detected/active → cancelled
 
 ## States
 
-| Status | Description | Typical Trigger |
-|--------|-------------|-----------------|
-| `detected` | Initial creation, awaiting triage or acknowledgement | Manual creation or promotion from an alert investigation |
-| `triaging` | Undergoing triage assessment | `POST /api/v1/incidents/{id}/begin-triage` |
-| `active` | Acknowledged, active response underway | `acknowledge`, or `promote` from triaging |
-| `mitigated` | Contained/fix in place, monitoring | `POST /api/v1/incidents/{id}/mitigate` |
-| `resolved` | Fully resolved (terminal) | `POST /api/v1/incidents/{id}/resolve` |
-| `closed` | Finalized after resolution (terminal) | `POST /api/v1/incidents/{id}/close` |
-| `cancelled` | False alarm (terminal) | `POST /api/v1/incidents/{id}/cancel` |
+| Status      | Description                                          | Typical Trigger                                          |
+| ----------- | ---------------------------------------------------- | -------------------------------------------------------- |
+| `detected`  | Initial creation, awaiting triage or acknowledgement | Manual creation or promotion from an alert investigation |
+| `triaging`  | Undergoing triage assessment                         | `POST /api/v1/incidents/{id}/begin-triage`               |
+| `active`    | Acknowledged, active response underway               | `acknowledge`, or `promote` from triaging                |
+| `mitigated` | Contained/fix in place, monitoring                   | `POST /api/v1/incidents/{id}/mitigate`                   |
+| `resolved`  | Fully resolved (terminal)                            | `POST /api/v1/incidents/{id}/resolve`                    |
+| `closed`    | Finalized after resolution (terminal)                | `POST /api/v1/incidents/{id}/close`                      |
+| `cancelled` | False alarm (terminal)                               | `POST /api/v1/incidents/{id}/cancel`                     |
 
 ## Optimistic Concurrency
 
@@ -40,16 +40,16 @@ Every transition goes through `TransitionIncidentStatus`, which guards the updat
 
 Each row lists the source states accepted by the action and the resulting state.
 
-| Action | From | To | Notes |
-|--------|------|----|-------|
-| Begin Triage | `detected` | `triaging` | Initializes the incident document sections |
-| Promote | `triaging` | `active` | Propagates service status |
-| Acknowledge | `detected` | `active` | Sets `sla_acknowledged_at`, stops escalation |
-| Mitigate | `detected`, `active` | `mitigated` | Sets `mitigated_at`, propagates service status |
-| Resolve | `detected`, `active`, `mitigated` | `resolved` | Requires resolution docs (see below); cascades `resolved` to linked firing alerts |
-| Close | `resolved` | `closed` | Sets `closed_at` |
-| Reopen | `mitigated`, `resolved`, `closed` | `active` | Returns incident to active response |
-| Cancel | `detected`, `active` | `cancelled` | Terminal false-alarm state |
+| Action       | From                              | To          | Notes                                                                             |
+| ------------ | --------------------------------- | ----------- | --------------------------------------------------------------------------------- |
+| Begin Triage | `detected`                        | `triaging`  | Initializes the incident document sections                                        |
+| Promote      | `triaging`                        | `active`    | Propagates service status                                                         |
+| Acknowledge  | `detected`                        | `active`    | Sets `sla_acknowledged_at`, stops escalation                                      |
+| Mitigate     | `detected`, `active`              | `mitigated` | Sets `mitigated_at`, propagates service status                                    |
+| Resolve      | `detected`, `active`, `mitigated` | `resolved`  | Requires resolution docs (see below); cascades `resolved` to linked firing alerts |
+| Close        | `resolved`                        | `closed`    | Sets `closed_at`                                                                  |
+| Reopen       | `mitigated`, `resolved`, `closed` | `active`    | Returns incident to active response                                               |
+| Cancel       | `detected`, `active`              | `cancelled` | Terminal false-alarm state                                                        |
 
 ### Resolution Requirements
 
@@ -65,13 +65,13 @@ If any are missing, the API returns a validation error listing the missing field
 
 `applyStatusTimestamps` stamps lifecycle fields as each transition lands:
 
-| Transition To | Timestamp(s) Set |
-|---------------|------------------|
-| `triaging` | `triaged_at` |
-| `active` | `sla_acknowledged_at` |
-| `mitigated` | `mitigated_at` |
-| `resolved` | `resolved_at` and `sla_resolved_at` |
-| `closed` | `closed_at` |
+| Transition To | Timestamp(s) Set                    |
+| ------------- | ----------------------------------- |
+| `triaging`    | `triaged_at`                        |
+| `active`      | `sla_acknowledged_at`               |
+| `mitigated`   | `mitigated_at`                      |
+| `resolved`    | `resolved_at` and `sla_resolved_at` |
+| `closed`      | `closed_at`                         |
 
 These timestamps drive the SLA metrics (MTTA, MTTR, MTTM) reported by the metrics API.
 
@@ -88,17 +88,17 @@ Beyond timestamps, transitions trigger:
 
 ## API Endpoints
 
-| Action | Method | Path | Permission |
-|--------|--------|------|------------|
+| Action       | Method | Path                                  | Permission          |
+| ------------ | ------ | ------------------------------------- | ------------------- |
 | Begin Triage | `POST` | `/api/v1/incidents/{id}/begin-triage` | `incidents:command` |
-| Promote | `POST` | `/api/v1/incidents/{id}/promote` | `incidents:command` |
-| Acknowledge | `POST` | `/api/v1/incidents/{id}/acknowledge` | `incidents:command` |
-| Mitigate | `POST` | `/api/v1/incidents/{id}/mitigate` | `incidents:command` |
-| Resolve | `POST` | `/api/v1/incidents/{id}/resolve` | `incidents:command` |
-| Close | `POST` | `/api/v1/incidents/{id}/close` | `incidents:command` |
-| Reopen | `POST` | `/api/v1/incidents/{id}/reopen` | `incidents:command` |
-| Cancel | `POST` | `/api/v1/incidents/{id}/cancel` | `incidents:command` |
-| Escalate | `POST` | `/api/v1/incidents/{id}/escalate` | `incidents:command` |
+| Promote      | `POST` | `/api/v1/incidents/{id}/promote`      | `incidents:command` |
+| Acknowledge  | `POST` | `/api/v1/incidents/{id}/acknowledge`  | `incidents:command` |
+| Mitigate     | `POST` | `/api/v1/incidents/{id}/mitigate`     | `incidents:command` |
+| Resolve      | `POST` | `/api/v1/incidents/{id}/resolve`      | `incidents:command` |
+| Close        | `POST` | `/api/v1/incidents/{id}/close`        | `incidents:command` |
+| Reopen       | `POST` | `/api/v1/incidents/{id}/reopen`       | `incidents:command` |
+| Cancel       | `POST` | `/api/v1/incidents/{id}/cancel`       | `incidents:command` |
+| Escalate     | `POST` | `/api/v1/incidents/{id}/escalate`     | `incidents:command` |
 
 ## See Also
 

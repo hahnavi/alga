@@ -23,6 +23,7 @@ Thank you for your interest in contributing to Alga! This guide covers everythin
 ### Prerequisites
 
 **Required:**
+
 - **Go 1.26.5+** - Backend language
 - **Node.js 24+** - Frontend tooling (Vite 8, TypeScript ~6.0.3, vue-tsc 3 require Node 20+; the project builds and CI run on Node 24)
 - **pnpm 8+** - Package manager
@@ -31,6 +32,7 @@ Thank you for your interest in contributing to Alga! This guide covers everythin
 - **RabbitMQ 4+** - For async pipeline (optional but recommended)
 
 **Recommended:**
+
 - **Docker & Docker Compose** - For local infrastructure
 - **Git** - Version control
 
@@ -128,17 +130,20 @@ pnpm format  # Check only
 ### Go Code Style
 
 **Formatting:**
+
 - Use `gofmt` for all Go code
 - Run `gofmt -w .` before committing
 - CI checks formatting automatically
 
 **Imports:**
+
 - Group imports in three blocks separated by blank lines:
   1. Standard library
   2. Third-party (`gopkg.in/yaml.v3`, `entgo.io/ent`, `github.com/...`)
   3. Internal packages (`alga/...`)
 
 **Naming:**
+
 - **Packages:** lowercase single words (`config`, `routing`, `logger`)
 - **Exported types/functions:** PascalCase (`NewClient`, `RouteConfig`, `Engine`)
 - **Unexported:** camelCase (`match`, `formatAlertMessage`, `handleWebhook`)
@@ -146,6 +151,7 @@ pnpm format  # Check only
 - **Variables:** camelCase (`routingEngine`, `mmClient`)
 
 **Error Handling:**
+
 - Always return `error` as the last return value
 - Wrap errors with `fmt.Errorf("context: %w", err)`
 - Fatal startup errors: `log.Fatalf`
@@ -155,22 +161,26 @@ pnpm format  # Check only
 ### Vue/TypeScript Code Style
 
 **Formatting:**
+
 - Use `oxfmt` for JavaScript/TypeScript formatting
 - Run `pnpm format:write` before committing
 - CI checks formatting automatically
 
 **Linting:**
+
 - Use `oxlint` for linting
 - Run `pnpm lint` before committing
 - CI runs linter in PR checks
 
 **TypeScript:**
+
 - Strict mode enabled
 - Use `<script setup lang="ts">` for Vue components
 - Type all props, emits, and function signatures
 - Avoid `any` type; use `unknown` if truly unknown
 
 **Component Organization:**
+
 - Page components in `src/pages/*`
 - Reusable UI components in `src/components/ui/*`
 - Feature components in `src/components/*`
@@ -179,17 +189,20 @@ pnpm format  # Check only
 - Stores in `src/stores/*`
 
 **API Calls:**
+
 - Put API calls in `src/lib/api.ts`
 - Avoid direct fetch in components
 - Use typed interfaces for request/response
 - Handle errors gracefully with toast notifications
 
 **Styling:**
+
 - Use Tailwind CSS v4 utility classes
 - Avoid inline styles; use Tailwind classes
 - For complex components, create utility classes in `app.css`
 
 **Accessibility:**
+
 - Add `aria-label` for icon-only buttons
 - Use semantic HTML (`<button>`, `<input>`, `<nav>`)
 - Support keyboard navigation
@@ -230,6 +243,7 @@ go test -race ./...
 ```
 
 **Coverage Requirements:**
+
 - Core packages (`api`): >80% coverage
 - Integration packages (`mattermost`, `slack`): >60% coverage
 - Utility packages (`logger`, `crypto`): >90% coverage
@@ -244,6 +258,7 @@ pnpm --filter frontend build
 ```
 
 **Coverage Requirements:**
+
 - Critical flows (authentication, alert creation): >70% coverage
 - UI components: >50% coverage
 - Utilities and composables: >80% coverage
@@ -251,6 +266,7 @@ pnpm --filter frontend build
 ### Pre-Commit Checks
 
 **Automated Checks:**
+
 - Go formatting (`gofmt`)
 - Go vet (`go vet`)
 - Go tests (`go test`)
@@ -259,6 +275,7 @@ pnpm --filter frontend build
 - Frontend formatting (`oxfmt`)
 
 **Run manually:**
+
 ```bash
 # From project root
 pnpm lint        # Frontend lint
@@ -277,6 +294,7 @@ go mod tidy
 ### Branch Naming
 
 **Use conventional branch names:**
+
 - `feature/` - New features
 - `fix/` - Bug fixes
 - `docs/` - Documentation changes
@@ -285,6 +303,7 @@ go mod tidy
 - `chore/` - Maintenance tasks
 
 **Examples:**
+
 ```
 feature/add-agent-memory-system
 fix/correct-escalation-timing
@@ -295,6 +314,7 @@ refactor/simplify-routing-engine
 ### Commit Messages
 
 **Follow Conventional Commits:**
+
 ```
 <type>[optional scope]: <description>
 
@@ -304,6 +324,7 @@ refactor/simplify-routing-engine
 ```
 
 **Types:**
+
 - `feat` - New feature
 - `fix` - Bug fix
 - `docs` - Documentation
@@ -315,6 +336,7 @@ refactor/simplify-routing-engine
 - `ci` - CI/CD changes
 
 **Examples:**
+
 ```
 feat(api): add agent memory search endpoint
 
@@ -326,6 +348,7 @@ Fixes #123
 ### Review Process
 
 **Before Submitting:**
+
 1. Ensure all tests pass locally
 2. Run linting and formatting checks
 3. Update documentation if needed
@@ -334,6 +357,7 @@ Fixes #123
 6. Review your own changes first
 
 **Review Guidelines:**
+
 - At least one approval from maintainers
 - All CI checks must pass
 - Address all review comments
@@ -343,6 +367,7 @@ Fixes #123
 ### Merge Requirements
 
 **Criteria for merging:**
+
 - All CI checks pass
 - At least one approval from maintainer
 - No unresolved review comments
@@ -355,12 +380,14 @@ Fixes #123
 ### Backend Architecture
 
 **Packages as Modules:**
+
 - Each package has a single responsibility
 - Clear interfaces between packages
 - Minimize circular dependencies
 - Prefer dependency injection
 
 **Layered Architecture:**
+
 ```
 api/          # HTTP handlers, auth, SSE
 store/        # Database persistence (Ent)
@@ -373,6 +400,7 @@ notification/ # Notification dispatcher
 ```
 
 **Concurrency:**
+
 - Use goroutines for concurrent operations
 - Use channels for communication
 - Use mutexes for shared state
@@ -380,6 +408,7 @@ notification/ # Notification dispatcher
 - Avoid global mutable state
 
 **Error Handling:**
+
 - Wrap errors with context
 - Don't panic in production code
 - Log errors at appropriate levels
@@ -387,6 +416,7 @@ notification/ # Notification dispatcher
 - Handle errors gracefully
 
 **Database:**
+
 - Use Ent ORM for type-safe queries
 - Use transactions for multi-step operations
 - Index frequently queried fields
@@ -396,6 +426,7 @@ notification/ # Notification dispatcher
 ### Frontend Architecture
 
 **Component Hierarchy:**
+
 ```
 App.vue
 ├── Sidebar.vue
@@ -407,12 +438,14 @@ App.vue
 ```
 
 **State Management:**
+
 - Use Pinia stores for global state (`auth`, `notifications`)
 - Use local state in components for UI state
 - Use composables for reusable logic
 - Keep stores focused and small
 
 **API Layer:**
+
 - Single API client in `src/lib/api.ts`
 - Type-safe request/response interfaces
 - Centralized error handling
@@ -420,12 +453,14 @@ App.vue
 - Token management
 
 **Routing:**
+
 - Vue Router for page navigation
 - Route guards for auth and permissions
 - Lazy loading for code splitting
 - Route parameters for dynamic pages
 
 **Real-time Updates:**
+
 - Server-Sent Events (SSE) for push updates
 - Reconnect logic for resilience
 - Event deduplication
@@ -434,6 +469,7 @@ App.vue
 ### Cross-Cutting Concerns
 
 **Security:**
+
 - Validate all inputs
 - Sanitize outputs
 - Use prepared statements for SQL
@@ -442,12 +478,14 @@ App.vue
 - Never expose secrets in logs
 
 **Logging:**
+
 - Use structured logging where possible
 - Log at appropriate levels (DEBUG, INFO, WARN, ERROR)
 - Include context (request IDs, user IDs)
 - Don't log sensitive data
 
 **Performance:**
+
 - Use connection pooling
 - Cache frequently accessed data
 - Optimize database queries
@@ -459,12 +497,14 @@ App.vue
 ### REST API Design
 
 **Resource Naming:**
+
 - Use nouns, not verbs: `/alerts` not `/getAlerts`
 - Use plural for collections: `/users` not `/user`
 - Use kebab-case for URLs: `/escalation-policies`
 - Nest logical resources: `/incidents/{id}/timeline`
 
 **HTTP Methods:**
+
 - `GET` - Retrieve resources
 - `POST` - Create resources
 - `PUT` - Replace resources (full update)
@@ -472,6 +512,7 @@ App.vue
 - `DELETE` - Remove resources
 
 **Status Codes:**
+
 - `200 OK` - Successful GET/PUT/PATCH
 - `201 Created` - Successful POST
 - `204 No Content` - Successful DELETE
@@ -485,6 +526,7 @@ App.vue
 - `500 Internal Server Error` - Server error
 
 **Error codes:**
+
 - `VALIDATION_ERROR` - Input validation failed
 - `NOT_FOUND` - Resource not found
 - `UNAUTHORIZED` - Authentication required
@@ -496,6 +538,7 @@ App.vue
 ### Versioning
 
 **API Versioning:**
+
 - Use URL path versioning: `/api/v1/alerts`
 - Maintain backward compatibility where possible
 - Document breaking changes in release notes
@@ -506,12 +549,14 @@ App.vue
 ### Code Documentation
 
 **Go Documentation:**
+
 - Add godoc comments for exported functions, types, and packages
 - Include examples for complex APIs
 - Document parameters and return values
 - Note any concurrency requirements
 
 **TypeScript Documentation:**
+
 - Use JSDoc comments for functions and complex types
 - Document props and emits in Vue components
 - Include examples for utility functions
@@ -519,6 +564,7 @@ App.vue
 ### User Documentation
 
 **Documentation Structure:**
+
 - `docs/getting-started/` — Quick start guides and installation
 - `docs/core-features/` — Feature documentation (alerts, investigations, agents)
 - `docs/configuration/` — Configuration and security guides
@@ -531,6 +577,7 @@ App.vue
 - `docs/resources/` — FAQ, use cases, contributing
 
 **Writing Guides:**
+
 - Start with user goals, not features
 - Use clear, simple language
 - Include code examples
@@ -538,6 +585,7 @@ App.vue
 - Cross-reference related topics
 
 **Updating Documentation:**
+
 - Update docs when adding new features
 - Update docs when breaking changes occur
 - Keep examples up to date
@@ -548,16 +596,19 @@ App.vue
 ### Code of Conduct
 
 **Be Respectful:**
+
 - Treat others with respect and professionalism
 - Welcome newcomers and help them learn
 - Assume good intentions
 
 **Be Constructive:**
+
 - Focus on what is best for community
 - Provide constructive feedback
 - Accept feedback gracefully
 
 **Be Inclusive:**
+
 - Respect different perspectives and experiences
 - Use inclusive language
 - Welcome contributions from everyone
@@ -565,12 +616,14 @@ App.vue
 ### Getting Help
 
 **Resources:**
+
 - [Documentation](../getting-started/)
 - [API Reference](../api-reference/)
 - [GitHub Issues](https://github.com/hahnavi/alga/issues)
 - [Discussions](https://github.com/hahnavi/alga/discussions)
 
 **Asking Questions:**
+
 - Search existing issues and discussions first
 - Include relevant context and error messages
 - Provide steps to reproduce bugs
@@ -579,12 +632,14 @@ App.vue
 ### Reporting Issues
 
 **Bug Reports:**
+
 - Use the bug report template
 - Include environment details (OS, Go version, etc.)
 - Provide minimal reproduction case
 - Include logs and error messages
 
 **Feature Requests:**
+
 - Describe the problem you're solving
 - Explain why the feature is needed
 - Suggest a solution approach
@@ -593,12 +648,14 @@ App.vue
 ### Security
 
 **Reporting Vulnerabilities:**
+
 - Do not report publicly
-- Email security@example.com
+- Report via [GitHub private vulnerability reporting](https://github.com/hahnavi/alga/security/advisories/new)
 - Include details and reproduction steps
-- Wait for confirmation before discussing publicly
+- Acknowledgement within 48 hours; fix target within 90 days
 
 **Security Best Practices:**
+
 - Never commit secrets or credentials
 - Use environment variables for configuration
 - Follow security guidelines in code
@@ -607,11 +664,13 @@ App.vue
 ## Recognition
 
 **Contributors:**
+
 - All contributors are recognized in the contributors list
 - Significant contributions may be featured in release notes
 - Maintain good commit hygiene
 
 **Attribution:**
+
 - Preserve author information when possible
 - Credit contributors in relevant documentation
 - Mention contributors in changelog for significant changes

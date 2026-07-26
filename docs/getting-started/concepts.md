@@ -99,7 +99,7 @@ Additional states: `promoted` (escalated to an incident), `failed`, `cancelled`,
 Additional states: `cancelled`, `paused`, `coordinating` (agent is coordinating multi-agent tasks).
 
 ::: warning "assigned" not "delegated"
-The scheduler *assigns* investigations to agents. You may see older references to "delegated" — the correct status is `assigned`.
+The scheduler _assigns_ investigations to agents. You may see older references to "delegated" — the correct status is `assigned`.
 :::
 
 ### Incidents
@@ -145,7 +145,7 @@ Alerts matching an active maintenance window are suppressed at ingestion — the
 
 These four stages process every alert, in order:
 
-1. **Routing** — label-based rules determine *where* to deliver the alert (Slack, Mattermost, etc.) and whether to suppress it
+1. **Routing** — label-based rules determine _where_ to deliver the alert (Slack, Mattermost, etc.) and whether to suppress it
 2. **Correlation** — related alerts within the time window are grouped into one investigation
 3. **Triage** — deterministic rules first (fast, free), then LLM (smart, costs tokens) decide what to do: `investigate`, `auto_resolve`, `suppress`, `escalate`, or `enrich_only`
 4. **Investigation** — the scheduler dispatches the grouped alerts to an AI agent
@@ -154,9 +154,9 @@ These four stages process every alert, in order:
 
 These three govern human response:
 
-- **On-call schedules** define *who* is responsible right now (multi-layer rotations with overrides)
-- **Escalation policies** define *who gets paged next* if the primary on-call doesn't respond (multi-level with timed delays)
-- **SLA tracking** measures *how fast* the team responds and resolves, mapped by incident priority, and *triggers escalation* on breach
+- **On-call schedules** define _who_ is responsible right now (multi-layer rotations with overrides)
+- **Escalation policies** define _who gets paged next_ if the primary on-call doesn't respond (multi-level with timed delays)
+- **SLA tracking** measures _how fast_ the team responds and resolves, mapped by incident priority, and _triggers escalation_ on breach
 
 ### Knowledge → Memory → Investigation
 
@@ -172,16 +172,17 @@ All three are injected into the agent's dispatch prompt automatically.
 
 AI agents (Hermes, OpenClaw, or custom SDK agents) connect via SSE and receive investigation dispatches. Two gates control which investigations an agent receives:
 
-- **Capabilities** (`investigate`, `communicate`, `command`) — what the agent is allowed to *do*
-- **Scope** (`all` or `labels` via label selectors) — which investigations the agent is allowed to *receive*
+- **Capabilities** (`investigate`, `communicate`, `command`) — what the agent is allowed to _do_
+- **Scope** (`all` or `labels` via label selectors) — which investigations the agent is allowed to _receive_
 
 The scheduler scores all eligible agents by specificity (label-matched > catch-all), then by load (least busy), then by health (success rate).
 
 ::: tip Capability meanings
+
 - `investigate` — receive and work alert/incident investigations
 - `communicate` — post messages to alert and incident threads
 - `command` — coordinate incident command decisions, escalation, and multi-agent task dispatch
-:::
+  :::
 
 ### Threads → Real-Time Chat
 
@@ -213,26 +214,26 @@ Alert processing, notifications, investigations, escalation, SLA timers, and tri
 
 The specific workers that consume these queues:
 
-| Worker | Responsibility |
-|--------|---------------|
-| AlertWorker | Webhook ingestion, dedup, routing, delivery |
-| InvestigateWorker | Dispatch investigations to agents, manage lifecycle |
-| IncidentWorker | Incident state transitions, ICS role assignment |
-| EscalationWorker | Execute escalation policy levels |
-| SLAWorker | Track SLA timers, trigger breach escalation |
-| NotificationDispatchWorker | Fan out notifications to configured channels |
-| EmailWorker | Send transactional and notification emails |
-| ICSWorker | Provision incident war rooms (Google Meet) |
+| Worker                     | Responsibility                                      |
+| -------------------------- | --------------------------------------------------- |
+| AlertWorker                | Webhook ingestion, dedup, routing, delivery         |
+| InvestigateWorker          | Dispatch investigations to agents, manage lifecycle |
+| IncidentWorker             | Incident state transitions, ICS role assignment     |
+| EscalationWorker           | Execute escalation policy levels                    |
+| SLAWorker                  | Track SLA timers, trigger breach escalation         |
+| NotificationDispatchWorker | Fan out notifications to configured channels        |
+| EmailWorker                | Send transactional and notification emails          |
+| ICSWorker                  | Provision incident war rooms (Google Meet)          |
 
 Sweep workers run on timers to reconcile state:
 
-| Sweep Worker | Responsibility |
-|-------------|---------------|
-| EscalationSweep | Detect stalled escalations and advance them |
-| HeartbeatSweep | Detect missing heartbeats and fire stale alerts |
+| Sweep Worker                 | Responsibility                                          |
+| ---------------------------- | ------------------------------------------------------- |
+| EscalationSweep              | Detect stalled escalations and advance them             |
+| HeartbeatSweep               | Detect missing heartbeats and fire stale alerts         |
 | StuckInvestigationEscalation | Escalate investigations stuck too long in active states |
-| ActionItemSweep | Track overdue incident action items |
-| Outbox | Retry and publish pending outbox messages |
+| ActionItemSweep              | Track overdue incident action items                     |
+| Outbox                       | Retry and publish pending outbox messages               |
 
 ### Fail-Closed Security
 

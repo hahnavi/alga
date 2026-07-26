@@ -13,12 +13,12 @@ Alga provides a structured, blameless post-mortem workflow for incidents, with r
 draft → in_review → approved → published
 ```
 
-| Status | Description |
-|--------|-------------|
-| `draft` | Initial creation, being written |
-| `in_review` | Submitted for review |
-| `approved` | Reviewed and approved (records `approved_by_id`) |
-| `published` | Publicly visible (records `published_at`) |
+| Status      | Description                                      |
+| ----------- | ------------------------------------------------ |
+| `draft`     | Initial creation, being written                  |
+| `in_review` | Submitted for review                             |
+| `approved`  | Reviewed and approved (records `approved_by_id`) |
+| `published` | Publicly visible (records `published_at`)        |
 
 Allowed transitions: `draft → in_review`; `in_review → draft` or `approved`; `approved → in_review` or `published`. Submitting for review notifies the incident commander that a review is requested.
 
@@ -26,19 +26,19 @@ Allowed transitions: `draft → in_review`; `in_review → draft` or `approved`;
 
 A post-mortem includes the following fields:
 
-| Field | Description |
-|-------|-------------|
-| `title` | Post-mortem title |
-| `summary` | Brief description of what happened |
-| `timeline` | Key events during the incident (structured JSON) |
-| `root_cause` | Technical explanation |
-| `contributing_factors` | Additional factors that contributed (list) |
-| `impact` | Duration, affected services, user impact |
-| `what_went_well` | Things that worked during the response |
-| `what_went_wrong` | Things that did not work or could be improved |
-| `lessons_learned` | What was learned and what could be improved |
-| `blameless_confirmed` | Acknowledgement that the review is blameless |
-| `blameless_notes` | Notes supporting the blameless confirmation |
+| Field                  | Description                                      |
+| ---------------------- | ------------------------------------------------ |
+| `title`                | Post-mortem title                                |
+| `summary`              | Brief description of what happened               |
+| `timeline`             | Key events during the incident (structured JSON) |
+| `root_cause`           | Technical explanation                            |
+| `contributing_factors` | Additional factors that contributed (list)       |
+| `impact`               | Duration, affected services, user impact         |
+| `what_went_well`       | Things that worked during the response           |
+| `what_went_wrong`      | Things that did not work or could be improved    |
+| `lessons_learned`      | What was learned and what could be improved      |
+| `blameless_confirmed`  | Acknowledgement that the review is blameless     |
+| `blameless_notes`      | Notes supporting the blameless confirmation      |
 
 ## AI Draft Builder
 
@@ -48,14 +48,14 @@ When an incident is resolved, Alga can auto-create a post-mortem draft pre-popul
 
 Action items are tracked per post-mortem and can be assigned, prioritized, and driven to completion.
 
-| Field | Description |
-|-------|-------------|
-| `description` | What needs to be done (required) |
-| `type` | Kind of follow-up (defaults to `investigate`) |
-| `assignee_id` / `assignee_name` | User responsible |
-| `status` | `open` → `in_progress` → `done` (defaults to `open`) |
-| `priority` | Priority level (defaults to `medium`) |
-| `due_date` | Target completion date |
+| Field                           | Description                                          |
+| ------------------------------- | ---------------------------------------------------- |
+| `description`                   | What needs to be done (required)                     |
+| `type`                          | Kind of follow-up (defaults to `investigate`)        |
+| `assignee_id` / `assignee_name` | User responsible                                     |
+| `status`                        | `open` → `in_progress` → `done` (defaults to `open`) |
+| `priority`                      | Priority level (defaults to `medium`)                |
+| `due_date`                      | Target completion date                               |
 
 View all open action items globally at `GET /api/v1/action-items`.
 
@@ -71,33 +71,37 @@ View all open action items globally at `GET /api/v1/action-items`.
 ## API Endpoints
 
 ### Post-Mortem Management
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `GET` | `/api/v1/post-mortems` | Session | `postmortems:read` | List all post-mortems |
-| `GET` | `/api/v1/incidents/{id}/post-mortem` | Session | `postmortems:read` | Get post-mortem |
-| `POST` | `/api/v1/incidents/{id}/post-mortem` | Session | `postmortems:write` | Create post-mortem |
-| `PATCH` | `/api/v1/incidents/{id}/post-mortem` | Session | `postmortems:write` | Update post-mortem |
-| `DELETE` | `/api/v1/incidents/{id}/post-mortem` | Session | `postmortems:delete` | Delete post-mortem |
+
+| Method   | Path                                 | Auth    | Permission           | Description           |
+| -------- | ------------------------------------ | ------- | -------------------- | --------------------- |
+| `GET`    | `/api/v1/post-mortems`               | Session | `postmortems:read`   | List all post-mortems |
+| `GET`    | `/api/v1/incidents/{id}/post-mortem` | Session | `postmortems:read`   | Get post-mortem       |
+| `POST`   | `/api/v1/incidents/{id}/post-mortem` | Session | `postmortems:write`  | Create post-mortem    |
+| `PATCH`  | `/api/v1/incidents/{id}/post-mortem` | Session | `postmortems:write`  | Update post-mortem    |
+| `DELETE` | `/api/v1/incidents/{id}/post-mortem` | Session | `postmortems:delete` | Delete post-mortem    |
 
 ### Workflow Actions
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
+
+| Method | Path                                               | Auth    | Permission          | Description                     |
+| ------ | -------------------------------------------------- | ------- | ------------------- | ------------------------------- |
 | `POST` | `/api/v1/incidents/{id}/post-mortem/submit-review` | Session | `postmortems:write` | Submit for review (`in_review`) |
-| `POST` | `/api/v1/incidents/{id}/post-mortem/approve` | Session | `postmortems:write` | Approve post-mortem |
-| `POST` | `/api/v1/incidents/{id}/post-mortem/publish` | Session | `postmortems:write` | Publish post-mortem |
+| `POST` | `/api/v1/incidents/{id}/post-mortem/approve`       | Session | `postmortems:write` | Approve post-mortem             |
+| `POST` | `/api/v1/incidents/{id}/post-mortem/publish`       | Session | `postmortems:write` | Publish post-mortem             |
 
 ### Action Items
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `GET` | `/api/v1/incidents/{id}/post-mortem/action-items` | Session | `postmortems:read` | List action items |
-| `POST` | `/api/v1/incidents/{id}/post-mortem/action-items` | Session | `postmortems:write` | Create action item |
-| `PATCH` | `/api/v1/incidents/{id}/post-mortem/action-items/{itemId}` | Session | `postmortems:write` | Update action item |
+
+| Method   | Path                                                       | Auth    | Permission           | Description        |
+| -------- | ---------------------------------------------------------- | ------- | -------------------- | ------------------ |
+| `GET`    | `/api/v1/incidents/{id}/post-mortem/action-items`          | Session | `postmortems:read`   | List action items  |
+| `POST`   | `/api/v1/incidents/{id}/post-mortem/action-items`          | Session | `postmortems:write`  | Create action item |
+| `PATCH`  | `/api/v1/incidents/{id}/post-mortem/action-items/{itemId}` | Session | `postmortems:write`  | Update action item |
 | `DELETE` | `/api/v1/incidents/{id}/post-mortem/action-items/{itemId}` | Session | `postmortems:delete` | Delete action item |
 
 ### Global Action Items
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `GET` | `/api/v1/action-items` | Session | `postmortems:read` | All open action items |
+
+| Method | Path                   | Auth    | Permission         | Description           |
+| ------ | ---------------------- | ------- | ------------------ | --------------------- |
+| `GET`  | `/api/v1/action-items` | Session | `postmortems:read` | All open action items |
 
 ## See Also
 

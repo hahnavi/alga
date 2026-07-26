@@ -56,25 +56,19 @@ A common pattern — page the primary on-call immediately, escalate to the secon
     {
       "level_number": 1,
       "delay_minutes": 0,
-      "targets": [
-        { "target_type": "team", "target_team_id": "payments-team-id" }
-      ],
+      "targets": [{ "target_type": "team", "target_team_id": "payments-team-id" }],
       "notify_channels": ["in_app", "slack"]
     },
     {
       "level_number": 2,
       "delay_minutes": 5,
-      "targets": [
-        { "target_type": "team", "target_team_id": "payments-secondary-team-id" }
-      ],
+      "targets": [{ "target_type": "team", "target_team_id": "payments-secondary-team-id" }],
       "notify_channels": ["in_app", "slack", "email"]
     },
     {
       "level_number": 3,
       "delay_minutes": 15,
-      "targets": [
-        { "target_type": "user", "target_user_id": "team-lead-user-id" }
-      ],
+      "targets": [{ "target_type": "user", "target_user_id": "team-lead-user-id" }],
       "notify_channels": ["in_app", "slack", "email", "voice"]
     }
   ]
@@ -83,10 +77,10 @@ A common pattern — page the primary on-call immediately, escalate to the secon
 
 ## Target Types
 
-| Target Type | Description | Use When |
-|-------------|-------------|----------|
-| `user` | A specific person by `target_user_id` | You want to page a named individual (e.g., a domain expert or team lead) |
-| `team` | A team by `target_team_id` | The most common target — resolves to whoever is currently on call for the team's auto-provisioned on-call schedule |
+| Target Type | Description                           | Use When                                                                                                           |
+| ----------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `user`      | A specific person by `target_user_id` | You want to page a named individual (e.g., a domain expert or team lead)                                           |
+| `team`      | A team by `target_team_id`            | The most common target — resolves to whoever is currently on call for the team's auto-provisioned on-call schedule |
 
 A `team` target does **not** page every member of the team. It resolves through the team's on-call schedule, so the rotation (and any active override) decides who is paged. To page a named person directly, use a `user` target.
 
@@ -127,13 +121,13 @@ SLA targets are derived from the incident's [priority](/incident-management/) (P
 
 ## API Endpoints
 
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `GET` | `/api/v1/escalation-policies` | Session | `escalation:read` | List escalation policies |
-| `POST` | `/api/v1/escalation-policies` | Session | `escalation:write` | Create policy |
-| `GET` | `/api/v1/escalation-policies/{id}` | Session | `escalation:read` | Get policy with levels and targets |
-| `PATCH` | `/api/v1/escalation-policies/{id}` | Session | `escalation:write` | Update policy |
-| `DELETE` | `/api/v1/escalation-policies/{id}` | Session | `escalation:write` | Delete policy |
+| Method   | Path                               | Auth    | Permission         | Description                        |
+| -------- | ---------------------------------- | ------- | ------------------ | ---------------------------------- |
+| `GET`    | `/api/v1/escalation-policies`      | Session | `escalation:read`  | List escalation policies           |
+| `POST`   | `/api/v1/escalation-policies`      | Session | `escalation:write` | Create policy                      |
+| `GET`    | `/api/v1/escalation-policies/{id}` | Session | `escalation:read`  | Get policy with levels and targets |
+| `PATCH`  | `/api/v1/escalation-policies/{id}` | Session | `escalation:write` | Update policy                      |
+| `DELETE` | `/api/v1/escalation-policies/{id}` | Session | `escalation:write` | Delete policy                      |
 
 ## See Also
 

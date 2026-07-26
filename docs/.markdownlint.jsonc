@@ -1,0 +1,33 @@
+{
+  // VitePress-friendly markdownlint config.
+  // https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
+  "default": true,
+
+  // VitePress frontmatter uses --- delimited YAML; allow long lines there.
+  "MD013": false,
+
+  // VitePress templates use inline HTML (e.g. <Badge>, <script setup>).
+  "MD033": false,
+
+  // Multiple top-level headings are fine in docs pages with frontmatter title.
+  "MD025": { "front_matter_title": "" },
+
+  // Allow duplicate headings in different sections (common in API docs).
+  "MD024": { "siblings_only": true },
+
+  // VitePress uses ::: tip / ::: warning containers (not standard blockquotes).
+  "MD028": false,
+
+  // Allow trailing punctuation in headings (questions, etc.).
+  "MD026": { "punctuation": ".,;:!" },
+
+  // Don't enforce first-line-h1; VitePress frontmatter handles the title.
+  "MD041": false,
+
+  // Docs use bare fenced blocks for command output / log examples.
+  "MD040": false,
+
+  // Numbered steps with code blocks between items are intentional;
+  // markdownlint misreads them as separate lists with wrong prefixes.
+  "MD029": false,
+}

@@ -9,7 +9,7 @@ Status pages surface the health of your services to viewers — either internall
 
 ## Why Status Pages?
 
-When an incident is active, stakeholders want answers: *What's affected? How bad is it? When will it be fixed?* A status page gives them a single URL to check, so your team can focus on resolving the incident instead of answering "is it down?" questions in chat.
+When an incident is active, stakeholders want answers: _What's affected? How bad is it? When will it be fixed?_ A status page gives them a single URL to check, so your team can focus on resolving the incident instead of answering "is it down?" questions in chat.
 
 ## Concepts
 
@@ -21,13 +21,13 @@ When an incident is active, stakeholders want answers: *What's affected? How bad
 
 Components use these statuses, ordered from least to most severe:
 
-| Status | Rank | Meaning |
-|--------|------|---------|
-| `operational` | 0 | Everything is working normally |
-| `maintenance` | 1 | Scheduled maintenance in progress |
-| `degraded` | 2 | Some functionality is impaired but available |
-| `partial_outage` | 3 | A subset of the component is down |
-| `major_outage` | 4 | The component is completely down |
+| Status           | Rank | Meaning                                      |
+| ---------------- | ---- | -------------------------------------------- |
+| `operational`    | 0    | Everything is working normally               |
+| `maintenance`    | 1    | Scheduled maintenance in progress            |
+| `degraded`       | 2    | Some functionality is impaired but available |
+| `partial_outage` | 3    | A subset of the component is down            |
+| `major_outage`   | 4    | The component is completely down             |
 
 The page-level overall status is the highest-ranked (worst) component status. This means if even one component is at `major_outage`, the entire page shows `major_outage`.
 
@@ -39,10 +39,10 @@ Component statuses are set explicitly via the API or UI. Linking a component to 
 
 Each page carries a `visibility` of `internal` (default) or `public`. This marks the page's intended audience:
 
-| Visibility | Intended Audience | Use Case |
-|------------|-------------------|----------|
-| `internal` | Operators | Internal operations dashboard, team-awareness pages |
-| `public` | Customers / stakeholders | Customer-facing status page, stakeholder updates |
+| Visibility | Intended Audience        | Use Case                                            |
+| ---------- | ------------------------ | --------------------------------------------------- |
+| `internal` | Operators                | Internal operations dashboard, team-awareness pages |
+| `public`   | Customers / stakeholders | Customer-facing status page, stakeholder updates    |
 
 ::: warning Public access is not yet unauthenticated
 All status page API routes currently require authentication (a session or personal access token) and the `statuspages:read` permission. The `public` visibility is a classification marker; Alga does not yet serve an unauthenticated public endpoint for `public` pages.
@@ -80,20 +80,20 @@ When the incident is resolved, set components back to `operational`.
 
 ### Status Pages
 
-| Method | Path | Permission | Description |
-|--------|------|------------|-------------|
-| `GET` | `/api/v1/status-pages` | `statuspages:read` | List status pages |
-| `POST` | `/api/v1/status-pages` | `statuspages:write` | Create status page |
-| `GET` | `/api/v1/status-pages/slug/{slug}` | `statuspages:read` | View page by slug (with overall status, components, active incidents) |
-| `GET` / `PATCH` / `DELETE` | `/api/v1/status-pages/{id}` | `statuspages:read` / `write` | Manage a page |
+| Method                     | Path                               | Permission                   | Description                                                           |
+| -------------------------- | ---------------------------------- | ---------------------------- | --------------------------------------------------------------------- |
+| `GET`                      | `/api/v1/status-pages`             | `statuspages:read`           | List status pages                                                     |
+| `POST`                     | `/api/v1/status-pages`             | `statuspages:write`          | Create status page                                                    |
+| `GET`                      | `/api/v1/status-pages/slug/{slug}` | `statuspages:read`           | View page by slug (with overall status, components, active incidents) |
+| `GET` / `PATCH` / `DELETE` | `/api/v1/status-pages/{id}`        | `statuspages:read` / `write` | Manage a page                                                         |
 
 ### Components
 
-| Method | Path | Permission | Description |
-|--------|------|------------|-------------|
-| `GET` | `/api/v1/status-pages/{id}/components` | `statuspages:read` | List components |
-| `POST` | `/api/v1/status-pages/{id}/components` | `statuspages:write` | Create component |
-| `GET` / `PATCH` / `DELETE` | `/api/v1/status-pages/{id}/components/{component_id}` | `statuspages:*` | Manage a component |
+| Method                     | Path                                                  | Permission          | Description        |
+| -------------------------- | ----------------------------------------------------- | ------------------- | ------------------ |
+| `GET`                      | `/api/v1/status-pages/{id}/components`                | `statuspages:read`  | List components    |
+| `POST`                     | `/api/v1/status-pages/{id}/components`                | `statuspages:write` | Create component   |
+| `GET` / `PATCH` / `DELETE` | `/api/v1/status-pages/{id}/components/{component_id}` | `statuspages:*`     | Manage a component |
 
 ## See Also
 

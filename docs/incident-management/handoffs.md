@@ -20,27 +20,27 @@ Shift Ending → Outgoing Notes → Handoff Created (pending) → Incoming Ackno
 
 ## Handoff Record
 
-| Field | Description |
-|-------|-------------|
-| `schedule_id` | The on-call schedule this handoff belongs to |
-| `outgoing_user_id` | User ending their shift |
-| `incoming_user_id` | User starting their shift |
-| `handoff_at` | When the handoff occurs |
-| `status` | `pending` or `acknowledged` |
-| `outgoing_notes` | Notes from the outgoing on-call |
-| `incoming_notes` | Notes from the incoming on-call |
-| `incoming_acknowledged_at` | When the incoming on-call acknowledged |
-| `incident_summary` | Snapshot of active incidents at handoff time |
+| Field                      | Description                                  |
+| -------------------------- | -------------------------------------------- |
+| `schedule_id`              | The on-call schedule this handoff belongs to |
+| `outgoing_user_id`         | User ending their shift                      |
+| `incoming_user_id`         | User starting their shift                    |
+| `handoff_at`               | When the handoff occurs                      |
+| `status`                   | `pending` or `acknowledged`                  |
+| `outgoing_notes`           | Notes from the outgoing on-call              |
+| `incoming_notes`           | Notes from the incoming on-call              |
+| `incoming_acknowledged_at` | When the incoming on-call acknowledged       |
+| `incident_summary`         | Snapshot of active incidents at handoff time |
 
 ## API Endpoints
 
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `GET` | `/api/v1/on-call/handoffs` | Session | `oncall:read` | List handoffs |
-| `GET` | `/api/v1/on-call/handoffs/pending` | Session | `oncall:read` | List pending handoffs for the current user |
-| `GET` | `/api/v1/on-call/handoffs/{id}` | Session | `oncall:read` | Get handoff details |
-| `POST` | `/api/v1/on-call/handoffs/{id}/notes` | Session | `oncall:write` | Save handoff notes |
-| `POST` | `/api/v1/on-call/handoffs/{id}/acknowledge` | Session | `oncall:write` | Acknowledge handoff |
+| Method | Path                                        | Auth    | Permission     | Description                                |
+| ------ | ------------------------------------------- | ------- | -------------- | ------------------------------------------ |
+| `GET`  | `/api/v1/on-call/handoffs`                  | Session | `oncall:read`  | List handoffs                              |
+| `GET`  | `/api/v1/on-call/handoffs/pending`          | Session | `oncall:read`  | List pending handoffs for the current user |
+| `GET`  | `/api/v1/on-call/handoffs/{id}`             | Session | `oncall:read`  | Get handoff details                        |
+| `POST` | `/api/v1/on-call/handoffs/{id}/notes`       | Session | `oncall:write` | Save handoff notes                         |
+| `POST` | `/api/v1/on-call/handoffs/{id}/acknowledge` | Session | `oncall:write` | Acknowledge handoff                        |
 
 ### Saving Notes
 
@@ -69,9 +69,9 @@ curl -X POST http://localhost:8080/api/v1/on-call/handoffs/{id}/acknowledge \
 
 Track on-call burden with shift-level metrics to identify overloaded rotations and ensure fair load distribution:
 
-| Method | Path | Auth | Permission | Description |
-|--------|------|------|------------|-------------|
-| `GET` | `/api/v1/on-call/metrics` | Session | `oncall:read` | Pager load metrics per shift |
+| Method | Path                      | Auth    | Permission    | Description                  |
+| ------ | ------------------------- | ------- | ------------- | ---------------------------- |
+| `GET`  | `/api/v1/on-call/metrics` | Session | `oncall:read` | Pager load metrics per shift |
 
 Metrics can be filtered by `schedule_id`, `user_id`, and date range.
 

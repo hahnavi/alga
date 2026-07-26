@@ -12,6 +12,7 @@ description: Common issues and solutions — health checks, logs, metrics, datab
 **Symptom:** Backend fails to start with PostgreSQL connection errors.
 
 **Fix:**
+
 - Verify `POSTGRES_DSN` is correct: `postgres://user:pass@host:5432/alga?sslmode=disable`
 - Check PostgreSQL is running: `docker compose ps postgres`
 - Check connectivity: `docker compose exec backend wget -qO- postgres:5432`
@@ -21,6 +22,7 @@ description: Common issues and solutions — health checks, logs, metrics, datab
 **Symptom:** Logged-in users are immediately logged out.
 
 **Fix:**
+
 - Ensure `SECRET_PEPPER` is consistent across restarts (don't regenerate)
 - Check `SECURE_COOKIES` matches your setup (only enable with HTTPS)
 
@@ -29,6 +31,7 @@ description: Common issues and solutions — health checks, logs, metrics, datab
 **Symptom:** Alert webhooks fail with `401 Unauthorized`.
 
 **Fix:**
+
 - Verify the bearer token is correct and not revoked
 - Check token format: `Authorization: Bearer alga_...`
 - Or use query parameter: `?token=alga_...`
@@ -38,6 +41,7 @@ description: Common issues and solutions — health checks, logs, metrics, datab
 **Symptom:** Alerts appear in Alga but not in Mattermost.
 
 **Fix:**
+
 - Verify `MATTERMOST_SERVER_URL` is set correctly
 - Check `MATTERMOST_WEBHOOK_SECRET` matches the plugin config
 - Ensure `MATTERMOST_DISABLED` is not set to `true`
@@ -48,6 +52,7 @@ description: Common issues and solutions — health checks, logs, metrics, datab
 **Symptom:** Alerts appear in Alga but not in Slack.
 
 **Fix:**
+
 - Verify `SLACK_BOT_TOKEN` starts with `xoxb-`
 - Check the bot is added to the target channel
 - Ensure `SLACK_DISABLED` is not set to `true`
@@ -58,6 +63,7 @@ description: Common issues and solutions — health checks, logs, metrics, datab
 **Symptom:** Agent or frontend SSE connections drop repeatedly.
 
 **Fix:**
+
 - Check reverse proxy timeout settings (nginx: `proxy_read_timeout 86400s`)
 - Ensure no load balancer is terminating idle connections
 - Verify `AGENT_PRESENCE_TTL` is longer than heartbeat interval
@@ -67,6 +73,7 @@ description: Common issues and solutions — health checks, logs, metrics, datab
 **Symptom:** Agent shows as offline despite being configured.
 
 **Fix:**
+
 - Verify the agent token is enabled (`POST /api/v1/agent-tokens/{id}/enable`)
 - Check the SSE endpoint: `GET /api/v1/agent/events` with bearer token
 - Verify network connectivity to the Alga backend
@@ -77,6 +84,7 @@ description: Common issues and solutions — health checks, logs, metrics, datab
 **Symptom:** Alerts are firing but no investigations are created.
 
 **Fix:**
+
 - Ensure `RABBITMQ_URI` is configured (required for investigations)
 - Check `CORRELATION_WINDOW` is > 0 (0 disables correlation)
 - Verify at least one agent is online (check Agents page)
@@ -87,6 +95,7 @@ description: Common issues and solutions — health checks, logs, metrics, datab
 **Symptom:** Investigations show `dead_lettered` status and are not retried automatically.
 
 **Fix:**
+
 - List dead-lettered investigations: `GET /api/v1/investigations?status=dead_lettered`
 - Check the investigation's error message for the root cause (e.g., agent timeout, external service unreachable)
 - Retry manually: `POST /api/v1/investigations/{id}/retry`
@@ -99,6 +108,7 @@ description: Common issues and solutions — health checks, logs, metrics, datab
 **Symptom:** A playbook exists but is not being attached to investigations.
 
 **Fix:**
+
 - Verify the playbook's label selectors match the alert's actual labels (exact match is required for each selector key)
 - Check that the playbook is enabled (not in draft or disabled state)
 - Confirm the alert labels include all keys referenced in the selector — partial matches are not applied
@@ -110,6 +120,7 @@ description: Common issues and solutions — health checks, logs, metrics, datab
 **Symptom:** Incidents are created but ICS roles (Incident Commander, Scribe, etc.) are not automatically assigned.
 
 **Fix:**
+
 - Verify the affected service has an escalation policy attached
 - Check that an on-call schedule is linked to the escalation policy's targets
 - Ensure the on-call schedule has at least one active rotation with members
@@ -122,6 +133,7 @@ description: Common issues and solutions — health checks, logs, metrics, datab
 **Symptom:** On-call shift transitions happen without a handoff record.
 
 **Fix:**
+
 - Confirm the team's on-call schedule has at least one active rotation layer with members
 - Verify the shift actually changes the resolved on-call user (handoffs are generated when the resolved responder changes)
 - Check that the outgoing and incoming engineers have notification preferences configured (in-app, email, Slack, or voice)
@@ -177,6 +189,7 @@ curl http://localhost:8080/metrics
 ```
 
 Key metrics:
+
 - `alga_correlator_alerts_total` — alerts received
 - `alga_scheduler_pending` — pending investigations
 - `alga_scheduler_online_agents` — connected agents

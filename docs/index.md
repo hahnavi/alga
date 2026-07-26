@@ -87,15 +87,19 @@ Alga is actively developed and **not yet production-ready**. Use at your own ris
 Alga combines four traditionally separate tools into a single platform:
 
 ### 1. Alert Management
+
 Ingest alerts from any webhook source (Grafana, Prometheus, custom scripts). Automatic fingerprint-based deduplication ensures you never get paged twice for the same issue. Alerts are correlated by deployment events and alertname within configurable time windows, then routed to the right destination via first-match rules.
 
 ### 2. AI Investigation
+
 Every alert can trigger an autonomous investigation. Alga's scheduler atomically assigns work to an online agent (the native Alga Agent, Hermes, OpenClaw, or a custom SDK agent), which receives the full alert context, queries the knowledge base, searches its own memories of past incidents, and produces a structured root-cause analysis — all visible to operators in real time through investigation threads.
 
 ### 3. Incident Response
+
 When an alert warrants it, the agent or an operator promotes it to an incident. Incidents follow a formal lifecycle (`detected → triaging → active → mitigated → resolved → closed`) with ICS command roles (Incident Commander, Communications Lead, Responder), SLA tracking, automated escalation, Google Meet war rooms, and structured post-mortems.
 
 ### 4. On-Call Management
+
 Multi-layer schedules with follow-the-sun support, overrides, and structured handoffs ensure the right person is always reachable. Escalation policies loop through tiers until someone acknowledges. Pager-load metrics help balance the load across your team.
 
 ## Why Alga?
@@ -122,14 +126,14 @@ Open `http://localhost:3000` and complete the setup wizard to create the initial
 
 ## Explore by Topic
 
-| If you want to... | Read this |
-|---|---|
-| Understand how Alga works | [Core Concepts](/getting-started/concepts) |
-| Get started fast | [Quick Start](/getting-started/) → [First Steps](/getting-started/first-steps) |
-| Connect an AI agent | [Agents Overview](/agents/) · [Alga Agent](/agents/alga-agent) · [Hermes](/agents/hermes) · [OpenClaw](/agents/openclaw) |
-| Configure alert routing | [Routing](/core-features/routing) · [Alerts](/core-features/alerts) |
-| Set up on-call | [Schedules](/on-call/schedules) · [Escalation Policies](/on-call/escalation-policies) |
-| Understand incidents | [Incident Management](/incident-management/) · [ICS Roles](/incident-management/ics-roles) |
-| Deploy to production | [Deployment](/operations/deployment) · [Architecture](/operations/architecture) |
-| Secure your instance | [Security & Auth](/configuration/security) · [Environment Variables](/configuration/environment-variables) |
-| Build a custom integration | [Agent SDKs](/agents/agent-sdks) · [API Reference](/api-reference/) |
+| If you want to...          | Read this                                                                                                                |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Understand how Alga works  | [Core Concepts](/getting-started/concepts)                                                                               |
+| Get started fast           | [Quick Start](/getting-started/) → [First Steps](/getting-started/first-steps)                                           |
+| Connect an AI agent        | [Agents Overview](/agents/) · [Alga Agent](/agents/alga-agent) · [Hermes](/agents/hermes) · [OpenClaw](/agents/openclaw) |
+| Configure alert routing    | [Routing](/core-features/routing) · [Alerts](/core-features/alerts)                                                      |
+| Set up on-call             | [Schedules](/on-call/schedules) · [Escalation Policies](/on-call/escalation-policies)                                    |
+| Understand incidents       | [Incident Management](/incident-management/) · [ICS Roles](/incident-management/ics-roles)                               |
+| Deploy to production       | [Deployment](/operations/deployment) · [Architecture](/operations/architecture)                                          |
+| Secure your instance       | [Security & Auth](/configuration/security) · [Environment Variables](/configuration/environment-variables)               |
+| Build a custom integration | [Agent SDKs](/agents/agent-sdks) · [API Reference](/api-reference/)                                                      |

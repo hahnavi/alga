@@ -30,13 +30,13 @@ Correlated Alerts → Triage Rules (ordered, deterministic) → Match? → Decis
 
 ### Triage Decisions
 
-| Decision | Description |
-|----------|-------------|
-| `investigate` | Dispatch an agent investigation (no incident created by triage itself) |
-| `escalate` | Dispatch an investigation and trigger immediate escalation |
-| `suppress` | Dismiss the alert group — no incident created |
-| `auto_resolve` | Automatically resolve the alerts without incident |
-| `enrich_only` | Enrich alert metadata without creating an incident |
+| Decision       | Description                                                            |
+| -------------- | ---------------------------------------------------------------------- |
+| `investigate`  | Dispatch an agent investigation (no incident created by triage itself) |
+| `escalate`     | Dispatch an investigation and trigger immediate escalation             |
+| `suppress`     | Dismiss the alert group — no incident created                          |
+| `auto_resolve` | Automatically resolve the alerts without incident                      |
+| `enrich_only`  | Enrich alert metadata without creating an incident                     |
 
 > **Note (gated decisions):** The `auto_resolve` and `suppress` decisions are gated by the config flags `TRIAGE_AUTO_RESOLVE_ENABLED` and `TRIAGE_SUPPRESS_ENABLED` respectively. When a flag is disabled, that decision downgrades to `enrich_only`. Additionally, any decision whose confidence falls below `TRIAGE_CONFIDENCE_THRESHOLD` (default `0.7`) also downgrades to `enrich_only`.
 
@@ -44,11 +44,11 @@ Correlated Alerts → Triage Rules (ordered, deterministic) → Match? → Decis
 
 Each triage result has an outcome that tracks operator review:
 
-| Outcome | Description |
-|---------|-------------|
-| `pending` | Awaiting operator review |
-| `confirmed` | Operator agreed with the automated decision |
-| `overridden` | Operator changed the decision |
+| Outcome      | Description                                 |
+| ------------ | ------------------------------------------- |
+| `pending`    | Awaiting operator review                    |
+| `confirmed`  | Operator agreed with the automated decision |
+| `overridden` | Operator changed the decision               |
 
 ## Triage Rules
 
@@ -56,18 +56,18 @@ Triage rules are evaluated in priority order (lower priority number = evaluated 
 
 ### Rule Fields
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `name` | string | Rule name (required) |
-| `description` | string | Rule description |
-| `conditions` | array | Condition objects matching against alert labels/annotations |
-| `match_mode` | string | How conditions are combined: `"all"` or `"any"` |
-| `decision` | string | Triage decision (`investigate`, `escalate`, `suppress`, `auto_resolve`, `enrich_only`) |
-| `severity` | string | Severity to assign if an incident is created |
-| `category` | string | Category label for grouping |
-| `enrichment` | object | Additional data to attach to the result |
-| `priority` | integer | Rule priority — lower values are evaluated first |
-| `enabled` | boolean | Whether the rule is active |
+| Field         | Type    | Description                                                                            |
+| ------------- | ------- | -------------------------------------------------------------------------------------- |
+| `name`        | string  | Rule name (required)                                                                   |
+| `description` | string  | Rule description                                                                       |
+| `conditions`  | array   | Condition objects matching against alert labels/annotations                            |
+| `match_mode`  | string  | How conditions are combined: `"all"` or `"any"`                                        |
+| `decision`    | string  | Triage decision (`investigate`, `escalate`, `suppress`, `auto_resolve`, `enrich_only`) |
+| `severity`    | string  | Severity to assign if an incident is created                                           |
+| `category`    | string  | Category label for grouping                                                            |
+| `enrichment`  | object  | Additional data to attach to the result                                                |
+| `priority`    | integer | Rule priority — lower values are evaluated first                                       |
+| `enabled`     | boolean | Whether the rule is active                                                             |
 
 ### Creating a Rule
 
@@ -126,29 +126,29 @@ Every triage evaluation produces a result record that captures the decision, rea
 
 ### Result Fields
 
-| Field | Description |
-|-------|-------------|
-| `triage_number` | Unique sequential identifier |
-| `correlation_key` | Correlation key of the alert group |
-| `alert_count` | Number of alerts in the group |
-| `alert_fingerprints` | Fingerprints of the grouped alerts |
-| `alert_labels` | Merged labels from the alert group |
-| `decision` | Automated triage decision |
-| `confidence` | Confidence score (0.0 – 1.0) |
-| `severity_classified` | Severity determined by triage |
-| `category` | Category label |
-| `reasoning` | Explanation of the decision |
-| `suggested_actions` | Recommended next steps |
-| `outcome` | Review status (`pending`, `confirmed`, `overridden`) |
-| `overridden_to` | New decision if overridden |
-| `model_used` | AI model used for classification (if applicable) |
-| `triage_duration_ms` | Time taken to evaluate |
-| `severity_input` | Original severity from the alert group before classification |
-| `enrichment` | Additional data attached to the result |
-| `context_used` | Context sources referenced during evaluation |
-| `overridden_by` | User ID who overrode the decision |
-| `overridden_at` | Timestamp when the override occurred |
-| `trace_id` | Correlation trace ID for debugging |
+| Field                 | Description                                                  |
+| --------------------- | ------------------------------------------------------------ |
+| `triage_number`       | Unique sequential identifier                                 |
+| `correlation_key`     | Correlation key of the alert group                           |
+| `alert_count`         | Number of alerts in the group                                |
+| `alert_fingerprints`  | Fingerprints of the grouped alerts                           |
+| `alert_labels`        | Merged labels from the alert group                           |
+| `decision`            | Automated triage decision                                    |
+| `confidence`          | Confidence score (0.0 – 1.0)                                 |
+| `severity_classified` | Severity determined by triage                                |
+| `category`            | Category label                                               |
+| `reasoning`           | Explanation of the decision                                  |
+| `suggested_actions`   | Recommended next steps                                       |
+| `outcome`             | Review status (`pending`, `confirmed`, `overridden`)         |
+| `overridden_to`       | New decision if overridden                                   |
+| `model_used`          | AI model used for classification (if applicable)             |
+| `triage_duration_ms`  | Time taken to evaluate                                       |
+| `severity_input`      | Original severity from the alert group before classification |
+| `enrichment`          | Additional data attached to the result                       |
+| `context_used`        | Context sources referenced during evaluation                 |
+| `overridden_by`       | User ID who overrode the decision                            |
+| `overridden_at`       | Timestamp when the override occurred                         |
+| `trace_id`            | Correlation trace ID for debugging                           |
 
 ### Viewing Results
 
@@ -195,15 +195,15 @@ curl http://localhost:8080/api/v1/triage/stats \
 
 Response includes:
 
-| Field | Description |
-|-------|-------------|
-| `total` | Total triage evaluations |
-| `accuracy` | Percentage of confirmed vs overridden results |
-| `by_decision` | Count breakdown by decision type |
-| `by_category` | Count breakdown by category |
-| `avg_confidence` | Average confidence score across all results |
-| `avg_duration_ms` | Average evaluation time in milliseconds |
-| `volume_trend_30d` | Daily volume counts for the last 30 days |
+| Field              | Description                                   |
+| ------------------ | --------------------------------------------- |
+| `total`            | Total triage evaluations                      |
+| `accuracy`         | Percentage of confirmed vs overridden results |
+| `by_decision`      | Count breakdown by decision type              |
+| `by_category`      | Count breakdown by category                   |
+| `avg_confidence`   | Average confidence score across all results   |
+| `avg_duration_ms`  | Average evaluation time in milliseconds       |
+| `volume_trend_30d` | Daily volume counts for the last 30 days      |
 
 ## CLI Commands
 
@@ -223,21 +223,21 @@ Triage Stats:
 
 ## Configuration
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `TRIAGE_ENABLED` | `true` | Enable/disable the triage pipeline |
-| `TRIAGE_LLM_URL` | — | LLM endpoint URL for stage-2 evaluation |
-| `TRIAGE_LLM_API_KEY` | — | API key for the LLM provider |
-| `TRIAGE_LLM_MODEL` | — | Model name to use for LLM triage |
-| `TRIAGE_MAX_CONCURRENT` | `3` | Maximum concurrent LLM triage evaluations |
-| `TRIAGE_CONFIDENCE_THRESHOLD` | `0.7` | Minimum confidence for non-investigate decisions; below this, decisions downgrade to `enrich_only` |
-| `TRIAGE_AUTO_RESOLVE_ENABLED` | `true` | Gate for the `auto_resolve` decision |
-| `TRIAGE_SUPPRESS_ENABLED` | `true` | Gate for the `suppress` decision |
-| `TRIAGE_CONTEXT_EPISODIC_LIMIT` | `3` | Max episodic memories injected into LLM context |
-| `TRIAGE_CONTEXT_NOTES_LIMIT` | `3` | Max knowledge notes injected into LLM context |
-| `TRIAGE_CONTEXT_MEMORIES_LIMIT` | `5` | Max agent memories injected into LLM context |
-| `TRIAGE_AUTO_PROMOTE_CONFIRMED_COUNT` | `3` | After N confirmed decisions of the same type, auto-promote the triage pattern |
-| `MaxConcurrentTriage` | `5` | Config-level concurrency cap for triage worker (config file default) |
+| Variable                              | Default | Description                                                                                                                                                                                        |
+| ------------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TRIAGE_ENABLED`                      | `true`  | Enable/disable the triage pipeline                                                                                                                                                                 |
+| `TRIAGE_LLM_URL`                      | —       | LLM endpoint URL for stage-2 evaluation                                                                                                                                                            |
+| `TRIAGE_LLM_API_KEY`                  | —       | API key for the LLM provider                                                                                                                                                                       |
+| `TRIAGE_LLM_MODEL`                    | —       | Model name to use for LLM triage                                                                                                                                                                   |
+| `TRIAGE_MAX_CONCURRENT`               | `3`     | Maximum concurrent LLM triage evaluations                                                                                                                                                          |
+| `TRIAGE_CONFIDENCE_THRESHOLD`         | `0.7`   | Minimum confidence for non-investigate decisions; below this, `auto_resolve`, `suppress`, and other non-`investigate` decisions downgrade to `enrich_only`. `investigate` decisions are unaffected |
+| `TRIAGE_AUTO_RESOLVE_ENABLED`         | `true`  | Gate for the `auto_resolve` decision                                                                                                                                                               |
+| `TRIAGE_SUPPRESS_ENABLED`             | `true`  | Gate for the `suppress` decision                                                                                                                                                                   |
+| `TRIAGE_CONTEXT_EPISODIC_LIMIT`       | `3`     | Max episodic memories injected into LLM context                                                                                                                                                    |
+| `TRIAGE_CONTEXT_NOTES_LIMIT`          | `3`     | Max knowledge notes injected into LLM context                                                                                                                                                      |
+| `TRIAGE_CONTEXT_MEMORIES_LIMIT`       | `5`     | Max agent memories injected into LLM context                                                                                                                                                       |
+| `TRIAGE_AUTO_PROMOTE_CONFIRMED_COUNT` | `3`     | After N confirmed decisions of the same type, auto-promote the triage pattern                                                                                                                      |
+| `MaxConcurrentTriage`                 | `5`     | Config-level concurrency cap for triage worker (config file default)                                                                                                                               |
 
 ### Context Injection
 
@@ -255,28 +255,28 @@ When `TRIAGE_AUTO_PROMOTE_CONFIRMED_COUNT` (default 3) triage results of the sam
 
 ### Rules
 
-| Method | Path | Permission | Description |
-|--------|------|------------|-------------|
-| `GET` | `/api/v1/triage/rules` | `triage:read` | List triage rules (supports `?search=`, `?enabled=true`, `?limit=`, `?skip=`) |
-| `POST` | `/api/v1/triage/rules` | `triage:write` | Create triage rule |
-| `GET` | `/api/v1/triage/rules/{id}` | `triage:read` | Get triage rule |
-| `PUT` | `/api/v1/triage/rules/{id}` | `triage:write` | Update triage rule |
-| `DELETE` | `/api/v1/triage/rules/{id}` | `triage:write` | Delete triage rule |
-| `PUT` | `/api/v1/triage/rules/reorder` | `triage:write` | Reorder triage rules |
+| Method   | Path                           | Permission     | Description                                                                   |
+| -------- | ------------------------------ | -------------- | ----------------------------------------------------------------------------- |
+| `GET`    | `/api/v1/triage/rules`         | `triage:read`  | List triage rules (supports `?search=`, `?enabled=true`, `?limit=`, `?skip=`) |
+| `POST`   | `/api/v1/triage/rules`         | `triage:write` | Create triage rule                                                            |
+| `GET`    | `/api/v1/triage/rules/{id}`    | `triage:read`  | Get triage rule                                                               |
+| `PUT`    | `/api/v1/triage/rules/{id}`    | `triage:write` | Update triage rule                                                            |
+| `DELETE` | `/api/v1/triage/rules/{id}`    | `triage:write` | Delete triage rule                                                            |
+| `PUT`    | `/api/v1/triage/rules/reorder` | `triage:write` | Reorder triage rules                                                          |
 
 ### Results
 
-| Method | Path | Permission | Description |
-|--------|------|------------|-------------|
-| `GET` | `/api/v1/triage/results` | `triage:read` | List triage results (supports `?decision=`, `?outcome=`, `?category=`, `?severity=`, `?search=`, `?start_date=`, `?end_date=`, `?limit=`, `?skip=`) |
-| `GET` | `/api/v1/triage/results/{id}` | `triage:read` | Get triage result |
-| `POST` | `/api/v1/triage/results/{id}` | `triage:override` | Override triage decision |
+| Method | Path                          | Permission        | Description                                                                                                                                         |
+| ------ | ----------------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET`  | `/api/v1/triage/results`      | `triage:read`     | List triage results (supports `?decision=`, `?outcome=`, `?category=`, `?severity=`, `?search=`, `?start_date=`, `?end_date=`, `?limit=`, `?skip=`) |
+| `GET`  | `/api/v1/triage/results/{id}` | `triage:read`     | Get triage result                                                                                                                                   |
+| `POST` | `/api/v1/triage/results/{id}` | `triage:override` | Override triage decision                                                                                                                            |
 
 ### Stats
 
-| Method | Path | Permission | Description |
-|--------|------|------------|-------------|
-| `GET` | `/api/v1/triage/stats` | `triage:read` | Get triage accuracy stats |
+| Method | Path                   | Permission    | Description               |
+| ------ | ---------------------- | ------------- | ------------------------- |
+| `GET`  | `/api/v1/triage/stats` | `triage:read` | Get triage accuracy stats |
 
 ## Best Practices
 

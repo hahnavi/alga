@@ -5,9 +5,15 @@
   "scripts": {
     "dev": "vitepress dev",
     "build": "vitepress build",
-    "preview": "vitepress preview"
+    "preview": "vitepress preview",
+    "lint": "oxlint . && markdownlint-cli2 \"**/*.md\" \"!node_modules/**\"",
+    "lint:fix": "markdownlint-cli2 --fix \"**/*.md\" \"!node_modules/**\"",
+    "format": "oxfmt --check .",
+    "format:write": "oxfmt ."
   },
   "devDependencies": {
+    "markdownlint-cli2": "^0.18.1",
+    "oxfmt": "^0.60.0",
     "vitepress": "^1.6.4",
     "vue": "^3.5.0"
   }

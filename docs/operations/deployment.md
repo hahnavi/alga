@@ -20,22 +20,22 @@ The UI is served on `https://${DOMAIN}`. The nginx-based frontend image proxies 
 
 ### Environment Variables
 
-| Variable | Default | Required | Description |
-|----------|---------|----------|-------------|
-| `ALGA_VERSION` | `latest` | No | Image tag for `ghcr.io/hahnavi/alga-{backend,frontend}` |
-| `DOMAIN` | `localhost` | **Yes** | Public hostname for Caddy TLS |
-| `SECURE_COOKIES` | `false` | No | Set `true` only behind HTTPS (TLS-terminating proxy) |
-| `POSTGRES_USER` | `alga` | No | PostgreSQL user |
-| `POSTGRES_PASS` | — | **Yes** | PostgreSQL password |
-| `POSTGRES_DB` | `alga` | No | PostgreSQL database name |
-| `VALKEY_PASSWORD` | — | **Yes** | Valkey requirepass |
-| `RABBITMQ_USER` | `alga` | No | RabbitMQ user |
-| `RABBITMQ_PASS` | — | **Yes** | RabbitMQ password |
-| `ENCRYPTION_KEYS` | — | **Yes** | Comma-separated `kid:base64(32-byte key)` pairs (startup fails without this) |
-| `SECRET_PEPPER` | — | **Yes** | HMAC pepper for token hashing (startup fails without this) |
-| `LOG_LEVEL` | `info` | No | Backend log level |
-| `ENVIRONMENT` | `production` | No | Runtime environment label |
-| `SESSION_EXPIRY_HOURS` | `24` | No | Session lifetime in hours |
+| Variable               | Default      | Required | Description                                                                  |
+| ---------------------- | ------------ | -------- | ---------------------------------------------------------------------------- |
+| `ALGA_VERSION`         | `latest`     | No       | Image tag for `ghcr.io/hahnavi/alga-{backend,frontend}`                      |
+| `DOMAIN`               | `localhost`  | **Yes**  | Public hostname for Caddy TLS                                                |
+| `SECURE_COOKIES`       | `false`      | No       | Set `true` only behind HTTPS (TLS-terminating proxy)                         |
+| `POSTGRES_USER`        | `alga`       | No       | PostgreSQL user                                                              |
+| `POSTGRES_PASS`        | —            | **Yes**  | PostgreSQL password                                                          |
+| `POSTGRES_DB`          | `alga`       | No       | PostgreSQL database name                                                     |
+| `VALKEY_PASSWORD`      | —            | **Yes**  | Valkey requirepass                                                           |
+| `RABBITMQ_USER`        | `alga`       | No       | RabbitMQ user                                                                |
+| `RABBITMQ_PASS`        | —            | **Yes**  | RabbitMQ password                                                            |
+| `ENCRYPTION_KEYS`      | —            | **Yes**  | Comma-separated `kid:base64(32-byte key)` pairs (startup fails without this) |
+| `SECRET_PEPPER`        | —            | **Yes**  | HMAC pepper for token hashing (startup fails without this)                   |
+| `LOG_LEVEL`            | `info`       | No       | Backend log level                                                            |
+| `ENVIRONMENT`          | `production` | No       | Runtime environment label                                                    |
+| `SESSION_EXPIRY_HOURS` | `24`         | No       | Session lifetime in hours                                                    |
 
 `setup.sh` generates all required secrets automatically. To generate them manually:
 
@@ -49,14 +49,14 @@ openssl rand -base64 32
 
 ### Services
 
-| Service | Image | Port | Description |
-|---------|-------|------|-------------|
-| `postgres` | `pgvector/pgvector:pg18` | — (internal) | PostgreSQL 18 with pgvector extension |
-| `valkey` | `valkey/valkey:9.1-alpine` | — (internal) | In-memory store (sessions, leader election, pub/sub) |
-| `rabbitmq` | `rabbitmq:4.3.3-management-alpine` | — (internal) | Message queue (async pipeline) |
-| `backend` | `ghcr.io/hahnavi/alga-backend:${ALGA_VERSION}` | — (internal) | Go API server + workers |
-| `frontend` | `ghcr.io/hahnavi/alga-frontend:${ALGA_VERSION}` | — (internal) | Vue web UI (nginx) |
-| `caddy` | `caddy:2-alpine` | 80, 443 | TLS-terminating reverse proxy |
+| Service    | Image                                           | Port         | Description                                          |
+| ---------- | ----------------------------------------------- | ------------ | ---------------------------------------------------- |
+| `postgres` | `pgvector/pgvector:pg18`                        | — (internal) | PostgreSQL 18 with pgvector extension                |
+| `valkey`   | `valkey/valkey:9.1-alpine`                      | — (internal) | In-memory store (sessions, leader election, pub/sub) |
+| `rabbitmq` | `rabbitmq:4.3.3-management-alpine`              | — (internal) | Message queue (async pipeline)                       |
+| `backend`  | `ghcr.io/hahnavi/alga-backend:${ALGA_VERSION}`  | — (internal) | Go API server + workers                              |
+| `frontend` | `ghcr.io/hahnavi/alga-frontend:${ALGA_VERSION}` | — (internal) | Vue web UI (nginx)                                   |
+| `caddy`    | `caddy:2-alpine`                                | 80, 443      | TLS-terminating reverse proxy                        |
 
 All services run on an internal bridge network. Only Caddy ports are published to the host.
 
@@ -88,6 +88,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 ```
 
 `setup.sh` generates:
+
 - Root `.env` with random `POSTGRES_PASS`, `VALKEY_PASSWORD`, `RABBITMQ_PASS`
 - `apps/backend/.env` with random `ENCRYPTION_KEYS` and `SECRET_PEPPER`
 - `apps/frontend/.env` (empty placeholder)
@@ -165,6 +166,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
 Caddy provides automatic HTTPS with Let's Encrypt. The production overlay hides direct backend and frontend port exposure — all traffic goes through Caddy on ports 80/443. The Caddyfile routes:
+
 - `/api/*` and `/webhooks/*` to the backend
 - `/metrics` and `/health` to the backend (restrict at the network level)
 - Everything else to the frontend

@@ -88,10 +88,12 @@ docker compose start valkey
 ### Encryption Keys
 
 **Critical:** Back up `ENCRYPTION_KEYS` (or `ENCRYPTION_KEY`) securely. Loss of these keys means:
+
 - Integration credentials (Slack, Mattermost, Twilio) become unreadable
 - Stored secrets must be re-entered
 
 Store keys in:
+
 - HashiCorp Vault
 - AWS Secrets Manager
 - Kubernetes Secrets (encrypted at rest)
@@ -100,6 +102,7 @@ Store keys in:
 ### SECRET_PEPPER
 
 **Critical:** Loss of `SECRET_PEPPER` means:
+
 - All user passwords must be reset
 - All active sessions are invalidated
 - All bearer tokens must be regenerated
@@ -140,11 +143,13 @@ docker compose exec rabbitmq rabbitmqctl import_definitions /tmp/definitions.jso
 ### Recovery Steps
 
 1. **Restore infrastructure:**
+
    ```sh
    docker compose up -d postgres valkey rabbitmq
    ```
 
 2. **Restore PostgreSQL:**
+
    ```sh
    cat backup.sql | docker compose exec -T postgres psql -U alga alga
    ```
@@ -154,11 +159,13 @@ docker compose exec rabbitmq rabbitmqctl import_definitions /tmp/definitions.jso
    - Update `apps/backend/.env`
 
 4. **Start application:**
+
    ```sh
    docker compose up -d
    ```
 
 5. **Verify:**
+
    ```sh
    curl http://localhost:8080/health
    curl http://localhost:8080/api/v1/readiness
@@ -166,13 +173,13 @@ docker compose exec rabbitmq rabbitmqctl import_definitions /tmp/definitions.jso
 
 ### Recovery Time Objectives
 
-| Component | RTO | Method |
-|-----------|-----|--------|
-| PostgreSQL | ~5 min | pg_restore from backup |
-| Valkey | ~1 min | RDB snapshot restore |
-| RabbitMQ | ~2 min | Definition import |
-| Backend | ~30 sec | Container restart |
-| Full system | ~10 min | Sequential restore |
+| Component   | RTO     | Method                 |
+| ----------- | ------- | ---------------------- |
+| PostgreSQL  | ~5 min  | pg_restore from backup |
+| Valkey      | ~1 min  | RDB snapshot restore   |
+| RabbitMQ    | ~2 min  | Definition import      |
+| Backend     | ~30 sec | Container restart      |
+| Full system | ~10 min | Sequential restore     |
 
 ## Testing Backups
 

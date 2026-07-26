@@ -22,16 +22,17 @@ SMTP_FROM=noreply@example.com
 SMTP_SKIP_TLS_VERIFY=false
 ```
 
-| Variable | Default | Required | Description |
-|----------|---------|----------|-------------|
-| `SMTP_HOST` | | No | SMTP relay hostname. When empty, email delivery is log-only (messages are logged but not sent). |
-| `SMTP_PORT` | `587` | No | SMTP port (typically 587 for STARTTLS, 465 for SMTPS) |
-| `SMTP_USER` | | No | SMTP authentication username (PLAIN auth). Only needed when the relay requires authentication. |
-| `SMTP_PASSWORD` | | No | SMTP authentication password (PLAIN auth). Only needed when the relay requires authentication. |
-| `SMTP_FROM` | `alga@localhost` | No | From address for email notifications |
-| `SMTP_SKIP_TLS_VERIFY` | `false` | No | When `true`, skips TLS certificate verification for SMTP (implicit-TLS handshake with `InsecureSkipVerify`). Enabling this is an MITM risk and logs a loud warning on startup. |
+| Variable               | Default          | Required | Description                                                                                                                                                                    |
+| ---------------------- | ---------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `SMTP_HOST`            |                  | No       | SMTP relay hostname. When empty, email delivery is log-only (messages are logged but not sent).                                                                                |
+| `SMTP_PORT`            | `587`            | No       | SMTP port (typically 587 for STARTTLS, 465 for SMTPS)                                                                                                                          |
+| `SMTP_USER`            |                  | No       | SMTP authentication username (PLAIN auth). Only needed when the relay requires authentication.                                                                                 |
+| `SMTP_PASSWORD`        |                  | No       | SMTP authentication password (PLAIN auth). Only needed when the relay requires authentication.                                                                                 |
+| `SMTP_FROM`            | `alga@localhost` | No       | From address for email notifications                                                                                                                                           |
+| `SMTP_SKIP_TLS_VERIFY` | `false`          | No       | When `true`, skips TLS certificate verification for SMTP (implicit-TLS handshake with `InsecureSkipVerify`). Enabling this is an MITM risk and logs a loud warning on startup. |
 
 **Security Notes:**
+
 - Treat `SMTP_PASSWORD` as sensitive data — store in `.env` file or secure secrets management
 - Never commit credentials to version control
 - Use environment-specific credentials in production
@@ -50,6 +51,7 @@ Alga constructs email content as plain strings via the notification dispatcher. 
 **Subject:** `[critical] HighMemoryUsage — firing`
 
 **Body:**
+
 ```
 Alert: HighMemoryUsage
 Status: firing
@@ -64,6 +66,7 @@ View in Alga: https://alga.example.com/alerts/abc123def456
 **Subject:** `Investigation Update: HighMemoryUsage`
 
 **Body:**
+
 ```
 Investigation: HighMemoryUsage
 Status: investigating
@@ -89,18 +92,18 @@ See [Notification Preferences](/on-call/notification-preferences) for complete p
 
 ### Notification Types
 
-| Notification Type | Description |
-|-------------------|-------------|
-| `alert_created` | New alert received |
-| `alert_acknowledged` | Alert acknowledged |
-| `alert_resolved` | Alert resolved |
-| `investigation_created` | New investigation |
-| `investigation_updated` | Investigation update |
-| `incident_created` | New incident |
-| `incident_acknowledged` | Incident acknowledged |
-| `incident_resolved` | Incident resolved |
-| `mention` | User mentioned in comment |
-| `escalation` | Escalation triggered |
+| Notification Type       | Description               |
+| ----------------------- | ------------------------- |
+| `alert_created`         | New alert received        |
+| `alert_acknowledged`    | Alert acknowledged        |
+| `alert_resolved`        | Alert resolved            |
+| `investigation_created` | New investigation         |
+| `investigation_updated` | Investigation update      |
+| `incident_created`      | New incident              |
+| `incident_acknowledged` | Incident acknowledged     |
+| `incident_resolved`     | Incident resolved         |
+| `mention`               | User mentioned in comment |
+| `escalation`            | Escalation triggered      |
 
 ## Email vs Plain Text
 
@@ -135,14 +138,14 @@ Email clients display the HTML version if supported, falling back to plain text.
 
 Different SMTP providers have varying rate limits:
 
-| Provider | Rate Limit | Quota Period |
-|----------|------------|--------------|
-| Gmail | 100 emails/day | 24 hours |
-| SendGrid | 100 emails/day (free tier) | 24 hours |
-| Mailgun | 5,000 emails/month | 30 days |
-| Amazon SES | 200 emails/day (sandbox) | 24 hours |
-| Postmark | 100 emails/minute | 1 minute |
-| Office 365 | 10,000 recipients/day | 24 hours |
+| Provider   | Rate Limit                 | Quota Period |
+| ---------- | -------------------------- | ------------ |
+| Gmail      | 100 emails/day             | 24 hours     |
+| SendGrid   | 100 emails/day (free tier) | 24 hours     |
+| Mailgun    | 5,000 emails/month         | 30 days      |
+| Amazon SES | 200 emails/day (sandbox)   | 24 hours     |
+| Postmark   | 100 emails/minute          | 1 minute     |
+| Office 365 | 10,000 recipients/day      | 24 hours     |
 
 ### Alga Rate Limiting
 
@@ -170,12 +173,12 @@ Email failures are retried up to **3 times** by the `EmailWorker` (`alga.email.s
 
 Common bounce scenarios:
 
-| Bounce Type | SMTP Code | Description | Action |
-|-------------|-----------|-------------|--------|
-| Hard bounce | 5xx | Permanent failure (invalid address) | Review user email address |
-| Soft bounce | 4xx | Temporary failure (mailbox full) | Retried up to 3x, then dead-lettered |
-| Rate limit | 421 / 452 | Too many emails | Reduce send rate |
-| Timeout | - | SMTP server timeout | Retried up to 3x, then dead-lettered |
+| Bounce Type | SMTP Code | Description                         | Action                               |
+| ----------- | --------- | ----------------------------------- | ------------------------------------ |
+| Hard bounce | 5xx       | Permanent failure (invalid address) | Review user email address            |
+| Soft bounce | 4xx       | Temporary failure (mailbox full)    | Retried up to 3x, then dead-lettered |
+| Rate limit  | 421 / 452 | Too many emails                     | Reduce send rate                     |
+| Timeout     | -         | SMTP server timeout                 | Retried up to 3x, then dead-lettered |
 
 ### Monitoring Bounces
 
@@ -227,6 +230,7 @@ LOG_LEVEL=debug
 ```
 
 Review logs for detailed email delivery information:
+
 ```
 [INFO] email sent to user@example.com: [critical] Test Alert — firing
 [DEBUG] notification dispatch: email channel handled for user 123
@@ -239,6 +243,7 @@ Review logs for detailed email delivery information:
 **Issue:** `dial tcp: lookup smtp.example.com: no such host`
 
 **Solution:**
+
 - Verify `SMTP_HOST` is correct and DNS resolves
 - Check network connectivity to SMTP server
 - Review firewall rules allow outbound SMTP traffic
@@ -247,6 +252,7 @@ Review logs for detailed email delivery information:
 **Issue:** `x509: certificate signed by unknown authority`
 
 **Solution:**
+
 - Ensure SMTP server has valid SSL/TLS certificate
 - Fix certificate chain on SMTP server
 
@@ -255,6 +261,7 @@ Review logs for detailed email delivery information:
 **Issue:** `535 Incorrect authentication data`
 
 **Solution:**
+
 - Verify `SMTP_USER` and `SMTP_PASSWORD` are correct
 - Check if password requires special encoding (URL-encoded, base64)
 - For Gmail, use app-specific password instead of account password
@@ -263,6 +270,7 @@ Review logs for detailed email delivery information:
 **Issue:** `530 Must issue a STARTTLS command first`
 
 **Solution:**
+
 - Verify `SMTP_PORT` is set to 587 for STARTTLS
 - Some providers require explicit TLS upgrade
 - Check SMTP server supports STARTTLS
@@ -272,6 +280,7 @@ Review logs for detailed email delivery information:
 **Issue:** Email sent successfully but not received
 
 **Solution:**
+
 1. Check email delivery logs in Alga
 2. Verify user's notification preferences enable email
 3. Check spam/junk folder
@@ -282,6 +291,7 @@ Review logs for detailed email delivery information:
 **Issue:** "SMTP not configured" error in logs
 
 **Solution:**
+
 - Verify all SMTP environment variables are set
 - Check `.env` file is loaded by Alga
 - Restart Alga after changing environment variables
@@ -292,6 +302,7 @@ Review logs for detailed email delivery information:
 **Issue:** `421 Too many messages from this IP`
 
 **Solution:**
+
 - Reduce email worker prefetch count
 - Implement batch notifications instead of per-alert emails
 - Upgrade SMTP provider plan for higher limits
@@ -327,16 +338,19 @@ Review logs for detailed email delivery information:
 Configure DNS records for your sending domain:
 
 **SPF (Sender Policy Framework):**
+
 ```
 example.com. IN TXT "v=spf1 include:_spf.google.com ~all"
 ```
 
 **DKIM (DomainKeys Identified Mail):**
+
 - Generate DKIM keys via your SMTP provider
 - Add public key to DNS as TXT record
 - Sign all outbound emails
 
 **DMARC (Domain-based Message Authentication):**
+
 ```
 _dmarc.example.com. IN TXT "v=DMARC1; p=quarantine; rua=mailto:dmarc@example.com"
 ```
@@ -354,6 +368,7 @@ SMTP_FROM=your-email@gmail.com
 ```
 
 **Setup Instructions:**
+
 1. Enable 2FA on Google Account
 2. Generate App-Specific Password: Google Account → Security → App passwords
 3. Use app-specific password as `SMTP_PASSWORD`
@@ -389,6 +404,7 @@ SMTP_FROM=noreply@example.com
 ```
 
 **Setup Instructions:**
+
 1. Verify sending domain in AWS SES Console
 2. Create SMTP credentials via SES → SMTP Settings
 3. Request production access (out of sandbox)

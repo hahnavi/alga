@@ -23,12 +23,12 @@ Environment variables remain available as a bootstrap fallback and override. Whe
 
 ### Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `TWILIO_ACCOUNT_SID` | | Twilio account SID. When set, the UI fields are locked and env values override the DB. |
-| `TWILIO_AUTH_TOKEN` | | Twilio auth token. Also used to validate callback signatures. Stored encrypted when set via the UI. |
-| `TWILIO_FROM_NUMBER` | | The Twilio number placing calls (E.164). |
-| `TWILIO_DISABLED` | `false` | Set to `true` to disable Twilio entirely. Also togglable from the UI via the `twilio_disabled` DB flag. |
+| Variable             | Default | Description                                                                                             |
+| -------------------- | ------- | ------------------------------------------------------------------------------------------------------- |
+| `TWILIO_ACCOUNT_SID` |         | Twilio account SID. When set, the UI fields are locked and env values override the DB.                  |
+| `TWILIO_AUTH_TOKEN`  |         | Twilio auth token. Also used to validate callback signatures. Stored encrypted when set via the UI.     |
+| `TWILIO_FROM_NUMBER` |         | The Twilio number placing calls (E.164).                                                                |
+| `TWILIO_DISABLED`    | `false` | Set to `true` to disable Twilio entirely. Also togglable from the UI via the `twilio_disabled` DB flag. |
 
 ## How It Works
 
@@ -53,6 +53,7 @@ POST /api/v1/twilio/callback?incident=<n>
 ```
 
 DTMF responses map to incident actions:
+
 - `1` — Acknowledge the incident (stops escalation)
 - `2` — Silence the incident (suppresses paging for one hour)
 

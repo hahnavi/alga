@@ -26,6 +26,7 @@ Common questions about Alga setup, integrations, features, troubleshooting, and 
 ### How do I install Alga?
 
 **Quick Install:**
+
 ```bash
 git clone https://github.com/hahnavi/alga.git
 cd alga
@@ -38,6 +39,7 @@ See [Quick Start Guide](/getting-started/) for details.
 ### What are minimum system requirements?
 
 **Minimum:**
+
 - CPU: 2 cores
 - RAM: 4 GB
 - Disk: 20 GB
@@ -45,6 +47,7 @@ See [Quick Start Guide](/getting-started/) for details.
 - Node.js 18+
 
 **Recommended for production:**
+
 - CPU: 4+ cores
 - RAM: 8+ GB
 - Disk: 50+ GB SSD
@@ -53,6 +56,7 @@ See [Quick Start Guide](/getting-started/) for details.
 ### How do I upgrade Alga?
 
 **Using Git:**
+
 ```bash
 git fetch origin
 git checkout v1.2.3
@@ -62,6 +66,7 @@ go run . db migrate
 ```
 
 **Using Docker:**
+
 ```bash
 docker compose pull
 docker compose up -d
@@ -112,11 +117,12 @@ See [Integration Guide](../integrations/) for examples.
 
 ### How do I integrate with Slack?
 
-1. Create Slack app at https://api.slack.com/apps
+1. Create Slack app at <https://api.slack.com/apps>
 2. Enable Bot permissions
 3. Add OAuth scopes (`chat:write`, `channels:history`)
 4. Install app to workspace
 5. Set environment variables:
+
 ```bash
 SLACK_BOT_TOKEN="xoxb-your-token"
 SLACK_DEFAULT_CHANNEL="#alerts"
@@ -129,6 +135,7 @@ See [Slack Integration Guide](/integrations/slack) for details.
 1. Install Mattermost plugin from `integrations/alga-mattermost-plugin/`
 2. Configure plugin with Alga webhook URL
 3. Set environment variables:
+
 ```bash
 MATTERMOST_SERVER_URL="https://mattermost.example.com"
 MATTERMOST_WEBHOOK_SECRET="shared-secret"
@@ -164,6 +171,7 @@ CORRELATION_WINDOW=5m
 Yes! Use API or web UI:
 
 **API:**
+
 ```bash
 curl -X POST http://localhost:8080/api/v1/alerts \
   -H "Content-Type: application/json" \
@@ -183,6 +191,7 @@ curl -X POST http://localhost:8080/api/v1/alerts \
 On-call schedules are **auto-provisioned one per team** — creating a team creates its schedule. You configure coverage by editing the schedule's rotation layers:
 
 **API:**
+
 ```bash
 curl -X PATCH http://localhost:8080/api/v1/on-call/schedules/{schedule_id} \
   -H "Content-Type: application/json" \
@@ -199,9 +208,21 @@ Multi-tier escalation with delays:
 {
   "name": "Critical Escalation",
   "levels": [
-    {"level_number": 1, "delay_minutes": 5, "targets": [{"target_type": "team", "target_team_id": "<team_id>"}]},
-    {"level_number": 2, "delay_minutes": 10, "targets": [{"target_type": "team", "target_team_id": "<team_id>"}]},
-    {"level_number": 3, "delay_minutes": 15, "targets": [{"target_type": "user", "target_user_id": "<user_id>"}]}
+    {
+      "level_number": 1,
+      "delay_minutes": 5,
+      "targets": [{ "target_type": "team", "target_team_id": "<team_id>" }]
+    },
+    {
+      "level_number": 2,
+      "delay_minutes": 10,
+      "targets": [{ "target_type": "team", "target_team_id": "<team_id>" }]
+    },
+    {
+      "level_number": 3,
+      "delay_minutes": 15,
+      "targets": [{ "target_type": "user", "target_user_id": "<user_id>" }]
+    }
   ]
 }
 ```
@@ -308,16 +329,19 @@ Yes! The MIT License permits commercial use without licensing fees.
 ### Where can I deploy Alga?
 
 **Cloud providers:**
+
 - AWS (EC2, RDS, ElastiCache)
 - Google Cloud (Compute Engine, Cloud SQL)
 - Azure (VMs, Azure Database)
 
 **Self-hosted:**
+
 - Bare metal servers
 - Virtual machines
 - Kubernetes clusters
 
 **Managed services:**
+
 - Render
 - Railway
 - DigitalOcean App Platform
@@ -347,12 +371,14 @@ Slack has message size limits (~40,000 characters). Alga automatically truncates
 ### How do I connect an agent to Alga?
 
 1. Create agent token via API:
+
 ```bash
 curl -X POST http://localhost:8080/api/v1/agent-tokens \
   -d '{"name": "my-agent"}'
 ```
 
 2. Connect agent via SSE:
+
 ```bash
 curl -H "Authorization: Bearer {token}" \
   http://localhost:8080/api/v1/agent/events
@@ -397,11 +423,14 @@ Yes! Alga works with:
 ### How do I back up the database?
 
 **Using pg_dump:**
+
 ```bash
-pg_dump postgresql://user:pass@localhost:5432/alga > backup.sql
+# Credentials resolved via ~/.pgpass or PGPASSWORD env (never inline in URIs)
+pg_dump -h localhost -U alga -p 5432 alga > backup.sql
 ```
 
 **Using Docker Compose:**
+
 ```bash
 docker compose exec postgres pg_dump -U alga alga > backup.sql
 ```
@@ -434,6 +463,7 @@ Without RabbitMQ, some async features are disabled.
 ### Alga won't start - what do I do?
 
 **Check logs:**
+
 ```bash
 # Docker
 docker compose logs backend
@@ -469,6 +499,7 @@ go run .  # Check for startup errors
 5. CSRF token is present
 
 **Reset lockout:**
+
 ```sql
 UPDATE users SET failed_login_attempts = 0 WHERE email = 'user@example.com';
 ```
@@ -482,6 +513,7 @@ UPDATE users SET failed_login_attempts = 0 WHERE email = 'user@example.com';
 3. **Schema mismatch:** Dump and restore fresh database
 
 **Force re-run:**
+
 ```bash
 # WARNING: This drops all data!
 DROP DATABASE alga;

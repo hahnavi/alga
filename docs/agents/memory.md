@@ -29,11 +29,11 @@ Relevant memories injected into the dispatch prompt
 
 ### Three Memory Types
 
-| Type | Description | Example |
-|------|-------------|---------|
-| **`fact`** | A concrete piece of knowledge about a system or behavior | "The payment-service connection pool leaks under load above 80%" |
-| **`pattern`** | A recurring condition or relationship observed across incidents | "Database CPU spikes correlate with deploy windows on Fridays" |
-| **`procedure`** | A step-by-step remediation or diagnostic sequence | "To clear the Redis cache deadlock: restart the sentinel, then flush node 3" |
+| Type            | Description                                                     | Example                                                                      |
+| --------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| **`fact`**      | A concrete piece of knowledge about a system or behavior        | "The payment-service connection pool leaks under load above 80%"             |
+| **`pattern`**   | A recurring condition or relationship observed across incidents | "Database CPU spikes correlate with deploy windows on Fridays"               |
+| **`procedure`** | A step-by-step remediation or diagnostic sequence               | "To clear the Redis cache deadlock: restart the sentinel, then flush node 3" |
 
 The extraction LLM classifies each memory into one of these types and assigns a confidence score.
 
@@ -43,20 +43,20 @@ Memory is **off by default**. To enable it, configure these environment variable
 
 ### Required for Auto-Extraction
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `MEMORY_ENABLED` | `false` | Master switch — no memory service is wired without this |
-| `MEMORY_LLM_URL` | | OpenAI-compatible chat-completions endpoint URL for extraction. **If empty, auto-extraction is disabled** |
-| `MEMORY_LLM_API_KEY` | | Bearer token for the extraction LLM |
-| `MEMORY_LLM_MODEL` | `gpt-4o-mini` | Chat model used for extraction |
+| Variable             | Default       | Description                                                                                               |
+| -------------------- | ------------- | --------------------------------------------------------------------------------------------------------- |
+| `MEMORY_ENABLED`     | `false`       | Master switch — no memory service is wired without this                                                   |
+| `MEMORY_LLM_URL`     |               | OpenAI-compatible chat-completions endpoint URL for extraction. **If empty, auto-extraction is disabled** |
+| `MEMORY_LLM_API_KEY` |               | Bearer token for the extraction LLM                                                                       |
+| `MEMORY_LLM_MODEL`   | `gpt-4o-mini` | Chat model used for extraction                                                                            |
 
 ### Required for Vector Search
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `MEMORY_EMBEDDING_URL` | | OpenAI-compatible embeddings endpoint. **If empty, a no-op embedder produces zero vectors** — search falls back to PostgreSQL full-text search |
-| `MEMORY_EMBEDDING_API_KEY` | | Bearer token for the embedding service |
-| `MEMORY_EMBEDDING_MODEL` | `text-embedding-3-small` | Embedding model (dimension 1536; `large` models use 3072) |
+| Variable                   | Default                  | Description                                                                                                                                    |
+| -------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MEMORY_EMBEDDING_URL`     |                          | OpenAI-compatible embeddings endpoint. **If empty, a no-op embedder produces zero vectors** — search falls back to PostgreSQL full-text search |
+| `MEMORY_EMBEDDING_API_KEY` |                          | Bearer token for the embedding service                                                                                                         |
+| `MEMORY_EMBEDDING_MODEL`   | `text-embedding-3-small` | Embedding model (dimension 1536; `large` models use 3072)                                                                                      |
 
 ::: tip Works with any OpenAI-compatible API
 Both the LLM and embedding endpoints accept any OpenAI-compatible API — OpenAI, Ollama, vLLM, Azure OpenAI (with a compatible proxy), etc.
@@ -64,11 +64,11 @@ Both the LLM and embedding endpoints accept any OpenAI-compatible API — OpenAI
 
 ### Optional Tuning
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `MEMORY_AUTO_EXTRACT` | `false` | Auto-extract on investigation completion (forced `true` when `MEMORY_LLM_URL` is set) |
-| `MEMORY_MAX_PER_INVESTIGATION` | `10` | Maximum memories extracted per investigation |
-| `MEMORY_SIMILARITY_THRESHOLD` | `0` | Minimum cosine similarity for search results (accepted and validated, but not currently applied as a filter — search returns top-K by similarity) |
+| Variable                       | Default | Description                                                                                                                                       |
+| ------------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MEMORY_AUTO_EXTRACT`          | `false` | Auto-extract on investigation completion (forced `true` when `MEMORY_LLM_URL` is set)                                                             |
+| `MEMORY_MAX_PER_INVESTIGATION` | `10`    | Maximum memories extracted per investigation                                                                                                      |
+| `MEMORY_SIMILARITY_THRESHOLD`  | `0`     | Minimum cosine similarity for search results (accepted and validated, but not currently applied as a filter — search returns top-K by similarity) |
 
 ## What Gets Extracted
 
@@ -108,39 +108,39 @@ The **Memory** page (brain icon in the sidebar) lets you browse, create, edit, a
 
 ### Via the Operator API
 
-| Method | Endpoint | Permission | Description |
-|--------|----------|------------|-------------|
-| `GET` | `/api/v1/memories` | — | List/search memories (filters: `q`, `memory_type`, `agent_id`, `investigation_id`) |
-| `POST` | `/api/v1/memories` | `memories:write` | Create a memory manually |
-| `GET` | `/api/v1/memories/{id}` | — | Get a specific memory |
-| `PUT` | `/api/v1/memories/{id}` | `memories:write` | Update memory content (re-embeds) |
-| `DELETE` | `/api/v1/memories/{id}` | `memories:delete` | Delete a memory |
+| Method   | Endpoint                | Permission        | Description                                                                        |
+| -------- | ----------------------- | ----------------- | ---------------------------------------------------------------------------------- |
+| `GET`    | `/api/v1/memories`      | —                 | List/search memories (filters: `q`, `memory_type`, `agent_id`, `investigation_id`) |
+| `POST`   | `/api/v1/memories`      | `memories:write`  | Create a memory manually                                                           |
+| `GET`    | `/api/v1/memories/{id}` | —                 | Get a specific memory                                                              |
+| `PUT`    | `/api/v1/memories/{id}` | `memories:write`  | Update memory content (re-embeds)                                                  |
+| `DELETE` | `/api/v1/memories/{id}` | `memories:delete` | Delete a memory                                                                    |
 
 ### Via the Agent API
 
 Agents interact with memories through their own bearer-scoped endpoints:
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/v1/agent/memories` | List/search memories |
-| `POST` | `/api/v1/agent/memories` | Create a memory (auto-stamps the calling agent's ID) |
-| `GET` | `/api/v1/agent/memories/{id}` | Get a specific memory (any agent can read any memory) |
+| Method   | Endpoint                      | Description                                                |
+| -------- | ----------------------------- | ---------------------------------------------------------- |
+| `GET`    | `/api/v1/agent/memories`      | List/search memories                                       |
+| `POST`   | `/api/v1/agent/memories`      | Create a memory (auto-stamps the calling agent's ID)       |
+| `GET`    | `/api/v1/agent/memories/{id}` | Get a specific memory (any agent can read any memory)      |
 | `DELETE` | `/api/v1/agent/memories/{id}` | Delete — only the owning agent can delete its own memories |
 
 ## Memory Fields
 
-| Field | Description |
-|-------|-------------|
-| `content` | The memory text (required) |
-| `memory_type` | `fact`, `pattern`, or `procedure` (default: `fact`) |
-| `agent_id` | The agent that created or extracted this memory |
-| `investigation_id` | The investigation that produced this memory |
-| `correlation_key` | The correlation key of the source alert group |
-| `labels` | Key-value labels copied from the source alert |
-| `entities` | Named entities identified during extraction |
-| `confidence` | LLM-assigned confidence score (0–1, default 0.7) |
-| `access_count` | How many times this memory has been returned in search results |
-| `expires_at` | Optional expiry — memories are auto-deleted after this time |
+| Field              | Description                                                    |
+| ------------------ | -------------------------------------------------------------- |
+| `content`          | The memory text (required)                                     |
+| `memory_type`      | `fact`, `pattern`, or `procedure` (default: `fact`)            |
+| `agent_id`         | The agent that created or extracted this memory                |
+| `investigation_id` | The investigation that produced this memory                    |
+| `correlation_key`  | The correlation key of the source alert group                  |
+| `labels`           | Key-value labels copied from the source alert                  |
+| `entities`         | Named entities identified during extraction                    |
+| `confidence`       | LLM-assigned confidence score (0–1, default 0.7)               |
+| `access_count`     | How many times this memory has been returned in search results |
+| `expires_at`       | Optional expiry — memories are auto-deleted after this time    |
 
 ## Best Practices
 

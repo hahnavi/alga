@@ -16,14 +16,14 @@ When an incident is created, Alga computes two deadlines that are stored on the 
 
 These can be supplied explicitly at creation (`sla_target_respond_at` / `sla_target_resolve_at`). When omitted, they default from the incident priority via `PriorityToSLATargets`:
 
-| Priority | Respond Within | Resolve Within |
-|----------|----------------|----------------|
-| P1 | 15 minutes | 4 hours |
-| P2 | 30 minutes | 8 hours |
-| P3 | 2 hours | 24 hours |
-| P4 | 8 hours | 72 hours |
-| P5 | 24 hours | 168 hours |
-| (default) | 2 hours | 24 hours |
+| Priority  | Respond Within | Resolve Within |
+| --------- | -------------- | -------------- |
+| P1        | 15 minutes     | 4 hours        |
+| P2        | 30 minutes     | 8 hours        |
+| P3        | 2 hours        | 24 hours       |
+| P4        | 8 hours        | 72 hours       |
+| P5        | 24 hours       | 168 hours      |
+| (default) | 2 hours        | 24 hours       |
 
 Priority is derived from severity and impact for alert-created incidents.
 
@@ -31,12 +31,12 @@ Priority is derived from severity and impact for alert-created incidents.
 
 SLA metrics are derived from lifecycle timestamps written by status transitions:
 
-| Field | Set When |
-|-------|----------|
+| Field                 | Set When                                        |
+| --------------------- | ----------------------------------------------- |
 | `sla_acknowledged_at` | Incident becomes `active` (acknowledge/promote) |
-| `sla_resolved_at` | Incident becomes `resolved` |
-| `mitigated_at` | Incident becomes `mitigated` |
-| `resolved_at` | Incident becomes `resolved` |
+| `sla_resolved_at`     | Incident becomes `resolved`                     |
+| `mitigated_at`        | Incident becomes `mitigated`                    |
+| `resolved_at`         | Incident becomes `resolved`                     |
 
 ## Breach Detection
 
@@ -54,12 +54,12 @@ Breaches are de-duplicated in Valkey (`alga:sla:breach:{incident}:{type}` with a
 
 ## SLA Metrics
 
-| Metric | Abbreviation | Description |
-|--------|-------------|-------------|
-| Mean Time To Acknowledge | MTTA | Time from creation to acknowledgement |
-| Mean Time To Resolve | MTTR | Time from creation to resolution |
-| Mean Time To Mitigate | MTTM | Time from creation to mitigation |
-| SLA Compliance | — | Percentage of incidents meeting response and resolution targets |
+| Metric                   | Abbreviation | Description                                                     |
+| ------------------------ | ------------ | --------------------------------------------------------------- |
+| Mean Time To Acknowledge | MTTA         | Time from creation to acknowledgement                           |
+| Mean Time To Resolve     | MTTR         | Time from creation to resolution                                |
+| Mean Time To Mitigate    | MTTM         | Time from creation to mitigation                                |
+| SLA Compliance           | —            | Percentage of incidents meeting response and resolution targets |
 
 ## Metrics API
 
@@ -69,10 +69,10 @@ curl -b cookies.txt "http://localhost:8080/api/v1/incidents/metrics?start_date=2
 
 ### Query Parameters
 
-| Parameter | Description |
-|-----------|-------------|
+| Parameter    | Description                                     |
+| ------------ | ----------------------------------------------- |
 | `start_date` | Start of date range (defaults to one month ago) |
-| `end_date` | End of date range (defaults to now) |
+| `end_date`   | End of date range (defaults to now)             |
 
 ### Response
 
@@ -84,14 +84,14 @@ curl -b cookies.txt "http://localhost:8080/api/v1/incidents/metrics?start_date=2
   "total_created": 42,
   "total_resolved": 38,
   "by_severity": {
-    "critical": {"count": 12, "mtta_minutes": 3.2, "mttr_minutes": 89.1},
-    "warning": {"count": 30, "mtta_minutes": 12.1, "mttr_minutes": 156.7}
+    "critical": { "count": 12, "mtta_minutes": 3.2, "mttr_minutes": 89.1 },
+    "warning": { "count": 30, "mtta_minutes": 12.1, "mttr_minutes": 156.7 }
   },
   "by_priority": {
-    "P1": {"count": 8, "mtta_minutes": 4.1, "mttr_minutes": 72.3}
+    "P1": { "count": 8, "mtta_minutes": 4.1, "mttr_minutes": 72.3 }
   },
   "by_service": {
-    "payment-service": {"count": 12, "mtta_minutes": 4.1, "mttr_minutes": 72.3}
+    "payment-service": { "count": 12, "mtta_minutes": 4.1, "mttr_minutes": 72.3 }
   },
   "sla_compliance": {
     "response_sla_compliance_pct": 92.5,
@@ -101,7 +101,13 @@ curl -b cookies.txt "http://localhost:8080/api/v1/incidents/metrics?start_date=2
     "total_with_sla": 40
   },
   "trend": [
-    {"date": "2026-05-01", "created": 3, "resolved": 2, "mtta_minutes": 6.5, "mttr_minutes": 108.2}
+    {
+      "date": "2026-05-01",
+      "created": 3,
+      "resolved": 2,
+      "mtta_minutes": 6.5,
+      "mttr_minutes": 108.2
+    }
   ]
 }
 ```

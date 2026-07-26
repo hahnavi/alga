@@ -11,13 +11,13 @@ Alga supports **multiple OIDC identity providers** (e.g. Okta, Keycloak, Google,
 
 For a single provider, set these environment variables (also editable via **System → Authentication**):
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `OIDC_ENABLED` | `false` | Enable OIDC SSO |
-| `OIDC_ISSUER_URL` | | OIDC issuer URL |
-| `OIDC_CLIENT_ID` | | OIDC client ID |
-| `OIDC_CLIENT_SECRET` | | OIDC client secret |
-| `OIDC_SCOPES` | `openid email profile` | OIDC scopes |
+| Variable             | Default                | Description        |
+| -------------------- | ---------------------- | ------------------ |
+| `OIDC_ENABLED`       | `false`                | Enable OIDC SSO    |
+| `OIDC_ISSUER_URL`    |                        | OIDC issuer URL    |
+| `OIDC_CLIENT_ID`     |                        | OIDC client ID     |
+| `OIDC_CLIENT_SECRET` |                        | OIDC client secret |
+| `OIDC_SCOPES`        | `openid email profile` | OIDC scopes        |
 
 ## Multi-Provider Management
 
@@ -25,32 +25,32 @@ Multiple providers are managed from **System → Authentication** (requires the 
 
 ### Provider Fields
 
-| Field | Description |
-|-------|-------------|
-| `name` | Display name shown on the login page |
-| `issuer` | OIDC issuer URL (must serve `.well-known/openid-configuration`) |
-| `client_id` | OAuth/OIDC client ID |
-| `client_secret` | Client secret (stored encrypted at rest) |
-| `scopes` | Requested scopes (default `openid email profile`) |
-| `enabled` | Toggle the provider on/off |
+| Field           | Description                                                     |
+| --------------- | --------------------------------------------------------------- |
+| `name`          | Display name shown on the login page                            |
+| `issuer`        | OIDC issuer URL (must serve `.well-known/openid-configuration`) |
+| `client_id`     | OAuth/OIDC client ID                                            |
+| `client_secret` | Client secret (stored encrypted at rest)                        |
+| `scopes`        | Requested scopes (default `openid email profile`)               |
+| `enabled`       | Toggle the provider on/off                                      |
 
 ### API Endpoints
 
 **Public (login flow):**
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/v1/auth/oidc/providers` | List enabled providers (name + id only) |
-| `GET` | `/api/v1/auth/oidc/{id}/authorize` | Start OIDC flow (PKCE + state) |
-| `GET` | `/api/v1/auth/oidc/{id}/callback` | OIDC callback |
+| Method | Path                               | Description                             |
+| ------ | ---------------------------------- | --------------------------------------- |
+| `GET`  | `/api/v1/auth/oidc/providers`      | List enabled providers (name + id only) |
+| `GET`  | `/api/v1/auth/oidc/{id}/authorize` | Start OIDC flow (PKCE + state)          |
+| `GET`  | `/api/v1/auth/oidc/{id}/callback`  | OIDC callback                           |
 
 **Admin (requires `oidc:manage`):**
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/v1/oidc/providers` | List all providers |
-| `POST` | `/api/v1/oidc/providers` | Create provider |
-| `GET`/`PUT`/`DELETE` | `/api/v1/oidc/providers/{id}` | Manage a provider |
+| Method               | Path                          | Description        |
+| -------------------- | ----------------------------- | ------------------ |
+| `GET`                | `/api/v1/oidc/providers`      | List all providers |
+| `POST`               | `/api/v1/oidc/providers`      | Create provider    |
+| `GET`/`PUT`/`DELETE` | `/api/v1/oidc/providers/{id}` | Manage a provider  |
 
 ## Login Flow
 
@@ -65,9 +65,9 @@ Multiple providers are managed from **System → Authentication** (requires the 
 
 OIDC data is stored in two Ent schemas:
 
-| Schema | Description |
-|--------|-------------|
-| `oidcprovider` | Provider configuration (issuer, client ID, scopes, enabled) |
+| Schema         | Description                                                           |
+| -------------- | --------------------------------------------------------------------- |
+| `oidcprovider` | Provider configuration (issuer, client ID, scopes, enabled)           |
 | `oidcidentity` | Links an OIDC subject to a local user account (provider_id + subject) |
 
 ## User Provisioning
@@ -88,9 +88,9 @@ Once linked, the identity persists in `oidc_identities`; subsequent logins resol
 
 In addition to generic OIDC providers, Alga supports Google OAuth as a separate login method with its own configuration:
 
-| Variable | Description |
-|----------|-------------|
-| `GOOGLE_CLIENT_ID` | Google OAuth client ID |
+| Variable               | Description                |
+| ---------------------- | -------------------------- |
+| `GOOGLE_CLIENT_ID`     | Google OAuth client ID     |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
 
 This is independent of the OIDC multi-provider system and provides a dedicated "Sign in with Google" button on the login page.

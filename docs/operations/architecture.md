@@ -12,11 +12,13 @@ Alga is a full-stack monorepo architecture designed for high availability, scala
 ## Components
 
 ### Backend (Go)
+
 - **Location:** `apps/backend/`
 - **Version:** Go 1.26.5
 - **Module:** `alga`
 
 The backend provides:
+
 - REST API for all operations
 - SSE (Server-Sent Events) for real-time updates
 - Webhook ingestion for alerts
@@ -25,10 +27,12 @@ The backend provides:
 - Authentication, authorization, and security
 
 ### Frontend (Vue)
+
 - **Location:** `apps/frontend/`
 - **Framework:** Vue 3 + Vite + Tailwind CSS v4
 
 The frontend provides:
+
 - Operations console
 - Role-based access control
 - Real-time SSE updates
@@ -39,6 +43,7 @@ The frontend provides:
 ### Infrastructure
 
 #### PostgreSQL
+
 - **Purpose:** Primary persistence layer
 - **Access:** Via Ent ORM and pgx driver
 - **Features:**
@@ -55,6 +60,7 @@ The frontend provides:
   - Post-mortems
 
 #### Valkey/Redis
+
 - **Purpose:** Distributed state, caching, and coordination
 - **Features:**
   - Session storage (preferred)
@@ -68,6 +74,7 @@ The frontend provides:
   - Pub/sub for cross-replica SSE fan-out
 
 #### RabbitMQ
+
 - **Purpose:** Async message queue with retry topology
 - **Features:**
   - 12 exchanges (one per async domain plus a dead-letter exchange)
@@ -82,28 +89,28 @@ Background processing is split between **queue-consuming workers** (driven by Ra
 
 ### Queue-Consuming Workers
 
-| Worker | Queue | Prefetch | Responsibility |
-|--------|-------|----------|----------------|
-| **AlertWorker** | `alga.alert.process` | 10 | Processes inbound webhook alerts; 4x retry with backoff |
-| **AuditWorker** | `alga.audit.log` | 10 | Persists audit events |
-| **NotificationWorker** | `alga.notification.send` | 10 | Legacy stub; immediately acks (superseded by NotificationDispatchWorker) |
-| **InvestigateWorker** | `alga.investigate.process` | `MaxConcurrentInvestigations` | Creates investigation records, resolves threads, posts cross-provider links, publishes SSE. Two-layer idempotency (Valkey SETNX + PG unique index). Retry via `alga.investigate.retry.{1-4}` |
-| **IncidentWorker** | `alga.incident.process` | 1 | Creates incidents from correlated alerts, reserves number, computes priority/SLA, links alerts, creates timeline, auto-assigns IC from on-call, triggers escalation |
-| **EscalationWorker** | `alga.escalation.process` | 5 | Evaluates an escalation policy level, dispatches notifications, seeds Valkey state for the sweep |
-| **SLAWorker** | `alga.sla.sweep` | 1 | Sweeps SLA-eligible incidents for response/resolve breaches; triggers escalation on breach |
-| **NotificationDispatchWorker** | `alga.notification-dispatch.process` | 10 | Creates in-app notifications, publishes SSE, dispatches via email/Slack DM/voice/Mattermost; 4x retry |
-| **EmailWorker** | `alga.email.send` | 10 | Sends email via SMTP; 3x retry with linear backoff |
-| **ICSWorker** | `alga.ics-provision.process` | 1 | Provisions the war room (ICS channels/roles); 3x retry |
+| Worker                         | Queue                                | Prefetch                      | Responsibility                                                                                                                                                                               |
+| ------------------------------ | ------------------------------------ | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **AlertWorker**                | `alga.alert.process`                 | 10                            | Processes inbound webhook alerts; 4x retry with backoff                                                                                                                                      |
+| **AuditWorker**                | `alga.audit.log`                     | 10                            | Persists audit events                                                                                                                                                                        |
+| **NotificationWorker**         | `alga.notification.send`             | 10                            | Legacy stub; immediately acks (superseded by NotificationDispatchWorker)                                                                                                                     |
+| **InvestigateWorker**          | `alga.investigate.process`           | `MaxConcurrentInvestigations` | Creates investigation records, resolves threads, posts cross-provider links, publishes SSE. Two-layer idempotency (Valkey SETNX + PG unique index). Retry via `alga.investigate.retry.{1-4}` |
+| **IncidentWorker**             | `alga.incident.process`              | 1                             | Creates incidents from correlated alerts, reserves number, computes priority/SLA, links alerts, creates timeline, auto-assigns IC from on-call, triggers escalation                          |
+| **EscalationWorker**           | `alga.escalation.process`            | 5                             | Evaluates an escalation policy level, dispatches notifications, seeds Valkey state for the sweep                                                                                             |
+| **SLAWorker**                  | `alga.sla.sweep`                     | 1                             | Sweeps SLA-eligible incidents for response/resolve breaches; triggers escalation on breach                                                                                                   |
+| **NotificationDispatchWorker** | `alga.notification-dispatch.process` | 10                            | Creates in-app notifications, publishes SSE, dispatches via email/Slack DM/voice/Mattermost; 4x retry                                                                                        |
+| **EmailWorker**                | `alga.email.send`                    | 10                            | Sends email via SMTP; 3x retry with linear backoff                                                                                                                                           |
+| **ICSWorker**                  | `alga.ics-provision.process`         | 1                             | Provisions the war room (ICS channels/roles); 3x retry                                                                                                                                       |
 
 ### Sweep Workers (Timer-Based)
 
-| Worker | Tick | Responsibility |
-|--------|------|----------------|
-| **EscalationSweepWorker** | 10s | Claims expired entries from the Valkey sorted set and advances the escalation level |
-| **ActionItemSweepWorker** | 5min | Lists overdue action items |
-| **HeartbeatSweepWorker** | 30s | Finds expired heartbeats, marks agents unhealthy, ingests a synthetic alert |
-| **StuckInvestigationEscalationWorker** | 30s | Detects stuck investigations and escalates via policy |
-| **OutboxWorker** | 5s | Drains the transactional outbox, publishes to RabbitMQ, prunes old rows |
+| Worker                                 | Tick | Responsibility                                                                      |
+| -------------------------------------- | ---- | ----------------------------------------------------------------------------------- |
+| **EscalationSweepWorker**              | 10s  | Claims expired entries from the Valkey sorted set and advances the escalation level |
+| **ActionItemSweepWorker**              | 5min | Lists overdue action items                                                          |
+| **HeartbeatSweepWorker**               | 30s  | Finds expired heartbeats, marks agents unhealthy, ingests a synthetic alert         |
+| **StuckInvestigationEscalationWorker** | 30s  | Detects stuck investigations and escalates via policy                               |
+| **OutboxWorker**                       | 5s   | Drains the transactional outbox, publishes to RabbitMQ, prunes old rows             |
 
 ### Investigation Scheduler
 
@@ -332,7 +339,7 @@ Incidents expose a real-time **coordination stream** — a chronological message
 
 ### Status Updates
 
-Incidents support **structured status updates** with explicit phases (e.g., *investigating*, *identified*, *monitoring*). Each update is timestamped and attributed to its author, creating an authoritative timeline of the response narrative.
+Incidents support **structured status updates** with explicit phases (e.g., _investigating_, _identified_, _monitoring_). Each update is timestamped and attributed to its author, creating an authoritative timeline of the response narrative.
 
 ### Incident Documents
 
@@ -359,10 +366,10 @@ Playbooks provide **structured response procedures** that guide SRE agents and h
 
 ### Playbook Types
 
-| Type | Purpose |
-|------|---------|
-| **Procedure** | Step-by-step instructions for investigation and diagnosis |
-| **Mitigation** | Predefined remediation actions for known failure modes |
+| Type           | Purpose                                                   |
+| -------------- | --------------------------------------------------------- |
+| **Procedure**  | Step-by-step instructions for investigation and diagnosis |
+| **Mitigation** | Predefined remediation actions for known failure modes    |
 
 ### Automatic Matching
 
@@ -372,47 +379,47 @@ Playbooks are matched to investigations automatically during scheduling via **la
 
 RabbitMQ uses the following exchanges to route messages through the async pipeline:
 
-| Exchange | Type | Purpose |
-|----------|------|---------|
-| `alga.alerts` | direct | Alert webhook processing |
-| `alga.notifications` | direct | Alert notification delivery |
-| `alga.audit` | fanout | Audit log persistence |
-| `alga.email` | direct | Email delivery |
-| `alga.investigate` | direct | Investigation dispatch |
-| `alga.triage` | direct | Alert triage |
-| `alga.incidents` | direct | Incident creation |
-| `alga.escalation` | direct | Escalation execution |
-| `alga.sla` | direct | SLA breach detection |
+| Exchange                     | Type   | Purpose                        |
+| ---------------------------- | ------ | ------------------------------ |
+| `alga.alerts`                | direct | Alert webhook processing       |
+| `alga.notifications`         | direct | Alert notification delivery    |
+| `alga.audit`                 | fanout | Audit log persistence          |
+| `alga.email`                 | direct | Email delivery                 |
+| `alga.investigate`           | direct | Investigation dispatch         |
+| `alga.triage`                | direct | Alert triage                   |
+| `alga.incidents`             | direct | Incident creation              |
+| `alga.escalation`            | direct | Escalation execution           |
+| `alga.sla`                   | direct | SLA breach detection           |
 | `alga.notification-dispatch` | direct | Per-user notification dispatch |
-| `alga.ics-provision` | direct | ICS war room provisioning |
-| `alga.dlx` | direct | Dead letter collection |
+| `alga.ics-provision`         | direct | ICS war room provisioning      |
+| `alga.dlx`                   | direct | Dead letter collection         |
 
 Each exchange routes to a dedicated processing queue plus `alga.dead_letter`. Domains that support retries (alert, investigate, triage, incident, escalation, notification-dispatch) add four retry queues (`<domain>.retry.{1-4}`). Failed messages are dead-lettered into the appropriate retry queue with a per-message TTL; when the TTL expires they return to the main exchange for reprocessing. The retry schedule is 1m → 5m → 15m → 1h with ±20% jitter, after which messages land in `alga.dead_letter`.
 
 ## Technology Stack
 
-| Component | Technology | Version | Purpose |
-|-----------|-----------|---------|---------|
-| **Backend** | Go | 1.26.5 | REST API, webhooks, workers |
-| **Frontend** | Vue | 3 | Operations console |
-| **Frontend** | Vite | Latest | Build tooling |
-| **Frontend** | Tailwind CSS | v4 | Styling |
-| **Database** | PostgreSQL | Latest | Primary persistence |
-| **Database ORM** | Ent | Latest | Schema & query builder |
-| **Database Driver** | pgx | v5 | PostgreSQL driver |
-| **Database Extensions** | pgvector | Latest | Vector search for agent memory |
-| **Cache** | Valkey/Redis | Latest | Distributed state, caching |
-| **Message Queue** | RabbitMQ | Latest | Async processing with retries |
-| **Web Server** | net/http | Go stdlib | HTTP server |
-| **Session Storage** | Valkey/PostgreSQL | Preferred: Valkey | Session management |
-| **Encryption** | AES-256-GCM | Go crypto | Integration secrets |
-| **Password Hashing** | Argon2id | golang.org/x/crypto | Password security |
-| **Auth** | Session + CSRF | Custom | Session-based auth |
-| **RBAC** | Custom | - | Role-based access control |
-| **Real-time** | SSE + Valkey pub/sub | Custom | Server-sent events |
-| **Monitoring** | expvar | Go stdlib | Metrics endpoint |
-| **Frontend Rich Text** | TipTap | @tiptap/vue-3 | Markdown editor |
-| **Frontend Charts** | Chart.js | vue-chartjs | Data visualization |
+| Component               | Technology           | Version             | Purpose                        |
+| ----------------------- | -------------------- | ------------------- | ------------------------------ |
+| **Backend**             | Go                   | 1.26.5              | REST API, webhooks, workers    |
+| **Frontend**            | Vue                  | 3                   | Operations console             |
+| **Frontend**            | Vite                 | Latest              | Build tooling                  |
+| **Frontend**            | Tailwind CSS         | v4                  | Styling                        |
+| **Database**            | PostgreSQL           | Latest              | Primary persistence            |
+| **Database ORM**        | Ent                  | Latest              | Schema & query builder         |
+| **Database Driver**     | pgx                  | v5                  | PostgreSQL driver              |
+| **Database Extensions** | pgvector             | Latest              | Vector search for agent memory |
+| **Cache**               | Valkey/Redis         | Latest              | Distributed state, caching     |
+| **Message Queue**       | RabbitMQ             | Latest              | Async processing with retries  |
+| **Web Server**          | net/http             | Go stdlib           | HTTP server                    |
+| **Session Storage**     | Valkey/PostgreSQL    | Preferred: Valkey   | Session management             |
+| **Encryption**          | AES-256-GCM          | Go crypto           | Integration secrets            |
+| **Password Hashing**    | Argon2id             | golang.org/x/crypto | Password security              |
+| **Auth**                | Session + CSRF       | Custom              | Session-based auth             |
+| **RBAC**                | Custom               | -                   | Role-based access control      |
+| **Real-time**           | SSE + Valkey pub/sub | Custom              | Server-sent events             |
+| **Monitoring**          | expvar               | Go stdlib           | Metrics endpoint               |
+| **Frontend Rich Text**  | TipTap               | @tiptap/vue-3       | Markdown editor                |
+| **Frontend Charts**     | Chart.js             | vue-chartjs         | Data visualization             |
 
 ## Scalability
 
@@ -435,12 +442,12 @@ Alga is designed to scale horizontally when Valkey and RabbitMQ are configured:
 
 ### Resource Recommendations
 
-| Deployment | CPU | Memory | Disk | Notes |
-|------------|-----|--------|------|-------|
-| Development | 2 cores | 4GB | 50GB | Single replica |
-| Production (Small) | 4 cores | 8GB | 100GB | 2 replicas |
-| Production (Medium) | 8 cores | 16GB | 200GB | 3-4 replicas |
-| Production (Large) | 16+ cores | 32GB+ | 500GB+ | 5+ replicas |
+| Deployment          | CPU       | Memory | Disk   | Notes          |
+| ------------------- | --------- | ------ | ------ | -------------- |
+| Development         | 2 cores   | 4GB    | 50GB   | Single replica |
+| Production (Small)  | 4 cores   | 8GB    | 100GB  | 2 replicas     |
+| Production (Medium) | 8 cores   | 16GB   | 200GB  | 3-4 replicas   |
+| Production (Large)  | 16+ cores | 32GB+  | 500GB+ | 5+ replicas    |
 
 ## High Availability
 
@@ -534,8 +541,6 @@ Each delay is adjusted by ±20% jitter to avoid retry storms.
   - `CORRELATION_COOLDOWN_TTL` prevents duplicate investigations
 
 ## Security Architecture
-
-
 
 ### Authentication
 

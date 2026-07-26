@@ -23,13 +23,13 @@ When an event triggers a notification, Alga checks the user's preference rules f
 
 ## Available Channels
 
-| Channel | Description | Requires |
-|----------|-------------|----------|
-| **In-App** (`in_app`) | Notifications appear in the notification bell dropdown | Nothing (always available) |
-| **Email** (`email`) | Sent via the configured SMTP server | [Email integration](/integrations/email) set up |
-| **Slack** (`slack`) | Sent to your linked Slack account via DM | [Slack integration](/integrations/slack) + account linked |
-| **Voice** (`voice`) | Phone call with IVR menu to acknowledge | [Twilio](/integrations/twilio) or [Telnyx](/integrations/telnyx) configured |
-| **Mattermost** (`mattermost`) | Placeholder — accepted in rules but not yet delivered | [Mattermost integration](/integrations/mattermost) |
+| Channel                       | Description                                            | Requires                                                                    |
+| ----------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------- |
+| **In-App** (`in_app`)         | Notifications appear in the notification bell dropdown | Nothing (always available)                                                  |
+| **Email** (`email`)           | Sent via the configured SMTP server                    | [Email integration](/integrations/email) set up                             |
+| **Slack** (`slack`)           | Sent to your linked Slack account via DM               | [Slack integration](/integrations/slack) + account linked                   |
+| **Voice** (`voice`)           | Phone call with IVR menu to acknowledge                | [Twilio](/integrations/twilio) or [Telnyx](/integrations/telnyx) configured |
+| **Mattermost** (`mattermost`) | Placeholder — accepted in rules but not yet delivered  | [Mattermost integration](/integrations/mattermost)                          |
 
 ::: tip Link your accounts first
 The Slack channel only works if you've linked your personal Slack account. Go to **Profile → Connected Accounts** to link Slack before configuring that channel in your preferences.
@@ -65,14 +65,14 @@ Each user has a separate **voice opt-out** flag (`voice_opt_out`). When enabled,
 
 These are the most commonly configured notification types. The full list is available in the UI.
 
-| Notification Type | When It Fires | Recommended Channels |
-|---|---|---|
-| `incident_created` | A new incident is opened | In-app, Slack |
-| `incident_escalated` | Escalation moved to the next level | In-app, Slack, Email, Voice |
-| `incident_acknowledged` | Someone acknowledged the incident | In-app, Email |
-| `incident_resolved` | The incident is marked resolved | In-app |
-| `alert_triggered` | A new alert fired | In-app |
-| `investigation_completed` | An AI investigation finished | In-app |
+| Notification Type         | When It Fires                      | Recommended Channels        |
+| ------------------------- | ---------------------------------- | --------------------------- |
+| `incident_created`        | A new incident is opened           | In-app, Slack               |
+| `incident_escalated`      | Escalation moved to the next level | In-app, Slack, Email, Voice |
+| `incident_acknowledged`   | Someone acknowledged the incident  | In-app, Email               |
+| `incident_resolved`       | The incident is marked resolved    | In-app                      |
+| `alert_triggered`         | A new alert fired                  | In-app                      |
+| `investigation_completed` | An AI investigation finished       | In-app                      |
 
 ## Managing Your Preferences
 
@@ -96,10 +96,10 @@ The **Send Test** button (`POST /api/v1/users/me/notification-preferences/test`)
 
 ## API Endpoints
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `GET` | `/api/v1/users/me/notification-preferences` | Session | Get current user's preferences |
-| `PUT` | `/api/v1/users/me/notification-preferences` | Session | Update preferences |
+| Method | Path                                             | Auth    | Description                                      |
+| ------ | ------------------------------------------------ | ------- | ------------------------------------------------ |
+| `GET`  | `/api/v1/users/me/notification-preferences`      | Session | Get current user's preferences                   |
+| `PUT`  | `/api/v1/users/me/notification-preferences`      | Session | Update preferences                               |
 | `POST` | `/api/v1/users/me/notification-preferences/test` | Session | Send test notification (in-app only, idempotent) |
 
 ## See Also

@@ -7,12 +7,12 @@ description: Resource recommendations, horizontal scaling with Valkey and Rabbit
 
 ## Resource Recommendations
 
-| Deployment | CPU | Memory | Disk | Replicas |
-|------------|-----|--------|------|----------|
-| Development | 2 cores | 4 GB | 50 GB | 1 |
-| Production (Small) | 4 cores | 8 GB | 100 GB | 2 |
-| Production (Medium) | 8 cores | 16 GB | 200 GB | 3-4 |
-| Production (Large) | 16+ cores | 32 GB+ | 500 GB+ | 5+ |
+| Deployment          | CPU       | Memory | Disk    | Replicas |
+| ------------------- | --------- | ------ | ------- | -------- |
+| Development         | 2 cores   | 4 GB   | 50 GB   | 1        |
+| Production (Small)  | 4 cores   | 8 GB   | 100 GB  | 2        |
+| Production (Medium) | 8 cores   | 16 GB  | 200 GB  | 3-4      |
+| Production (Large)  | 16+ cores | 32 GB+ | 500 GB+ | 5+       |
 
 ## Horizontal Scaling
 
@@ -25,13 +25,13 @@ Alga scales horizontally when Valkey and RabbitMQ are configured:
 
 ### Coordination Mechanisms
 
-| Mechanism | Purpose | Storage |
-|-----------|---------|---------|
-| Leader election | Single scheduler tick runner | Valkey lease |
-| Agent presence | Track online agents across replicas | Valkey hash |
-| SSE fan-out | Cross-replica event distribution | Valkey pub/sub |
-| Atomic claims | Prevent double-dispatch | PostgreSQL row lock |
-| Disconnect grace | Handle agent reconnects | Valkey SET NX |
+| Mechanism        | Purpose                             | Storage             |
+| ---------------- | ----------------------------------- | ------------------- |
+| Leader election  | Single scheduler tick runner        | Valkey lease        |
+| Agent presence   | Track online agents across replicas | Valkey hash         |
+| SSE fan-out      | Cross-replica event distribution    | Valkey pub/sub      |
+| Atomic claims    | Prevent double-dispatch             | PostgreSQL row lock |
+| Disconnect grace | Handle agent reconnects             | Valkey SET NX       |
 
 ## Database Optimization
 
@@ -52,6 +52,7 @@ default_pool_size = 25
 ### Indexing
 
 Key indexes (auto-created by Ent):
+
 - `alerts.fingerprint` — partial unique index (`WHERE status != 'resolved'`)
 - `alerts.status`, `alerts.severity` — query filters
 - `investigations.status`, `investigations.agent_id` — scheduler lookups
@@ -60,6 +61,7 @@ Key indexes (auto-created by Ent):
 ### Read Replicas
 
 For read-heavy workloads:
+
 1. Set up PostgreSQL streaming replication
 2. Route read queries to replicas via PgBouncer
 3. Write queries go to primary
@@ -77,6 +79,7 @@ For read-heavy workloads:
 ### Persistence
 
 For production:
+
 - Enable RDB snapshots for point-in-time recovery
 - Consider AOF for durability
 - Use Valkey Sentinel for HA
@@ -85,26 +88,26 @@ For production:
 
 ### Queue Configuration
 
-| Queue | Purpose | Prefetch |
-|-------|---------|----------|
-| `alga.alert.process` | Alert processing | 10 |
-| `alga.investigate.process` | Investigation dispatch | `MAX_CONCURRENT_INVESTIGATIONS` (default 5) |
-| `alga.triage.process` | Triage decisions | 5 |
-| `alga.incident.process` | Incident management | 1 |
-| `alga.escalation.process` | Escalation processing | 5 |
-| `alga.sla.sweep` | SLA breach detection | 1 |
-| `alga.email.send` | Email delivery | 10 |
-| `alga.notification-dispatch.process` | Notification dispatching | 10 |
-| `alga.notification.send` | Notification sending | 10 |
-| `alga.audit.log` | Audit logging | 10 |
+| Queue                                | Purpose                  | Prefetch                                    |
+| ------------------------------------ | ------------------------ | ------------------------------------------- |
+| `alga.alert.process`                 | Alert processing         | 10                                          |
+| `alga.investigate.process`           | Investigation dispatch   | `MAX_CONCURRENT_INVESTIGATIONS` (default 5) |
+| `alga.triage.process`                | Triage decisions         | 5                                           |
+| `alga.incident.process`              | Incident management      | 1                                           |
+| `alga.escalation.process`            | Escalation processing    | 5                                           |
+| `alga.sla.sweep`                     | SLA breach detection     | 1                                           |
+| `alga.email.send`                    | Email delivery           | 10                                          |
+| `alga.notification-dispatch.process` | Notification dispatching | 10                                          |
+| `alga.notification.send`             | Notification sending     | 10                                          |
+| `alga.audit.log`                     | Audit logging            | 10                                          |
 
 ### Retry Topology
 
 Every domain (alert, investigate, triage, incident, escalation, notification-dispatch) shares a single authoritative retry schedule: four retry queues with exponential backoff, after which the message is dead-lettered to the terminal DLQ.
 
-| Stage | retry.1 | retry.2 | retry.3 | retry.4 | Then |
-|-------|---------|---------|---------|---------|------|
-| Backoff | 1min | 5min | 15min | 1h | Dead-letter |
+| Stage   | retry.1 | retry.2 | retry.3 | retry.4 | Then        |
+| ------- | ------- | ------- | ------- | ------- | ----------- |
+| Backoff | 1min    | 5min    | 15min   | 1h      | Dead-letter |
 
 Each backoff has ±20% jitter applied so correlated failures do not re-deliver in lockstep. Tune retry behavior by adjusting the shared `RetrySchedule` in the RabbitMQ topology.
 
@@ -140,6 +143,7 @@ STALE_ALERT_SWEEP_INTERVAL=5m  # Sweep frequency
 ## Frontend Optimization
 
 The frontend is served by nginx with:
+
 - Gzip compression
 - Static asset caching (immutable, 1 year)
 - SPA routing via `try_files`

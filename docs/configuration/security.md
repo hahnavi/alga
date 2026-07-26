@@ -11,11 +11,11 @@ Alga uses session-based authentication with HTTP-only cookies, CSRF protection, 
 
 Alga supports three authentication models depending on the caller:
 
-| Model | Mechanism | Use Case |
-|-------|-----------|----------|
-| Session cookie | `alga_session` cookie + CSRF token | Browser / web UI |
-| Personal Access Token | `Authorization: Bearer alga_pat_...` | Automation, scripting |
-| Agent token | `Authorization: Bearer <agent-token>` | AI agent API and SSE |
+| Model                 | Mechanism                             | Use Case              |
+| --------------------- | ------------------------------------- | --------------------- |
+| Session cookie        | `alga_session` cookie + CSRF token    | Browser / web UI      |
+| Personal Access Token | `Authorization: Bearer alga_pat_...`  | Automation, scripting |
+| Agent token           | `Authorization: Bearer <agent-token>` | AI agent API and SSE  |
 
 ### Session Authentication
 
@@ -40,6 +40,7 @@ curl -c cookies.txt -X POST http://localhost:8080/api/v1/auth/login \
 ```
 
 The response sets two cookies:
+
 - `alga_session` — HTTP-only session cookie
 - `alga_csrf` — CSRF token for state-changing requests
 
@@ -51,21 +52,21 @@ Alga supports Google Sign-In via standard OAuth 2.0. When configured, users can 
 
 Set the following environment variables (or configure at runtime via [System Configuration API](/configuration/system-config)):
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `GOOGLE_CLIENT_ID` | Yes | Google OAuth client ID |
-| `GOOGLE_CLIENT_SECRET` | Yes | Google OAuth client secret |
-| `GOOGLE_OAUTH_REDIRECT_URL` | No | Override callback URL (auto-detected from request headers if not set) |
+| Variable                    | Required | Description                                                           |
+| --------------------------- | -------- | --------------------------------------------------------------------- |
+| `GOOGLE_CLIENT_ID`          | Yes      | Google OAuth client ID                                                |
+| `GOOGLE_CLIENT_SECRET`      | Yes      | Google OAuth client secret                                            |
+| `GOOGLE_OAUTH_REDIRECT_URL` | No       | Override callback URL (auto-detected from request headers if not set) |
 
 When `GOOGLE_CLIENT_ID` is set, the login page displays a "Sign in with Google" button.
 
 ### API Endpoints
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `GET` | `/api/v1/auth/google/enabled` | None | Check if Google OAuth is enabled |
-| `GET` | `/api/v1/auth/google` | None | Redirect to Google OAuth authorization |
-| `GET` | `/api/v1/auth/google/callback` | None | Google OAuth callback |
+| Method | Path                           | Auth | Description                            |
+| ------ | ------------------------------ | ---- | -------------------------------------- |
+| `GET`  | `/api/v1/auth/google/enabled`  | None | Check if Google OAuth is enabled       |
+| `GET`  | `/api/v1/auth/google`          | None | Redirect to Google OAuth authorization |
+| `GET`  | `/api/v1/auth/google/callback` | None | Google OAuth callback                  |
 
 ### Flow
 
@@ -96,10 +97,10 @@ Alga provides a self-service password reset flow via email.
 
 ### API Endpoints
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
+| Method | Path                           | Auth | Description                  |
+| ------ | ------------------------------ | ---- | ---------------------------- |
 | `POST` | `/api/v1/auth/forgot-password` | None | Request password reset email |
-| `POST` | `/api/v1/auth/reset-password` | None | Reset password with token |
+| `POST` | `/api/v1/auth/reset-password`  | None | Reset password with token    |
 
 ### Flow
 
@@ -150,53 +151,54 @@ Read-only access across all operational resources.
 
 ### Permission Matrix
 
-| Permission | Admin | Operator | Viewer |
-|------------|:-----:|:--------:|:------:|
-| `alerts:read` / `alerts:write` | Yes | Yes | Read only |
-| `alerts:delete` | Yes | — | — |
-| `knowledge:read` / `knowledge:write` | Yes | Yes | Read only |
-| `knowledge:delete` | Yes | — | — |
-| `memories:read` / `memories:write` | Yes | Yes | Read only |
-| `memories:delete` | Yes | — | — |
-| `routes:read` | Yes | Yes | Yes |
-| `routes:write` | Yes | — | — |
-| `integrations:read` | Yes | Yes | Yes |
-| `integrations:write` | Yes | — | — |
-| `integrations:test` | Yes | Yes | — |
-| `users:manage` | Yes | Yes | — |
-| `tokens:manage` | Yes | — | — |
-| `dashboard:read` | Yes | Yes | Yes |
-| `channels:read` | Yes | Yes | Yes |
-| `audit:read` | Yes | Yes | — |
-| `notifications:read` / `notifications:write` | Yes | Yes | Read only |
-| `system:read` / `system:write` | Yes | — | — |
-| `triage:read` / `triage:write` | Yes | Yes | Read only |
-| `triage:override` | Yes | Yes | — |
-| `incidents:read` / `incidents:write` | Yes | Yes | Read only |
-| `incidents:command` | Yes | Yes | — |
-| `incidents:delete` | Yes | — | — |
-| `services:read` | Yes | Yes | Yes |
-| `services:write` | Yes | — | — |
-| `oncall:read` | Yes | Yes | Yes |
-| `oncall:write` | Yes | — | — |
-| `escalation:read` | Yes | Yes | Yes |
-| `escalation:write` | Yes | — | — |
-| `postmortems:read` / `postmortems:write` | Yes | Yes | Read only |
-| `postmortems:delete` | Yes | — | — |
-| `playbooks:read` / `playbooks:write` | Yes | Yes | Read only |
-| `playbooks:delete` | Yes | — | — |
-| `heartbeats:read` / `heartbeats:write` | Yes | Yes | Read only |
-| `heartbeats:delete` | Yes | — | — |
-| `statuspages:read` / `statuspages:write` | Yes | Yes | Read only |
-| `statuspages:delete` | Yes | — | — |
-| `oidc:manage` | Yes | — | — |
-| `credentials:read` | Yes | Yes | — |
-| `credentials:manage` | Yes | Yes | — |
-| `admin:access` | Yes | — | — |
+| Permission                                   | Admin | Operator |  Viewer   |
+| -------------------------------------------- | :---: | :------: | :-------: |
+| `alerts:read` / `alerts:write`               |  Yes  |   Yes    | Read only |
+| `alerts:delete`                              |  Yes  |    —     |     —     |
+| `knowledge:read` / `knowledge:write`         |  Yes  |   Yes    | Read only |
+| `knowledge:delete`                           |  Yes  |    —     |     —     |
+| `memories:read` / `memories:write`           |  Yes  |   Yes    | Read only |
+| `memories:delete`                            |  Yes  |    —     |     —     |
+| `routes:read`                                |  Yes  |   Yes    |    Yes    |
+| `routes:write`                               |  Yes  |    —     |     —     |
+| `integrations:read`                          |  Yes  |   Yes    |    Yes    |
+| `integrations:write`                         |  Yes  |    —     |     —     |
+| `integrations:test`                          |  Yes  |   Yes    |     —     |
+| `users:manage`                               |  Yes  |   Yes    |     —     |
+| `tokens:manage`                              |  Yes  |    —     |     —     |
+| `dashboard:read`                             |  Yes  |   Yes    |    Yes    |
+| `channels:read`                              |  Yes  |   Yes    |    Yes    |
+| `audit:read`                                 |  Yes  |   Yes    |     —     |
+| `notifications:read` / `notifications:write` |  Yes  |   Yes    | Read only |
+| `system:read` / `system:write`               |  Yes  |    —     |     —     |
+| `triage:read` / `triage:write`               |  Yes  |   Yes    | Read only |
+| `triage:override`                            |  Yes  |   Yes    |     —     |
+| `incidents:read` / `incidents:write`         |  Yes  |   Yes    | Read only |
+| `incidents:command`                          |  Yes  |   Yes    |     —     |
+| `incidents:delete`                           |  Yes  |    —     |     —     |
+| `services:read`                              |  Yes  |   Yes    |    Yes    |
+| `services:write`                             |  Yes  |    —     |     —     |
+| `oncall:read`                                |  Yes  |   Yes    |    Yes    |
+| `oncall:write`                               |  Yes  |    —     |     —     |
+| `escalation:read`                            |  Yes  |   Yes    |    Yes    |
+| `escalation:write`                           |  Yes  |    —     |     —     |
+| `postmortems:read` / `postmortems:write`     |  Yes  |   Yes    | Read only |
+| `postmortems:delete`                         |  Yes  |    —     |     —     |
+| `playbooks:read` / `playbooks:write`         |  Yes  |   Yes    | Read only |
+| `playbooks:delete`                           |  Yes  |    —     |     —     |
+| `heartbeats:read` / `heartbeats:write`       |  Yes  |   Yes    | Read only |
+| `heartbeats:delete`                          |  Yes  |    —     |     —     |
+| `statuspages:read` / `statuspages:write`     |  Yes  |   Yes    | Read only |
+| `statuspages:delete`                         |  Yes  |    —     |     —     |
+| `oidc:manage`                                |  Yes  |    —     |     —     |
+| `credentials:read`                           |  Yes  |   Yes    |     —     |
+| `credentials:manage`                         |  Yes  |   Yes    |     —     |
+| `admin:access`                               |  Yes  |    —     |     —     |
 
 ## Password Policy
 
 Alga enforces the following password requirements:
+
 - Minimum 8 characters
 - At least one uppercase letter
 - At least one lowercase letter
@@ -254,12 +256,12 @@ See [Personal Access Tokens](/operations/personal-access-tokens) for details.
 
 ## Cryptographic Primitives
 
-| Primitive | Algorithm | Configuration |
-|-----------|-----------|---------------|
-| Password hashing | Argon2id | 64 MiB memory, time 3, parallelism 2, 16-byte salt, 32-byte key |
-| Envelope encryption | AES-256-GCM | `ENCRYPTION_KEYS` (comma-separated `kid:base64-key` pairs, supports key rotation via kid) |
-| Token hashing | HMAC-SHA-256 | `SECRET_PEPPER` as the HMAC key |
-| Secret comparison | Constant-time | `crypto/subtle` for all secret, token, and signature checks |
+| Primitive           | Algorithm     | Configuration                                                                             |
+| ------------------- | ------------- | ----------------------------------------------------------------------------------------- |
+| Password hashing    | Argon2id      | 64 MiB memory, time 3, parallelism 2, 16-byte salt, 32-byte key                           |
+| Envelope encryption | AES-256-GCM   | `ENCRYPTION_KEYS` (comma-separated `kid:base64-key` pairs, supports key rotation via kid) |
+| Token hashing       | HMAC-SHA-256  | `SECRET_PEPPER` as the HMAC key                                                           |
+| Secret comparison   | Constant-time | `crypto/subtle` for all secret, token, and signature checks                               |
 
 ## Security Features
 

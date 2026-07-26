@@ -108,6 +108,7 @@ open → active → mitigated → resolved → closed
 (with `cancelled` and `reopened` branches)
 
 Each transition is:
+
 - Logged to the incident timeline
 - Triggers notifications and escalations
 - Updates service status and dependencies
@@ -121,11 +122,12 @@ Each transition is:
 
 ```yaml
 # Service-level SLA configuration
-sla_target_respond_minutes: 15  # Time to first response
-sla_target_resolve_minutes: 60  # Time to resolution
+sla_target_respond_minutes: 15 # Time to first response
+sla_target_resolve_minutes: 60 # Time to resolution
 ```
 
 Alga automatically:
+
 - Tracks SLA deadlines in sorted sets
 - Detects breaches and fires escalation events
 - Records SLA compliance metrics
@@ -143,7 +145,7 @@ policy:
   - level_number: 1
     delay_minutes: 5
     targets:
-      - target_type: team        # resolves to the team's on-call schedule
+      - target_type: team # resolves to the team's on-call schedule
         target_team_id: "platform-team"
   - level_number: 2
     delay_minutes: 10
@@ -203,7 +205,7 @@ Escalation stops automatically when the incident is acknowledged.
 await agent.peerAsk({
   topic: "database.performance",
   context: { query: "slow_query_123" },
-  urgency: "high"
+  urgency: "high",
 });
 ```
 

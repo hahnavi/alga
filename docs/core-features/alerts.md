@@ -14,30 +14,31 @@ Alga follows the Opsgenie deduplication model:
 3. **Resolved** → Alert is no longer active
 
 Key concepts:
+
 - **Fingerprint** is a dedup key, not a unique identifier. Multiple resolved alerts can share the same fingerprint.
 - **Alert Number** is the true unique identifier for each alert, assigned sequentially via the counters table.
-- Resolved alerts are never reopened *automatically* by the system, but they **can** be manually reopened via the API (`POST /api/v1/alerts/{alert_number}/reopen`) or the UI. Reopening resets the alert from `resolved` back to `firing` and can revive a terminal investigation (except `promoted` — a promoted investigation is irreversible). A new firing alert with the same fingerprint creates a fresh alert record.
+- Resolved alerts are never reopened _automatically_ by the system, but they **can** be manually reopened via the API (`POST /api/v1/alerts/{alert_number}/reopen`) or the UI. Reopening resets the alert from `resolved` back to `firing` and can revive a terminal investigation (except `promoted` — a promoted investigation is irreversible). A new firing alert with the same fingerprint creates a fresh alert record.
 
 ### Alert Fields
 
-| Field | Description |
-|-------|-------------|
-| `alert_number` | Sequential unique identifier (from counters table) |
-| `fingerprint` | Dedup key for correlating related alerts |
-| `status` | `firing` or `resolved` |
-| `acknowledged` | Whether the alert has been acknowledged |
-| `silenced` | Whether the alert is silenced |
-| `labels` | Key-value label map (e.g., alertname, severity, namespace) |
-| `annotations` | Key-value annotation map (e.g., summary, description) |
-| `values` | Metric values associated with the alert |
-| `starts_at` | When the alert started firing |
-| `ends_at` | When the alert was resolved |
-| `generator_url` | Link back to the source (e.g., Grafana) |
-| `triage_result_id` | Linked triage result (if triaged) |
-| `enrichment` | Enriched metadata from triage or agents |
-| `triage_category` | Category assigned by triage |
-| `severity_classified` | Severity determined by triage |
-| `deleted_at` | Soft-delete tombstone timestamp (null if active) |
+| Field                 | Description                                                |
+| --------------------- | ---------------------------------------------------------- |
+| `alert_number`        | Sequential unique identifier (from counters table)         |
+| `fingerprint`         | Dedup key for correlating related alerts                   |
+| `status`              | `firing` or `resolved`                                     |
+| `acknowledged`        | Whether the alert has been acknowledged                    |
+| `silenced`            | Whether the alert is silenced                              |
+| `labels`              | Key-value label map (e.g., alertname, severity, namespace) |
+| `annotations`         | Key-value annotation map (e.g., summary, description)      |
+| `values`              | Metric values associated with the alert                    |
+| `starts_at`           | When the alert started firing                              |
+| `ends_at`             | When the alert was resolved                                |
+| `generator_url`       | Link back to the source (e.g., Grafana)                    |
+| `triage_result_id`    | Linked triage result (if triaged)                          |
+| `enrichment`          | Enriched metadata from triage or agents                    |
+| `triage_category`     | Category assigned by triage                                |
+| `severity_classified` | Severity determined by triage                              |
+| `deleted_at`          | Soft-delete tombstone timestamp (null if active)           |
 
 ### Soft Delete
 
@@ -98,6 +99,7 @@ Alga accepts Grafana-compatible alert payloads:
 ### Authentication
 
 Include the webhook token as either:
+
 - `Authorization: Bearer alga_...` header
 - `?token=alga_...` query parameter
 
@@ -134,17 +136,17 @@ The `source` field defaults to `grafana` for webhook alerts. Manual alerts use `
 
 ## Alert Actions
 
-| Action | Endpoint | Description |
-|--------|----------|-------------|
-| List | `GET /api/v1/alerts` | List with filters (status, severity, channel, provider, search, date range) |
-| Get | `GET /api/v1/alerts/{alert_number}` | Get alert and active investigation |
-| Create | `POST /api/v1/alerts` | Create a manual alert |
-| Acknowledge | `POST /api/v1/alerts/{alert_number}/acknowledge` | Mark as acknowledged |
-| Resolve | `POST /api/v1/alerts/{alert_number}/resolve` | Manually resolve |
-| Reopen | `POST /api/v1/alerts/{alert_number}/reopen` | Reopen resolved alert |
-| Investigate | `POST /api/v1/alerts/{alert_number}/investigate` | Trigger AI investigation |
-| Delete | `DELETE /api/v1/alerts/{alert_number}` | Delete alert (alerts:delete) |
-| Related | `GET /api/v1/alerts/{alert_number}/related` | Get correlated alerts and linked incident |
+| Action      | Endpoint                                         | Description                                                                 |
+| ----------- | ------------------------------------------------ | --------------------------------------------------------------------------- |
+| List        | `GET /api/v1/alerts`                             | List with filters (status, severity, channel, provider, search, date range) |
+| Get         | `GET /api/v1/alerts/{alert_number}`              | Get alert and active investigation                                          |
+| Create      | `POST /api/v1/alerts`                            | Create a manual alert                                                       |
+| Acknowledge | `POST /api/v1/alerts/{alert_number}/acknowledge` | Mark as acknowledged                                                        |
+| Resolve     | `POST /api/v1/alerts/{alert_number}/resolve`     | Manually resolve                                                            |
+| Reopen      | `POST /api/v1/alerts/{alert_number}/reopen`      | Reopen resolved alert                                                       |
+| Investigate | `POST /api/v1/alerts/{alert_number}/investigate` | Trigger AI investigation                                                    |
+| Delete      | `DELETE /api/v1/alerts/{alert_number}`           | Delete alert (alerts:delete)                                                |
+| Related     | `GET /api/v1/alerts/{alert_number}/related`      | Get correlated alerts and linked incident                                   |
 
 Agent endpoints use fingerprint-based routing — see [Agent REST API](/api-reference/#agent-rest-api).
 
@@ -152,13 +154,13 @@ Agent endpoints use fingerprint-based routing — see [Agent REST API](/api-refe
 
 Each alert tracks a timeline of events (acknowledge, resolve, reopen, investigate, etc.). Each event records:
 
-| Field | Description |
-|-------|-------------|
-| `type` | Event type (e.g., `acknowledged`, `resolved`, `reopened`, `investigation_started`) |
-| `timestamp` | When the event occurred |
-| `actor_type` | Who performed the action (`user`, `agent`, `system`) |
-| `actor_id` | Identifier of the actor |
-| `source` | Origin of the event (e.g., `api`, `webhook`, `scheduler`) |
+| Field        | Description                                                                        |
+| ------------ | ---------------------------------------------------------------------------------- |
+| `type`       | Event type (e.g., `acknowledged`, `resolved`, `reopened`, `investigation_started`) |
+| `timestamp`  | When the event occurred                                                            |
+| `actor_type` | Who performed the action (`user`, `agent`, `system`)                               |
+| `actor_id`   | Identifier of the actor                                                            |
+| `source`     | Origin of the event (e.g., `api`, `webhook`, `scheduler`)                          |
 
 ## Alert Search
 
@@ -174,11 +176,11 @@ The `search` query parameter matches against alert summaries, label values, and 
 
 Each alert has a dedicated **owner-thread** for operator discussion. Thread messages support real-time updates via SSE.
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/v1/alerts/{alert_number}/thread` | Get thread with messages |
+| Method | Endpoint                                        | Description                 |
+| ------ | ----------------------------------------------- | --------------------------- |
+| `GET`  | `/api/v1/alerts/{alert_number}/thread`          | Get thread with messages    |
 | `POST` | `/api/v1/alerts/{alert_number}/thread/messages` | Add a message to the thread |
-| `POST` | `/api/v1/alerts/{alert_number}/thread/typing` | Typing indicator |
+| `POST` | `/api/v1/alerts/{alert_number}/thread/typing`   | Typing indicator            |
 
 New messages are pushed to connected clients over the SSE stream (`GET /api/v1/events`), so the thread UI updates in real time without polling.
 
@@ -197,15 +199,16 @@ Returns related alerts sharing the same correlation key and the linked incident 
 When `CORRELATION_WINDOW` is set (e.g., `5m`), alerts that share the same correlation key (deployment name + alertname) within the window are grouped into a single investigation.
 
 The correlator:
+
 1. Buffers incoming alerts by correlation key
 2. Waits for the window to expire
 3. Creates a single investigation covering all correlated alerts
 4. Honors `CORRELATION_COOLDOWN_TTL` (default `30m`) to prevent duplicate investigations on the same key
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `CORRELATION_WINDOW` | `0` (disabled) | Time window for grouping related alerts |
-| `CORRELATION_COOLDOWN_TTL` | `30m` | Cooldown before a new investigation opens on the same correlation key |
+| Variable                   | Default        | Description                                                           |
+| -------------------------- | -------------- | --------------------------------------------------------------------- |
+| `CORRELATION_WINDOW`       | `0` (disabled) | Time window for grouping related alerts                               |
+| `CORRELATION_COOLDOWN_TTL` | `30m`          | Cooldown before a new investigation opens on the same correlation key |
 
 ## Delivery Targets
 
@@ -213,11 +216,11 @@ Alerts track where they were delivered — Mattermost post IDs, Slack message ti
 
 Each delivery target stores:
 
-| Field | Description |
-|-------|-------------|
+| Field      | Description                                     |
+| ---------- | ----------------------------------------------- |
 | `provider` | Delivery provider (e.g., `mattermost`, `slack`) |
-| `channel` | Channel or conversation ID |
-| `post_id` | External post/message ID in the provider |
+| `channel`  | Channel or conversation ID                      |
+| `post_id`  | External post/message ID in the provider        |
 
 ## Maintenance Window Suppression
 
@@ -225,11 +228,11 @@ Alerts that fire during an active maintenance window are suppressed. The alert i
 
 Configure maintenance windows under **Routes → Maintenance Windows** or via the API:
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/v1/maintenance-windows` | List maintenance windows |
-| `POST` | `/api/v1/maintenance-windows` | Create maintenance window |
-| `PUT` | `/api/v1/maintenance-windows/{id}` | Update maintenance window |
+| Method   | Endpoint                           | Description               |
+| -------- | ---------------------------------- | ------------------------- |
+| `GET`    | `/api/v1/maintenance-windows`      | List maintenance windows  |
+| `POST`   | `/api/v1/maintenance-windows`      | Create maintenance window |
+| `PUT`    | `/api/v1/maintenance-windows/{id}` | Update maintenance window |
 | `DELETE` | `/api/v1/maintenance-windows/{id}` | Delete maintenance window |
 
 Each window has a start time, end time, and optional label selectors to scope suppression to specific alerts.
@@ -238,10 +241,10 @@ Each window has a start time, end time, and optional label selectors to scope su
 
 A background sweeper detects firing alerts that have not been investigated within a configurable threshold and marks them as stale candidates for re-investigation.
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `STALE_ALERT_THRESHOLD` | `15m` | Alert age before the stale sweep considers it uninvestigated |
-| `STALE_ALERT_SWEEP_INTERVAL` | `5m` | How often the stale sweep runs |
+| Variable                     | Default | Description                                                  |
+| ---------------------------- | ------- | ------------------------------------------------------------ |
+| `STALE_ALERT_THRESHOLD`      | `15m`   | Alert age before the stale sweep considers it uninvestigated |
+| `STALE_ALERT_SWEEP_INTERVAL` | `5m`    | How often the stale sweep runs                               |
 
 ## Data Retention
 

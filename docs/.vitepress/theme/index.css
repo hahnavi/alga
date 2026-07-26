@@ -41,11 +41,7 @@
 /* Hero */
 :root {
   --vp-home-hero-name-color: transparent;
-  --vp-home-hero-name-background: linear-gradient(
-    120deg,
-    var(--alga-violet) 30%,
-    var(--alga-cyan)
-  );
+  --vp-home-hero-name-background: linear-gradient(120deg, var(--alga-violet) 30%, var(--alga-cyan));
   --vp-home-hero-image-background-image: linear-gradient(
     -45deg,
     rgba(134, 59, 255, 0.55) 40%,

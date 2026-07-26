@@ -36,6 +36,7 @@ curl -X POST http://localhost:8080/api/v1/integrations/slack/oauth/authorize
 ```
 
 Response:
+
 ```json
 {
   "url": "https://slack.com/oauth/v2/authorize?client_id=xxx&scope=chat:write,channels:read&redirect_uri=..."
@@ -51,6 +52,7 @@ The user reviews permissions, selects a workspace, and clicks **Allow**.
 ### Step 3: Callback
 
 Slack redirects back to Alga's callback. Alga automatically:
+
 1. Exchanges the authorization code for a bot token
 2. Stores the token encrypted at rest (AES-256-GCM)
 3. Updates integration status to connected
@@ -83,19 +85,19 @@ Configure in your Slack App's **OAuth & Permissions** section:
 
 The OAuth flow requests the following scopes:
 
-| Scope | Purpose |
-|-------|---------|
-| `chat:write` | Send messages to channels |
+| Scope                  | Purpose                                             |
+| ---------------------- | --------------------------------------------------- |
+| `chat:write`           | Send messages to channels                           |
 | `chat:write.customize` | Send messages with a customized username and avatar |
-| `chat:write.public` | Post to public channels without joining |
-| `channels:read` | Read channel information |
-| `groups:read` | Read private channels |
-| `channels:manage` | Create, archive, and manage channels |
-| `groups:manage` | Create, archive, and manage private channels |
-| `channels:history` | Read message history in channels |
-| `groups:history` | Read message history in private channels |
-| `im:write` | Open and send direct messages |
-| `mpim:write` | Open and send group direct messages |
+| `chat:write.public`    | Post to public channels without joining             |
+| `channels:read`        | Read channel information                            |
+| `groups:read`          | Read private channels                               |
+| `channels:manage`      | Create, archive, and manage channels                |
+| `groups:manage`        | Create, archive, and manage private channels        |
+| `channels:history`     | Read message history in channels                    |
+| `groups:history`       | Read message history in private channels            |
+| `im:write`             | Open and send direct messages                       |
+| `mpim:write`           | Open and send group direct messages                 |
 
 ## Troubleshooting
 

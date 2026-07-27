@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRoute, useRouter } from "vue-router";
-import { LogOut, X } from "@lucide/vue";
+import { LogOut, Settings, X } from "@lucide/vue";
 import { useAuthStore } from "@/stores/auth";
 import UserLabel from "@/components/ui/UserLabel.vue";
 import { isActiveRoute } from "@/lib/routing";
@@ -10,7 +10,6 @@ import { MOBILE_MORE_USER_ACTION_CLASS } from "@/lib/uiClasses";
 
 const emit = defineEmits<{
   close: [];
-  openSettings: [];
 }>();
 
 const auth = useAuthStore();
@@ -29,7 +28,7 @@ function handleNav() {
 
 function openSettings() {
   emit("close");
-  emit("openSettings");
+  router.push("/settings/general");
 }
 
 async function handleLogout() {

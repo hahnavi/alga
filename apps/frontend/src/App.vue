@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, watch, computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { Bot, ChevronLeft, Menu, Loader2 } from "@lucide/vue";
+import { Bot, ChevronLeft, Menu, Loader2, Settings } from "@lucide/vue";
 import Sidebar from "@/components/Sidebar.vue";
+import SettingsSidebar from "@/components/SettingsSidebar.vue";
 import MobileMoreMenu from "@/components/MobileMoreMenu.vue";
 import MobileAgentMenu from "@/components/MobileAgentMenu.vue";
 import GlobalSearchOverlay from "@/components/ui/GlobalSearchOverlay.vue";
-import SettingsDialog from "@/components/ui/settings/SettingsDialog.vue";
 import ToastStack from "@/components/ui/ToastStack.vue";
 import RouteLoadingBar from "@/components/ui/RouteLoadingBar.vue";
 import LoadingSpinner from "@/components/ui/LoadingSpinner.vue";
@@ -16,13 +16,12 @@ import { pageHeader, headerSearchActive, headerSearchState } from "@/lib/pageHea
 import ChatSearchBar from "@/components/ui/ChatSearchBar.vue";
 import { useAuthBootstrap } from "@/composables/useAuthBootstrap";
 import { useSessionKeepAlive } from "@/composables/useSessionKeepAlive";
-import { useSettingsDialogFromQuery } from "@/composables/useSettingsDialogFromQuery";
 import { useSSE } from "@/composables/useSSE";
 import { isActiveRoute } from "@/lib/routing";
 import { setAuthRedirectRouter } from "@/lib/authRedirect";
 import { pageTitleForPath } from "@/lib/pageTitles";
 import { getAgentBrandIconSrc } from "@/lib/agentAvatar";
-import { CARD_ICON_BTN_CLASS } from "@/lib/uiClasses";
+import { CARD_ICON_BTN_CLASS, HEADER_ICON_BTN_CLASS } from "@/lib/uiClasses";
 import { useRoutePrefetch } from "@/composables/useRoutePrefetch";
 import { useGlobalSearch } from "@/composables/useGlobalSearch";
 import { useNavSections, TOP_NAV_ITEMS } from "@/lib/nav";
@@ -45,13 +44,14 @@ const router = useRouter();
 setAuthRedirectRouter(router);
 
 useAuthBootstrap();
-const { showSettings, settingsTab, openSettings, closeSettings } = useSettingsDialogFromQuery();
 
 const moreMenuOpen = ref(false);
 const agentMenuOpen = ref(false);
 
 const { mobileMorePaths } = useNavSections();
 const navItems = TOP_NAV_ITEMS;
+
+const inSettingsArea = computed(() => route.meta.area === "settings");
 
 const agentGroupActive = computed(() => {
   const p = route.path;
@@ -145,7 +145,8 @@ onBeforeUnmount(() => {
   >
     <!-- Desktop sidebar -->
     <div class="hidden shrink-0 md:block">
-      <Sidebar />
+      <SettingsSidebar v-if="inSettingsArea" />
+      <Sidebar v-else />
     </div>
 
     <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
@@ -268,6 +269,17 @@ onBeforeUnmount(() => {
               :key="`a-${i}`"
               :is="action"
             />
+            <router-link
+              v-if="!inSettingsArea"
+              to="/settings/general"
+              aria-label="Settings"
+              title="Settings"
+              :class="[HEADER_ICON_BTN_CLASS, 'hidden md:inline-flex']"
+              @mouseenter="prefetch('/settings/general')"
+              @focus="prefetch('/settings/general')"
+            >
+              <Settings class="h-4 w-4" aria-hidden="true" />
+            </router-link>
           </div>
         </template>
       </header>
@@ -330,12 +342,7 @@ onBeforeUnmount(() => {
       </button>
     </nav>
     <MobileAgentMenu v-if="agentMenuOpen && !hideMobileChatChrome" @close="agentMenuOpen = false" />
-    <MobileMoreMenu
-      v-if="moreMenuOpen && !hideMobileChatChrome"
-      @close="moreMenuOpen = false"
-      @open-settings="openSettings()"
-    />
-    <SettingsDialog :open="showSettings" :tab="settingsTab" @close="closeSettings" />
+    <MobileMoreMenu v-if="moreMenuOpen && !hideMobileChatChrome" @close="moreMenuOpen = false" />
     <GlobalSearchOverlay />
     <RouteLoadingBar />
     <ToastStack />

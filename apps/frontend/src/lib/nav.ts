@@ -4,19 +4,25 @@ import {
   AlertTriangle,
   BarChart3,
   Bell,
+  BellRing,
   BookOpen,
   Bot,
   Brain,
   Clock,
   FileText,
   HeartPulse,
+  Key,
   KeyRound,
   Layers,
+  Link2,
+  Lock,
+  Palette,
   PlugZap,
   Route,
   Settings,
   Shield,
   ShieldCheck,
+  User,
   Users,
 } from "@lucide/vue";
 import { useAuthStore } from "@/stores/auth";
@@ -24,8 +30,9 @@ import { useAuthStore } from "@/stores/auth";
 /**
  * Single source of truth for the app's navigation structure.
  *
- * Three consumers read from here:
+ * Consumers:
  *   - `Sidebar.vue` (full desktop nav) → `sidebarSections`
+ *   - `SettingsSidebar.vue` (settings-area desktop nav) → `settingsSections`
  *   - `MobileMoreMenu.vue` (the "More" bottom-sheet on mobile)
  *   - `MobileAgentMenu.vue` (the "Agents" bottom-sheet on mobile)
  *
@@ -100,11 +107,6 @@ export function useNavSections() {
       readPlaybooks: auth.hasPermission("playbooks:read"),
       readEscalation: auth.hasPermission("escalation:read"),
       writeRoutes: auth.hasPermission("routes:write"),
-      readHeartbeats: auth.hasPermission("heartbeats:read"),
-      readStatuspages: auth.hasPermission("statuspages:read"),
-      manageOidc: auth.hasPermission("oidc:manage"),
-      manageUsers: auth.hasPermission("users:manage"),
-      readSystem: auth.hasPermission("system:read"),
     };
 
     return [
@@ -143,35 +145,67 @@ export function useNavSections() {
             : []),
         ],
       },
-      {
-        label: "Configure",
-        items: [
-          { to: "/routes", icon: Route, label: "Routes" },
-          { to: "/integrations", icon: PlugZap, label: "Integrations" },
-          ...(p.readHeartbeats
-            ? [{ to: "/heartbeats", icon: HeartPulse, label: "Heartbeats" }]
-            : []),
-          ...(p.readStatuspages
-            ? [{ to: "/status-pages", icon: Activity, label: "Status Pages" }]
-            : []),
-          ...(p.manageOidc ? [{ to: "/sso", icon: KeyRound, label: "SSO" }] : []),
-          ...(p.manageUsers ? [{ to: "/users", icon: Users, label: "Users" }] : []),
-          ...(p.readSystem ? [{ to: "/system", icon: Settings, label: "System" }] : []),
-        ],
-      },
+    ];
+  });
+
+  const settingsSections = computed<NavSectionFlat[]>(() => {
+    const p = {
+      manageTokens: auth.hasPermission("tokens:manage"),
+      readNotifications: auth.hasPermission("notifications:read"),
+      readCreds: auth.hasPermission("credentials:read"),
+      readHeartbeats: auth.hasPermission("heartbeats:read"),
+      readStatuspages: auth.hasPermission("statuspages:read"),
+      manageOidc: auth.hasPermission("oidc:manage"),
+      manageUsers: auth.hasPermission("users:manage"),
+      readSystem: auth.hasPermission("system:read"),
+    };
+
+    const account: NavFlat[] = [
+      { to: "/settings/general", icon: User, label: "General" },
+      { to: "/settings/appearance", icon: Palette, label: "Appearance" },
+      { to: "/settings/security", icon: Lock, label: "Security" },
+      { to: "/settings/integrations", icon: Link2, label: "Connected Apps" },
+      ...(p.manageTokens
+        ? [{ to: "/personal-access-tokens", icon: Key, label: "Access Tokens" }]
+        : []),
+      ...(p.readNotifications
+        ? [{ to: "/notification-preferences", icon: BellRing, label: "Notifications" }]
+        : []),
+    ];
+
+    const workspace: NavFlat[] = [
+      { to: "/routes", icon: Route, label: "Routes" },
+      { to: "/integrations", icon: PlugZap, label: "Integrations" },
+      ...(p.readHeartbeats ? [{ to: "/heartbeats", icon: HeartPulse, label: "Heartbeats" }] : []),
+      ...(p.readStatuspages
+        ? [{ to: "/status-pages", icon: Activity, label: "Status Pages" }]
+        : []),
+      ...(p.readCreds
+        ? [{ to: "/credential-providers", icon: KeyRound, label: "Credential Providers" }]
+        : []),
+      ...(p.manageOidc ? [{ to: "/sso", icon: KeyRound, label: "SSO" }] : []),
+      ...(p.manageUsers ? [{ to: "/users", icon: Users, label: "Users" }] : []),
+    ];
+
+    return [
+      { label: "Account", items: account },
+      { label: "Workspace", items: workspace },
+      ...(p.readSystem
+        ? [
+            {
+              label: "System",
+              items: [{ to: "/system", icon: Settings, label: "System" }],
+            },
+          ]
+        : []),
     ];
   });
 
   const mobileMoreSections = computed<NavSectionFlat[]>(() => {
     const p = {
       readPostmortem: auth.hasPermission("postmortems:read"),
-      writeOncall: auth.hasPermission("oncall:write"),
+      readEscalation: auth.hasPermission("escalation:read"),
       writeRoutes: auth.hasPermission("routes:write"),
-      readHeartbeats: auth.hasPermission("heartbeats:read"),
-      readStatuspages: auth.hasPermission("statuspages:read"),
-      manageOidc: auth.hasPermission("oidc:manage"),
-      manageUsers: auth.hasPermission("users:manage"),
-      readSystem: auth.hasPermission("system:read"),
     };
 
     const result: NavSectionFlat[] = [];
@@ -189,7 +223,7 @@ export function useNavSections() {
       { to: "/on-call", icon: Clock, label: "On-Call" },
       { to: "/teams", icon: Users, label: "Teams" },
     ];
-    if (p.writeOncall) {
+    if (p.readEscalation) {
       operateItems.push({ to: "/escalation-policies", icon: Shield, label: "Escalation" });
     }
     if (p.writeRoutes) {
@@ -197,26 +231,7 @@ export function useNavSections() {
     }
     result.push({ label: "Operate", items: operateItems });
 
-    const configureItems: NavFlat[] = [
-      { to: "/routes", icon: Route, label: "Routes" },
-      { to: "/integrations", icon: PlugZap, label: "Integrations" },
-    ];
-    if (p.readHeartbeats) {
-      configureItems.push({ to: "/heartbeats", icon: HeartPulse, label: "Heartbeats" });
-    }
-    if (p.readStatuspages) {
-      configureItems.push({ to: "/status-pages", icon: Activity, label: "Status Pages" });
-    }
-    if (p.manageOidc) {
-      configureItems.push({ to: "/sso", icon: KeyRound, label: "SSO" });
-    }
-    if (p.manageUsers) {
-      configureItems.push({ to: "/users", icon: Users, label: "Users" });
-    }
-    if (p.readSystem) {
-      configureItems.push({ to: "/system", icon: Settings, label: "System" });
-    }
-    result.push({ label: "Configure", items: configureItems });
+    result.push(...settingsSections.value);
 
     return result;
   });
@@ -239,6 +254,7 @@ export function useNavSections() {
 
   return {
     sidebarSections,
+    settingsSections,
     mobileMoreSections,
     mobileAgentItems,
     mobileMorePaths,

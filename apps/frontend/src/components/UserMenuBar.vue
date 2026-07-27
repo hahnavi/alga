@@ -4,7 +4,6 @@ import { useRouter } from "vue-router";
 import { ChevronDown, KeyRound, LogOut, Settings } from "@lucide/vue";
 import { useAuthStore } from "@/stores/auth";
 import UserLabel from "@/components/ui/UserLabel.vue";
-import SettingsDialog from "@/components/ui/settings/SettingsDialog.vue";
 import { useDropdownLifecycle } from "@/composables/useDropdownLifecycle";
 import { usePopoverPosition, type PopoverPlacement } from "@/composables/usePopoverPosition";
 import { useRoutePrefetch } from "@/composables/useRoutePrefetch";
@@ -30,7 +29,6 @@ const { prefetch } = useRoutePrefetch();
 const rootRef = ref<HTMLElement | null>(null);
 const contentRef = ref<HTMLElement | null>(null);
 const open = ref(false);
-const showSettings = ref(false);
 
 useDropdownLifecycle(open, rootRef, contentRef);
 
@@ -51,15 +49,6 @@ async function handleLogout() {
   close();
   await auth.logout();
   router.push("/login");
-}
-
-function openSettings() {
-  close();
-  showSettings.value = true;
-}
-
-function closeSettings() {
-  showSettings.value = false;
 }
 
 function toggle() {
@@ -124,15 +113,17 @@ function toggle() {
             {{ auth.user.email }}
           </p>
         </div>
-        <button
-          type="button"
+        <router-link
+          to="/settings/general"
           :class="ACCOUNT_MENU_ITEM_CLASS"
           role="menuitem"
-          @click="openSettings()"
+          @click="close()"
+          @mouseenter="prefetch('/settings/general')"
+          @focus="prefetch('/settings/general')"
         >
           <Settings class="h-4 w-4 shrink-0" />
           Settings
-        </button>
+        </router-link>
 
         <router-link
           to="/personal-access-tokens"
@@ -158,6 +149,4 @@ function toggle() {
       </div>
     </Teleport>
   </div>
-
-  <SettingsDialog :open="showSettings" @close="closeSettings" />
 </template>

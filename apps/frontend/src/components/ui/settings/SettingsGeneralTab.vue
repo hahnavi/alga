@@ -7,8 +7,6 @@ import Input from "@/components/ui/Input.vue";
 import FormLabel from "@/components/ui/FormLabel.vue";
 import PhoneInput from "@/components/ui/PhoneInput.vue";
 
-defineProps<{ onClose: () => void }>();
-
 const auth = useAuthStore();
 
 const editFullName = ref("");

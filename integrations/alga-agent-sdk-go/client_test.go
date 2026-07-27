@@ -550,6 +550,55 @@ func TestHeartbeatAuthSurfacesOnErrChan(t *testing.T) {
 	}
 }
 
+// TestSSEStreamNotKilledByRESTTimeout is a regression test: the SSE client
+// must not inherit the REST client's http.Client.Timeout. The server sends an
+// event after 500ms; the REST timeout is 200ms. If the SSE client used the
+// REST client, the stream would die at 200ms and the event would never arrive.
+func TestSSEStreamNotKilledByRESTTimeout(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/v1/agent/heartbeat" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		if r.URL.Path != "/api/v1/agent/events" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		f := w.(http.Flusher)
+		f.Flush()
+		// Send the event after a delay that exceeds the REST client timeout.
+		time.Sleep(500 * time.Millisecond)
+		_, _ = io.Copy(w, strings.NewReader("event: message\ndata: {\"chat_id\":\"c1\",\"text\":\"late\",\"message_id\":\"m-late\"}\n\n"))
+		f.Flush()
+		// Hold open so the client doesn't reconnect and replay.
+		time.Sleep(2 * time.Second)
+	}))
+	defer srv.Close()
+
+	c := NewAlgaClient(srv.URL, "tok",
+		WithHTTPClient(&http.Client{Timeout: 200 * time.Millisecond}),
+		WithMaxRESTRetries(0),
+	)
+	got := make(chan MessageEvent, 1)
+	c.OnMessage = func(ev MessageEvent) { got <- ev }
+
+	if err := c.Connect(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	defer c.Disconnect()
+
+	select {
+	case ev := <-got:
+		if ev.Text != "late" {
+			t.Errorf("unexpected event text: %q", ev.Text)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("SSE stream was killed by the REST client timeout; event never arrived")
+	}
+}
+
 // --- helpers ---
 
 // newSSEServer returns an httptest server that responds to /events with the

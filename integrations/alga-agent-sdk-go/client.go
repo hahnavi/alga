@@ -98,9 +98,14 @@ func (c *AlgaClient) ServerURL() string { return c.serverURL }
 func (c *AlgaClient) Err() <-chan error { return c.errCh }
 
 func (c *AlgaClient) Connect(ctx context.Context) error {
+	// The SSE stream is long-lived; the REST client's Timeout (default 30s)
+	// would kill it. Share the Transport (TLS, proxy, pool) but drop the
+	// deadline so the stream stays open until the server or context closes it.
+	sseHTTPClient := &http.Client{Transport: c.httpClient.Transport}
+
 	sseClient := NewSSEClient(c.serverURL, c.token, c.dedup,
 		WithSSELogger(c.logger),
-		WithSSEHTTPClient(c.httpClient),
+		WithSSEHTTPClient(sseHTTPClient),
 		WithSSEHeartbeat(c.heartbeatInterval),
 	)
 	sseClient.ErrChan = c.errCh

@@ -131,6 +131,26 @@ const filteredAgents = computed(() => {
   );
 });
 
+const capabilityCounts = computed(() => {
+  const counts: Record<AgentCapability, number> = { investigate: 0, communicate: 0, command: 0 };
+  for (const t of agentTokens.value) {
+    for (const cap of t.capabilities ?? []) {
+      if (cap in counts) counts[cap] += 1;
+    }
+  }
+  return counts;
+});
+
+function toggleCapabilityFilter(cap: AgentCapability | "") {
+  capabilityFilter.value = capabilityFilter.value === cap ? "" : cap;
+}
+
+function capabilityPillClass(active: boolean): string {
+  return active
+    ? "border-[var(--btn-default-border)] bg-[var(--btn-default-bg)] text-[var(--btn-default-text)]"
+    : "border-[var(--border-primary)] bg-transparent text-[var(--text-muted)] hover:border-[var(--border-secondary)] hover:text-[var(--text-secondary)]";
+}
+
 async function loadAgentTokens() {
   agentTokensLoading.value = true;
   try {
@@ -417,13 +437,38 @@ onMounted(() => {
         </Card>
       </div>
 
-      <div class="flex items-center gap-3">
-        <Select v-model="capabilityFilter">
-          <option value="">All capabilities</option>
-          <option v-for="(info, key) in agentCapabilities" :key="key" :value="key">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div
+          class="flex flex-wrap items-center gap-1.5"
+          role="group"
+          aria-label="Filter by capability"
+        >
+          <button
+            type="button"
+            class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
+            :class="capabilityPillClass(!capabilityFilter)"
+            :aria-pressed="!capabilityFilter"
+            @click="toggleCapabilityFilter('')"
+          >
+            All
+            <span class="tabular-nums opacity-60">{{ agentTokens.length }}</span>
+          </button>
+          <button
+            v-for="(info, key) in agentCapabilities"
+            :key="key"
+            type="button"
+            class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
+            :class="capabilityPillClass(capabilityFilter === key)"
+            :aria-pressed="capabilityFilter === key"
+            @click="toggleCapabilityFilter(key)"
+          >
             {{ info.label }}
-          </option>
-        </Select>
+            <span class="tabular-nums opacity-60">{{ capabilityCounts[key] }}</span>
+          </button>
+        </div>
+        <p v-if="capabilityFilter" class="text-xs text-[var(--text-muted)]">
+          {{ filteredAgents.length }} of {{ agentTokens.length }} agents
+        </p>
       </div>
 
       <div class="space-y-3">

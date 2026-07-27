@@ -14,6 +14,13 @@ import (
 	"alga/store"
 )
 
+// KeepaliveInterval is the cadence at which SSE handlers emit a comment frame
+// on idle streams. It must stay well below any intermediate proxy/NAT idle
+// timeout (commonly ~30s); otherwise the idle stream is severed right as the
+// keepalive fires, causing clients to reconnect constantly. Shared by every
+// SSE handler so the cadence stays consistent.
+const KeepaliveInterval = 15 * time.Second
+
 // DisableWriteDeadline clears the per-connection write deadline that the
 // http.Server applies via WriteTimeout. Long-lived streaming handlers (SSE)
 // must call this before entering their write loop, otherwise the server's
@@ -120,7 +127,7 @@ func (b *Broker) Handler() http.HandlerFunc {
 		}
 		flusher.Flush()
 
-		keepalive := time.NewTicker(30 * time.Second)
+		keepalive := time.NewTicker(KeepaliveInterval)
 		defer keepalive.Stop()
 
 		for {

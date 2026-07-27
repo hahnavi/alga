@@ -157,7 +157,7 @@ func (h *AgentSSEHandler) Handler() http.HandlerFunc {
 		}
 		flusher.Flush()
 
-		keepalive := time.NewTicker(30 * time.Second)
+		keepalive := time.NewTicker(sse.KeepaliveInterval)
 		defer keepalive.Stop()
 
 		for {

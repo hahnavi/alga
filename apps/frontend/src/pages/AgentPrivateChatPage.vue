@@ -337,7 +337,9 @@ function userAvatarLetter(m: AgentDMMessageRow): string {
 
 watch(
   agentTokenId,
-  () => {
+  (id) => {
+    // Param becomes undefined while navigating away; don't re-bootstrap then.
+    if (!id) return;
     void bootstrapChat();
   },
   { immediate: true },
@@ -352,6 +354,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  chatLoadSeq++;
   clearPageHeader();
   clearAgentTyping();
   if (typingPostTimer) {

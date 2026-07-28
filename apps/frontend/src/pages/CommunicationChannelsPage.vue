@@ -2,7 +2,7 @@
 import { getErrorMessage } from "@/lib/error";
 import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { Link2, MessageSquare, Phone, PhoneCall, PlugZap, Settings, Zap } from "@lucide/vue";
+import { Link2, MessageSquare, Phone, PhoneCall, Settings, Zap } from "@lucide/vue";
 import { api, type IntegrationInfo } from "@/lib/api";
 import { providerStatus } from "@/lib/integrations";
 import Button from "@/components/ui/Button.vue";

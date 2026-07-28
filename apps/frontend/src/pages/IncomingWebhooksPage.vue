@@ -14,6 +14,8 @@ import DateTimePicker from "@/components/ui/DateTimePicker.vue";
 import { useToast } from "@/lib/toast";
 import { useDelete } from "@/composables/useDelete";
 import { useClipboard } from "@/composables/useClipboard";
+import { useFormSubmit } from "@/composables/useFormSubmit";
+import { useEntityPermissions } from "@/composables/useEntityPermissions";
 import { usePageHeaderActions } from "@/composables/usePageHeaderActions";
 import { useListFilter } from "@/composables/useListFilter";
 import { formatExpires, localDatetimeToRFC3339 } from "@/lib/time";
@@ -22,11 +24,13 @@ defineOptions({ name: "IncomingWebhooksPage" });
 
 const { push } = useToast();
 const { copyToClipboard } = useClipboard();
+const { submitting: webhookSubmitting, formError: webhookError, withSubmit } = useFormSubmit();
+const { canWrite, canDelete } = useEntityPermissions("tokens", {
+  actions: { read: "tokens:manage", write: "tokens:manage", delete: "tokens:manage" },
+});
 
 const webhookTokens = ref<WebhookTokenRow[]>([]);
 const webhookTokensLoading = ref(false);
-const webhookSubmitting = ref(false);
-const webhookError = ref("");
 const webhookNewName = ref("");
 const webhookNewExpiresLocal = ref("");
 const webhookCreatedSecret = ref<string | null>(null);
@@ -47,6 +51,7 @@ usePageHeaderActions({
   title: "Incoming Webhooks",
   titleIcon: Webhook,
   searchInput,
+  showAdd: canWrite,
   onAdd: openWebhookDialog,
   addLabel: "Create token",
 });
@@ -96,18 +101,11 @@ async function submitWebhookToken() {
     expiresAt = iso;
   }
 
-  webhookSubmitting.value = true;
-  webhookError.value = "";
-  try {
+  await withSubmit(async () => {
     const res = await api.createWebhookToken(webhookNewName.value.trim(), expiresAt);
     webhookCreatedSecret.value = res.token;
-    push("Webhook token created", "success");
     await loadWebhookTokens();
-  } catch (err) {
-    webhookError.value = getErrorMessage(err, "Failed to create webhook token");
-  } finally {
-    webhookSubmitting.value = false;
-  }
+  }, "Webhook token created");
 }
 
 async function copyWebhookSecret() {
@@ -159,6 +157,7 @@ onMounted(() => {
             </div>
           </div>
           <Button
+            v-if="canDelete"
             size="sm"
             variant="destructive"
             class="shrink-0 md:opacity-0 md:transition-opacity md:duration-150 md:group-hover:opacity-100"

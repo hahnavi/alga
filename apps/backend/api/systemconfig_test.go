@@ -310,6 +310,12 @@ func TestPutSystemConfig_AuthRoundTrip(t *testing.T) {
 	if srv.cfg.GoogleClientID != "g-id" {
 		t.Fatalf("expected cfg.GoogleClientID=g-id, got %q", srv.cfg.GoogleClientID)
 	}
+	if !srv.cfg.GoogleOAuthEnabled {
+		t.Fatal("expected cfg.GoogleOAuthEnabled=true")
+	}
+	if srv.cfg.GoogleOAuthRedirectURL != "https://alga.example/callback" {
+		t.Fatalf("expected cfg.GoogleOAuthRedirectURL=https://alga.example/callback, got %q", srv.cfg.GoogleOAuthRedirectURL)
+	}
 
 	// Persisted store must hold ciphertext, not plaintext.
 	saved := sysCfgStore.saved()
@@ -318,6 +324,12 @@ func TestPutSystemConfig_AuthRoundTrip(t *testing.T) {
 	}
 	if saved.GoogleClientID != "g-id" {
 		t.Fatalf("expected persisted google_client_id=g-id, got %q", saved.GoogleClientID)
+	}
+	if !saved.GoogleOAuthEnabled {
+		t.Fatal("expected persisted google_oauth_enabled=true")
+	}
+	if saved.GoogleOAuthRedirectURL != "https://alga.example/callback" {
+		t.Fatalf("expected persisted google_oauth_redirect_url=https://alga.example/callback, got %q", saved.GoogleOAuthRedirectURL)
 	}
 }
 

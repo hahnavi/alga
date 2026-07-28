@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -271,6 +272,25 @@ func (s *Server) handlePutSystemConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Encrypt the secret before mutating anything so an encryption failure
+	// aborts the update and preserves the stored ciphertext. When no new
+	// secret is provided, re-encrypt the existing in-memory secret so an
+	// unrelated update does not overwrite the stored credential with empty.
+	secretToEncrypt := ""
+	if upd.GoogleClientSecret != nil {
+		secretToEncrypt = *upd.GoogleClientSecret
+	} else {
+		s.mu.RLock()
+		secretToEncrypt = s.cfg.GoogleClientSecret
+		s.mu.RUnlock()
+	}
+	googleSecretEnc, err := encryptAuthSecret(secretToEncrypt)
+	if err != nil {
+		logger.ErrorCtx(r.Context(), "failed to encrypt google client secret; aborting system config update", "error", err)
+		writeErrorStatus(w, http.StatusInternalServerError, ErrorCodeInternal, "failed to encrypt google client secret")
+		return
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -371,7 +391,7 @@ func (s *Server) handlePutSystemConfig(w http.ResponseWriter, r *http.Request) {
 
 			GoogleOAuthEnabled:     s.cfg.GoogleOAuthEnabled,
 			GoogleClientID:         s.cfg.GoogleClientID,
-			GoogleClientSecretEnc:  encryptAuthSecret(s.cfg.GoogleClientSecret),
+			GoogleClientSecretEnc:  googleSecretEnc,
 			GoogleOAuthRedirectURL: s.cfg.GoogleOAuthRedirectURL,
 		}
 		if err := s.systemConfigStore.Save(dbCfg); err != nil {
@@ -382,8 +402,15 @@ func (s *Server) handlePutSystemConfig(w http.ResponseWriter, r *http.Request) {
 	s.systemConfigUpdatedAt = time.Now().UTC()
 
 	if user := userFromContext(r.Context()); user != nil {
+		auditFields := make(map[string]any, len(req))
+		for k, v := range req {
+			auditFields[k] = v
+		}
+		if _, ok := auditFields["google_client_secret"]; ok {
+			auditFields["google_client_secret"] = "[redacted]"
+		}
 		s.auditStore.Log("system_config_updated", &user.ID, user.Email, s.ipExtractor.clientIP(r), r.UserAgent(), true, map[string]any{
-			"fields": req,
+			"fields": auditFields,
 		})
 	}
 
@@ -422,17 +449,16 @@ func durationIntervalsToAny(m map[string]time.Duration) map[string]any {
 }
 
 // encryptAuthSecret encrypts a plaintext auth secret (Google client
-// secret) for persistence in the system config. On failure it logs and returns
-// an empty string so the secret is never persisted in plaintext; the in-memory
-// config still holds the plaintext value for runtime use.
-func encryptAuthSecret(plaintext string) string {
+// secret) for persistence in the system config. It returns an error when a
+// non-empty secret cannot be encrypted so callers can abort instead of
+// overwriting the stored ciphertext with an empty value.
+func encryptAuthSecret(plaintext string) (string, error) {
 	if plaintext == "" {
-		return ""
+		return "", nil
 	}
 	enc, err := algacrypto.Default().EncryptString(plaintext)
 	if err != nil {
-		logger.Error("failed to encrypt auth secret for system config; secret not persisted to DB", "error", err)
-		return ""
+		return "", fmt.Errorf("encrypt auth secret: %w", err)
 	}
-	return enc
+	return enc, nil
 }

@@ -12,6 +12,8 @@ repo_root=$(git rev-parse --show-toplevel)
 
 staged_go=$(git diff --cached --name-only --diff-filter=ACM -- '*.go' | grep -v '/ent/' || true)
 staged_ts=$(git diff --cached --name-only --diff-filter=ACM -- '*.ts' '*.vue' '*.js' '*.tsx' | grep '^apps/frontend/' | grep -v node_modules || true)
+staged_int_ts=$(git diff --cached --name-only --diff-filter=ACM -- '*.ts' '*.js' | grep '^integrations/' | grep -v node_modules | grep -v dist || true)
+staged_md=$(git diff --cached --name-only --diff-filter=ACM -- '*.md' | grep -v node_modules || true)
 
 status=0
 
@@ -57,6 +59,52 @@ if [[ -n "$staged_ts" ]]; then
   fi
 
   cd "$repo_root"
+fi
+
+# ── Integrations: oxlint + oxfmt ──
+if [[ -n "$staged_int_ts" ]]; then
+  cd "$repo_root"
+
+  if pnpm exec oxlint $staged_int_ts >/tmp/precommit-oxlint-int.log 2>&1; then
+    :
+  else
+    echo "✖ oxlint: lint errors in staged integration files"
+    cat /tmp/precommit-oxlint-int.log
+    echo "  Fix: pnpm exec oxlint --fix $staged_int_ts"
+    status=1
+  fi
+
+  if pnpm exec oxfmt --check $staged_int_ts >/tmp/precommit-oxfmt-int.log 2>&1; then
+    :
+  else
+    echo "✖ oxfmt: these integration files need formatting:"
+    cat /tmp/precommit-oxfmt-int.log
+    echo "  Fix: pnpm exec oxfmt $staged_int_ts"
+    status=1
+  fi
+fi
+
+# ── Markdown: markdownlint + oxfmt ──
+if [[ -n "$staged_md" ]]; then
+  cd "$repo_root"
+
+  if pnpm exec markdownlint-cli2 $staged_md >/tmp/precommit-mdlint.log 2>&1; then
+    :
+  else
+    echo "✖ markdownlint: issues in staged markdown files"
+    cat /tmp/precommit-mdlint.log
+    echo "  Fix: pnpm exec markdownlint-cli2 --fix $staged_md"
+    status=1
+  fi
+
+  if pnpm exec oxfmt --check $staged_md >/tmp/precommit-oxfmt-md.log 2>&1; then
+    :
+  else
+    echo "✖ oxfmt: these markdown files need formatting:"
+    cat /tmp/precommit-oxfmt-md.log
+    echo "  Fix: pnpm exec oxfmt $staged_md"
+    status=1
+  fi
 fi
 
 if [[ $status -ne 0 ]]; then

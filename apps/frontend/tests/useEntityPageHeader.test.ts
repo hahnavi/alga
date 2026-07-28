@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { ref, nextTick } from "vue";
+import { defineComponent, ref, nextTick } from "vue";
+import { mount } from "@vue/test-utils";
 import { useEntityPageHeader } from "../src/composables/useEntityPageHeader.ts";
 import { pageHeader, clearPageHeader } from "../src/lib/pageHeader.ts";
 
@@ -36,10 +37,16 @@ describe("useEntityPageHeader", () => {
   it("clears the page header on unmount", async () => {
     clearPageHeader();
     const source = ref<Row | null>({ id: "2", name: "Gamma" });
-    useEntityPageHeader<Row>({ source, buildTitle: (r) => r.name });
+    const Harness = defineComponent({
+      setup() {
+        useEntityPageHeader<Row>({ source, buildTitle: (r) => r.name });
+        return () => null;
+      },
+    });
+    const wrapper = mount(Harness);
     await nextTick();
     expect(pageHeader.value?.title).toBe("Gamma");
-    clearPageHeader();
+    wrapper.unmount();
     expect(pageHeader.value).toBeNull();
   });
 });

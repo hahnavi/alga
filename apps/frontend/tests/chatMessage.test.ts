@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   displayName,
   sourceAvatarBg,
@@ -56,7 +56,7 @@ const incidentMsg = (
     created_at: "2026-06-07T00:00:00Z",
     updated_at: "2026-06-07T00:00:00Z",
     ...overrides,
-  }) as IncidentCoordinationMessage;
+  }) satisfies IncidentCoordinationMessage;
 
 describe("displayName", () => {
   it("prefers actor_display_name then username then role fallback", () => {
@@ -121,6 +121,15 @@ describe("borderClass", () => {
 describe("messagePermalink", () => {
   it("anchors the message id to the current page", () => {
     expect(messagePermalink("abc")).toContain("#msg-abc");
+  });
+
+  it("returns a bare anchor when window is unavailable", () => {
+    vi.stubGlobal("window", undefined);
+    try {
+      expect(messagePermalink("abc")).toBe("#msg-abc");
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 

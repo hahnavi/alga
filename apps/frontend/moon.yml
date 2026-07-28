@@ -16,3 +16,6 @@ tasks:
 
   typecheck:
     command: "pnpm typecheck"
+
+  test:
+    command: "pnpm test"

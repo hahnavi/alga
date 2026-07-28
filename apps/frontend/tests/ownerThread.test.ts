@@ -1,5 +1,4 @@
-import assert from "node:assert/strict";
-import { test } from "node:test";
+import { describe, expect, it } from "vitest";
 import { normalizeOwnerThreadResponse } from "../src/lib/ownerThread.ts";
 import type { OwnerThreadMessage } from "../src/lib/api";
 
@@ -12,16 +11,18 @@ const message = {
   updated_at: "2026-06-07T00:00:00Z",
 } satisfies OwnerThreadMessage;
 
-test("normalizes items form", () => {
-  assert.deepEqual(normalizeOwnerThreadResponse({ items: [message], total: 1 }).messages, [
-    message,
-  ]);
-});
+describe("normalizeOwnerThreadResponse", () => {
+  it("normalizes items form", () => {
+    expect(normalizeOwnerThreadResponse({ items: [message], total: 1 }).messages).toEqual([
+      message,
+    ]);
+  });
 
-test("normalizes messages form", () => {
-  assert.deepEqual(normalizeOwnerThreadResponse({ messages: [message] }).messages, [message]);
-});
+  it("normalizes messages form", () => {
+    expect(normalizeOwnerThreadResponse({ messages: [message] }).messages).toEqual([message]);
+  });
 
-test("returns empty array when neither items nor messages is provided", () => {
-  assert.deepEqual(normalizeOwnerThreadResponse({}).messages, []);
+  it("returns empty array when neither items nor messages is provided", () => {
+    expect(normalizeOwnerThreadResponse({}).messages).toEqual([]);
+  });
 });

@@ -1,5 +1,4 @@
-import assert from "node:assert/strict";
-import { test } from "node:test";
+import { describe, expect, it } from "vitest";
 import {
   displayName,
   sourceAvatarBg,
@@ -45,118 +44,132 @@ const slackMsg = {
 
 const incidentMsg = (
   overrides: Partial<IncidentCoordinationMessage> = {},
-): IncidentCoordinationMessage => ({
-  id: "i1",
-  kind: "agent_reply",
-  source: "agent",
-  actor_type: "agent",
-  message: "thinking",
-  created_at: "2026-06-07T00:00:00Z",
-  ...overrides,
-});
+): IncidentCoordinationMessage =>
+  ({
+    id: "i1",
+    incident_number: 1,
+    kind: "agent_reply",
+    actor_type: "agent",
+    body: "thinking",
+    internal: false,
+    source: "agent",
+    created_at: "2026-06-07T00:00:00Z",
+    updated_at: "2026-06-07T00:00:00Z",
+    ...overrides,
+  }) as IncidentCoordinationMessage;
 
-test("displayName prefers actor_display_name then username then role fallback", () => {
-  assert.equal(displayName(incidentMsg({ actor_display_name: "Hermes" })), "Hermes");
-  assert.equal(displayName(userMsg), "alice");
-  assert.equal(displayName(agentMsg), "Agent");
-  assert.equal(displayName(slackMsg), "Slack user");
-  assert.equal(
-    displayName({ ...userMsg, source: "system" as const, username: undefined }),
-    "System",
-  );
-});
-
-test("sourceAvatarBg returns tinted background per source", () => {
-  assert.equal(sourceAvatarBg("agent"), "bg-transparent");
-  assert.equal(sourceAvatarBg("system"), "bg-blue-100 dark:bg-blue-900/30");
-  assert.equal(sourceAvatarBg("slack"), "bg-emerald-600");
-  assert.equal(sourceAvatarBg("unknown"), "bg-[var(--bg-secondary)]");
-});
-
-test("avatarBg for incident messages uses actor_type palette", () => {
-  assert.equal(avatarBg(incidentMsg({ actor_type: "agent" })), "bg-transparent");
-  assert.equal(avatarBg(incidentMsg({ actor_type: "system" })), "bg-slate-600");
-  assert.equal(avatarBg(incidentMsg({ actor_type: "user", source: "slack" })), "bg-emerald-600");
-  assert.equal(avatarBg(incidentMsg({ actor_type: "user" })), "bg-blue-600");
-});
-
-test("avatarLetter is the first letter of display name (uppercased)", () => {
-  assert.equal(avatarLetter(userMsg), "A");
-  assert.equal(avatarLetter(agentMsg), "A");
-  assert.equal(avatarLetter(slackMsg), "S");
-});
-
-test("sourceColor returns the per-source left border class", () => {
-  assert.equal(sourceColor("agent"), "border-l-purple-500");
-  assert.equal(sourceColor("system"), "border-l-blue-500");
-  assert.equal(sourceColor("slack"), "border-l-emerald-500");
-  assert.equal(sourceColor("mattermost"), "border-l-indigo-500");
-  assert.equal(sourceColor("user"), "border-l-[var(--border-primary)]");
-});
-
-test("borderClass falls back to sourceColor except for known kinds", () => {
-  assert.equal(borderClass(incidentMsg({ kind: "decision" })), "border-l-emerald-500");
-  assert.equal(borderClass(incidentMsg({ kind: "action" })), "border-l-amber-500");
-  assert.equal(borderClass(incidentMsg({ kind: "agent_reply" })), "border-l-purple-500");
-  assert.equal(borderClass(incidentMsg({ kind: "investigation_summary" })), "border-l-cyan-500");
-  assert.equal(
-    borderClass(incidentMsg({ kind: "comment", source: "slack" })),
-    "border-l-emerald-500",
-  );
-});
-
-test("messagePermalink anchors the message id to the current page", () => {
-  // jsdom-less env: window is undefined → the fallback format is used.
-  const prevWindow = (globalThis as { window?: unknown }).window;
-  delete (globalThis as { window?: unknown }).window;
-  try {
-    assert.equal(messagePermalink("abc"), "#msg-abc");
-  } finally {
-    if (prevWindow !== undefined) (globalThis as { window?: unknown }).window = prevWindow;
-  }
-});
-
-test("shouldShowAgentAvatar is true for agent sources only", () => {
-  assert.equal(shouldShowAgentAvatar(agentMsg), true);
-  assert.equal(shouldShowAgentAvatar(userMsg), false);
-  assert.equal(shouldShowAgentAvatar(slackMsg), false);
-});
-
-test("groupMessagesByParent puts orphan roots under the empty key", () => {
-  const root = incidentMsg({ id: "r1", parent_message_id: null });
-  const child = incidentMsg({ id: "c1", parent_message_id: "r1" });
-  const grouped = groupMessagesByParent([root, child]);
-  assert.equal(grouped.get("")?.length, 1);
-  assert.equal(grouped.get("")?.[0]?.id, "r1");
-  assert.equal(grouped.get("r1")?.length, 1);
-  assert.equal(grouped.get("r1")?.[0]?.id, "c1");
-});
-
-test("rootMessages includes orphans whose parent id is unknown", () => {
-  const root = incidentMsg({ id: "r1", parent_message_id: null });
-  const orphan = incidentMsg({ id: "o1", parent_message_id: "missing" });
-  const grouped = groupMessagesByParent([root, orphan]);
-  const roots = rootMessages([root, orphan], grouped);
-  assert.equal(roots.length, 2);
-  assert.equal(roots[0]?.id, "r1");
-  assert.equal(roots[1]?.id, "o1");
-});
-
-test("childrenOf returns children sorted by created_at ascending", () => {
-  const child1 = incidentMsg({
-    id: "c1",
-    parent_message_id: "r1",
-    created_at: "2026-06-07T00:00:02Z",
+describe("displayName", () => {
+  it("prefers actor_display_name then username then role fallback", () => {
+    expect(displayName(incidentMsg({ actor_display_name: "Hermes" }))).toBe("Hermes");
+    expect(displayName(userMsg)).toBe("alice");
+    expect(displayName(agentMsg)).toBe("Agent");
+    expect(displayName(slackMsg)).toBe("Slack user");
+    expect(displayName({ ...userMsg, source: "system" as const, username: undefined })).toBe(
+      "System",
+    );
   });
-  const child2 = incidentMsg({
-    id: "c2",
-    parent_message_id: "r1",
-    created_at: "2026-06-07T00:00:01Z",
+});
+
+describe("sourceAvatarBg", () => {
+  it("returns tinted background per source", () => {
+    expect(sourceAvatarBg("agent")).toBe("bg-transparent");
+    expect(sourceAvatarBg("system")).toBe("bg-blue-100 dark:bg-blue-900/30");
+    expect(sourceAvatarBg("slack")).toBe("bg-emerald-600");
+    expect(sourceAvatarBg("unknown")).toBe("bg-[var(--bg-secondary)]");
   });
-  const grouped = groupMessagesByParent([child1, child2]);
-  const ordered = childrenOf("r1", grouped);
-  assert.deepEqual(
-    ordered.map((m) => m.id),
-    ["c2", "c1"],
-  );
+});
+
+describe("avatarBg", () => {
+  it("for incident messages uses actor_type palette", () => {
+    expect(avatarBg(incidentMsg({ actor_type: "agent" }))).toBe("bg-transparent");
+    expect(avatarBg(incidentMsg({ actor_type: "system" }))).toBe("bg-slate-600");
+    expect(avatarBg(incidentMsg({ actor_type: "user", source: "slack" }))).toBe("bg-emerald-600");
+    expect(avatarBg(incidentMsg({ actor_type: "user" }))).toBe("bg-blue-600");
+  });
+});
+
+describe("avatarLetter", () => {
+  it("is the first letter of display name (uppercased)", () => {
+    expect(avatarLetter(userMsg)).toBe("A");
+    expect(avatarLetter(agentMsg)).toBe("A");
+    expect(avatarLetter(slackMsg)).toBe("S");
+  });
+});
+
+describe("sourceColor", () => {
+  it("returns the per-source left border class", () => {
+    expect(sourceColor("agent")).toBe("border-l-purple-500");
+    expect(sourceColor("system")).toBe("border-l-blue-500");
+    expect(sourceColor("slack")).toBe("border-l-emerald-500");
+    expect(sourceColor("mattermost")).toBe("border-l-indigo-500");
+    expect(sourceColor("user")).toBe("border-l-[var(--border-primary)]");
+  });
+});
+
+describe("borderClass", () => {
+  it("falls back to sourceColor except for known kinds", () => {
+    expect(borderClass(incidentMsg({ kind: "decision" }))).toBe("border-l-emerald-500");
+    expect(borderClass(incidentMsg({ kind: "action" }))).toBe("border-l-amber-500");
+    expect(borderClass(incidentMsg({ kind: "agent_reply" }))).toBe("border-l-purple-500");
+    expect(borderClass(incidentMsg({ kind: "investigation_summary" }))).toBe("border-l-cyan-500");
+    expect(borderClass(incidentMsg({ kind: "chat", source: "slack" }))).toBe(
+      "border-l-emerald-500",
+    );
+  });
+});
+
+describe("messagePermalink", () => {
+  it("anchors the message id to the current page", () => {
+    expect(messagePermalink("abc")).toContain("#msg-abc");
+  });
+});
+
+describe("shouldShowAgentAvatar", () => {
+  it("is true for agent sources only", () => {
+    expect(shouldShowAgentAvatar(agentMsg)).toBe(true);
+    expect(shouldShowAgentAvatar(userMsg)).toBe(false);
+    expect(shouldShowAgentAvatar(slackMsg)).toBe(false);
+  });
+});
+
+describe("groupMessagesByParent", () => {
+  it("puts orphan roots under the empty key", () => {
+    const root = incidentMsg({ id: "r1", parent_message_id: undefined });
+    const child = incidentMsg({ id: "c1", parent_message_id: "r1" });
+    const grouped = groupMessagesByParent([root, child]);
+    expect(grouped.get("")?.length).toBe(1);
+    expect(grouped.get("")?.[0]?.id).toBe("r1");
+    expect(grouped.get("r1")?.length).toBe(1);
+    expect(grouped.get("r1")?.[0]?.id).toBe("c1");
+  });
+});
+
+describe("rootMessages", () => {
+  it("includes orphans whose parent id is unknown", () => {
+    const root = incidentMsg({ id: "r1", parent_message_id: undefined });
+    const orphan = incidentMsg({ id: "o1", parent_message_id: "missing" });
+    const grouped = groupMessagesByParent([root, orphan]);
+    const roots = rootMessages([root, orphan], grouped);
+    expect(roots.length).toBe(2);
+    expect(roots[0]?.id).toBe("r1");
+    expect(roots[1]?.id).toBe("o1");
+  });
+});
+
+describe("childrenOf", () => {
+  it("returns children sorted by created_at ascending", () => {
+    const child1 = incidentMsg({
+      id: "c1",
+      parent_message_id: "r1",
+      created_at: "2026-06-07T00:00:02Z",
+    });
+    const child2 = incidentMsg({
+      id: "c2",
+      parent_message_id: "r1",
+      created_at: "2026-06-07T00:00:01Z",
+    });
+    const grouped = groupMessagesByParent([child1, child2]);
+    const ordered = childrenOf("r1", grouped);
+    expect(ordered.map((m) => m.id)).toEqual(["c2", "c1"]);
+  });
 });

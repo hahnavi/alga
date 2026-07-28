@@ -10,7 +10,10 @@
     "typecheck": "vue-tsc -b --pretty false",
     "lint": "oxlint .",
     "format": "oxfmt --check .",
-    "format:write": "oxfmt ."
+    "format:write": "oxfmt .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@lucide/vue": "^1.21.0",
@@ -36,15 +39,19 @@
     "zod": "^4.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.0",
     "@tailwindcss/vite": "^4.3.1",
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^26.1.1",
     "@vitejs/plugin-vue": "^6.0.7",
+    "@vue/test-utils": "^2.4.11",
     "@vue/tsconfig": "^0.9.1",
+    "happy-dom": "^20.11.1",
     "oxfmt": "^0.60.0",
     "tailwindcss": "^4.3.1",
     "typescript": "~6.0.3",
     "vite": "^8.1.0",
+    "vitest": "^4.1.10",
     "vue-tsc": "^3.3.7"
   }
 }

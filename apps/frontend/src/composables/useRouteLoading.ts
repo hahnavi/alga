@@ -18,7 +18,7 @@ function nowMs(): number {
   return Date.now();
 }
 
-function createRouteLoadingTracker(): RouteLoadingTracker {
+export function createRouteLoadingTracker(): RouteLoadingTracker {
   const pending = ref(0);
   const visible = ref(false);
   const completing = ref(false);

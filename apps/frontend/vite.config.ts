@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig, loadEnv } from "vite";
 import vue from "@vitejs/plugin-vue";
 import tailwindcss from "@tailwindcss/vite";
@@ -91,6 +92,10 @@ export default defineConfig(({ mode }) => {
         "/api": proxyOpts,
         "/webhooks": proxyOpts,
       },
+    },
+    test: {
+      environment: "happy-dom",
+      include: ["tests/**/*.test.ts"],
     },
   };
 });

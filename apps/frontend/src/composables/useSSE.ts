@@ -93,7 +93,10 @@ function connectShared(path: string, shared: SharedSSE) {
   };
 
   // Attach tracked listeners for every registered event so close()/eventListeners
-  // accounting matches what is actually attached to the EventSource.
+  // accounting matches what is actually attached to the EventSource. Tracked
+  // listeners reference the previous (now closed) EventSource, so reset the
+  // list first or named events silently stop arriving after a reconnect.
+  shared.eventListeners = [];
   for (const event of shared.handlers.keys()) {
     attachHandler(shared, event);
   }

@@ -68,7 +68,7 @@ onMounted(() => {
           class: HEADER_ICON_BTN_CLASS,
           "aria-label": "Notification Preferences",
           title: "Notification Preferences",
-          onClick: () => router.push("/notification-preferences"),
+          onClick: () => router.push("/settings/notifications"),
         },
         [h(Settings, { class: "h-4 w-4", "aria-hidden": "true" })],
       ),

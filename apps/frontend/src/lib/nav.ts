@@ -10,6 +10,7 @@ import {
   Brain,
   Clock,
   FileText,
+  Fingerprint,
   HeartPulse,
   Key,
   KeyRound,
@@ -186,6 +187,7 @@ export function useNavSections() {
       readCreds: auth.hasPermission("credentials:read"),
       readHeartbeats: auth.hasPermission("heartbeats:read"),
       readStatuspages: auth.hasPermission("statuspages:read"),
+      readRoutes: auth.hasPermission("routes:read"),
       manageOidc: auth.hasPermission("oidc:manage"),
       manageUsers: auth.hasPermission("users:manage"),
       readSystem: auth.hasPermission("system:read"),
@@ -197,27 +199,29 @@ export function useNavSections() {
       { to: "/settings/security", icon: Lock, label: "Security" },
       { to: "/settings/integrations", icon: Link2, label: "Connected Apps" },
       ...(p.manageTokens
-        ? [{ to: "/personal-access-tokens", icon: Key, label: "Access Tokens" }]
+        ? [{ to: "/settings/access-tokens", icon: Key, label: "Access Tokens" }]
         : []),
       ...(p.readNotifications
-        ? [{ to: "/notification-preferences", icon: BellRing, label: "Notifications" }]
+        ? [{ to: "/settings/notifications", icon: BellRing, label: "Notifications" }]
         : []),
     ];
 
     const workspace: NavFlat[] = [
-      { to: "/routes", icon: Route, label: "Routes" },
-      ...(p.readHeartbeats ? [{ to: "/heartbeats", icon: HeartPulse, label: "Heartbeats" }] : []),
+      ...(p.readRoutes ? [{ to: "/settings/routes", icon: Route, label: "Routes" }] : []),
+      ...(p.readHeartbeats
+        ? [{ to: "/settings/heartbeats", icon: HeartPulse, label: "Heartbeats" }]
+        : []),
       ...(p.readStatuspages
-        ? [{ to: "/status-pages", icon: Activity, label: "Status Pages" }]
+        ? [{ to: "/settings/status-pages", icon: Activity, label: "Status Pages" }]
         : []),
       ...(p.readCreds
-        ? [{ to: "/credential-providers", icon: KeyRound, label: "Credential Providers" }]
+        ? [{ to: "/settings/credential-providers", icon: KeyRound, label: "Credential Providers" }]
         : []),
-      ...(p.manageOidc ? [{ to: "/sso", icon: KeyRound, label: "SSO" }] : []),
+      ...(p.manageOidc ? [{ to: "/settings/sso", icon: Fingerprint, label: "SSO" }] : []),
       ...(p.readSystem
         ? [{ to: "/settings/authentication", icon: ShieldCheck, label: "Authentication" }]
         : []),
-      ...(p.manageUsers ? [{ to: "/users", icon: Users, label: "Users" }] : []),
+      ...(p.manageUsers ? [{ to: "/settings/users", icon: Users, label: "Users" }] : []),
     ];
 
     return [

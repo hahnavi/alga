@@ -210,7 +210,7 @@ watch(slug, loadView);
       variant="outline"
       size="sm"
       class="flex items-center gap-1 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-      @click="router.push('/status-pages')"
+      @click="router.push('/settings/status-pages')"
     >
       <ArrowLeft class="h-4 w-4" /> Back to Status Pages
     </Button>

@@ -1,52 +1,91 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional
+
+from pydantic import BaseModel, ConfigDict
 
 
-class InvestigationCommand:
-    def __init__(self, op: str, **fields: Any):
-        self.op = op
-        self.fields = fields
+class InvestigationCommand(BaseModel):
+    model_config = ConfigDict(extra="allow")
 
-    def to_dict(self) -> dict[str, Any]:
-        result: dict[str, Any] = {"op": self.op}
-        for k, v in self.fields.items():
-            if v is not None:
-                result[k] = v
-        return result
+    op: str
+    chat_id: Optional[str] = None
+    fingerprint: Optional[str] = None
+    reason: Optional[str] = None
+    note: Optional[str] = None
+    priority: Optional[str] = None
+    severity: Optional[str] = None
+    title: Optional[str] = None
+    root_cause: Optional[str] = None
+    resolution: Optional[str] = None
+    summary: Optional[str] = None
+    impact_assessment: Optional[str] = None
+    actions_taken: Optional[str] = None
+    eta: Optional[str] = None
+    triage_result_id: Optional[str] = None
+    agreed: Optional[bool] = None
+    correct_decision: Optional[str] = None
+    correct_severity: Optional[str] = None
+    target_agent_id: Optional[str] = None
+    role_type: Optional[str] = None
+    user_id: Optional[str] = None
+    agent_token_id: Optional[str] = None
+    scope_description: Optional[str] = None
+    incident_number: Optional[int] = None
+    message: Optional[str] = None
+    audience: Optional[str] = None
+    urgency: Optional[str] = None
+    status_level: Optional[str] = None
+    source_coordination_message_id: Optional[str] = None
+    internal: Optional[bool] = None
+    task_id: Optional[str] = None
+    task_kind: Optional[str] = None
+    assignee_role: Optional[str] = None
+    assignee_agent_id: Optional[str] = None
+    goal: Optional[str] = None
+    input_context: Optional[dict[str, Any]] = None
+    result: Optional[dict[str, Any]] = None
+    parent_task_id: Optional[str] = None
 
 
-# --- Alert investigation tools ---
+TASK_KIND_INVESTIGATE = "investigate"
+TASK_KIND_COMMUNICATE = "communicate"
+TASK_KIND_VERIFY = "verify"
+TASK_KIND_MITIGATE = "mitigate"
+
 
 def resolve_alert(fingerprint: str) -> InvestigationCommand:
-    return InvestigationCommand("resolve_alert", fingerprint=fingerprint)
+    return InvestigationCommand(op="resolve_alert", fingerprint=fingerprint)
 
 
 def reopen_alert(fingerprint: str) -> InvestigationCommand:
-    return InvestigationCommand("reopen_alert", fingerprint=fingerprint)
+    return InvestigationCommand(op="reopen_alert", fingerprint=fingerprint)
 
 
-def set_outcome(root_cause: str | None = None, resolution: str | None = None) -> InvestigationCommand:
-    return InvestigationCommand("set_outcome", root_cause=root_cause, resolution=resolution)
+def set_outcome(
+    root_cause: str | None = None,
+    resolution: str | None = None,
+) -> InvestigationCommand:
+    return InvestigationCommand(op="set_outcome", root_cause=root_cause, resolution=resolution)
 
 
 def cancel_investigation(reason: str | None = None) -> InvestigationCommand:
-    return InvestigationCommand("cancel_investigation", reason=reason)
+    return InvestigationCommand(op="cancel_investigation", reason=reason)
 
 
 def pause_investigation(reason: str | None = None) -> InvestigationCommand:
-    return InvestigationCommand("pause_investigation", reason=reason)
+    return InvestigationCommand(op="pause_investigation", reason=reason)
 
 
 def triage_feedback(
     triage_result_id: str,
-    agreed: bool,
+    agreed: bool = True,
     correct_decision: str | None = None,
     correct_severity: str | None = None,
     note: str | None = None,
 ) -> InvestigationCommand:
     return InvestigationCommand(
-        "triage_feedback",
+        op="triage_feedback",
         triage_result_id=triage_result_id,
         agreed=agreed,
         correct_decision=correct_decision,
@@ -56,7 +95,7 @@ def triage_feedback(
 
 
 def assign_investigation(target_agent_id: str) -> InvestigationCommand:
-    return InvestigationCommand("assign_investigation", target_agent_id=target_agent_id)
+    return InvestigationCommand(op="assign_investigation", target_agent_id=target_agent_id)
 
 
 def promote_to_incident(
@@ -64,55 +103,160 @@ def promote_to_incident(
     severity: str | None = None,
     priority: str | None = None,
 ) -> InvestigationCommand:
-    return InvestigationCommand("promote_to_incident", title=title, severity=severity, priority=priority)
+    return InvestigationCommand(
+        op="promote_to_incident", title=title, severity=severity, priority=priority
+    )
 
 
-# --- Incident tools ---
-
-def set_incident_priority(incident_id: str, priority: str) -> InvestigationCommand:
-    return InvestigationCommand("set_incident_priority", incident_id=incident_id, priority=priority)
-
-
-def set_incident_severity(incident_id: str, severity: str) -> InvestigationCommand:
-    return InvestigationCommand("set_incident_severity", incident_id=incident_id, severity=severity)
+def set_incident_priority(incident_number: int, priority: str) -> InvestigationCommand:
+    return InvestigationCommand(
+        op="set_incident_priority", incident_number=incident_number, priority=priority
+    )
 
 
-def trigger_escalation(incident_id: str) -> InvestigationCommand:
-    return InvestigationCommand("trigger_escalation", incident_id=incident_id)
+def set_incident_severity(incident_number: int, severity: str) -> InvestigationCommand:
+    return InvestigationCommand(
+        op="set_incident_severity", incident_number=incident_number, severity=severity
+    )
 
 
-def request_status_update(incident_id: str) -> InvestigationCommand:
-    return InvestigationCommand("request_status_update", incident_id=incident_id)
+def trigger_escalation(incident_number: int) -> InvestigationCommand:
+    return InvestigationCommand(op="trigger_escalation", incident_number=incident_number)
 
 
-def mitigate_incident(incident_id: str, reason: str | None = None) -> InvestigationCommand:
-    return InvestigationCommand("mitigate_incident", incident_id=incident_id, reason=reason)
+def mitigate_incident(incident_number: int, reason: str | None = None) -> InvestigationCommand:
+    return InvestigationCommand(
+        op="mitigate_incident", incident_number=incident_number, reason=reason
+    )
 
 
-def resolve_incident(incident_id: str, reason: str | None = None) -> InvestigationCommand:
-    return InvestigationCommand("resolve_incident", incident_id=incident_id, reason=reason)
+def resolve_incident(incident_number: int, reason: str | None = None) -> InvestigationCommand:
+    return InvestigationCommand(
+        op="resolve_incident", incident_number=incident_number, reason=reason
+    )
 
 
-def begin_triage(incident_id: str) -> InvestigationCommand:
-    return InvestigationCommand("begin_triage", incident_id=incident_id)
+def begin_triage(incident_number: int) -> InvestigationCommand:
+    return InvestigationCommand(op="begin_triage", incident_number=incident_number)
 
 
-def promote_incident(incident_id: str) -> InvestigationCommand:
-    return InvestigationCommand("promote_incident", incident_id=incident_id)
+def promote_incident(incident_number: int) -> InvestigationCommand:
+    return InvestigationCommand(op="promote_incident", incident_number=incident_number)
 
 
-def assign_incident_role(
-    incident_id: str,
+def assign_incident_role_to_user(
+    incident_number: int,
     role_type: str,
-    user_id: str | None = None,
-    agent_token_id: str | None = None,
+    user_id: str,
     scope_description: str | None = None,
 ) -> InvestigationCommand:
     return InvestigationCommand(
-        "assign_incident_role",
-        incident_id=incident_id,
+        op="assign_incident_role",
+        incident_number=incident_number,
         role_type=role_type,
         user_id=user_id,
+        scope_description=scope_description,
+    )
+
+
+def assign_incident_role_to_agent(
+    incident_number: int,
+    role_type: str,
+    agent_token_id: str,
+    scope_description: str | None = None,
+) -> InvestigationCommand:
+    return InvestigationCommand(
+        op="assign_incident_role",
+        incident_number=incident_number,
+        role_type=role_type,
         agent_token_id=agent_token_id,
         scope_description=scope_description,
+    )
+
+
+def post_handoff(
+    incident_number: int, message: str, audience: str, urgency: str
+) -> InvestigationCommand:
+    return InvestigationCommand(
+        op="post_handoff",
+        incident_number=incident_number,
+        message=message,
+        audience=audience,
+        urgency=urgency,
+    )
+
+
+def publish_status_update(
+    incident_number: int, message: str, status_level: str
+) -> InvestigationCommand:
+    return InvestigationCommand(
+        op="publish_status_update",
+        incident_number=incident_number,
+        message=message,
+        status_level=status_level,
+    )
+
+
+def set_incident_resolution_docs(
+    incident_number: int,
+    summary: str | None = None,
+    impact_assessment: str | None = None,
+    actions_taken: str | None = None,
+    root_cause: str | None = None,
+    resolution: str | None = None,
+) -> InvestigationCommand:
+    return InvestigationCommand(
+        op="set_incident_resolution_docs",
+        incident_number=incident_number,
+        summary=summary,
+        impact_assessment=impact_assessment,
+        actions_taken=actions_taken,
+        root_cause=root_cause,
+        resolution=resolution,
+    )
+
+
+def dispatch_task(
+    incident_number: int, kind: str, goal: str, assignee_role: str
+) -> InvestigationCommand:
+    return InvestigationCommand(
+        op="dispatch_task",
+        incident_number=incident_number,
+        task_kind=kind,
+        goal=goal,
+        assignee_role=assignee_role,
+    )
+
+
+def dispatch_task_to_agent(
+    incident_number: int, kind: str, goal: str, assignee_agent_id: str
+) -> InvestigationCommand:
+    return InvestigationCommand(
+        op="dispatch_task",
+        incident_number=incident_number,
+        task_kind=kind,
+        goal=goal,
+        assignee_agent_id=assignee_agent_id,
+    )
+
+
+def claim_task(task_id: str) -> InvestigationCommand:
+    return InvestigationCommand(op="claim_task", task_id=task_id)
+
+
+def complete_task(task_id: str, result: dict[str, Any]) -> InvestigationCommand:
+    return InvestigationCommand(op="complete_task", task_id=task_id, result=result)
+
+
+def synthesize_findings(
+    incident_number: int,
+    summary: str,
+    evidence: dict[str, Any] | None = None,
+) -> InvestigationCommand:
+    result: dict[str, Any] = {"summary": summary}
+    if evidence:
+        for k, v in evidence.items():
+            result[k] = v
+    return InvestigationCommand(
+        op="synthesize_findings", incident_number=incident_number, result=result
     )

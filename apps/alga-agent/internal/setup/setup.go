@@ -25,6 +25,8 @@ import (
 	"strings"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
+
 	"alga-agent/internal/config"
 )
 
@@ -761,7 +763,84 @@ func findSection(key string) (sectionDef, bool) {
 // Run executes the wizard. section is "" for the full menu, or one of the
 // section keys (see sections) for a direct jump to one area.
 func Run(section string) error {
+	if isInteractive() {
+		return runTUI(section)
+	}
 	return runWith(os.Stdin, os.Stdout, section)
+}
+
+func runTUI(section string) error {
+	if section != "" {
+		if _, ok := findSection(section); !ok {
+			fmt.Fprintf(os.Stderr, "alga-agent: unknown setup section %q\n", section)
+			fmt.Fprintf(os.Stderr, "Available: %s\n", sectionKeys())
+			return fmt.Errorf("unknown setup section %q", section)
+		}
+	}
+
+	dir := config.ResolveDataDir()
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("create data dir %s: %w", dir, err)
+	}
+	path := config.DefaultPath("")
+
+	cfg, err := config.Load("")
+	var backupPath string
+	if err != nil {
+		if _, statErr := os.Stat(path); statErr == nil {
+			backupPath = path + ".bak." + time.Now().Format("20060102_150405")
+			if cerr := copyFile(path, backupPath); cerr != nil {
+				return fmt.Errorf("back up %s: %w", path, cerr)
+			}
+			cfg = config.Default()
+		} else {
+			cfg = config.Default()
+		}
+	} else if _, statErr := os.Stat(path); statErr == nil {
+		backupPath = path + ".bak." + time.Now().Format("20060102_150405")
+		if berr := copyFile(path, backupPath); berr != nil {
+			backupPath = ""
+		}
+	}
+
+	m := newWizardModel(cfg)
+	if section != "" {
+		for i, s := range sections {
+			if s.key == section {
+				m.enterSection(i)
+				break
+			}
+		}
+	}
+
+	p := tea.NewProgram(m)
+	final, err := p.Run()
+	if err != nil {
+		return fmt.Errorf("tui: %w", err)
+	}
+
+	result, ok := final.(wizardModel)
+	if !ok {
+		return nil
+	}
+
+	switch result.state {
+	case stateDone:
+		if serr := config.Save(path, cfg); serr != nil {
+			return fmt.Errorf("save config: %w", serr)
+		}
+		fmt.Printf("\n✓ Configuration saved to %s\n", path)
+		if backupPath != "" {
+			fmt.Printf("  Previous config backed up to %s\n", backupPath)
+		}
+		fmt.Println("\n  Run `alga-agent` to start the agent.")
+	case stateQuit:
+		if backupPath != "" {
+			_ = copyFile(backupPath, path)
+		}
+		return ErrAbort
+	}
+	return nil
 }
 
 // runWith is the testable core: all I/O flows through r and w.

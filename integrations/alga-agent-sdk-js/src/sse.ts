@@ -1,4 +1,5 @@
 import { MessageDedup } from "./dedup.js";
+import { AlgaAuthError, AlgaAPIError, AlgaConnectionError } from "./errors.js";
 import type {
   ConnectedEvent,
   MessageEvent as AlgaMessageEvent,
@@ -7,10 +8,26 @@ import type {
   PeerFindingEvent,
   PeerAskEvent,
   PeerReplyEvent,
-  AgentPresenceEvent,
+  CoordinationTaskEvent,
+  SummarizeIncidentEvent,
+  AlertAutoResolvedEvent,
+  IncidentCommsStaleEvent,
 } from "./models.js";
 
 type Callback<T> = (data: T) => void;
+
+const LOCK_EMOJI = "\u{1F512}"; // 🔒
+
+// ErrHandler is invoked once with a terminal error (auth failure) after the
+// SSE + heartbeat loops have stopped. The client must obtain a valid token and
+// call start() again to resume.
+export type ErrHandler = (err: Error) => void;
+
+export interface SSEOptions {
+  heartbeatIntervalMs?: number;
+  userAgent?: string;
+  fetchImpl?: typeof fetch;
+}
 
 export class SSEClient {
   private httpBase: string;
@@ -18,28 +35,47 @@ export class SSEClient {
   private dedup: MessageDedup;
   private abortController: AbortController | null = null;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
-  private reconnectDelay = 2000;
-  private maxReconnectDelay = 60000;
+  private reconnectDelayMs = 2000;
+  private readonly maxReconnectDelayMs = 60_000;
   private stopped = false;
+  private heartbeatIntervalMs: number;
+  private userAgent: string;
+  private fetchImpl: typeof fetch;
+  private errHandler: ErrHandler | null = null;
 
   onConnected: Callback<ConnectedEvent> | null = null;
   onMessage: Callback<AlgaMessageEvent> | null = null;
   onTyping: Callback<TypingEvent> | null = null;
-  onInvestigationCancel: Callback<InvestigationSignalEvent> | null = null;
-  onInvestigationPause: Callback<InvestigationSignalEvent> | null = null;
   onInvestigationResume: Callback<InvestigationSignalEvent> | null = null;
   onPeerFinding: Callback<PeerFindingEvent> | null = null;
   onPeerAsk: Callback<PeerAskEvent> | null = null;
   onPeerReply: Callback<PeerReplyEvent> | null = null;
-  onAgentPresence: Callback<AgentPresenceEvent> | null = null;
+  onCoordinationTask: Callback<CoordinationTaskEvent> | null = null;
+  onSummarizeIncident: Callback<SummarizeIncidentEvent> | null = null;
+  onAlertAutoResolved: Callback<AlertAutoResolvedEvent> | null = null;
+  onIncidentCommsStale: Callback<IncidentCommsStaleEvent> | null = null;
+  // onUnknownEvent receives any SSE event type the SDK has no dedicated
+  // handler for, so consumers can react to backend additions without an SDK
+  // upgrade.
+  onUnknownEvent: ((eventType: string, data: string) => void) | null = null;
 
-  private heartbeatInterval: number;
-
-  constructor(httpBase: string, token: string, dedup?: MessageDedup, heartbeatInterval?: number) {
+  constructor(
+    httpBase: string,
+    token: string,
+    dedup?: MessageDedup,
+    heartbeatIntervalMs?: number,
+    opts?: SSEOptions,
+  ) {
     this.httpBase = httpBase;
     this.token = token;
     this.dedup = dedup ?? new MessageDedup();
-    this.heartbeatInterval = heartbeatInterval ?? 30_000;
+    this.heartbeatIntervalMs = Math.max(1_000, heartbeatIntervalMs ?? 30_000);
+    this.userAgent = opts?.userAgent ?? "alga-agent-sdk-js";
+    this.fetchImpl = opts?.fetchImpl ?? fetch;
+  }
+
+  setErrHandler(handler: ErrHandler): void {
+    this.errHandler = handler;
   }
 
   start(): void {
@@ -47,7 +83,7 @@ export class SSEClient {
     this.connect();
     this.heartbeatTimer = setInterval(() => {
       this.sendHeartbeat().catch(() => {});
-    }, this.heartbeatInterval);
+    }, this.heartbeatIntervalMs);
   }
 
   stop(): void {
@@ -62,6 +98,19 @@ export class SSEClient {
     }
   }
 
+  private fatal(err: Error): void {
+    this.stopped = true;
+    if (this.heartbeatTimer !== null) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+    if (this.abortController !== null) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
+    this.errHandler?.(err);
+  }
+
   private connect(): void {
     if (this.stopped) return;
 
@@ -69,22 +118,32 @@ export class SSEClient {
     const ac = new AbortController();
     this.abortController = ac;
 
-    fetch(url, {
+    this.fetchImpl(url, {
       headers: {
         Authorization: `Bearer ${this.token}`,
         Accept: "text/event-stream",
+        "User-Agent": this.userAgent,
       },
       signal: ac.signal,
     })
       .then(async (response) => {
         if (response.status === 401 || response.status === 403) {
-          throw { authError: true, status: response.status };
+          throw new AlgaAuthError(response.status, "authentication failed");
         }
-        if (!response.ok || !response.body) {
-          throw new Error(`HTTP ${response.status}`);
+        if (response.status !== 200) {
+          throw new AlgaAPIError(
+            response.status,
+            "unexpected status code",
+            parseRetryAfterMs(response.headers.get("Retry-After")),
+          );
+        }
+        if (!response.body) {
+          throw new AlgaConnectionError("response has no body");
         }
 
-        this.reconnectDelay = 2000;
+        // Any successful connection resets the backoff.
+        this.reconnectDelayMs = 2_000;
+
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
@@ -105,7 +164,7 @@ export class SSEClient {
 
               if (trimmed === "") {
                 if (dataBuf.length > 0) {
-                  this.dispatch(eventType, dataBuf.join("\n"));
+                  this.dispatch(eventType || "message", dataBuf.join("\n"));
                 }
                 eventType = "";
                 dataBuf = [];
@@ -115,89 +174,138 @@ export class SSEClient {
               if (trimmed.startsWith(":")) continue;
 
               if (trimmed.startsWith("event:")) {
-                eventType = trimmed.slice(6).trim();
+                eventType = trimmed.slice(6).trimStart();
                 continue;
               }
 
               if (trimmed.startsWith("data:")) {
-                dataBuf.push(trimmed.slice(5));
+                // Per SSE spec, strip exactly one leading space when present.
+                dataBuf.push(trimmed.slice(trimmed.charAt(5) === " " ? 6 : 5));
                 continue;
               }
+
+              // `id:` is intentionally ignored.
+              if (trimmed.startsWith("id:")) continue;
             }
           }
         } catch (err: unknown) {
           if (this.stopped || ac.signal.aborted) return;
-          throw err;
+          throw new AlgaConnectionError(`stream read failed: ${(err as Error).message}`);
         }
+
+        // Stream closed cleanly — treat as a connection error so the outer
+        // loop applies backoff and reconnects.
+        if (!this.stopped) throw new AlgaConnectionError("sse stream closed");
       })
       .catch((err: unknown) => {
         if (this.stopped) return;
-        if (err && typeof err === "object" && "authError" in err) {
+        if (err instanceof AlgaAuthError) {
+          this.fatal(err);
           return;
         }
         if (err instanceof DOMException && err.name === "AbortError") return;
-        const jitter = 1 + Math.random() * 0.2 - 0.1;
-        const delay = Math.min(this.reconnectDelay * jitter, this.maxReconnectDelay);
-        this.reconnectDelay = Math.min(this.reconnectDelay * 2, this.maxReconnectDelay);
+
+        let delay: number;
+        if (err instanceof AlgaAPIError && err.retryAfterMs > 0) {
+          delay = err.retryAfterMs;
+        } else {
+          const jitter = 0.9 + Math.random() * 0.2;
+          delay = Math.min(this.reconnectDelayMs * jitter, this.maxReconnectDelayMs);
+          this.reconnectDelayMs = Math.min(this.reconnectDelayMs * 2, this.maxReconnectDelayMs);
+        }
         setTimeout(() => this.connect(), delay);
       });
   }
 
   private dispatch(eventType: string, data: string): void {
+    const trimmed = data.trim();
+    let parsed: unknown;
     try {
-      const parsed = JSON.parse(data);
-      switch (eventType) {
-        case "connected":
-          this.onConnected?.(parsed as ConnectedEvent);
-          break;
-        case "message": {
-          const msg = parsed as AlgaMessageEvent;
-          if (msg.id && this.dedup.isDuplicate(msg.id)) return;
-          if (msg.kind === "lock_emoji") return;
-          this.onMessage?.(msg);
-          break;
-        }
-        case "typing":
-          this.onTyping?.(parsed as TypingEvent);
-          break;
-        case "investigation_cancel":
-          this.onInvestigationCancel?.(parsed as InvestigationSignalEvent);
-          break;
-        case "investigation_pause":
-          this.onInvestigationPause?.(parsed as InvestigationSignalEvent);
-          break;
-        case "investigation_resume":
-          this.onInvestigationResume?.(parsed as InvestigationSignalEvent);
-          break;
-        case "peer_finding":
-          this.onPeerFinding?.(parsed as PeerFindingEvent);
-          break;
-        case "peer_ask":
-          this.onPeerAsk?.(parsed as PeerAskEvent);
-          break;
-        case "peer_reply":
-          this.onPeerReply?.(parsed as PeerReplyEvent);
-          break;
-        case "agent_presence":
-          this.onAgentPresence?.(parsed as AgentPresenceEvent);
-          break;
-      }
+      parsed = JSON.parse(trimmed);
     } catch {
-      // ignore parse errors
+      return;
+    }
+
+    switch (eventType) {
+      case "connected":
+        this.onConnected?.(parsed as ConnectedEvent);
+        break;
+      case "message": {
+        const msg = parsed as AlgaMessageEvent;
+        const id = msg.message_id;
+        if (id && this.dedup.isDuplicate(id)) return;
+        // Skip internal/system messages (leading lock-emoji per backend convention).
+        if (typeof msg.text === "string" && msg.text.startsWith(LOCK_EMOJI)) return;
+        this.onMessage?.(msg);
+        break;
+      }
+      case "typing":
+        this.onTyping?.(parsed as TypingEvent);
+        break;
+      case "investigation_resume":
+        this.onInvestigationResume?.(parsed as InvestigationSignalEvent);
+        break;
+      case "peer_finding":
+        this.onPeerFinding?.(parsed as PeerFindingEvent);
+        break;
+      case "peer_ask":
+        this.onPeerAsk?.(parsed as PeerAskEvent);
+        break;
+      case "peer_reply":
+        this.onPeerReply?.(parsed as PeerReplyEvent);
+        break;
+      case "coordination_task_dispatched":
+        this.onCoordinationTask?.(parsed as CoordinationTaskEvent);
+        break;
+      case "summarize_incident":
+        this.onSummarizeIncident?.(parsed as SummarizeIncidentEvent);
+        break;
+      case "alert_auto_resolved":
+        this.onAlertAutoResolved?.(parsed as AlertAutoResolvedEvent);
+        break;
+      case "incident_comms_stale":
+        this.onIncidentCommsStale?.(parsed as IncidentCommsStaleEvent);
+        break;
+      default:
+        this.onUnknownEvent?.(eventType, trimmed);
+        break;
     }
   }
 
   private async sendHeartbeat(): Promise<void> {
     try {
-      await fetch(`${this.httpBase}/api/v1/agent/heartbeat`, {
+      const res = await this.fetchImpl(`${this.httpBase}/api/v1/agent/heartbeat`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${this.token}`,
-          "Content-Type": "application/json",
+          "User-Agent": this.userAgent,
         },
       });
+      if (res.status === 401 || res.status === 403) {
+        this.fatal(new AlgaAuthError(res.status, "heartbeat auth failed"));
+      }
     } catch {
-      // heartbeat failure is non-fatal
+      // Non-auth heartbeat errors are non-fatal; the SSE loop observes
+      // persistent outages on its own cadence.
     }
   }
+}
+
+// parseRetryAfterMs parses the HTTP `Retry-After` header into milliseconds.
+// Both delta-seconds and HTTP-date forms are accepted. Returns 0 when the
+// header is absent or unparseable. Capped at 10 minutes.
+export function parseRetryAfterMs(raw: string | null): number {
+  if (!raw) return 0;
+  const trimmed = raw.trim();
+  if (trimmed === "") return 0;
+  const secs = Number(trimmed);
+  if (Number.isFinite(secs) && secs >= 0) {
+    return Math.min(secs * 1000, 10 * 60 * 1000);
+  }
+  const t = Date.parse(trimmed);
+  if (Number.isFinite(t)) {
+    const d = t - Date.now();
+    if (d > 0) return Math.min(d, 10 * 60 * 1000);
+  }
+  return 0;
 }

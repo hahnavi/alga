@@ -1,3 +1,19 @@
+export interface AlertEvent {
+  type?: string;
+  timestamp?: string;
+  source?: string;
+  actor_user_id?: string;
+  actor_username?: string;
+  actor_display_name?: string;
+}
+
+export interface DeliveryTarget {
+  provider?: string;
+  channel?: string;
+  channel_name?: string;
+  post_id?: string;
+}
+
 export interface Alert {
   fingerprint?: string;
   alert_number?: number;
@@ -16,86 +32,21 @@ export interface Alert {
   updated_at?: string;
 }
 
-export interface AlertEvent {
-  type?: string;
-  timestamp?: string;
-  source?: string;
-  actor_user_id?: string;
-  actor_username?: string;
-  actor_display_name?: string;
-}
-
-export interface DeliveryTarget {
-  provider?: string;
-  channel?: string;
-  channel_name?: string;
-  post_id?: string;
-}
-
-export interface CorrelatedAlert {
-  fingerprint?: string;
-  alert_number?: number;
-  labels?: Record<string, string>;
-  annotations?: Record<string, string>;
+// CoordinationTask describes a unit of work dispatched by an incident
+// commander to a role (responder, communicator, verifier).
+export interface CoordinationTask {
+  task_id?: string;
+  incident_number?: number;
+  kind?: string;
+  goal?: string;
+  assignee_role?: string;
+  assignee_agent_id?: string;
   status?: string;
-  starts_at?: string;
-  values?: Record<string, number>;
-  generator_url?: string;
-}
-
-export interface InvestigationResult {
-  status?: string;
-  root_cause?: string;
-  resolution?: string;
-  summary?: string;
-  evidence?: string[];
-  recommended_actions?: string[];
-  severity_assessment?: string;
-  escalation_level?: string;
-  raw_response?: string;
-}
-
-export interface InvestigationUpdate {
-  id?: string;
-  type?: string;
-  message?: string;
-  source?: string;
-  internal?: boolean;
-  edited?: boolean;
-  user_id?: string;
-  username?: string;
-  mm_post_id?: string;
-  slack_message_ts?: string;
-  quoted_update_id?: string;
-  mentions?: string[];
+  result?: Record<string, unknown>;
+  input_context?: Record<string, unknown>;
+  parent_task_id?: string;
   created_at?: string;
-}
-
-export interface Investigation {
-  id?: string;
-  investigation_id?: string;
-  investigation_number?: number;
-  alerts?: CorrelatedAlert[];
-  severity?: string;
-  correlation_key?: string;
-  status?: string;
-  result?: InvestigationResult;
-  mm_post_id?: string;
-  mm_thread_id?: string;
-  primary_thread_id?: string;
-  slack_channel_id?: string;
-  slack_thread_ts?: string;
-  twilio_call_sid?: string;
-  agent_id?: string;
-  agent_name?: string;
-  agent_type?: string;
-  escalation_level?: string;
-  updates?: InvestigationUpdate[];
-  created_at?: string;
-  updated_at?: string;
   completed_at?: string;
-  started_at?: string;
-  investigating_duration_ms?: number;
 }
 
 export interface KnowledgeNote {
@@ -129,7 +80,7 @@ export interface Memory {
   metadata?: Record<string, unknown>;
   confidence?: number;
   access_count?: number;
-  similarity?: number;
+  score?: number;
   expires_at?: string;
   created_at?: string;
   updated_at?: string;
@@ -166,8 +117,10 @@ export interface Service {
 
 export interface Incident {
   id?: string;
+  incident_number?: number;
   title?: string;
   description?: string;
+  summary?: string;
   severity?: string;
   priority?: string;
   status?: string;
@@ -182,22 +135,89 @@ export interface Incident {
   closed_at?: string;
 }
 
+// IncidentRole is a role assignment (commander, communications lead,
+// responder, ...) attached to an incident.
+export interface IncidentRole {
+  role_type?: string;
+  assignee_type?: string;
+  agent_token_id?: string;
+  agent_name?: string;
+  user_id?: string;
+  user_name?: string;
+  status?: string;
+}
+
+// IncidentContext is the agent-facing incident read model.
+export interface IncidentContext {
+  incident?: Incident;
+  roles?: IncidentRole[];
+}
+
+export interface OnCallEntry {
+  schedule_id?: string;
+  schedule_name?: string;
+  user_id?: string;
+  user_name?: string;
+}
+
+// SecretValue is the payload of GET /api/v1/agent/secrets/{secret_id}. The
+// value is plaintext for immediate use; never persist or log it.
+export interface SecretValue {
+  secret_id?: string;
+  name?: string;
+  value?: string;
+  fetched_at?: string;
+}
+
+export interface PlaybookStep {
+  id?: string;
+  step_number?: number;
+  title?: string;
+  description?: string;
+  expected_duration?: string;
+  command?: string;
+}
+
+export interface Playbook {
+  id?: string;
+  title?: string;
+  kind?: string;
+  summary?: string;
+  service_id?: string;
+  label_selectors?: Record<string, string>[];
+  tags?: string[];
+  steps?: PlaybookStep[];
+  created_by?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Capability {
+  id?: string;
+  name?: string;
+  description?: string;
+}
+
+// --- Server-Sent Events ---
+
 export interface ConnectedEvent {
-  agent_id?: string;
   client_id?: string;
+  agent_id?: string;
 }
 
 export interface MessageEvent {
-  id?: string;
   type?: string;
   chat_id?: string;
-  kind?: string;
   text?: string;
-  sender_type?: string;
   sender_id?: string;
   sender_name?: string;
   message_id?: string;
-  created_at?: string;
+  // trigger distinguishes actionable deliveries ("dispatch"/"mention") from
+  // passive ones ("observe").
+  trigger?: string;
+  reply_to_message_id?: string;
+  reply_to_text?: string;
+  mentions?: string[];
 }
 
 export interface TypingEvent {
@@ -206,9 +226,10 @@ export interface TypingEvent {
   active?: boolean;
 }
 
+// InvestigationSignalEvent is the payload of investigation_resume.
 export interface InvestigationSignalEvent {
   investigation_id?: string;
-  signal?: string;
+  alert_investigation_id?: string;
   reason?: string;
   actor?: string;
 }
@@ -250,78 +271,87 @@ export interface AgentPresenceEvent {
   online?: boolean;
 }
 
+// CoordinationTaskEvent is published when an incident commander dispatches a
+// task to this agent's role.
+export interface CoordinationTaskEvent {
+  type?: string;
+  chat_id?: string;
+  task_id?: string;
+  incident_number?: number;
+  kind?: string;
+  goal?: string;
+  assignee_role?: string;
+  assignee_agent_id?: string;
+  input_context?: Record<string, unknown>;
+  parent_task_id?: string;
+}
+
+// SummarizeIncidentEvent asks a communicate-capable agent to produce an
+// incident summary (reply with sendIncidentSummary).
+export interface SummarizeIncidentEvent {
+  incident_number?: number;
+  chat_id?: string;
+  incident?: Record<string, unknown>;
+}
+
+// AlertAutoResolvedEvent notifies the agent that an alert it was investigating
+// auto-resolved (e.g. the alert cleared at the source).
+export interface AlertAutoResolvedEvent {
+  investigation_id?: string;
+  fingerprint?: string;
+  alert_name?: string;
+}
+
+// IncidentCommsStaleEvent nudges the incident-commander agent when incident
+// communications have gone quiet past the SLA threshold.
+export interface IncidentCommsStaleEvent {
+  incident_number?: number;
+  trigger?: string;
+  reason?: string;
+}
+
+// --- List responses ---
+
 export interface AlertListResponse {
   alerts?: Alert[];
   items?: Alert[];
   total?: number;
-  limit?: number;
-  skip?: number;
-}
-
-export interface InvestigationListResponse {
-  investigations?: Investigation[];
-  items?: Investigation[];
-  total?: number;
-  limit?: number;
-  skip?: number;
 }
 
 export interface KnowledgeListResponse {
-  notes?: KnowledgeNote[];
   items?: KnowledgeNote[];
+  notes?: KnowledgeNote[];
   total?: number;
-  limit?: number;
-  skip?: number;
 }
 
 export interface MemoryListResponse {
+  items?: Memory[];
   memories?: Memory[];
   total?: number;
 }
 
 export interface PeerAskListResponse {
+  items?: PeerAsk[];
   asks?: PeerAsk[];
   total?: number;
 }
 
-export interface SendMessageResponse {
-  message_id?: string;
-  chat_id?: string;
-  created_at?: string;
+export interface ServiceListResponse {
+  items?: Service[];
+  total?: number;
 }
 
+export interface SendMessageResponse {
+  status?: string;
+  message_id?: string;
+}
+
+// CommandResponse mirrors the backend inv_tool outcome object.
 export interface CommandResponse {
   ok?: boolean;
   op?: string;
+  chat_id?: string;
   investigation_id?: string;
+  incident_number?: number;
   error?: string;
-}
-
-export interface PlaybookStep {
-  id?: string;
-  step_number?: number;
-  title?: string;
-  description?: string;
-  expected_duration?: string;
-  command?: string;
-}
-
-export interface Playbook {
-  id?: string;
-  title?: string;
-  kind?: string;
-  summary?: string;
-  service_id?: string;
-  label_selectors?: unknown[];
-  tags?: string[];
-  steps?: PlaybookStep[];
-  created_by?: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface Capability {
-  id?: string;
-  name?: string;
-  description?: string;
 }

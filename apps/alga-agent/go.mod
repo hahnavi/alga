@@ -40,7 +40,6 @@ require (
 	github.com/segmentio/encoding v0.5.4 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
-	github.com/yuin/goldmark v1.7.17 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.3.8 // indirect
@@ -51,3 +50,8 @@ require (
 // Local SDK: resolved via go.work in the monorepo. The replace directive makes
 // standalone builds (outside the workspace) work against the local checkout.
 replace github.com/alga/agent-sdk-go => ../../integrations/alga-agent-sdk-go
+
+// goldmark is a transitive, non-built dependency (via golang.org/x/tools) that
+// Snyk flags for XSS below v1.7.17. A plain indirect require is dropped by
+// `go mod tidy`, so this replace pins the patched version durably.
+replace github.com/yuin/goldmark => github.com/yuin/goldmark v1.7.17

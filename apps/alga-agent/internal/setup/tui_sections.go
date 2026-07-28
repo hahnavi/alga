@@ -1,6 +1,7 @@
 package setup
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -45,10 +46,12 @@ func modelSteps(cfg *config.Config) []step {
 	}
 
 	defBase := cfg.Model.BaseURL
-	if cfg.Model.Provider != "custom" {
-		defBase = config.BaseURLForProvider(cfg.Model.Provider)
-	} else if defBase == "" {
-		defBase = config.BaseURLForProvider("openrouter")
+	if defBase == "" {
+		if cfg.Model.Provider != "custom" {
+			defBase = config.BaseURLForProvider(cfg.Model.Provider)
+		} else {
+			defBase = config.BaseURLForProvider("openrouter")
+		}
 	}
 
 	steps := []step{
@@ -179,26 +182,31 @@ func channelBadge(enabled bool) string {
 	return "[off]"
 }
 
-func applyStepResult(cfg *config.Config, s step, value string) {
+func applyStepResult(cfg *config.Config, s step, value string) error {
 	switch s.key {
 	case "provider":
 		prev := cfg.Model.Provider
 		cfg.Model.Provider = value
 		if cfg.Model.Provider != prev {
-			cfg.Model.Model = ""
+			cfg.Model.Model = defaultModelForProvider(value)
+			cfg.Model.BaseURL = config.BaseURLForProvider(value)
 		}
 	case "base_url":
 		cfg.Model.BaseURL = value
 	case "api_key":
 		cfg.Model.APIKey = value
 	case "max_tokens":
-		if n, err := strconv.Atoi(value); err == nil {
-			cfg.Model.MaxTokens = n
+		n, err := strconv.Atoi(value)
+		if err != nil {
+			return fmt.Errorf("max_tokens: %w", err)
 		}
+		cfg.Model.MaxTokens = n
 	case "temperature":
-		if f, err := strconv.ParseFloat(value, 64); err == nil {
-			cfg.Model.Temperature = f
+		f, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return fmt.Errorf("temperature: %w", err)
 		}
+		cfg.Model.Temperature = f
 	case "tg_enabled":
 		cfg.Telegram.Enabled = value == "true"
 	case "tg_token":
@@ -227,13 +235,17 @@ func applyStepResult(cfg *config.Config, s step, value string) {
 		}
 		cfg.Tools.Shell.AllowedCommands = out
 	case "shell_max":
-		if n, err := strconv.Atoi(value); err == nil {
-			cfg.Tools.Shell.MaxOutputBytes = n
+		n, err := strconv.Atoi(value)
+		if err != nil {
+			return fmt.Errorf("shell_max: %w", err)
 		}
+		cfg.Tools.Shell.MaxOutputBytes = n
 	case "shell_timeout":
-		if d, err := config.ParseDuration(value); err == nil {
-			cfg.Tools.Shell.Timeout = d
+		d, err := config.ParseDuration(value)
+		if err != nil {
+			return fmt.Errorf("shell_timeout: %w", err)
 		}
+		cfg.Tools.Shell.Timeout = d
 	case "search_enabled":
 		cfg.Tools.WebSearch.Enabled = value == "true"
 	case "search_provider":
@@ -241,23 +253,31 @@ func applyStepResult(cfg *config.Config, s step, value string) {
 	case "search_key":
 		cfg.Tools.WebSearch.APIKey = value
 	case "search_max":
-		if n, err := strconv.Atoi(value); err == nil {
-			cfg.Tools.WebSearch.MaxResults = n
+		n, err := strconv.Atoi(value)
+		if err != nil {
+			return fmt.Errorf("search_max: %w", err)
 		}
+		cfg.Tools.WebSearch.MaxResults = n
 	case "search_fetch":
 		cfg.Tools.WebSearch.FetchContent = value == "true"
 	case "max_iters":
-		if n, err := strconv.Atoi(value); err == nil {
-			cfg.AgentBehavior.MaxIterations = n
+		n, err := strconv.Atoi(value)
+		if err != nil {
+			return fmt.Errorf("max_iters: %w", err)
 		}
+		cfg.AgentBehavior.MaxIterations = n
 	case "tool_timeout":
-		if d, err := config.ParseDuration(value); err == nil {
-			cfg.AgentBehavior.ToolTimeout = d
+		d, err := config.ParseDuration(value)
+		if err != nil {
+			return fmt.Errorf("tool_timeout: %w", err)
 		}
+		cfg.AgentBehavior.ToolTimeout = d
 	case "ctx_window":
-		if n, err := strconv.Atoi(value); err == nil {
-			cfg.AgentBehavior.ContextWindow = n
+		n, err := strconv.Atoi(value)
+		if err != nil {
+			return fmt.Errorf("ctx_window: %w", err)
 		}
+		cfg.AgentBehavior.ContextWindow = n
 	case "prompt_file":
 		cfg.AgentBehavior.SystemPromptFile = value
 	case "log_level":
@@ -269,4 +289,5 @@ func applyStepResult(cfg *config.Config, s step, value string) {
 	case "metrics_addr":
 		cfg.Metrics.Addr = value
 	}
+	return nil
 }

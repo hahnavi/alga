@@ -193,6 +193,19 @@ func ResolveDataDir() string {
 // Load reads configuration from the file at path (resolved via DefaultPath
 // when empty). Environment variables override YAML values per SPEC §8.2.
 func Load(path string) (*Config, error) {
+	cfg, err := Parse(path)
+	if err != nil {
+		return nil, err
+	}
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("config validation: %w", err)
+	}
+	return cfg, nil
+}
+
+// Parse reads and decodes the config file without running validation.
+// It returns defaults (with env overrides) when the file does not exist.
+func Parse(path string) (*Config, error) {
 	path = DefaultPath(path)
 
 	cfg := Default()
@@ -200,12 +213,7 @@ func Load(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			// No config file is allowed as long as env vars cover the
-			// required fields; validate will catch missing values.
 			applyEnvOverrides(cfg)
-			if err := cfg.Validate(); err != nil {
-				return nil, fmt.Errorf("config validation: %w", err)
-			}
 			return cfg, nil
 		}
 		return nil, fmt.Errorf("read config %s: %w", path, err)
@@ -224,10 +232,6 @@ func Load(path string) (*Config, error) {
 
 	cfg.applyDefaults()
 	applyEnvOverrides(cfg)
-
-	if err := cfg.Validate(); err != nil {
-		return nil, fmt.Errorf("config validation: %w", err)
-	}
 
 	return cfg, nil
 }

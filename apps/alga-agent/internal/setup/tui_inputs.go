@@ -111,7 +111,9 @@ func (m toggleModel) Update(msg tea.Msg) (toggleModel, tea.Cmd) {
 		switch msg.String() {
 		case "left", "h", "y":
 			m.value = true
-		case "right", "l", "n", "tab":
+		case "right", "l", "n":
+			m.value = false
+		case "tab":
 			m.value = !m.value
 		}
 	}
@@ -134,9 +136,13 @@ type textModel struct {
 }
 
 func newText(def string, secret bool, width int) textModel {
+	return newTextLimit(def, secret, width, 256)
+}
+
+func newTextLimit(def string, secret bool, width, charLimit int) textModel {
 	ti := textinput.New()
 	ti.Width = width
-	ti.CharLimit = 256
+	ti.CharLimit = charLimit
 	ti.SetValue(def)
 	ti.Prompt = styleInputPrompt.Render("▸ ")
 	if secret {

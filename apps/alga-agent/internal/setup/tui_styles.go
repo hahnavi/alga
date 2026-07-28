@@ -8,9 +8,9 @@ var (
 	tuiGreen   = lipgloss.Color("#34D399")
 	tuiAmber   = lipgloss.Color("#FBBF24")
 	tuiRed     = lipgloss.Color("#F87171")
-	tuiFaint   = lipgloss.Color("#4B5563")
+	tuiFaint   = lipgloss.AdaptiveColor{Light: "#6B7280", Dark: "#4B5563"}
 	tuiMuted   = lipgloss.Color("#9CA3AF")
-	tuiText    = lipgloss.Color("#F3F4F6")
+	tuiText    = lipgloss.AdaptiveColor{Light: "#111827", Dark: "#F3F4F6"}
 	tuiBg      = lipgloss.Color("#1F2937")
 	tuiBgLight = lipgloss.Color("#374151")
 )

@@ -52,6 +52,9 @@ func (m wizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+		inputWidth := min(60, max(30, m.width-12))
+		m.text.input.Width = inputWidth
+		m.list.width = inputWidth
 		return m, nil
 	case tea.KeyMsg:
 		if msg.String() == "ctrl+c" {
@@ -122,6 +125,16 @@ func (m *wizardModel) enterSection(idx int) {
 	}
 }
 
+func (m *wizardModel) advancePast(key string) {
+	m.stepIdx = 0
+	for i, s := range m.steps {
+		if s.key == key {
+			m.stepIdx = i + 1
+			break
+		}
+	}
+}
+
 func (m *wizardModel) initStep() {
 	s := m.steps[m.stepIdx]
 	inputWidth := min(60, max(30, m.width-12))
@@ -131,7 +144,11 @@ func (m *wizardModel) initStep() {
 	case stepYesNo:
 		m.toggle = newToggle(s.label, s.defBool)
 	case stepText, stepSecret:
-		m.text = newText(s.def, s.kind == stepSecret, inputWidth)
+		if strings.Contains(s.key, "url") || strings.Contains(s.key, "webhook") {
+			m.text = newTextLimit(s.def, s.kind == stepSecret, inputWidth, 2048)
+		} else {
+			m.text = newText(s.def, s.kind == stepSecret, inputWidth)
+		}
 	case stepInt:
 		m.text = newText(strconv.Itoa(s.defInt), false, inputWidth)
 	case stepFloat:
@@ -139,7 +156,7 @@ func (m *wizardModel) initStep() {
 	case stepDuration:
 		m.text = newText(s.defDur.String(), false, inputWidth)
 	case stepCSV:
-		m.text = newText(strings.Join(s.defCSV, ", "), false, inputWidth)
+		m.text = newTextLimit(strings.Join(s.defCSV, ", "), false, inputWidth, 2048)
 	}
 }
 
@@ -188,12 +205,20 @@ func (m wizardModel) confirmStep() (tea.Model, tea.Cmd) {
 		value = m.text.Value()
 	}
 
+	if err := applyStepResult(m.cfg, s, value); err != nil {
+		m.err = err
+		return m, nil
+	}
+	m.err = nil
 	m.confirmed = append(m.confirmed, styleSuccess.Render("✓")+" "+styleConfirmed.Render(s.label+": "+maskSecret(s, value)))
-	applyStepResult(m.cfg, s, value)
 
 	if s.key == "provider" {
 		m.steps = modelSteps(m.cfg)
-		m.stepIdx = 0
+		m.advancePast(s.key)
+		if m.stepIdx >= len(m.steps) {
+			m.state = stateMenu
+			return m, nil
+		}
 		m.initStep()
 		return m, nil
 	}
@@ -202,25 +227,44 @@ func (m wizardModel) confirmStep() (tea.Model, tea.Cmd) {
 		if s.key == "metrics_enabled" {
 			m.steps = loggingSteps(m.cfg)
 		}
-		m.stepIdx = 0
+		m.advancePast(s.key)
+		if m.stepIdx >= len(m.steps) {
+			m.state = stateMenu
+			return m, nil
+		}
 		m.initStep()
 		return m, nil
 	}
 	if s.key == "tg_enabled" {
 		m.steps = telegramSteps(m.cfg)
-		m.stepIdx = 0
+		m.advancePast(s.key)
+		if m.stepIdx >= len(m.steps) {
+			m.state = stateMenu
+			return m, nil
+		}
 		m.initStep()
 		return m, nil
 	}
 	if s.key == "alga_enabled" {
 		m.steps = algaSteps(m.cfg)
-		m.stepIdx = 0
+		m.advancePast(s.key)
+		if m.stepIdx >= len(m.steps) {
+			m.state = stateMenu
+			return m, nil
+		}
 		m.initStep()
 		return m, nil
 	}
 
 	m.stepIdx++
 	if m.stepIdx >= len(m.steps) {
+		if sections[m.sectionIdx].key == "channel" && len(m.steps) > 1 {
+			m.confirmed = nil
+			m.steps = channelSteps(m.cfg)
+			m.stepIdx = 0
+			m.initStep()
+			return m, nil
+		}
 		m.state = stateMenu
 		return m, nil
 	}
@@ -249,6 +293,11 @@ func (m wizardModel) updateReview(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if msg, ok := msg.(tea.KeyMsg); ok {
 		switch msg.String() {
 		case "y", "enter":
+			if verr := m.cfg.Validate(); verr != nil {
+				m.err = verr
+				return m, nil
+			}
+			m.err = nil
 			m.state = stateDone
 			return m, tea.Quit
 		case "n", "esc", "q":
@@ -267,7 +316,7 @@ func (m wizardModel) View() string {
 	case stateReview:
 		return m.viewReview()
 	case stateDone:
-		return "\n  " + styleSuccess.Render("✓ Configuration saved successfully.") + "\n\n"
+		return "\n  " + styleSuccess.Render("✓ Saving configuration…") + "\n\n"
 	}
 	return ""
 }
@@ -341,6 +390,9 @@ func (m wizardModel) viewSection() string {
 		b.WriteString("  " + styleLabel.Render(cur.label) + "\n")
 		if cur.help != "" {
 			b.WriteString("  " + styleHint.Render(cur.help) + "\n")
+		}
+		if m.err != nil {
+			b.WriteString("  " + styleError.Render("✗ "+m.err.Error()) + "\n")
 		}
 		b.WriteString("\n")
 

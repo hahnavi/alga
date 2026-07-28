@@ -779,27 +779,17 @@ func runTUI(section string) error {
 	}
 
 	dir := config.ResolveDataDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return fmt.Errorf("create data dir %s: %w", dir, err)
 	}
 	path := config.DefaultPath("")
 
 	cfg, err := config.Load("")
-	var backupPath string
 	if err != nil {
-		if _, statErr := os.Stat(path); statErr == nil {
-			backupPath = path + ".bak." + time.Now().Format("20060102_150405")
-			if cerr := copyFile(path, backupPath); cerr != nil {
-				return fmt.Errorf("back up %s: %w", path, cerr)
-			}
-			cfg = config.Default()
+		if parsed, perr := config.Parse(""); perr == nil {
+			cfg = parsed
 		} else {
 			cfg = config.Default()
-		}
-	} else if _, statErr := os.Stat(path); statErr == nil {
-		backupPath = path + ".bak." + time.Now().Format("20060102_150405")
-		if berr := copyFile(path, backupPath); berr != nil {
-			backupPath = ""
 		}
 	}
 
@@ -826,6 +816,13 @@ func runTUI(section string) error {
 
 	switch result.state {
 	case stateDone:
+		var backupPath string
+		if _, statErr := os.Stat(path); statErr == nil {
+			backupPath = path + ".bak." + time.Now().Format("20060102_150405")
+			if cerr := copyFile(path, backupPath); cerr != nil {
+				return fmt.Errorf("back up %s: %w", path, cerr)
+			}
+		}
 		if serr := config.Save(path, cfg); serr != nil {
 			return fmt.Errorf("save config: %w", serr)
 		}
@@ -835,9 +832,6 @@ func runTUI(section string) error {
 		}
 		fmt.Println("\n  Run `alga-agent` to start the agent.")
 	case stateQuit:
-		if backupPath != "" {
-			_ = copyFile(backupPath, path)
-		}
 		return ErrAbort
 	}
 	return nil
@@ -862,7 +856,7 @@ func runWith(stdin io.Reader, stdout io.Writer, section string) error {
 	r := bufio.NewReader(stdin)
 
 	dir := config.ResolveDataDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return fmt.Errorf("create data dir %s: %w", dir, err)
 	}
 	path := config.DefaultPath("")

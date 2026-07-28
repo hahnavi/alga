@@ -264,10 +264,10 @@ onMounted(() => {
           <ArrowRight class="h-3.5 w-3.5 text-[var(--text-muted)]" />
           <span class="text-sm text-[var(--text-secondary)]">{{ dest.channel }}</span>
           <router-link
-            to="/integrations"
+            to="/communication-channels"
             class="ml-auto text-xs text-[var(--text-muted)] underline-offset-2 transition-colors hover:text-[var(--text-primary)] hover:underline focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
           >
-            Configure in Integration Settings
+            Configure in Channel Settings
           </router-link>
         </div>
       </Card>

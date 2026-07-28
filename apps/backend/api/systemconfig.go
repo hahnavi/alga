@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -56,11 +57,6 @@ func (s *Server) handleGetSystemConfig(w http.ResponseWriter, r *http.Request) {
 		"google_client_id":          cfg.GoogleClientID,
 		"google_client_secret_set":  cfg.GoogleClientSecret != "",
 		"google_oauth_redirect_url": cfg.GoogleOAuthRedirectURL,
-		"oidc_enabled":              cfg.OIDCEnabled,
-		"oidc_issuer_url":           cfg.OIDCIssuerURL,
-		"oidc_client_id":            cfg.OIDCClientID,
-		"oidc_client_secret_set":    cfg.OIDCClientSecret != "",
-		"oidc_scopes":               cfg.OIDCScopes,
 	}
 	if !updatedAt.IsZero() {
 		resp["updated_at"] = updatedAt.UTC().Format(time.RFC3339)
@@ -103,11 +99,6 @@ func (s *Server) handlePutSystemConfig(w http.ResponseWriter, r *http.Request) {
 		GoogleClientID         *string
 		GoogleClientSecret     *string // plaintext; only set when the caller provides a new value
 		GoogleOAuthRedirectURL *string
-		OIDCEnabled            *bool
-		OIDCIssuerURL          *string
-		OIDCClientID           *string
-		OIDCClientSecret       *string // plaintext; only set when the caller provides a new value
-		OIDCScopes             *string
 	}
 
 	var upd configUpdate
@@ -267,29 +258,6 @@ func (s *Server) handlePutSystemConfig(w http.ResponseWriter, r *http.Request) {
 		upd.GoogleOAuthRedirectURL = &s
 	}
 
-	// --- Authentication: OIDC ---
-	if v, ok := req["oidc_enabled"].(bool); ok {
-		upd.OIDCEnabled = &v
-	}
-	if v, ok := req["oidc_issuer_url"].(string); ok {
-		s := strings.TrimSpace(v)
-		upd.OIDCIssuerURL = &s
-	}
-	if v, ok := req["oidc_client_id"].(string); ok {
-		s := strings.TrimSpace(v)
-		upd.OIDCClientID = &s
-	}
-	if v, ok := req["oidc_client_secret"].(string); ok {
-		if strings.TrimSpace(v) != "" {
-			v := strings.TrimSpace(v)
-			upd.OIDCClientSecret = &v
-		}
-	}
-	if v, ok := req["oidc_scopes"].(string); ok {
-		s := strings.TrimSpace(v)
-		upd.OIDCScopes = &s
-	}
-
 	anySet := upd.LogLevel != nil || upd.SessionExpiryHrs != nil || upd.MaxConcurrentInvestigations != nil ||
 		upd.CorrelationWindow != nil || upd.CorrelationCooldownTTL != nil || upd.InvestigationTimeout != nil ||
 		upd.AgentPresenceTTL != nil || upd.AgentDisconnectGrace != nil || upd.SchedulerLeaderTTL != nil ||
@@ -297,11 +265,29 @@ func (s *Server) handlePutSystemConfig(w http.ResponseWriter, r *http.Request) {
 		upd.SlackIncidentChannelTriggerStatus != nil || upd.SlackIncidentChannelArchiveOnClose != nil ||
 		upd.IncidentSummaryEnabled != nil || upd.IncidentSummaryInterval != nil || upd.IncidentSummaryIntervals != nil ||
 		upd.GoogleOAuthEnabled != nil || upd.GoogleClientID != nil || upd.GoogleClientSecret != nil ||
-		upd.GoogleOAuthRedirectURL != nil || upd.OIDCEnabled != nil || upd.OIDCIssuerURL != nil ||
-		upd.OIDCClientID != nil || upd.OIDCClientSecret != nil || upd.OIDCScopes != nil
+		upd.GoogleOAuthRedirectURL != nil
 
 	if !anySet {
 		writeStatus(w, "no changes")
+		return
+	}
+
+	// Encrypt the secret before mutating anything so an encryption failure
+	// aborts the update and preserves the stored ciphertext. When no new
+	// secret is provided, re-encrypt the existing in-memory secret so an
+	// unrelated update does not overwrite the stored credential with empty.
+	secretToEncrypt := ""
+	if upd.GoogleClientSecret != nil {
+		secretToEncrypt = *upd.GoogleClientSecret
+	} else {
+		s.mu.RLock()
+		secretToEncrypt = s.cfg.GoogleClientSecret
+		s.mu.RUnlock()
+	}
+	googleSecretEnc, err := encryptAuthSecret(secretToEncrypt)
+	if err != nil {
+		logger.ErrorCtx(r.Context(), "failed to encrypt google client secret; aborting system config update", "error", err)
+		writeErrorStatus(w, http.StatusInternalServerError, ErrorCodeInternal, "failed to encrypt google client secret")
 		return
 	}
 
@@ -383,21 +369,6 @@ func (s *Server) handlePutSystemConfig(w http.ResponseWriter, r *http.Request) {
 	if upd.GoogleOAuthRedirectURL != nil {
 		s.cfg.GoogleOAuthRedirectURL = *upd.GoogleOAuthRedirectURL
 	}
-	if upd.OIDCEnabled != nil {
-		s.cfg.OIDCEnabled = *upd.OIDCEnabled
-	}
-	if upd.OIDCIssuerURL != nil {
-		s.cfg.OIDCIssuerURL = *upd.OIDCIssuerURL
-	}
-	if upd.OIDCClientID != nil {
-		s.cfg.OIDCClientID = *upd.OIDCClientID
-	}
-	if upd.OIDCClientSecret != nil {
-		s.cfg.OIDCClientSecret = *upd.OIDCClientSecret
-	}
-	if upd.OIDCScopes != nil {
-		s.cfg.OIDCScopes = *upd.OIDCScopes
-	}
 
 	if s.systemConfigStore != nil {
 		dbCfg := store.SystemConfigValues{
@@ -420,13 +391,8 @@ func (s *Server) handlePutSystemConfig(w http.ResponseWriter, r *http.Request) {
 
 			GoogleOAuthEnabled:     s.cfg.GoogleOAuthEnabled,
 			GoogleClientID:         s.cfg.GoogleClientID,
-			GoogleClientSecretEnc:  encryptAuthSecret(s.cfg.GoogleClientSecret),
+			GoogleClientSecretEnc:  googleSecretEnc,
 			GoogleOAuthRedirectURL: s.cfg.GoogleOAuthRedirectURL,
-			OIDCEnabled:            s.cfg.OIDCEnabled,
-			OIDCIssuerURL:          s.cfg.OIDCIssuerURL,
-			OIDCClientID:           s.cfg.OIDCClientID,
-			OIDCClientSecretEnc:    encryptAuthSecret(s.cfg.OIDCClientSecret),
-			OIDCScopes:             s.cfg.OIDCScopes,
 		}
 		if err := s.systemConfigStore.Save(dbCfg); err != nil {
 			logger.ErrorCtx(r.Context(), "failed to persist system config to DB", "error", err)
@@ -436,8 +402,15 @@ func (s *Server) handlePutSystemConfig(w http.ResponseWriter, r *http.Request) {
 	s.systemConfigUpdatedAt = time.Now().UTC()
 
 	if user := userFromContext(r.Context()); user != nil {
+		auditFields := make(map[string]any, len(req))
+		for k, v := range req {
+			auditFields[k] = v
+		}
+		if _, ok := auditFields["google_client_secret"]; ok {
+			auditFields["google_client_secret"] = "[redacted]"
+		}
 		s.auditStore.Log("system_config_updated", &user.ID, user.Email, s.ipExtractor.clientIP(r), r.UserAgent(), true, map[string]any{
-			"fields": req,
+			"fields": auditFields,
 		})
 	}
 
@@ -475,18 +448,17 @@ func durationIntervalsToAny(m map[string]time.Duration) map[string]any {
 	return out
 }
 
-// encryptAuthSecret encrypts a plaintext auth secret (Google/OIDC client
-// secret) for persistence in the system config. On failure it logs and returns
-// an empty string so the secret is never persisted in plaintext; the in-memory
-// config still holds the plaintext value for runtime use.
-func encryptAuthSecret(plaintext string) string {
+// encryptAuthSecret encrypts a plaintext auth secret (Google client
+// secret) for persistence in the system config. It returns an error when a
+// non-empty secret cannot be encrypted so callers can abort instead of
+// overwriting the stored ciphertext with an empty value.
+func encryptAuthSecret(plaintext string) (string, error) {
 	if plaintext == "" {
-		return ""
+		return "", nil
 	}
 	enc, err := algacrypto.Default().EncryptString(plaintext)
 	if err != nil {
-		logger.Error("failed to encrypt auth secret for system config; secret not persisted to DB", "error", err)
-		return ""
+		return "", fmt.Errorf("encrypt auth secret: %w", err)
 	}
-	return enc
+	return enc, nil
 }

@@ -7,13 +7,15 @@ declare module "vue-router" {
     public?: boolean;
     guestOnly?: boolean;
     requiredPermission?: string;
+    area?: "settings";
   }
 }
 
 const DashboardPage = () => import("@/pages/DashboardPage.vue");
 const AlertsPage = () => import("@/pages/AlertsPage.vue");
 const RoutesPage = () => import("@/pages/RoutesPage.vue");
-const IntegrationsPage = () => import("@/pages/IntegrationsPage.vue");
+const CommunicationChannelsPage = () => import("@/pages/CommunicationChannelsPage.vue");
+const IncomingWebhooksPage = () => import("@/pages/IncomingWebhooksPage.vue");
 const LoginPage = () => import("@/pages/LoginPage.vue");
 const UsersPage = () => import("@/pages/UsersPage.vue");
 const AlertDetailPage = () => import("@/pages/AlertDetailPage.vue");
@@ -22,7 +24,9 @@ const AgentsPage = () => import("@/pages/AgentsPage.vue");
 const NotificationsPage = () => import("@/pages/NotificationsPage.vue");
 const KnowledgePage = () => import("@/pages/KnowledgePage.vue");
 const MemoryPage = () => import("@/pages/MemoryPage.vue");
-const SystemPage = () => import("@/pages/SystemPage.vue");
+const SystemGeneralPage = () => import("@/pages/system/SystemGeneralPage.vue");
+const SystemInvestigationsPage = () => import("@/pages/system/SystemInvestigationsPage.vue");
+const SystemIncidentsPage = () => import("@/pages/system/SystemIncidentsPage.vue");
 const MaintenanceWindowsPage = () => import("@/pages/MaintenanceWindowsPage.vue");
 const HeartbeatsPage = () => import("@/pages/HeartbeatsPage.vue");
 const StatusPagesPage = () => import("@/pages/StatusPagesPage.vue");
@@ -45,6 +49,11 @@ const NotificationPreferencesPage = () => import("@/pages/NotificationPreference
 const PersonalAccessTokensPage = () => import("@/pages/PersonalAccessTokensPage.vue");
 const PlaybookPage = () => import("@/pages/PlaybookPage.vue");
 const PlaybookDetailPage = () => import("@/pages/PlaybookDetailPage.vue");
+const SettingsGeneralPage = () => import("@/pages/settings/SettingsGeneralPage.vue");
+const SettingsAppearancePage = () => import("@/pages/settings/SettingsAppearancePage.vue");
+const SettingsSecurityPage = () => import("@/pages/settings/SettingsSecurityPage.vue");
+const SettingsIntegrationsPage = () => import("@/pages/settings/SettingsIntegrationsPage.vue");
+const SettingsAuthenticationPage = () => import("@/pages/settings/SettingsAuthenticationPage.vue");
 
 const router = createRouter({
   history: createWebHistory(),
@@ -61,13 +70,46 @@ const router = createRouter({
     { path: "/login", component: LoginPage, meta: { public: true, guestOnly: true } },
     {
       path: "/settings",
-      redirect: (to) => ({
-        path: "/",
-        query: {
-          ...to.query,
-          settings: to.query.settings ?? "integrations",
-        },
-      }),
+      redirect: (to) => {
+        if (to.query.slack_linked || to.query.google_linked) {
+          return { path: "/settings/integrations", query: to.query };
+        }
+        const tab = to.query.settings;
+        const query = { ...to.query };
+        delete query.settings;
+        if (tab === "general" || tab === "appearance" || tab === "security") {
+          return { path: `/settings/${tab}`, query };
+        }
+        if (tab === "integrations") {
+          return { path: "/settings/integrations", query };
+        }
+        return { path: "/settings/general", query };
+      },
+    },
+    {
+      path: "/settings/general",
+      component: SettingsGeneralPage,
+      meta: { area: "settings" },
+    },
+    {
+      path: "/settings/appearance",
+      component: SettingsAppearancePage,
+      meta: { area: "settings" },
+    },
+    {
+      path: "/settings/security",
+      component: SettingsSecurityPage,
+      meta: { area: "settings" },
+    },
+    {
+      path: "/settings/integrations",
+      component: SettingsIntegrationsPage,
+      meta: { area: "settings" },
+    },
+    {
+      path: "/settings/authentication",
+      component: SettingsAuthenticationPage,
+      meta: { requiredPermission: "system:read", area: "settings" },
     },
     {
       path: "/forgot-password",
@@ -82,19 +124,33 @@ const router = createRouter({
     { path: "/", component: DashboardPage },
     { path: "/alerts", component: AlertsPage },
     { path: "/alerts/:alertNumber", component: AlertDetailPage },
-    { path: "/routes", component: RoutesPage, meta: { requiredPermission: "routes:read" } },
     {
-      path: "/integrations",
-      component: IntegrationsPage,
+      path: "/routes",
+      component: RoutesPage,
+      meta: { requiredPermission: "routes:read", area: "settings" },
+    },
+    {
+      path: "/communication-channels",
+      component: CommunicationChannelsPage,
       meta: { requiredPermission: "integrations:read" },
     },
+    {
+      path: "/incoming-webhooks",
+      component: IncomingWebhooksPage,
+      meta: { requiredPermission: "tokens:manage" },
+    },
+    { path: "/integrations", redirect: { path: "/communication-channels" } },
     { path: "/agents", component: AgentsPage, meta: { requiredPermission: "tokens:manage" } },
     {
       path: "/agents/:agent_token_id/chat",
       component: AgentPrivateChatPage,
       meta: { requiredPermission: "tokens:manage" },
     },
-    { path: "/users", component: UsersPage, meta: { requiredPermission: "users:manage" } },
+    {
+      path: "/users",
+      component: UsersPage,
+      meta: { requiredPermission: "users:manage", area: "settings" },
+    },
     {
       path: "/incidents",
       component: IncidentsPage,
@@ -141,7 +197,7 @@ const router = createRouter({
     {
       path: "/notification-preferences",
       component: NotificationPreferencesPage,
-      meta: { requiredPermission: "notifications:read" },
+      meta: { requiredPermission: "notifications:read", area: "settings" },
     },
     {
       path: "/notifications",
@@ -161,12 +217,12 @@ const router = createRouter({
     {
       path: "/heartbeats",
       component: HeartbeatsPage,
-      meta: { requiredPermission: "heartbeats:read" },
+      meta: { requiredPermission: "heartbeats:read", area: "settings" },
     },
     {
       path: "/status-pages",
       component: StatusPagesPage,
-      meta: { requiredPermission: "statuspages:read" },
+      meta: { requiredPermission: "statuspages:read", area: "settings" },
     },
     {
       path: "/status/:slug",
@@ -176,7 +232,7 @@ const router = createRouter({
     {
       path: "/sso",
       component: OIDCProvidersPage,
-      meta: { requiredPermission: "oidc:manage" },
+      meta: { requiredPermission: "oidc:manage", area: "settings" },
     },
     {
       path: "/credentials",
@@ -186,15 +242,30 @@ const router = createRouter({
     {
       path: "/credential-providers",
       component: CredentialProvidersPage,
-      meta: { requiredPermission: "credentials:read" },
+      meta: { requiredPermission: "credentials:read", area: "settings" },
     },
     { path: "/memories", component: MemoryPage, meta: { requiredPermission: "memories:read" } },
     {
       path: "/personal-access-tokens",
       component: PersonalAccessTokensPage,
-      meta: { requiredPermission: "tokens:manage" },
+      meta: { requiredPermission: "tokens:manage", area: "settings" },
     },
-    { path: "/system", component: SystemPage, meta: { requiredPermission: "system:read" } },
+    {
+      path: "/system/general",
+      component: SystemGeneralPage,
+      meta: { requiredPermission: "system:read" },
+    },
+    {
+      path: "/system/investigations",
+      component: SystemInvestigationsPage,
+      meta: { requiredPermission: "system:read" },
+    },
+    {
+      path: "/system/incidents",
+      component: SystemIncidentsPage,
+      meta: { requiredPermission: "system:read" },
+    },
+    { path: "/system", redirect: { path: "/system/general" } },
     { path: "/playbooks", component: PlaybookPage, meta: { requiredPermission: "playbooks:read" } },
     {
       path: "/playbooks/:id",

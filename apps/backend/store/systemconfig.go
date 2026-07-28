@@ -35,13 +35,6 @@ type SystemConfigValues struct {
 	GoogleClientSecretEnc  string `json:"google_client_secret_enc,omitempty"`
 	GoogleOAuthRedirectURL string `json:"google_oauth_redirect_url"`
 
-	// Authentication — single-provider OIDC SSO.
-	OIDCEnabled         bool   `json:"oidc_enabled"`
-	OIDCIssuerURL       string `json:"oidc_issuer_url"`
-	OIDCClientID        string `json:"oidc_client_id"`
-	OIDCClientSecretEnc string `json:"oidc_client_secret_enc,omitempty"`
-	OIDCScopes          string `json:"oidc_scopes"`
-
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
@@ -146,23 +139,6 @@ func (s *pgSystemConfigStore) Get() (*SystemConfigValues, error) {
 	if v, ok := r.Config["google_oauth_redirect_url"].(string); ok {
 		out.GoogleOAuthRedirectURL = v
 	}
-
-	// Authentication — OIDC.
-	if v, ok := r.Config["oidc_enabled"].(bool); ok {
-		out.OIDCEnabled = v
-	}
-	if v, ok := r.Config["oidc_issuer_url"].(string); ok {
-		out.OIDCIssuerURL = v
-	}
-	if v, ok := r.Config["oidc_client_id"].(string); ok {
-		out.OIDCClientID = v
-	}
-	if v, ok := r.Config["oidc_client_secret_enc"].(string); ok {
-		out.OIDCClientSecretEnc = v
-	}
-	if v, ok := r.Config["oidc_scopes"].(string); ok {
-		out.OIDCScopes = v
-	}
 	out.UpdatedAt = r.UpdatedAt
 
 	return out, nil
@@ -195,12 +171,6 @@ func (s *pgSystemConfigStore) Save(cfg SystemConfigValues) error {
 		"google_client_id":          cfg.GoogleClientID,
 		"google_client_secret_enc":  cfg.GoogleClientSecretEnc,
 		"google_oauth_redirect_url": cfg.GoogleOAuthRedirectURL,
-
-		"oidc_enabled":           cfg.OIDCEnabled,
-		"oidc_issuer_url":        cfg.OIDCIssuerURL,
-		"oidc_client_id":         cfg.OIDCClientID,
-		"oidc_client_secret_enc": cfg.OIDCClientSecretEnc,
-		"oidc_scopes":            cfg.OIDCScopes,
 	}
 
 	sid := singletonUUID()

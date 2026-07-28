@@ -3,10 +3,10 @@ import { onMounted, onBeforeUnmount, watch, computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { Bot, ChevronLeft, Menu, Loader2 } from "@lucide/vue";
 import Sidebar from "@/components/Sidebar.vue";
+import SettingsSidebar from "@/components/SettingsSidebar.vue";
 import MobileMoreMenu from "@/components/MobileMoreMenu.vue";
 import MobileAgentMenu from "@/components/MobileAgentMenu.vue";
 import GlobalSearchOverlay from "@/components/ui/GlobalSearchOverlay.vue";
-import SettingsDialog from "@/components/ui/settings/SettingsDialog.vue";
 import ToastStack from "@/components/ui/ToastStack.vue";
 import RouteLoadingBar from "@/components/ui/RouteLoadingBar.vue";
 import LoadingSpinner from "@/components/ui/LoadingSpinner.vue";
@@ -16,7 +16,6 @@ import { pageHeader, headerSearchActive, headerSearchState } from "@/lib/pageHea
 import ChatSearchBar from "@/components/ui/ChatSearchBar.vue";
 import { useAuthBootstrap } from "@/composables/useAuthBootstrap";
 import { useSessionKeepAlive } from "@/composables/useSessionKeepAlive";
-import { useSettingsDialogFromQuery } from "@/composables/useSettingsDialogFromQuery";
 import { useSSE } from "@/composables/useSSE";
 import { isActiveRoute } from "@/lib/routing";
 import { setAuthRedirectRouter } from "@/lib/authRedirect";
@@ -45,7 +44,6 @@ const router = useRouter();
 setAuthRedirectRouter(router);
 
 useAuthBootstrap();
-const { showSettings, settingsTab, openSettings, closeSettings } = useSettingsDialogFromQuery();
 
 const moreMenuOpen = ref(false);
 const agentMenuOpen = ref(false);
@@ -145,7 +143,8 @@ onBeforeUnmount(() => {
   >
     <!-- Desktop sidebar -->
     <div class="hidden shrink-0 md:block">
-      <Sidebar />
+      <SettingsSidebar v-if="route.meta.area === 'settings'" />
+      <Sidebar v-else />
     </div>
 
     <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
@@ -330,12 +329,7 @@ onBeforeUnmount(() => {
       </button>
     </nav>
     <MobileAgentMenu v-if="agentMenuOpen && !hideMobileChatChrome" @close="agentMenuOpen = false" />
-    <MobileMoreMenu
-      v-if="moreMenuOpen && !hideMobileChatChrome"
-      @close="moreMenuOpen = false"
-      @open-settings="openSettings()"
-    />
-    <SettingsDialog :open="showSettings" :tab="settingsTab" @close="closeSettings" />
+    <MobileMoreMenu v-if="moreMenuOpen && !hideMobileChatChrome" @close="moreMenuOpen = false" />
     <GlobalSearchOverlay />
     <RouteLoadingBar />
     <ToastStack />

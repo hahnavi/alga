@@ -602,13 +602,6 @@ export type SystemConfigValues = {
   google_client_secret_set: boolean;
   google_oauth_redirect_url: string;
 
-  // Authentication — single-provider OIDC SSO.
-  oidc_enabled: boolean;
-  oidc_issuer_url: string;
-  oidc_client_id: string;
-  oidc_client_secret_set: boolean;
-  oidc_scopes: string;
-
   updated_at?: string;
 };
 

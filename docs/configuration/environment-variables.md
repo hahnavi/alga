@@ -1,6 +1,6 @@
 ---
 title: Environment Variables
-description: Complete reference for every Alga environment variable — database, crypto, Valkey, RabbitMQ, agents, triage, OIDC, email, voice, telemetry, and more.
+description: Complete reference for every Alga environment variable — database, crypto, Valkey, RabbitMQ, agents, triage, email, voice, telemetry, and more.
 ---
 
 # Configuration
@@ -290,18 +290,6 @@ Enables "Sign in with Google" on the login page.
 | `GOOGLE_CLIENT_SECRET`      |         | No       | Google OAuth client secret                                            |
 | `GOOGLE_OAUTH_REDIRECT_URL` |         | No       | Override callback URL (auto-detected from request headers if not set) |
 | `GOOGLE_OAUTH_ENABLED`      | `true`  | No       | Toggle Google Sign-In                                                 |
-
-## OIDC SSO
-
-Single-provider quick config for OIDC SSO. Multiple providers can also be managed via **System → Authentication** (see [OIDC SSO](/integrations/oidc-sso)).
-
-| Variable             | Default                | Required | Description        |
-| -------------------- | ---------------------- | -------- | ------------------ |
-| `OIDC_ENABLED`       | `false`                | No       | Enable OIDC SSO    |
-| `OIDC_ISSUER_URL`    |                        | No       | OIDC issuer URL    |
-| `OIDC_CLIENT_ID`     |                        | No       | OIDC client ID     |
-| `OIDC_CLIENT_SECRET` |                        | No       | OIDC client secret |
-| `OIDC_SCOPES`        | `openid email profile` | No       | OIDC scopes        |
 
 ## Google Meet (War Rooms)
 

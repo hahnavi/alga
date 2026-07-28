@@ -6,8 +6,6 @@ import Button from "@/components/ui/Button.vue";
 import Input from "@/components/ui/Input.vue";
 import FormLabel from "@/components/ui/FormLabel.vue";
 
-defineProps<{ onClose: () => void }>();
-
 const currentPassword = ref("");
 const newPassword = ref("");
 const confirmPassword = ref("");

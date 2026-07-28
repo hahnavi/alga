@@ -1076,25 +1076,6 @@ func (a *App) loadStoredSystemConfig() *store.SystemConfigValues {
 				logger.Warn("failed to decrypt stored Google client secret; falling back to env config", "error", err)
 			}
 		}
-
-		// Authentication — OIDC.
-		a.cfg.OIDCEnabled = storedSysCfg.OIDCEnabled
-		if v := storedSysCfg.OIDCIssuerURL; v != "" {
-			a.cfg.OIDCIssuerURL = v
-		}
-		if v := storedSysCfg.OIDCClientID; v != "" {
-			a.cfg.OIDCClientID = v
-		}
-		if v := storedSysCfg.OIDCScopes; v != "" {
-			a.cfg.OIDCScopes = v
-		}
-		if storedSysCfg.OIDCClientSecretEnc != "" {
-			if pt, err := algacrypto.Default().DecryptString(storedSysCfg.OIDCClientSecretEnc); err == nil {
-				a.cfg.OIDCClientSecret = pt
-			} else {
-				logger.Warn("failed to decrypt stored OIDC client secret; falling back to env config", "error", err)
-			}
-		}
 	}
 	return storedSysCfg
 }

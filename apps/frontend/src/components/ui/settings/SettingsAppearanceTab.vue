@@ -3,8 +3,6 @@ import { Sun, Moon, Monitor } from "@lucide/vue";
 import { useTheme, type ThemeMode } from "@/lib/theme";
 import { useFont, fontOptions } from "@/lib/font";
 
-defineProps<{ onClose: () => void }>();
-
 const { mode: themeMode, setMode: setThemeMode } = useTheme();
 const { current: currentFont, setFont } = useFont();
 

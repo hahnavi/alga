@@ -4,28 +4,37 @@ import {
   AlertTriangle,
   BarChart3,
   Bell,
+  BellRing,
   BookOpen,
   Bot,
   Brain,
   Clock,
   FileText,
   HeartPulse,
+  Key,
   KeyRound,
   Layers,
-  PlugZap,
+  Link2,
+  Lock,
+  MessageSquare,
+  Palette,
   Route,
-  Settings,
   Shield,
   ShieldCheck,
+  SlidersHorizontal,
+  User,
   Users,
+  Webhook,
+  Workflow,
 } from "@lucide/vue";
 import { useAuthStore } from "@/stores/auth";
 
 /**
  * Single source of truth for the app's navigation structure.
  *
- * Three consumers read from here:
+ * Consumers:
  *   - `Sidebar.vue` (full desktop nav) → `sidebarSections`
+ *   - `SettingsSidebar.vue` (settings-area desktop nav) → `settingsSections`
  *   - `MobileMoreMenu.vue` (the "More" bottom-sheet on mobile)
  *   - `MobileAgentMenu.vue` (the "Agents" bottom-sheet on mobile)
  *
@@ -83,6 +92,14 @@ function buildAgentsGroup(canManageAgents: boolean, canReadCreds: boolean): NavG
   };
 }
 
+function buildSystemItems(): NavFlat[] {
+  return [
+    { to: "/system/general", icon: SlidersHorizontal, label: "General" },
+    { to: "/system/investigations", icon: Workflow, label: "Investigations" },
+    { to: "/system/incidents", icon: FileText, label: "Incidents" },
+  ];
+}
+
 /**
  * Returns the four nav surfaces that depend on the auth store. The
  * `mobileMorePaths` set is exposed so the mobile bottom-bar can
@@ -100,12 +117,19 @@ export function useNavSections() {
       readPlaybooks: auth.hasPermission("playbooks:read"),
       readEscalation: auth.hasPermission("escalation:read"),
       writeRoutes: auth.hasPermission("routes:write"),
-      readHeartbeats: auth.hasPermission("heartbeats:read"),
-      readStatuspages: auth.hasPermission("statuspages:read"),
-      manageOidc: auth.hasPermission("oidc:manage"),
-      manageUsers: auth.hasPermission("users:manage"),
+      readIntegrations: auth.hasPermission("integrations:read"),
+      manageTokens: auth.hasPermission("tokens:manage"),
       readSystem: auth.hasPermission("system:read"),
     };
+
+    const integrationsItems: NavFlat[] = [
+      ...(p.readIntegrations
+        ? [{ to: "/communication-channels", icon: MessageSquare, label: "Channels" }]
+        : []),
+      ...(p.manageTokens ? [{ to: "/incoming-webhooks", icon: Webhook, label: "Webhooks" }] : []),
+    ];
+
+    const configureItems: NavFlat[] = [...(p.readSystem ? buildSystemItems() : [])];
 
     return [
       {
@@ -125,11 +149,16 @@ export function useNavSections() {
         ],
       },
       {
-        label: "Automate",
-        items: [buildAgentsGroup(p.manageAgents, p.readCreds)],
+        label: "AI",
+        items: [
+          ...(p.manageAgents ? [{ to: "/agents", icon: Bot, label: "Agents" }] : []),
+          { to: "/knowledge", icon: BookOpen, label: "Knowledge" },
+          { to: "/memories", icon: Brain, label: "Memory" },
+          ...(p.readCreds ? [{ to: "/credentials", icon: KeyRound, label: "Secrets" }] : []),
+        ],
       },
       {
-        label: "Operate",
+        label: "Operations",
         items: [
           { to: "/services", icon: Layers, label: "Services" },
           { to: "/on-call", icon: Clock, label: "On-Call" },
@@ -143,34 +172,67 @@ export function useNavSections() {
             : []),
         ],
       },
-      {
-        label: "Configure",
-        items: [
-          { to: "/routes", icon: Route, label: "Routes" },
-          { to: "/integrations", icon: PlugZap, label: "Integrations" },
-          ...(p.readHeartbeats
-            ? [{ to: "/heartbeats", icon: HeartPulse, label: "Heartbeats" }]
-            : []),
-          ...(p.readStatuspages
-            ? [{ to: "/status-pages", icon: Activity, label: "Status Pages" }]
-            : []),
-          ...(p.manageOidc ? [{ to: "/sso", icon: KeyRound, label: "SSO" }] : []),
-          ...(p.manageUsers ? [{ to: "/users", icon: Users, label: "Users" }] : []),
-          ...(p.readSystem ? [{ to: "/system", icon: Settings, label: "System" }] : []),
-        ],
-      },
+      ...(integrationsItems.length > 0
+        ? [{ label: "Integrations", items: integrationsItems }]
+        : []),
+      ...(configureItems.length > 0 ? [{ label: "Configure", items: configureItems }] : []),
+    ];
+  });
+
+  const settingsSections = computed<NavSectionFlat[]>(() => {
+    const p = {
+      manageTokens: auth.hasPermission("tokens:manage"),
+      readNotifications: auth.hasPermission("notifications:read"),
+      readCreds: auth.hasPermission("credentials:read"),
+      readHeartbeats: auth.hasPermission("heartbeats:read"),
+      readStatuspages: auth.hasPermission("statuspages:read"),
+      manageOidc: auth.hasPermission("oidc:manage"),
+      manageUsers: auth.hasPermission("users:manage"),
+      readSystem: auth.hasPermission("system:read"),
+    };
+
+    const account: NavFlat[] = [
+      { to: "/settings/general", icon: User, label: "General" },
+      { to: "/settings/appearance", icon: Palette, label: "Appearance" },
+      { to: "/settings/security", icon: Lock, label: "Security" },
+      { to: "/settings/integrations", icon: Link2, label: "Connected Apps" },
+      ...(p.manageTokens
+        ? [{ to: "/personal-access-tokens", icon: Key, label: "Access Tokens" }]
+        : []),
+      ...(p.readNotifications
+        ? [{ to: "/notification-preferences", icon: BellRing, label: "Notifications" }]
+        : []),
+    ];
+
+    const workspace: NavFlat[] = [
+      { to: "/routes", icon: Route, label: "Routes" },
+      ...(p.readHeartbeats ? [{ to: "/heartbeats", icon: HeartPulse, label: "Heartbeats" }] : []),
+      ...(p.readStatuspages
+        ? [{ to: "/status-pages", icon: Activity, label: "Status Pages" }]
+        : []),
+      ...(p.readCreds
+        ? [{ to: "/credential-providers", icon: KeyRound, label: "Credential Providers" }]
+        : []),
+      ...(p.manageOidc ? [{ to: "/sso", icon: KeyRound, label: "SSO" }] : []),
+      ...(p.readSystem
+        ? [{ to: "/settings/authentication", icon: ShieldCheck, label: "Authentication" }]
+        : []),
+      ...(p.manageUsers ? [{ to: "/users", icon: Users, label: "Users" }] : []),
+    ];
+
+    return [
+      { label: "Account", items: account },
+      { label: "Workspace", items: workspace },
     ];
   });
 
   const mobileMoreSections = computed<NavSectionFlat[]>(() => {
     const p = {
       readPostmortem: auth.hasPermission("postmortems:read"),
-      writeOncall: auth.hasPermission("oncall:write"),
+      readEscalation: auth.hasPermission("escalation:read"),
       writeRoutes: auth.hasPermission("routes:write"),
-      readHeartbeats: auth.hasPermission("heartbeats:read"),
-      readStatuspages: auth.hasPermission("statuspages:read"),
-      manageOidc: auth.hasPermission("oidc:manage"),
-      manageUsers: auth.hasPermission("users:manage"),
+      readIntegrations: auth.hasPermission("integrations:read"),
+      manageTokens: auth.hasPermission("tokens:manage"),
       readSystem: auth.hasPermission("system:read"),
     };
 
@@ -189,34 +251,38 @@ export function useNavSections() {
       { to: "/on-call", icon: Clock, label: "On-Call" },
       { to: "/teams", icon: Users, label: "Teams" },
     ];
-    if (p.writeOncall) {
+    if (p.readEscalation) {
       operateItems.push({ to: "/escalation-policies", icon: Shield, label: "Escalation" });
     }
     if (p.writeRoutes) {
       operateItems.push({ to: "/maintenance", icon: ShieldCheck, label: "Maintenance" });
     }
-    result.push({ label: "Operate", items: operateItems });
+    result.push({ label: "Operations", items: operateItems });
 
-    const configureItems: NavFlat[] = [
-      { to: "/routes", icon: Route, label: "Routes" },
-      { to: "/integrations", icon: PlugZap, label: "Integrations" },
-    ];
-    if (p.readHeartbeats) {
-      configureItems.push({ to: "/heartbeats", icon: HeartPulse, label: "Heartbeats" });
+    const integrationsItems: NavFlat[] = [];
+    if (p.readIntegrations) {
+      integrationsItems.push({
+        to: "/communication-channels",
+        icon: MessageSquare,
+        label: "Channels",
+      });
     }
-    if (p.readStatuspages) {
-      configureItems.push({ to: "/status-pages", icon: Activity, label: "Status Pages" });
+    if (p.manageTokens) {
+      integrationsItems.push({ to: "/incoming-webhooks", icon: Webhook, label: "Webhooks" });
     }
-    if (p.manageOidc) {
-      configureItems.push({ to: "/sso", icon: KeyRound, label: "SSO" });
+    if (integrationsItems.length > 0) {
+      result.push({ label: "Integrations", items: integrationsItems });
     }
-    if (p.manageUsers) {
-      configureItems.push({ to: "/users", icon: Users, label: "Users" });
-    }
+
+    const configureItems: NavFlat[] = [];
     if (p.readSystem) {
-      configureItems.push({ to: "/system", icon: Settings, label: "System" });
+      configureItems.push(...buildSystemItems());
     }
-    result.push({ label: "Configure", items: configureItems });
+    if (configureItems.length > 0) {
+      result.push({ label: "Configure", items: configureItems });
+    }
+
+    result.push(...settingsSections.value);
 
     return result;
   });
@@ -239,6 +305,7 @@ export function useNavSections() {
 
   return {
     sidebarSections,
+    settingsSections,
     mobileMoreSections,
     mobileAgentItems,
     mobileMorePaths,

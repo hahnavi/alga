@@ -7,8 +7,6 @@ import { api } from "@/lib/api";
 import { getErrorMessage } from "@/lib/error";
 import Button from "@/components/ui/Button.vue";
 
-defineProps<{ onClose: () => void }>();
-
 const auth = useAuthStore();
 
 const slackAuthorizing = ref(false);

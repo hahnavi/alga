@@ -736,7 +736,7 @@ class GetKnowledgeTests(unittest.IsolatedAsyncioTestCase):
 class ResolutionDocsTests(unittest.IsolatedAsyncioTestCase):
     async def test_set_resolution_docs_requires_a_field(self):
         module = _load_register_module()
-        raw = await module._alga_set_incident_resolution_docs({"incident_id": "42"})
+        raw = await module._alga_set_incident_resolution_docs({"incident_number": "42"})
         got = json.loads(raw)
         self.assertIn("error", got)
         self.assertIn("at least one of", got["error"])
@@ -752,7 +752,7 @@ class ResolutionDocsTests(unittest.IsolatedAsyncioTestCase):
 
         module._inv_tool = fake_inv_tool
         raw = await module._alga_set_incident_resolution_docs({
-            "incident_id": "42",
+            "incident_number": "42",
             "summary": "Resolved.",
             "impact_assessment": "No impact.",
             "actions_taken": "Verified.",
@@ -763,7 +763,7 @@ class ResolutionDocsTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(got["success"])
         self.assertEqual(captured["chat_id"], "incident_coord_42")
         self.assertEqual(captured["command"]["op"], "set_incident_resolution_docs")
-        self.assertEqual(captured["command"]["incident_id"], "42")
+        self.assertEqual(captured["command"]["incident_number"], 42)
         self.assertEqual(captured["command"]["summary"], "Resolved.")
         self.assertEqual(captured["command"]["impact_assessment"], "No impact.")
         self.assertEqual(captured["command"]["actions_taken"], "Verified.")
@@ -780,7 +780,7 @@ class ResolutionDocsTests(unittest.IsolatedAsyncioTestCase):
 
         module._inv_tool = fake_inv_tool
         raw = await module._alga_resolve_incident({
-            "incident_id": "24",
+            "incident_number": "24",
             "reason": "closed",
             "summary": "S.",
             "impact_assessment": "I.",
@@ -807,7 +807,7 @@ class ResolutionDocsTests(unittest.IsolatedAsyncioTestCase):
             return '{"success": true}'
 
         module._inv_tool = fake_inv_tool
-        await module._alga_resolve_incident({"incident_id": "24", "reason": "  "})
+        await module._alga_resolve_incident({"incident_number": "24", "reason": "  "})
         self.assertNotIn("summary", captured["command"])
         self.assertNotIn("impact_assessment", captured["command"])
         self.assertNotIn("actions_taken", captured["command"])
@@ -858,7 +858,7 @@ class ResolutionDocsTests(unittest.IsolatedAsyncioTestCase):
 
         module._inv_tool = fake_inv_tool
         raw = await module._alga_publish_status_update({
-            "incident_id": "24",
+            "incident_number": "24",
             "message": "We have identified the cause and are rolling out a fix.",
             "status_level": "identified",
             "source_coordination_message_id": "msg-7",
@@ -873,7 +873,7 @@ class ResolutionDocsTests(unittest.IsolatedAsyncioTestCase):
     async def test_publish_status_update_requires_valid_status_level(self):
         module = _load_register_module()
         raw = await module._alga_publish_status_update({
-            "incident_id": "24",
+            "incident_number": "24",
             "message": "x",
             "status_level": "bogus",
         })

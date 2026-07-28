@@ -22,17 +22,17 @@ function isActive(to: string) {
 <template>
   <aside
     v-bind="attrs"
-    class="flex h-screen w-[220px] shrink-0 flex-col overflow-visible border-r border-[var(--border-primary)] bg-[var(--bg-sidebar)]"
+    class="flex h-screen w-[240px] shrink-0 flex-col overflow-visible border-r border-[var(--border-primary)] bg-[var(--bg-sidebar)]"
   >
     <div class="flex h-14 shrink-0 items-center gap-2 border-b border-[var(--border-primary)] px-2">
       <router-link
         to="/"
-        class="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-[var(--text-muted)] transition-colors hover:bg-[var(--sidebar-hover,rgb(148_163_184/0.1))] hover:text-[var(--text-primary)]"
+        class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-[var(--text-muted)] transition-colors hover:bg-[var(--sidebar-hover,rgb(148_163_184/0.1))] hover:text-[var(--text-primary)]"
         @mouseenter="prefetch('/')"
         @focus="prefetch('/')"
       >
         <ArrowLeft class="h-4 w-4 shrink-0" />
-        <span>Back to Alga</span>
+        <span>Back to Dashboard</span>
       </router-link>
     </div>
 

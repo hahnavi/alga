@@ -14,7 +14,8 @@ declare module "vue-router" {
 const DashboardPage = () => import("@/pages/DashboardPage.vue");
 const AlertsPage = () => import("@/pages/AlertsPage.vue");
 const RoutesPage = () => import("@/pages/RoutesPage.vue");
-const IntegrationsPage = () => import("@/pages/IntegrationsPage.vue");
+const CommunicationChannelsPage = () => import("@/pages/CommunicationChannelsPage.vue");
+const IncomingWebhooksPage = () => import("@/pages/IncomingWebhooksPage.vue");
 const LoginPage = () => import("@/pages/LoginPage.vue");
 const UsersPage = () => import("@/pages/UsersPage.vue");
 const AlertDetailPage = () => import("@/pages/AlertDetailPage.vue");
@@ -23,7 +24,9 @@ const AgentsPage = () => import("@/pages/AgentsPage.vue");
 const NotificationsPage = () => import("@/pages/NotificationsPage.vue");
 const KnowledgePage = () => import("@/pages/KnowledgePage.vue");
 const MemoryPage = () => import("@/pages/MemoryPage.vue");
-const SystemPage = () => import("@/pages/SystemPage.vue");
+const SystemGeneralPage = () => import("@/pages/system/SystemGeneralPage.vue");
+const SystemInvestigationsPage = () => import("@/pages/system/SystemInvestigationsPage.vue");
+const SystemIncidentsPage = () => import("@/pages/system/SystemIncidentsPage.vue");
 const MaintenanceWindowsPage = () => import("@/pages/MaintenanceWindowsPage.vue");
 const HeartbeatsPage = () => import("@/pages/HeartbeatsPage.vue");
 const StatusPagesPage = () => import("@/pages/StatusPagesPage.vue");
@@ -50,6 +53,7 @@ const SettingsGeneralPage = () => import("@/pages/settings/SettingsGeneralPage.v
 const SettingsAppearancePage = () => import("@/pages/settings/SettingsAppearancePage.vue");
 const SettingsSecurityPage = () => import("@/pages/settings/SettingsSecurityPage.vue");
 const SettingsIntegrationsPage = () => import("@/pages/settings/SettingsIntegrationsPage.vue");
+const SettingsAuthenticationPage = () => import("@/pages/settings/SettingsAuthenticationPage.vue");
 
 const router = createRouter({
   history: createWebHistory(),
@@ -103,6 +107,11 @@ const router = createRouter({
       meta: { area: "settings" },
     },
     {
+      path: "/settings/authentication",
+      component: SettingsAuthenticationPage,
+      meta: { requiredPermission: "system:read", area: "settings" },
+    },
+    {
       path: "/forgot-password",
       component: () => import("@/pages/ForgotPasswordPage.vue"),
       meta: { public: true },
@@ -121,10 +130,16 @@ const router = createRouter({
       meta: { requiredPermission: "routes:read", area: "settings" },
     },
     {
-      path: "/integrations",
-      component: IntegrationsPage,
-      meta: { requiredPermission: "integrations:read", area: "settings" },
+      path: "/communication-channels",
+      component: CommunicationChannelsPage,
+      meta: { requiredPermission: "integrations:read" },
     },
+    {
+      path: "/incoming-webhooks",
+      component: IncomingWebhooksPage,
+      meta: { requiredPermission: "tokens:manage" },
+    },
+    { path: "/integrations", redirect: { path: "/communication-channels" } },
     { path: "/agents", component: AgentsPage, meta: { requiredPermission: "tokens:manage" } },
     {
       path: "/agents/:agent_token_id/chat",
@@ -236,10 +251,21 @@ const router = createRouter({
       meta: { requiredPermission: "tokens:manage", area: "settings" },
     },
     {
-      path: "/system",
-      component: SystemPage,
-      meta: { requiredPermission: "system:read", area: "settings" },
+      path: "/system/general",
+      component: SystemGeneralPage,
+      meta: { requiredPermission: "system:read" },
     },
+    {
+      path: "/system/investigations",
+      component: SystemInvestigationsPage,
+      meta: { requiredPermission: "system:read" },
+    },
+    {
+      path: "/system/incidents",
+      component: SystemIncidentsPage,
+      meta: { requiredPermission: "system:read" },
+    },
+    { path: "/system", redirect: { path: "/system/general" } },
     { path: "/playbooks", component: PlaybookPage, meta: { requiredPermission: "playbooks:read" } },
     {
       path: "/playbooks/:id",

@@ -83,32 +83,34 @@ export function usePageHeaderActions(
       );
     }
 
-    actions.push(
-      h(
-        "button",
-        {
-          type: "button",
-          class: HEADER_ICON_BTN_CLASS,
-          "aria-label": showSearch.value ? "Close search" : "Search",
-          title: "Search",
-          onClick: () => {
-            const wasOpen = showSearch.value;
-            showSearch.value = !showSearch.value;
-            if (wasOpen) {
-              if (searchInput) searchInput.value = "";
-              options.onSearchInput?.();
-            }
-            syncHeader();
-            if (showSearch.value) {
-              nextTick(() => {
-                document.querySelector<HTMLInputElement>("[data-page-header-search]")?.focus();
-              });
-            }
+    if (searchInput) {
+      actions.push(
+        h(
+          "button",
+          {
+            type: "button",
+            class: HEADER_ICON_BTN_CLASS,
+            "aria-label": showSearch.value ? "Close search" : "Search",
+            title: "Search",
+            onClick: () => {
+              const wasOpen = showSearch.value;
+              showSearch.value = !showSearch.value;
+              if (wasOpen) {
+                searchInput.value = "";
+                options.onSearchInput?.();
+              }
+              syncHeader();
+              if (showSearch.value) {
+                nextTick(() => {
+                  document.querySelector<HTMLInputElement>("[data-page-header-search]")?.focus();
+                });
+              }
+            },
           },
-        },
-        [h(showSearch.value ? X : Search, { class: "h-4 w-4", "aria-hidden": "true" })],
-      ),
-    );
+          [h(showSearch.value ? X : Search, { class: "h-4 w-4", "aria-hidden": "true" })],
+        ),
+      );
+    }
 
     if (filtersEnabled) {
       actions.push(

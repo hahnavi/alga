@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, watch, computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { Bot, ChevronLeft, Menu, Loader2, Settings } from "@lucide/vue";
+import { Bot, ChevronLeft, Menu, Loader2 } from "@lucide/vue";
 import Sidebar from "@/components/Sidebar.vue";
 import SettingsSidebar from "@/components/SettingsSidebar.vue";
 import MobileMoreMenu from "@/components/MobileMoreMenu.vue";
@@ -21,7 +21,7 @@ import { isActiveRoute } from "@/lib/routing";
 import { setAuthRedirectRouter } from "@/lib/authRedirect";
 import { pageTitleForPath } from "@/lib/pageTitles";
 import { getAgentBrandIconSrc } from "@/lib/agentAvatar";
-import { CARD_ICON_BTN_CLASS, HEADER_ICON_BTN_CLASS } from "@/lib/uiClasses";
+import { CARD_ICON_BTN_CLASS } from "@/lib/uiClasses";
 import { useRoutePrefetch } from "@/composables/useRoutePrefetch";
 import { useGlobalSearch } from "@/composables/useGlobalSearch";
 import { useNavSections, TOP_NAV_ITEMS } from "@/lib/nav";
@@ -50,8 +50,6 @@ const agentMenuOpen = ref(false);
 
 const { mobileMorePaths } = useNavSections();
 const navItems = TOP_NAV_ITEMS;
-
-const inSettingsArea = computed(() => route.meta.area === "settings");
 
 const agentGroupActive = computed(() => {
   const p = route.path;
@@ -145,7 +143,7 @@ onBeforeUnmount(() => {
   >
     <!-- Desktop sidebar -->
     <div class="hidden shrink-0 md:block">
-      <SettingsSidebar v-if="inSettingsArea" />
+      <SettingsSidebar v-if="route.meta.area === 'settings'" />
       <Sidebar v-else />
     </div>
 
@@ -269,17 +267,6 @@ onBeforeUnmount(() => {
               :key="`a-${i}`"
               :is="action"
             />
-            <router-link
-              v-if="!inSettingsArea"
-              to="/settings/general"
-              aria-label="Settings"
-              title="Settings"
-              :class="[HEADER_ICON_BTN_CLASS, 'hidden md:inline-flex']"
-              @mouseenter="prefetch('/settings/general')"
-              @focus="prefetch('/settings/general')"
-            >
-              <Settings class="h-4 w-4" aria-hidden="true" />
-            </router-link>
           </div>
         </template>
       </header>

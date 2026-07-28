@@ -1,27 +1,15 @@
 ---
 title: OIDC SSO
-description: Single sign-on via Okta, Keycloak, Google, Auth0, and other OIDC identity providers — single and multi-provider configuration.
+description: Single sign-on via Okta, Keycloak, Google, Auth0, and other OIDC identity providers — multi-provider configuration.
 ---
 
 # OIDC SSO
 
 Alga supports **multiple OIDC identity providers** (e.g. Okta, Keycloak, Google, Auth0) for single sign-on. Users authenticate against their IdP; Alga verifies the ID token and links the OIDC identity to a local user account.
 
-## Quick Config (Single Provider)
-
-For a single provider, set these environment variables (also editable via **System → Authentication**):
-
-| Variable             | Default                | Description        |
-| -------------------- | ---------------------- | ------------------ |
-| `OIDC_ENABLED`       | `false`                | Enable OIDC SSO    |
-| `OIDC_ISSUER_URL`    |                        | OIDC issuer URL    |
-| `OIDC_CLIENT_ID`     |                        | OIDC client ID     |
-| `OIDC_CLIENT_SECRET` |                        | OIDC client secret |
-| `OIDC_SCOPES`        | `openid email profile` | OIDC scopes        |
-
 ## Multi-Provider Management
 
-Multiple providers are managed from **System → Authentication** (requires the `oidc:manage` permission).
+Providers are managed from the **SSO Providers** page (`/sso`) (requires the `oidc:manage` permission).
 
 ### Provider Fields
 

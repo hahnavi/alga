@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, useId } from "vue";
 import { useRouter } from "vue-router";
-import { ChevronDown, KeyRound, LogOut, Settings } from "@lucide/vue";
+import { ChevronDown, LogOut } from "@lucide/vue";
 import { useAuthStore } from "@/stores/auth";
 import UserLabel from "@/components/ui/UserLabel.vue";
 import { useDropdownLifecycle } from "@/composables/useDropdownLifecycle";
 import { usePopoverPosition, type PopoverPlacement } from "@/composables/usePopoverPosition";
-import { useRoutePrefetch } from "@/composables/useRoutePrefetch";
 import { ACCOUNT_MENU_ITEM_CLASS } from "@/lib/uiClasses";
 
 defineOptions({ inheritAttrs: false });
@@ -25,7 +24,6 @@ const props = withDefaults(
 const menuId = useId();
 const auth = useAuthStore();
 const router = useRouter();
-const { prefetch } = useRoutePrefetch();
 const rootRef = ref<HTMLElement | null>(null);
 const contentRef = ref<HTMLElement | null>(null);
 const open = ref(false);
@@ -113,30 +111,6 @@ function toggle() {
             {{ auth.user.email }}
           </p>
         </div>
-        <router-link
-          to="/settings/general"
-          :class="ACCOUNT_MENU_ITEM_CLASS"
-          role="menuitem"
-          @click="close()"
-          @mouseenter="prefetch('/settings/general')"
-          @focus="prefetch('/settings/general')"
-        >
-          <Settings class="h-4 w-4 shrink-0" />
-          Settings
-        </router-link>
-
-        <router-link
-          to="/personal-access-tokens"
-          :class="ACCOUNT_MENU_ITEM_CLASS"
-          role="menuitem"
-          @click="close()"
-          @mouseenter="prefetch('/personal-access-tokens')"
-          @focus="prefetch('/personal-access-tokens')"
-        >
-          <KeyRound class="h-4 w-4 shrink-0" />
-          Access Tokens
-        </router-link>
-
         <button
           type="button"
           :class="ACCOUNT_MENU_ITEM_CLASS"

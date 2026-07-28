@@ -137,12 +137,6 @@ type Config struct {
 	GoogleOAuthRedirectURL string `yaml:"google_oauth_redirect_url"`
 	GoogleOAuthEnabled     bool   `yaml:"google_oauth_enabled"`
 
-	// OIDC SSO (single-provider quick config managed via system settings).
-	OIDCEnabled      bool   `yaml:"oidc_enabled"`
-	OIDCIssuerURL    string `yaml:"oidc_issuer_url"`
-	OIDCClientID     string `yaml:"oidc_client_id"`
-	OIDCClientSecret string `yaml:"oidc_client_secret"`
-	OIDCScopes       string `yaml:"oidc_scopes"`
 	// AgentSSEAllowedOrigins is a comma-separated list of allowed Origin headers for the agent SSE endpoint; empty allows all.
 	AgentSSEAllowedOrigins string `yaml:"agent_sse_allowed_origins"`
 
@@ -307,7 +301,6 @@ func Defaults() *Config {
 		SlackIncidentChannelTriggerStatus:        "active",
 		SlackIncidentChannelArchiveOnClose:       true,
 		GoogleOAuthEnabled:                       true,
-		OIDCScopes:                               "openid email profile",
 		// Outbox retention: keep published outbox rows for 7 days so operators
 		// can audit recent event delivery, then the outbox worker prunes them.
 		OutboxRetention: 7 * 24 * time.Hour,
@@ -664,23 +657,6 @@ func Load() (*Config, error) {
 		if parsed, err := strconv.ParseBool(v); err == nil {
 			cfg.GoogleOAuthEnabled = parsed
 		}
-	}
-	if v := os.Getenv("OIDC_ENABLED"); v != "" {
-		if parsed, err := strconv.ParseBool(v); err == nil {
-			cfg.OIDCEnabled = parsed
-		}
-	}
-	if v := os.Getenv("OIDC_ISSUER_URL"); v != "" {
-		cfg.OIDCIssuerURL = v
-	}
-	if v := os.Getenv("OIDC_CLIENT_ID"); v != "" {
-		cfg.OIDCClientID = v
-	}
-	if v := os.Getenv("OIDC_CLIENT_SECRET"); v != "" {
-		cfg.OIDCClientSecret = v
-	}
-	if v := os.Getenv("OIDC_SCOPES"); v != "" {
-		cfg.OIDCScopes = v
 	}
 	if v := os.Getenv("GOOGLE_MEET_ENABLED"); v != "" {
 		if parsed, err := strconv.ParseBool(v); err == nil {

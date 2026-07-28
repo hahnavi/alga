@@ -257,8 +257,6 @@ func TestGetSystemConfig_AuthSecretsMasked(t *testing.T) {
 	cfg := &config.Config{
 		GoogleClientID:     "google-client-id",
 		GoogleClientSecret: "super-secret-value",
-		OIDCClientID:       "oidc-client-id",
-		OIDCClientSecret:   "oidc-secret-value",
 	}
 	_, _, mux, _ := newSystemConfigTestServer(t, cfg)
 
@@ -273,9 +271,6 @@ func TestGetSystemConfig_AuthSecretsMasked(t *testing.T) {
 	if strings.Contains(body, "super-secret-value") {
 		t.Fatal("Google client secret must not appear in GET response")
 	}
-	if strings.Contains(body, "oidc-secret-value") {
-		t.Fatal("OIDC client secret must not appear in GET response")
-	}
 
 	var resp map[string]any
 	if err := decodeResponse(t, rec.Body.Bytes(), &resp); err != nil {
@@ -284,17 +279,11 @@ func TestGetSystemConfig_AuthSecretsMasked(t *testing.T) {
 	if resp["google_client_secret_set"] != true {
 		t.Fatalf("expected google_client_secret_set=true, got %v", resp["google_client_secret_set"])
 	}
-	if resp["oidc_client_secret_set"] != true {
-		t.Fatalf("expected oidc_client_secret_set=true, got %v", resp["oidc_client_secret_set"])
-	}
 	if resp["google_client_id"] != "google-client-id" {
 		t.Fatalf("expected google_client_id=google-client-id, got %v", resp["google_client_id"])
 	}
 	if _, ok := resp["google_client_secret"]; ok {
 		t.Fatal("google_client_secret must not be present in GET response")
-	}
-	if _, ok := resp["oidc_client_secret"]; ok {
-		t.Fatal("oidc_client_secret must not be present in GET response")
 	}
 }
 
@@ -306,12 +295,7 @@ func TestPutSystemConfig_AuthRoundTrip(t *testing.T) {
 		"google_oauth_enabled": true,
 		"google_client_id": "g-id",
 		"google_client_secret": "g-secret",
-		"google_oauth_redirect_url": "https://alga.example/callback",
-		"oidc_enabled": true,
-		"oidc_issuer_url": "https://issuer.example",
-		"oidc_client_id": "o-id",
-		"oidc_client_secret": "o-secret",
-		"oidc_scopes": "openid email"
+		"google_oauth_redirect_url": "https://alga.example/callback"
 	}`)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
@@ -323,20 +307,8 @@ func TestPutSystemConfig_AuthRoundTrip(t *testing.T) {
 	if srv.cfg.GoogleClientSecret != "g-secret" {
 		t.Fatalf("expected cfg.GoogleClientSecret=g-secret, got %q", srv.cfg.GoogleClientSecret)
 	}
-	if srv.cfg.OIDCClientSecret != "o-secret" {
-		t.Fatalf("expected cfg.OIDCClientSecret=o-secret, got %q", srv.cfg.OIDCClientSecret)
-	}
 	if srv.cfg.GoogleClientID != "g-id" {
 		t.Fatalf("expected cfg.GoogleClientID=g-id, got %q", srv.cfg.GoogleClientID)
-	}
-	if !srv.cfg.OIDCEnabled {
-		t.Fatal("expected cfg.OIDCEnabled=true")
-	}
-	if srv.cfg.OIDCIssuerURL != "https://issuer.example" {
-		t.Fatalf("expected cfg.OIDCIssuerURL, got %q", srv.cfg.OIDCIssuerURL)
-	}
-	if srv.cfg.OIDCScopes != "openid email" {
-		t.Fatalf("expected cfg.OIDCScopes=openid email, got %q", srv.cfg.OIDCScopes)
 	}
 
 	// Persisted store must hold ciphertext, not plaintext.
@@ -344,14 +316,8 @@ func TestPutSystemConfig_AuthRoundTrip(t *testing.T) {
 	if saved.GoogleClientSecretEnc == "" || strings.Contains(saved.GoogleClientSecretEnc, "g-secret") {
 		t.Fatalf("expected encrypted Google secret, got %q", saved.GoogleClientSecretEnc)
 	}
-	if saved.OIDCClientSecretEnc == "" || strings.Contains(saved.OIDCClientSecretEnc, "o-secret") {
-		t.Fatalf("expected encrypted OIDC secret, got %q", saved.OIDCClientSecretEnc)
-	}
 	if saved.GoogleClientID != "g-id" {
 		t.Fatalf("expected persisted google_client_id=g-id, got %q", saved.GoogleClientID)
-	}
-	if saved.OIDCIssuerURL != "https://issuer.example" {
-		t.Fatalf("expected persisted oidc_issuer_url, got %q", saved.OIDCIssuerURL)
 	}
 }
 
@@ -359,11 +325,10 @@ func TestPutSystemConfig_AuthEmptySecretPreserved(t *testing.T) {
 	installAPITestCrypto(t)
 	srv, _, mux, _ := newSystemConfigTestServer(t, &config.Config{
 		GoogleClientSecret: "existing-secret",
-		OIDCClientSecret:   "existing-oidc",
 	})
 
 	// Saving other auth fields with an empty secret must not clear the existing secret.
-	rec := putSystemConfig(t, mux, `{"google_client_id":"new-id","google_client_secret":"","oidc_client_id":"new-oidc-id"}`)
+	rec := putSystemConfig(t, mux, `{"google_client_id":"new-id","google_client_secret":""}`)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -373,13 +338,7 @@ func TestPutSystemConfig_AuthEmptySecretPreserved(t *testing.T) {
 	if srv.cfg.GoogleClientSecret != "existing-secret" {
 		t.Fatalf("expected GoogleClientSecret preserved, got %q", srv.cfg.GoogleClientSecret)
 	}
-	if srv.cfg.OIDCClientSecret != "existing-oidc" {
-		t.Fatalf("expected OIDCClientSecret preserved, got %q", srv.cfg.OIDCClientSecret)
-	}
 	if srv.cfg.GoogleClientID != "new-id" {
 		t.Fatalf("expected GoogleClientID=new-id, got %q", srv.cfg.GoogleClientID)
-	}
-	if srv.cfg.OIDCClientID != "new-oidc-id" {
-		t.Fatalf("expected OIDCClientID=new-oidc-id, got %q", srv.cfg.OIDCClientID)
 	}
 }

@@ -56,11 +56,6 @@ func (s *Server) handleGetSystemConfig(w http.ResponseWriter, r *http.Request) {
 		"google_client_id":          cfg.GoogleClientID,
 		"google_client_secret_set":  cfg.GoogleClientSecret != "",
 		"google_oauth_redirect_url": cfg.GoogleOAuthRedirectURL,
-		"oidc_enabled":              cfg.OIDCEnabled,
-		"oidc_issuer_url":           cfg.OIDCIssuerURL,
-		"oidc_client_id":            cfg.OIDCClientID,
-		"oidc_client_secret_set":    cfg.OIDCClientSecret != "",
-		"oidc_scopes":               cfg.OIDCScopes,
 	}
 	if !updatedAt.IsZero() {
 		resp["updated_at"] = updatedAt.UTC().Format(time.RFC3339)
@@ -103,11 +98,6 @@ func (s *Server) handlePutSystemConfig(w http.ResponseWriter, r *http.Request) {
 		GoogleClientID         *string
 		GoogleClientSecret     *string // plaintext; only set when the caller provides a new value
 		GoogleOAuthRedirectURL *string
-		OIDCEnabled            *bool
-		OIDCIssuerURL          *string
-		OIDCClientID           *string
-		OIDCClientSecret       *string // plaintext; only set when the caller provides a new value
-		OIDCScopes             *string
 	}
 
 	var upd configUpdate
@@ -267,29 +257,6 @@ func (s *Server) handlePutSystemConfig(w http.ResponseWriter, r *http.Request) {
 		upd.GoogleOAuthRedirectURL = &s
 	}
 
-	// --- Authentication: OIDC ---
-	if v, ok := req["oidc_enabled"].(bool); ok {
-		upd.OIDCEnabled = &v
-	}
-	if v, ok := req["oidc_issuer_url"].(string); ok {
-		s := strings.TrimSpace(v)
-		upd.OIDCIssuerURL = &s
-	}
-	if v, ok := req["oidc_client_id"].(string); ok {
-		s := strings.TrimSpace(v)
-		upd.OIDCClientID = &s
-	}
-	if v, ok := req["oidc_client_secret"].(string); ok {
-		if strings.TrimSpace(v) != "" {
-			v := strings.TrimSpace(v)
-			upd.OIDCClientSecret = &v
-		}
-	}
-	if v, ok := req["oidc_scopes"].(string); ok {
-		s := strings.TrimSpace(v)
-		upd.OIDCScopes = &s
-	}
-
 	anySet := upd.LogLevel != nil || upd.SessionExpiryHrs != nil || upd.MaxConcurrentInvestigations != nil ||
 		upd.CorrelationWindow != nil || upd.CorrelationCooldownTTL != nil || upd.InvestigationTimeout != nil ||
 		upd.AgentPresenceTTL != nil || upd.AgentDisconnectGrace != nil || upd.SchedulerLeaderTTL != nil ||
@@ -297,8 +264,7 @@ func (s *Server) handlePutSystemConfig(w http.ResponseWriter, r *http.Request) {
 		upd.SlackIncidentChannelTriggerStatus != nil || upd.SlackIncidentChannelArchiveOnClose != nil ||
 		upd.IncidentSummaryEnabled != nil || upd.IncidentSummaryInterval != nil || upd.IncidentSummaryIntervals != nil ||
 		upd.GoogleOAuthEnabled != nil || upd.GoogleClientID != nil || upd.GoogleClientSecret != nil ||
-		upd.GoogleOAuthRedirectURL != nil || upd.OIDCEnabled != nil || upd.OIDCIssuerURL != nil ||
-		upd.OIDCClientID != nil || upd.OIDCClientSecret != nil || upd.OIDCScopes != nil
+		upd.GoogleOAuthRedirectURL != nil
 
 	if !anySet {
 		writeStatus(w, "no changes")
@@ -383,21 +349,6 @@ func (s *Server) handlePutSystemConfig(w http.ResponseWriter, r *http.Request) {
 	if upd.GoogleOAuthRedirectURL != nil {
 		s.cfg.GoogleOAuthRedirectURL = *upd.GoogleOAuthRedirectURL
 	}
-	if upd.OIDCEnabled != nil {
-		s.cfg.OIDCEnabled = *upd.OIDCEnabled
-	}
-	if upd.OIDCIssuerURL != nil {
-		s.cfg.OIDCIssuerURL = *upd.OIDCIssuerURL
-	}
-	if upd.OIDCClientID != nil {
-		s.cfg.OIDCClientID = *upd.OIDCClientID
-	}
-	if upd.OIDCClientSecret != nil {
-		s.cfg.OIDCClientSecret = *upd.OIDCClientSecret
-	}
-	if upd.OIDCScopes != nil {
-		s.cfg.OIDCScopes = *upd.OIDCScopes
-	}
 
 	if s.systemConfigStore != nil {
 		dbCfg := store.SystemConfigValues{
@@ -422,11 +373,6 @@ func (s *Server) handlePutSystemConfig(w http.ResponseWriter, r *http.Request) {
 			GoogleClientID:         s.cfg.GoogleClientID,
 			GoogleClientSecretEnc:  encryptAuthSecret(s.cfg.GoogleClientSecret),
 			GoogleOAuthRedirectURL: s.cfg.GoogleOAuthRedirectURL,
-			OIDCEnabled:            s.cfg.OIDCEnabled,
-			OIDCIssuerURL:          s.cfg.OIDCIssuerURL,
-			OIDCClientID:           s.cfg.OIDCClientID,
-			OIDCClientSecretEnc:    encryptAuthSecret(s.cfg.OIDCClientSecret),
-			OIDCScopes:             s.cfg.OIDCScopes,
 		}
 		if err := s.systemConfigStore.Save(dbCfg); err != nil {
 			logger.ErrorCtx(r.Context(), "failed to persist system config to DB", "error", err)
@@ -475,7 +421,7 @@ func durationIntervalsToAny(m map[string]time.Duration) map[string]any {
 	return out
 }
 
-// encryptAuthSecret encrypts a plaintext auth secret (Google/OIDC client
+// encryptAuthSecret encrypts a plaintext auth secret (Google client
 // secret) for persistence in the system config. On failure it logs and returns
 // an empty string so the secret is never persisted in plaintext; the in-memory
 // config still holds the plaintext value for runtime use.

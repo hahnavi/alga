@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, useAttrs, watch, type ComponentPublicInstance } from "vue";
 import { useRoute } from "vue-router";
-import { ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen } from "@lucide/vue";
+import { ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen, Settings } from "@lucide/vue";
 import { isActiveRoute } from "@/lib/routing";
 import { safeGetItem, safeSetItem } from "@/lib/storage";
 import { isNavGroup, useNavSections, type NavEntry } from "@/lib/nav";
@@ -115,7 +115,7 @@ const popupStyle = computed(() => {
   <aside
     v-bind="attrs"
     class="flex h-screen shrink-0 flex-col overflow-visible border-r border-[var(--border-primary)] bg-[var(--bg-sidebar)] transition-[width] duration-200 ease-in-out"
-    :style="{ width: collapsed ? '56px' : '220px' }"
+    :style="{ width: collapsed ? '56px' : '240px' }"
   >
     <div
       class="flex h-14 shrink-0 items-center border-b border-[var(--border-primary)] px-2"
@@ -255,9 +255,23 @@ const popupStyle = computed(() => {
 
     <div
       class="shrink-0 border-t border-[var(--border-primary)] px-2 py-3"
-      :class="collapsed ? 'flex justify-center' : ''"
+      :class="collapsed ? 'flex flex-col items-center gap-1.5' : 'flex items-center gap-1'"
     >
-      <UserMenuBar :show-name="!collapsed" :compact="collapsed" />
+      <UserMenuBar
+        :show-name="!collapsed"
+        :compact="collapsed"
+        :class="collapsed ? '' : 'min-w-0 flex-1'"
+      />
+      <router-link
+        to="/settings/general"
+        aria-label="Settings"
+        :title="collapsed ? 'Settings' : undefined"
+        :class="[CARD_ICON_BTN_CLASS, 'inline-flex h-8 w-8']"
+        @mouseenter="prefetch('/settings/general')"
+        @focus="prefetch('/settings/general')"
+      >
+        <Settings class="h-4 w-4" aria-hidden="true" />
+      </router-link>
     </div>
   </aside>
 </template>

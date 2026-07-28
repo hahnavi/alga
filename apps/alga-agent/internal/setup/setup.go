@@ -760,6 +760,20 @@ func findSection(key string) (sectionDef, bool) {
 	return sectionDef{}, false
 }
 
+// ensureDataDir creates the agent data directory and enforces restrictive
+// 0o700 permissions. os.MkdirAll leaves the mode of a pre-existing directory
+// unchanged, so chmod explicitly to tighten a directory created earlier with a
+// permissive mode or umask.
+func ensureDataDir(dir string) error {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return fmt.Errorf("create data dir %s: %w", dir, err)
+	}
+	if err := os.Chmod(dir, 0o700); err != nil {
+		return fmt.Errorf("restrict data dir %s permissions: %w", dir, err)
+	}
+	return nil
+}
+
 // Run executes the wizard. section is "" for the full menu, or one of the
 // section keys (see sections) for a direct jump to one area.
 func Run(section string) error {
@@ -779,18 +793,21 @@ func runTUI(section string) error {
 	}
 
 	dir := config.ResolveDataDir()
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return fmt.Errorf("create data dir %s: %w", dir, err)
+	if err := ensureDataDir(dir); err != nil {
+		return err
 	}
 	path := config.DefaultPath("")
 
+	// Load the existing config. Fall back to Parse so a config that fails
+	// validation still shows the user's values; only default when no parseable
+	// config exists, never silently clobber a malformed file.
 	cfg, err := config.Load("")
 	if err != nil {
-		if parsed, perr := config.Parse(""); perr == nil {
-			cfg = parsed
-		} else {
-			cfg = config.Default()
+		parsed, perr := config.Parse("")
+		if perr != nil {
+			return fmt.Errorf("load existing config %s: %w", path, perr)
 		}
+		cfg = parsed
 	}
 
 	m := newWizardModel(cfg)
@@ -856,8 +873,8 @@ func runWith(stdin io.Reader, stdout io.Writer, section string) error {
 	r := bufio.NewReader(stdin)
 
 	dir := config.ResolveDataDir()
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return fmt.Errorf("create data dir %s: %w", dir, err)
+	if err := ensureDataDir(dir); err != nil {
+		return err
 	}
 	path := config.DefaultPath("")
 

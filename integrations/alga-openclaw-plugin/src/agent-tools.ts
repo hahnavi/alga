@@ -10,7 +10,7 @@ const InvestigationIdParam = Type.String({
     "Investigation identifier. This is the Alga chat id of the investigation thread: an alert investigation is `alert_<number>` (e.g. `alert_42`), an incident investigation thread is `incident_coord_<number>` or `incident_inv_<number>`. A bare number is treated as an alert number.",
 });
 
-const IncidentIdParam = Type.Optional(
+const IncidentNumberParam = Type.Optional(
   Type.String({
     description:
       "Incident number when the op targets an incident and the investigation_id is not already an `incident_*` chat id. Used to build the incident coordination chat id `incident_coord_<number>`.",
@@ -21,7 +21,6 @@ const INCIDENT_TOOL_OPS = new Set<AlgaInvestigationCommand["op"]>([
   "set_incident_priority",
   "set_incident_severity",
   "trigger_escalation",
-  "request_status_update",
   "mitigate_incident",
   "resolve_incident",
   "begin_triage",
@@ -30,6 +29,8 @@ const INCIDENT_TOOL_OPS = new Set<AlgaInvestigationCommand["op"]>([
   "post_handoff",
   "publish_status_update",
   "set_incident_resolution_docs",
+  "dispatch_task",
+  "synthesize_findings",
 ]);
 
 export function createAlgaCommandTools(cfg?: CoreConfig): ChannelAgentTool[] {
@@ -705,14 +706,14 @@ export function createAlgaCommandTools(cfg?: CoreConfig): ChannelAgentTool[] {
           enum: ["P1", "P2", "P3", "P4", "P5"],
           description: "Priority level. P1 = critical/highest, P5 = lowest.",
         }),
-        incident_id: IncidentIdParam,
+        incident_number: IncidentNumberParam,
       }),
       execute: async (_id, args) => {
-        const p = args as { investigation_id?: string; priority?: string; incident_id?: string };
+        const p = args as { investigation_id?: string; priority?: string; incident_number?: string };
         if (!p.investigation_id) return errText("set_incident_priority", "missing investigation_id");
         if (!p.priority) return errText("set_incident_priority", "missing priority");
         const cmd: AlgaInvestigationCommand = { op: "set_incident_priority", priority: p.priority };
-        if (p.incident_id) cmd.incident_id = p.incident_id;
+        if (p.incident_number) cmd.incident_number = Number(p.incident_number);
         try {
           const r = await execInvTool(cfg, p.investigation_id, cmd);
           if (r.ok === false) return errText("set_incident_priority", r.error ?? "unknown");
@@ -733,14 +734,14 @@ export function createAlgaCommandTools(cfg?: CoreConfig): ChannelAgentTool[] {
           enum: ["critical", "high", "warning", "info"],
           description: "New severity level.",
         }),
-        incident_id: IncidentIdParam,
+        incident_number: IncidentNumberParam,
       }),
       execute: async (_id, args) => {
-        const p = args as { investigation_id?: string; severity?: string; incident_id?: string };
+        const p = args as { investigation_id?: string; severity?: string; incident_number?: string };
         if (!p.investigation_id) return errText("set_incident_severity", "missing investigation_id");
         if (!p.severity) return errText("set_incident_severity", "missing severity");
         const cmd: AlgaInvestigationCommand = { op: "set_incident_severity", severity: p.severity as AlgaInvestigationSeverity };
-        if (p.incident_id) cmd.incident_id = p.incident_id;
+        if (p.incident_number) cmd.incident_number = Number(p.incident_number);
         try {
           const r = await execInvTool(cfg, p.investigation_id, cmd);
           if (r.ok === false) return errText("set_incident_severity", r.error ?? "unknown");
@@ -756,40 +757,18 @@ export function createAlgaCommandTools(cfg?: CoreConfig): ChannelAgentTool[] {
         "that the incident requires urgent attention.",
       parameters: Type.Object({
         investigation_id: InvestigationIdParam,
-        incident_id: IncidentIdParam,
+        incident_number: IncidentNumberParam,
       }),
       execute: async (_id, args) => {
-        const p = args as { investigation_id?: string; incident_id?: string };
+        const p = args as { investigation_id?: string; incident_number?: string };
         if (!p.investigation_id) return errText("trigger_escalation", "missing investigation_id");
         const cmd: AlgaInvestigationCommand = { op: "trigger_escalation" };
-        if (p.incident_id) cmd.incident_id = p.incident_id;
+        if (p.incident_number) cmd.incident_number = Number(p.incident_number);
         try {
           const r = await execInvTool(cfg, p.investigation_id, cmd);
           if (r.ok === false) return errText("trigger_escalation", r.error ?? "unknown");
           return okText("trigger_escalation", p.investigation_id, "Escalation triggered.");
         } catch (e) { return catchErr("trigger_escalation", e); }
-      },
-    },
-    {
-      label: "Request Status Update",
-      name: "alga_request_status_update",
-      description:
-        "Request a status update from incident responders. Sends a notification asking for a progress " +
-        "report on the incident.",
-      parameters: Type.Object({
-        investigation_id: InvestigationIdParam,
-        incident_id: IncidentIdParam,
-      }),
-      execute: async (_id, args) => {
-        const p = args as { investigation_id?: string; incident_id?: string };
-        if (!p.investigation_id) return errText("request_status_update", "missing investigation_id");
-        const cmd: AlgaInvestigationCommand = { op: "request_status_update" };
-        if (p.incident_id) cmd.incident_id = p.incident_id;
-        try {
-          const r = await execInvTool(cfg, p.investigation_id, cmd);
-          if (r.ok === false) return errText("request_status_update", r.error ?? "unknown");
-          return okText("request_status_update", p.investigation_id, "Status update requested.");
-        } catch (e) { return catchErr("request_status_update", e); }
       },
     },
     {
@@ -801,14 +780,14 @@ export function createAlgaCommandTools(cfg?: CoreConfig): ChannelAgentTool[] {
       parameters: Type.Object({
         investigation_id: InvestigationIdParam,
         reason: Type.Optional(Type.String({ description: "Reason or description of the mitigation action taken." })),
-        incident_id: IncidentIdParam,
+        incident_number: IncidentNumberParam,
       }),
       execute: async (_id, args) => {
-        const p = args as { investigation_id?: string; reason?: string; incident_id?: string };
+        const p = args as { investigation_id?: string; reason?: string; incident_number?: string };
         if (!p.investigation_id) return errText("mitigate_incident", "missing investigation_id");
         const cmd: AlgaInvestigationCommand = { op: "mitigate_incident" };
         if (p.reason) cmd.reason = p.reason;
-        if (p.incident_id) cmd.incident_id = p.incident_id;
+        if (p.incident_number) cmd.incident_number = Number(p.incident_number);
         try {
           const r = await execInvTool(cfg, p.investigation_id, cmd);
           if (r.ok === false) return errText("mitigate_incident", r.error ?? "unknown");
@@ -824,14 +803,14 @@ export function createAlgaCommandTools(cfg?: CoreConfig): ChannelAgentTool[] {
       parameters: Type.Object({
         investigation_id: InvestigationIdParam,
         reason: Type.Optional(Type.String({ description: "Resolution description or post-fix summary." })),
-        incident_id: IncidentIdParam,
+        incident_number: IncidentNumberParam,
       }),
       execute: async (_id, args) => {
-        const p = args as { investigation_id?: string; reason?: string; incident_id?: string };
+        const p = args as { investigation_id?: string; reason?: string; incident_number?: string };
         if (!p.investigation_id) return errText("resolve_incident", "missing investigation_id");
         const cmd: AlgaInvestigationCommand = { op: "resolve_incident" };
         if (p.reason) cmd.reason = p.reason;
-        if (p.incident_id) cmd.incident_id = p.incident_id;
+        if (p.incident_number) cmd.incident_number = Number(p.incident_number);
         try {
           const r = await execInvTool(cfg, p.investigation_id, cmd);
           if (r.ok === false) return errText("resolve_incident", r.error ?? "unknown");
@@ -847,13 +826,13 @@ export function createAlgaCommandTools(cfg?: CoreConfig): ChannelAgentTool[] {
         "Use this when you begin the structured triage process for an incident.",
       parameters: Type.Object({
         investigation_id: InvestigationIdParam,
-        incident_id: IncidentIdParam,
+        incident_number: IncidentNumberParam,
       }),
       execute: async (_id, args) => {
-        const p = args as { investigation_id?: string; incident_id?: string };
+        const p = args as { investigation_id?: string; incident_number?: string };
         if (!p.investigation_id) return errText("begin_triage", "missing investigation_id");
         const cmd: AlgaInvestigationCommand = { op: "begin_triage" };
-        if (p.incident_id) cmd.incident_id = p.incident_id;
+        if (p.incident_number) cmd.incident_number = Number(p.incident_number);
         try {
           const r = await execInvTool(cfg, p.investigation_id, cmd);
           if (r.ok === false) return errText("begin_triage", r.error ?? "unknown");
@@ -869,13 +848,13 @@ export function createAlgaCommandTools(cfg?: CoreConfig): ChannelAgentTool[] {
         "Use this to advance the incident through the standard progression.",
       parameters: Type.Object({
         investigation_id: InvestigationIdParam,
-        incident_id: IncidentIdParam,
+        incident_number: IncidentNumberParam,
       }),
       execute: async (_id, args) => {
-        const p = args as { investigation_id?: string; incident_id?: string };
+        const p = args as { investigation_id?: string; incident_number?: string };
         if (!p.investigation_id) return errText("promote_incident", "missing investigation_id");
         const cmd: AlgaInvestigationCommand = { op: "promote_incident" };
-        if (p.incident_id) cmd.incident_id = p.incident_id;
+        if (p.incident_number) cmd.incident_number = Number(p.incident_number);
         try {
           const r = await execInvTool(cfg, p.investigation_id, cmd);
           if (r.ok === false) return errText("promote_incident", r.error ?? "unknown");
@@ -896,7 +875,7 @@ export function createAlgaCommandTools(cfg?: CoreConfig): ChannelAgentTool[] {
         user_id: Type.Optional(Type.String({ description: "User ID to assign to the role." })),
         agent_token_id: Type.Optional(Type.String({ description: "Agent token ID to assign to the role." })),
         scope_description: Type.Optional(Type.String({ description: "Optional scope or context for this role assignment." })),
-        incident_id: IncidentIdParam,
+        incident_number: IncidentNumberParam,
       }),
       execute: async (_id, args) => {
         const p = args as {
@@ -905,7 +884,7 @@ export function createAlgaCommandTools(cfg?: CoreConfig): ChannelAgentTool[] {
           user_id?: string;
           agent_token_id?: string;
           scope_description?: string;
-          incident_id?: string;
+          incident_number?: string;
         };
         if (!p.investigation_id) return errText("assign_incident_role", "missing investigation_id");
         if (!p.role_type) return errText("assign_incident_role", "missing role_type");
@@ -914,7 +893,7 @@ export function createAlgaCommandTools(cfg?: CoreConfig): ChannelAgentTool[] {
         if (p.user_id) cmd.user_id = p.user_id;
         if (p.agent_token_id) cmd.agent_token_id = p.agent_token_id;
         if (p.scope_description) cmd.scope_description = p.scope_description;
-        if (p.incident_id) cmd.incident_id = p.incident_id;
+        if (p.incident_number) cmd.incident_number = Number(p.incident_number);
         try {
           const r = await execInvTool(cfg, p.investigation_id, cmd);
           if (r.ok === false) return errText("assign_incident_role", r.error ?? "unknown");
@@ -954,7 +933,7 @@ export function createAlgaCommandTools(cfg?: CoreConfig): ChannelAgentTool[] {
             description: "How loud the handoff should ring for the audience.",
           }),
         ),
-        incident_id: IncidentIdParam,
+        incident_number: IncidentNumberParam,
       }),
       execute: async (_id, args) => {
         const p = args as {
@@ -962,7 +941,7 @@ export function createAlgaCommandTools(cfg?: CoreConfig): ChannelAgentTool[] {
           message?: string;
           audience?: "none" | "commander" | "communicator" | "command";
           urgency?: "info" | "needs_attention" | "decision_needed";
-          incident_id?: string;
+          incident_number?: string;
         };
         if (!p.investigation_id) return errText("post_handoff", "missing investigation_id");
         if (!p.message) return errText("post_handoff", "missing message");
@@ -972,7 +951,7 @@ export function createAlgaCommandTools(cfg?: CoreConfig): ChannelAgentTool[] {
         };
         if (p.audience) cmd.audience = p.audience;
         if (p.urgency) cmd.urgency = p.urgency;
-        if (p.incident_id) cmd.incident_id = p.incident_id;
+        if (p.incident_number) cmd.incident_number = Number(p.incident_number);
         try {
           const r = await execInvTool(cfg, p.investigation_id, cmd);
           if (r.ok === false) return errText("post_handoff", r.error ?? "unknown");
@@ -998,7 +977,7 @@ export function createAlgaCommandTools(cfg?: CoreConfig): ChannelAgentTool[] {
         source_coordination_message_id: Type.Optional(
           Type.String({ description: "Optional coordination message id this update is anchored to." }),
         ),
-        incident_id: IncidentIdParam,
+        incident_number: IncidentNumberParam,
       }),
       execute: async (_id, args) => {
         const p = args as {
@@ -1006,7 +985,7 @@ export function createAlgaCommandTools(cfg?: CoreConfig): ChannelAgentTool[] {
           status_level?: string;
           message?: string;
           source_coordination_message_id?: string;
-          incident_id?: string;
+          incident_number?: string;
         };
         if (!p.investigation_id) return errText("publish_status_update", "missing investigation_id");
         if (!p.status_level) return errText("publish_status_update", "missing status_level");
@@ -1017,7 +996,7 @@ export function createAlgaCommandTools(cfg?: CoreConfig): ChannelAgentTool[] {
           message: p.message,
         };
         if (p.source_coordination_message_id) cmd.source_coordination_message_id = p.source_coordination_message_id;
-        if (p.incident_id) cmd.incident_id = p.incident_id;
+        if (p.incident_number) cmd.incident_number = Number(p.incident_number);
         try {
           const r = await execInvTool(cfg, p.investigation_id, cmd);
           if (r.ok === false) return errText("publish_status_update", r.error ?? "unknown");
@@ -1039,7 +1018,7 @@ export function createAlgaCommandTools(cfg?: CoreConfig): ChannelAgentTool[] {
         actions_taken: Type.String({ description: "What was done to mitigate and resolve the incident." }),
         root_cause: Type.Optional(Type.String({ description: "Root cause; if omitted the existing value is kept." })),
         resolution: Type.Optional(Type.String({ description: "Resolution narrative; if omitted the existing value is kept." })),
-        incident_id: IncidentIdParam,
+        incident_number: IncidentNumberParam,
       }),
       execute: async (_id, args) => {
         const p = args as {
@@ -1049,7 +1028,7 @@ export function createAlgaCommandTools(cfg?: CoreConfig): ChannelAgentTool[] {
           actions_taken?: string;
           root_cause?: string;
           resolution?: string;
-          incident_id?: string;
+          incident_number?: string;
         };
         if (!p.investigation_id) return errText("set_incident_resolution_docs", "missing investigation_id");
         if (!p.summary) return errText("set_incident_resolution_docs", "missing summary");
@@ -1063,12 +1042,174 @@ export function createAlgaCommandTools(cfg?: CoreConfig): ChannelAgentTool[] {
         };
         if (p.root_cause) cmd.root_cause = p.root_cause;
         if (p.resolution) cmd.resolution = p.resolution;
-        if (p.incident_id) cmd.incident_id = p.incident_id;
+        if (p.incident_number) cmd.incident_number = Number(p.incident_number);
         try {
           const r = await execInvTool(cfg, p.investigation_id, cmd);
           if (r.ok === false) return errText("set_incident_resolution_docs", r.error ?? "unknown");
           return okText("set_incident_resolution_docs", p.investigation_id, "Resolution docs recorded.");
         } catch (e) { return catchErr("set_incident_resolution_docs", e); }
+      },
+    },
+    {
+      label: "Dispatch Coordination Task",
+      name: "alga_dispatch_task",
+      description:
+        "Dispatch a coordination task to a role or a specific agent (commander only). " +
+        "Use this to delegate investigation, communication, verification, or mitigation work " +
+        "during incident coordination. Provide either assignee_role or assignee_agent_id.",
+      parameters: Type.Object({
+        investigation_id: InvestigationIdParam,
+        incident_number: Type.String({ description: "Incident number the task belongs to." }),
+        task_kind: Type.Unsafe({
+          type: "string",
+          enum: ["investigate", "communicate", "verify", "mitigate"],
+          description: "Kind of coordination task to dispatch.",
+        }),
+        goal: Type.String({ description: "What the assignee should accomplish." }),
+        assignee_role: Type.Optional(
+          Type.Unsafe({
+            type: "string",
+            enum: ["commander", "communicator", "responder"],
+            description: "Role to dispatch the task to. Use this or assignee_agent_id, not both.",
+          }),
+        ),
+        assignee_agent_id: Type.Optional(
+          Type.String({ description: "Specific agent id to dispatch the task to." }),
+        ),
+      }),
+      execute: async (_id, args) => {
+        const p = args as {
+          investigation_id?: string;
+          incident_number?: string;
+          task_kind?: "investigate" | "communicate" | "verify" | "mitigate";
+          goal?: string;
+          assignee_role?: "commander" | "communicator" | "responder";
+          assignee_agent_id?: string;
+        };
+        if (!p.investigation_id) return errText("dispatch_task", "missing investigation_id");
+        if (!p.incident_number) return errText("dispatch_task", "missing incident_number");
+        if (!p.task_kind) return errText("dispatch_task", "missing task_kind");
+        if (!p.goal) return errText("dispatch_task", "missing goal");
+        if (!p.assignee_role && !p.assignee_agent_id) {
+          return errText("dispatch_task", "provide assignee_role or assignee_agent_id");
+        }
+        const cmd: AlgaInvestigationCommand = {
+          op: "dispatch_task",
+          incident_number: Number(p.incident_number),
+          task_kind: p.task_kind,
+          goal: p.goal,
+        };
+        if (p.assignee_role) cmd.assignee_role = p.assignee_role;
+        if (p.assignee_agent_id) cmd.assignee_agent_id = p.assignee_agent_id;
+        try {
+          const r = await execInvTool(cfg, p.investigation_id, cmd);
+          if (r.ok === false) return errText("dispatch_task", r.error ?? "unknown");
+          return okText("dispatch_task", p.investigation_id, "Task dispatched.");
+        } catch (e) { return catchErr("dispatch_task", e); }
+      },
+    },
+    {
+      label: "Claim Coordination Task",
+      name: "alga_claim_task",
+      description:
+        "Claim a pending coordination task so you can work on it. Provide the task id (UUID) " +
+        "from a dispatched task notification.",
+      parameters: Type.Object({
+        investigation_id: InvestigationIdParam,
+        task_id: Type.String({ description: "Coordination task id (UUID) to claim." }),
+      }),
+      execute: async (_id, args) => {
+        const p = args as { investigation_id?: string; task_id?: string };
+        if (!p.investigation_id) return errText("claim_task", "missing investigation_id");
+        if (!p.task_id) return errText("claim_task", "missing task_id");
+        const cmd: AlgaInvestigationCommand = { op: "claim_task", task_id: p.task_id };
+        try {
+          const r = await execInvTool(cfg, p.investigation_id, cmd);
+          if (r.ok === false) return errText("claim_task", r.error ?? "unknown");
+          return okText("claim_task", p.investigation_id, "Task claimed.");
+        } catch (e) { return catchErr("claim_task", e); }
+      },
+    },
+    {
+      label: "Complete Coordination Task",
+      name: "alga_complete_task",
+      description:
+        "Complete a claimed coordination task with a structured result. Provide the task id (UUID) " +
+        "and a result object describing the outcome.",
+      parameters: Type.Object({
+        investigation_id: InvestigationIdParam,
+        task_id: Type.String({ description: "Coordination task id (UUID) to complete." }),
+        result: Type.Unsafe<Record<string, unknown>>({
+          type: "object",
+          description: "Structured result object for the completed task.",
+        }),
+      }),
+      execute: async (_id, args) => {
+        const p = args as { investigation_id?: string; task_id?: string; result?: Record<string, unknown> };
+        if (!p.investigation_id) return errText("complete_task", "missing investigation_id");
+        if (!p.task_id) return errText("complete_task", "missing task_id");
+        const cmd: AlgaInvestigationCommand = { op: "complete_task", task_id: p.task_id };
+        if (p.result) cmd.result = p.result;
+        try {
+          const r = await execInvTool(cfg, p.investigation_id, cmd);
+          if (r.ok === false) return errText("complete_task", r.error ?? "unknown");
+          return okText("complete_task", p.investigation_id, "Task completed.");
+        } catch (e) { return catchErr("complete_task", e); }
+      },
+    },
+    {
+      label: "List Coordination Tasks",
+      name: "alga_list_tasks",
+      description:
+        "List coordination tasks for an incident. Optionally filter by status " +
+        "(pending, claimed, completed, failed).",
+      parameters: Type.Object({
+        incident_number: Type.String({ description: "Incident number to list tasks for." }),
+        status: Type.Optional(
+          Type.String({ description: "Filter by task status (pending, claimed, completed, failed)." }),
+        ),
+        limit: Type.Optional(Type.Number({ description: "Max results (default 20)." })),
+      }),
+      execute: async (_id, args) => {
+        const p = args as { incident_number?: string; status?: string; limit?: number };
+        if (!p.incident_number) return errText("list_tasks", "missing incident_number");
+        try {
+          const account = resolveAccount(cfg);
+          const { agentListTasks } = await import("./agent-rest.js");
+          const data = await agentListTasks(account.httpBase, account.token, Number(p.incident_number), {
+            status: p.status,
+            limit: p.limit,
+          });
+          return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
+        } catch (e) { return catchErr("list_tasks", e); }
+      },
+    },
+    {
+      label: "Synthesize Findings",
+      name: "alga_synthesize_findings",
+      description:
+        "Synthesize investigation findings into a summary for an incident (commander only). " +
+        "Use this to consolidate findings from coordination tasks and investigation work.",
+      parameters: Type.Object({
+        investigation_id: InvestigationIdParam,
+        incident_number: Type.String({ description: "Incident number to synthesize findings for." }),
+        summary: Type.String({ description: "Synthesized findings summary." }),
+      }),
+      execute: async (_id, args) => {
+        const p = args as { investigation_id?: string; incident_number?: string; summary?: string };
+        if (!p.investigation_id) return errText("synthesize_findings", "missing investigation_id");
+        if (!p.incident_number) return errText("synthesize_findings", "missing incident_number");
+        if (!p.summary) return errText("synthesize_findings", "missing summary");
+        const cmd: AlgaInvestigationCommand = {
+          op: "synthesize_findings",
+          incident_number: Number(p.incident_number),
+          summary: p.summary,
+        };
+        try {
+          const r = await execInvTool(cfg, p.investigation_id, cmd);
+          if (r.ok === false) return errText("synthesize_findings", r.error ?? "unknown");
+          return okText("synthesize_findings", p.investigation_id, "Findings synthesized.");
+        } catch (e) { return catchErr("synthesize_findings", e); }
       },
     },
   ];
@@ -1100,8 +1241,8 @@ function resolveInvToolChatId(
   cmd: AlgaInvestigationCommand,
 ): string {
   const id = investigationId.trim();
-  if (cmd.incident_id && !/^(alert_|incident_)/.test(id)) {
-    const inc = String(cmd.incident_id).trim();
+  if (cmd.incident_number && !/^(alert_|incident_)/.test(id)) {
+    const inc = String(cmd.incident_number).trim();
     return /^(incident_coord_|incident_inv_)/.test(inc) ? inc : `incident_coord_${inc}`;
   }
   if (/^(alert_|incident_coord_|incident_inv_|alga_dm)/i.test(id)) {

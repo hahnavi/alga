@@ -2,6 +2,8 @@ import EventSource from "eventsource2";
 import type { InvestigationSignalEvent, InvestigationSignalEventType } from "./types.js";
 
 const HEARTBEAT_INTERVAL_MS = 30_000;
+const RECONNECT_BASE_MS = 2_000;
+const RECONNECT_MAX_MS = 60_000;
 
 export type AlgaSSEInboundHandler = (raw: string) => void;
 
@@ -20,6 +22,7 @@ export class AlgaSSEClient {
   private es: EventSource | null = null;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private reconnectDelay = RECONNECT_BASE_MS;
   private stopped = false;
 
   constructor(
@@ -89,10 +92,12 @@ export class AlgaSSEClient {
   private scheduleReconnect(): void {
     if (this.stopped) return;
     if (this.reconnectTimer !== null) clearTimeout(this.reconnectTimer);
+    const jittered = this.reconnectDelay * (0.9 + Math.random() * 0.2);
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
       if (!this.stopped) this.connect();
-    }, 5_000);
+    }, jittered);
+    this.reconnectDelay = Math.min(this.reconnectDelay * 2, RECONNECT_MAX_MS);
   }
 
   private setupEventListeners(): void {
@@ -100,6 +105,7 @@ export class AlgaSSEClient {
     if (!es) return;
 
     es.onopen = () => {
+      this.reconnectDelay = RECONNECT_BASE_MS;
       this.opts.log?.info(`Alga SSE connected (${this.opts.httpBase})`);
       this.startHeartbeat();
     };
@@ -129,6 +135,30 @@ export class AlgaSSEClient {
 
     es.addEventListener("investigation_abort", (ev: MessageEvent) => {
       this.dispatchSignal("investigation_abort", ev.data);
+    });
+
+    es.addEventListener("coordination_task_dispatched", (ev: MessageEvent) => {
+      this.opts.log?.info(
+        `Alga SSE coordination_task_dispatched: ${typeof ev.data === "string" ? ev.data : ""}`,
+      );
+    });
+
+    es.addEventListener("summarize_incident", (ev: MessageEvent) => {
+      this.opts.log?.info(
+        `Alga SSE summarize_incident: ${typeof ev.data === "string" ? ev.data : ""}`,
+      );
+    });
+
+    es.addEventListener("alert_auto_resolved", (ev: MessageEvent) => {
+      this.opts.log?.info(
+        `Alga SSE alert_auto_resolved: ${typeof ev.data === "string" ? ev.data : ""}`,
+      );
+    });
+
+    es.addEventListener("incident_comms_stale", (ev: MessageEvent) => {
+      this.opts.log?.info(
+        `Alga SSE incident_comms_stale: ${typeof ev.data === "string" ? ev.data : ""}`,
+      );
     });
   }
 

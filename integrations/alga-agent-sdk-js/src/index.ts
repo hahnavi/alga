@@ -1,4 +1,4 @@
-export { AlgaError, AlgaAuthError, AlgaAPIError, AlgaConnectionError } from "./errors.js";
+export { AlgaError, AlgaAuthError, AlgaAPIError, AlgaConnectionError, isAuthError, isRetryableError } from "./errors.js";
 export { MessageDedup } from "./dedup.js";
 export {
   // alert investigation
@@ -14,32 +14,49 @@ export {
   setIncidentPriority,
   setIncidentSeverity,
   triggerEscalation,
-  requestStatusUpdate,
   mitigateIncident,
   resolveIncident,
   beginTriage,
   promoteIncident,
-  assignIncidentRole,
+  assignIncidentRoleToUser,
+  assignIncidentRoleToAgent,
+  // coordination / status
+  postHandoff,
+  publishStatusUpdate,
+  setIncidentResolutionDocs,
+  // coordination tasks
+  dispatchTask,
+  dispatchTaskToAgent,
+  claimTask,
+  completeTask,
+  synthesizeFindings,
+  TASK_KIND_INVESTIGATE,
+  TASK_KIND_COMMUNICATE,
+  TASK_KIND_VERIFY,
+  TASK_KIND_MITIGATE,
 } from "./commands.js";
 export type { InvestigationCommand } from "./commands.js";
-export {
-  SSEClient,
-} from "./sse.js";
+export { SSEClient, parseRetryAfterMs } from "./sse.js";
+export type { ErrHandler, SSEOptions } from "./sse.js";
 export { AlgaClient } from "./client.js";
-export type { AlgaClientOptions } from "./client.js";
+export type { AlgaClientOptions, CoordinationTaskListResponse } from "./client.js";
 export type {
   Alert,
   AlertEvent,
   DeliveryTarget,
-  CorrelatedAlert,
-  InvestigationResult,
-  InvestigationUpdate,
-  Investigation,
+  CoordinationTask,
   KnowledgeNote,
   Memory,
   PeerAsk,
   Service,
   Incident,
+  IncidentRole,
+  IncidentContext,
+  OnCallEntry,
+  SecretValue,
+  Playbook,
+  PlaybookStep,
+  Capability,
   ConnectedEvent,
   MessageEvent,
   TypingEvent,
@@ -48,11 +65,15 @@ export type {
   PeerAskEvent,
   PeerReplyEvent,
   AgentPresenceEvent,
+  CoordinationTaskEvent,
+  SummarizeIncidentEvent,
+  AlertAutoResolvedEvent,
+  IncidentCommsStaleEvent,
   AlertListResponse,
-  InvestigationListResponse,
   KnowledgeListResponse,
   MemoryListResponse,
   PeerAskListResponse,
+  ServiceListResponse,
   SendMessageResponse,
   CommandResponse,
 } from "./models.js";

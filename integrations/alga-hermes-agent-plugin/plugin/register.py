@@ -1093,10 +1093,10 @@ _ALGA_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "incident_id": {"type": "string", "description": "Incident ID."},
+                    "incident_number": {"type": "string", "description": "Incident ID."},
                     "priority": {"type": "string", "description": "Priority: P1, P2, P3, P4, or P5."},
                 },
-                "required": ["incident_id", "priority"],
+                "required": ["incident_number", "priority"],
             },
         },
     },
@@ -1108,10 +1108,10 @@ _ALGA_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "incident_id": {"type": "string", "description": "Incident ID (e.g. 42)."},
+                    "incident_number": {"type": "string", "description": "Incident ID (e.g. 42)."},
                     "severity": {"type": "string", "enum": ["critical", "high", "warning", "info"]},
                 },
-                "required": ["incident_id", "severity"],
+                "required": ["incident_number", "severity"],
             },
         },
     },
@@ -1123,9 +1123,9 @@ _ALGA_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "incident_id": {"type": "string", "description": "Incident ID."},
+                    "incident_number": {"type": "string", "description": "Incident ID."},
                 },
-                "required": ["incident_id"],
+                "required": ["incident_number"],
             },
         },
     },
@@ -1137,10 +1137,10 @@ _ALGA_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "incident_id": {"type": "string", "description": "Incident ID."},
+                    "incident_number": {"type": "string", "description": "Incident ID."},
                     "reason": {"type": "string", "description": "Mitigation reason."},
                 },
-                "required": ["incident_id"],
+                "required": ["incident_number"],
             },
         },
     },
@@ -1152,7 +1152,7 @@ _ALGA_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "incident_id": {"type": "string", "description": "Incident ID."},
+                    "incident_number": {"type": "string", "description": "Incident ID."},
                     "reason": {"type": "string", "description": "Resolution reason."},
                     "summary": {"type": "string", "description": "Detailed executive resolution summary including the cause, why it started, what it did, and status until recovery (required if not already set)."},
                     "impact_assessment": {"type": "string", "description": "Customer/business impact assessment (required if not already set)."},
@@ -1160,7 +1160,7 @@ _ALGA_TOOLS = [
                     "root_cause": {"type": "string", "description": "Underlying root cause of the incident (required if not already set). Describe WHY the incident happened — the technical or process failure that triggered it. Distinguish from `resolution` (what fixed it) and `summary` (executive narrative)."},
                     "resolution": {"type": "string", "description": "Concrete remediation/recovery applied to resolve the incident (required if not already set). Describe the fix, rollback, or configuration change that restored service. Distinguish from `actions_taken` (environment commands) and `root_cause` (why it happened)."},
                 },
-                "required": ["incident_id"],
+                "required": ["incident_number"],
             },
         },
     },
@@ -1172,14 +1172,14 @@ _ALGA_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "incident_id": {"type": "string", "description": "Incident ID (e.g. 42)."},
+                    "incident_number": {"type": "string", "description": "Incident ID (e.g. 42)."},
                     "summary": {"type": "string", "description": "Detailed executive resolution summary including the cause, why it started, what it did, and status until recovery."},
                     "impact_assessment": {"type": "string", "description": "Customer/business impact assessment."},
                     "actions_taken": {"type": "string", "description": "Concrete actions taken against the environment to mitigate and resolve. MUST be valid markdown with each action on its own line as a `- ` bullet item (or `1.` numbered list). Describe what was DONE TO the system — commands run, services restarted, deployments rolled back, configs changed, hosts cordoned, traffic shifted, etc. Do NOT describe which agent or role did what; that is implied by role assignment and is not useful. Omit @mentions of agents. If no environment action was taken (e.g. alert was already resolved, no impact), state that explicitly in one line."},
                     "root_cause": {"type": "string", "description": "Underlying root cause of the incident. Describe WHY the incident happened — the technical or process failure that triggered it. Distinguish from `resolution` (what fixed it) and `summary` (executive narrative)."},
                     "resolution": {"type": "string", "description": "Concrete remediation/recovery applied to resolve the incident. Describe the fix, rollback, or configuration change that restored service. Distinguish from `actions_taken` (environment commands) and `root_cause` (why it happened)."},
                 },
-                "required": ["incident_id"],
+                "required": ["incident_number"],
             },
         },
     },
@@ -1191,9 +1191,9 @@ _ALGA_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "incident_id": {"type": "string", "description": "Incident ID (e.g. 42)."},
+                    "incident_number": {"type": "string", "description": "Incident ID (e.g. 42)."},
                 },
-                "required": ["incident_id"],
+                "required": ["incident_number"],
             },
         },
     },
@@ -1205,9 +1205,9 @@ _ALGA_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "incident_id": {"type": "string", "description": "Incident ID (e.g. 42)."},
+                    "incident_number": {"type": "string", "description": "Incident ID (e.g. 42)."},
                 },
-                "required": ["incident_id"],
+                "required": ["incident_number"],
             },
         },
     },
@@ -1219,11 +1219,11 @@ _ALGA_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "incident_id": {"type": "string", "description": "Incident ID (e.g. 42)."},
+                    "incident_number": {"type": "string", "description": "Incident ID (e.g. 42)."},
                     "message": {"type": "string", "description": "Timeline message content."},
                     "event_type": {"type": "string", "description": "Optional event type classification (defaults to agent_note)."},
                 },
-                "required": ["incident_id", "message"],
+                "required": ["incident_number", "message"],
             },
         },
     },
@@ -1235,13 +1235,13 @@ _ALGA_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "incident_id": {"type": "string", "description": "Incident ID (e.g. 42)."},
+                    "incident_number": {"type": "string", "description": "Incident ID (e.g. 42)."},
                     "role_type": {"type": "string", "enum": ["incident_commander", "communications_lead", "responder"], "description": "The ICS role type."},
                     "user_id": {"type": "string", "description": "User UUID (provide user_id or agent_token_id)."},
                     "agent_token_id": {"type": "string", "description": "Agent token UUID (provide user_id or agent_token_id)."},
                     "scope_description": {"type": "string", "description": "Optional scope description for role responsibilities."},
                 },
-                "required": ["incident_id", "role_type"],
+                "required": ["incident_number", "role_type"],
             },
         },
     },
@@ -1253,9 +1253,9 @@ _ALGA_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "incident_id": {"type": "string", "description": "Incident ID (e.g. 42)."},
+                    "incident_number": {"type": "string", "description": "Incident ID (e.g. 42)."},
                 },
-                "required": ["incident_id"],
+                "required": ["incident_number"],
             },
         },
     },
@@ -1267,9 +1267,9 @@ _ALGA_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "incident_id": {"type": "string", "description": "Incident ID (e.g. 42)."},
+                    "incident_number": {"type": "string", "description": "Incident ID (e.g. 42)."},
                 },
-                "required": ["incident_id"],
+                "required": ["incident_number"],
             },
         },
     },
@@ -1298,12 +1298,12 @@ _ALGA_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "incident_id": {"type": "string", "description": "Incident ID (e.g. 42)."},
+                    "incident_number": {"type": "string", "description": "Incident ID (e.g. 42)."},
                     "message": {"type": "string", "description": "Public-facing status update text."},
                     "status_level": {"type": "string", "enum": ["investigating", "identified", "mitigated", "monitoring", "resolved"], "description": "Public status level reflected by this update. Responders must use 'identified', 'mitigated', or 'monitoring' only — never 'resolved' (commander-only) or 'investigating' (system-only)."},
                     "source_coordination_message_id": {"type": "string", "description": "Optional coordination message id this update responds to."},
                 },
-                "required": ["incident_id", "message"],
+                "required": ["incident_number", "message"],
             },
         },
     },
@@ -1338,7 +1338,7 @@ _ALGA_TOOLS = [
                 "type": "object",
                 "properties": {
                     "chat_id": {"type": "string", "description": "Owner-scoped chat ID (e.g. incident_coord_12)."},
-                    "incident_id": {"type": "string", "description": "Incident number."},
+                    "incident_number": {"type": "string", "description": "Incident number."},
                     "kind": {"type": "string", "enum": ["investigate", "communicate", "verify", "mitigate"], "description": "Task kind. investigate=technical work (creates child investigation), communicate=status update request, verify=verification, mitigate=recovery action."},
                     "assignee_role": {"type": "string", "enum": ["responder", "communicator"], "description": "Role to target. responders do investigate/verify/mitigate; communicators do communicate."},
                     "goal": {"type": "string", "description": "Clear, specific instruction for the task."},
@@ -1346,7 +1346,7 @@ _ALGA_TOOLS = [
                     "input_context": {"type": "object", "description": "Optional structured context (hypotheses, suspect services, evidence so far)."},
                     "parent_task_id": {"type": "string", "description": "Optional parent task ID for sub-tasks."},
                 },
-                "required": ["chat_id", "incident_id", "kind", "assignee_role", "goal"],
+                "required": ["chat_id", "incident_number", "kind", "assignee_role", "goal"],
             },
         },
     },
@@ -1374,12 +1374,12 @@ _ALGA_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "incident_id": {"type": "string", "description": "Incident number."},
+                    "incident_number": {"type": "string", "description": "Incident number."},
                     "status": {"type": "string", "description": "Optional filter: pending, assigned, in_progress, complete, failed, cancelled."},
                     "assignee_role": {"type": "string", "description": "Optional filter: responder, communicator, commander."},
                     "limit": {"type": "integer", "description": "Optional limit (default 50)."},
                 },
-                "required": ["incident_id"],
+                "required": ["incident_number"],
             },
         },
     },
@@ -1392,10 +1392,10 @@ _ALGA_TOOLS = [
                 "type": "object",
                 "properties": {
                     "chat_id": {"type": "string", "description": "Owner-scoped chat ID."},
-                    "incident_id": {"type": "string", "description": "Incident number."},
+                    "incident_number": {"type": "string", "description": "Incident number."},
                     "summary": {"type": "string", "description": "The synthesized incident conclusion (root cause, resolution, evidence summary)."},
                 },
-                "required": ["chat_id", "incident_id", "summary"],
+                "required": ["chat_id", "incident_number", "summary"],
             },
         },
     },
@@ -1444,13 +1444,13 @@ async def _alga_promote_to_incident(args: dict, **kw) -> str:
 
 
 async def _alga_set_incident_severity(args: dict, **kw) -> str:
-    incident_id = args.get("incident_id", "").strip()
+    incident_id = args.get("incident_number", "").strip()
     severity = args.get("severity", "").strip()
     if not incident_id or not severity:
-        return json.dumps({"error": "incident_id and severity are required"})
+        return json.dumps({"error": "incident_number and severity are required"})
     if severity not in ("critical", "high", "warning", "info"):
         return json.dumps({"error": "severity must be one of: critical, high, warning, info"})
-    cmd = {"op": "set_incident_severity", "incident_id": incident_id, "severity": severity}
+    cmd = {"op": "set_incident_severity", "incident_number": int(incident_id), "severity": severity}
     return await _inv_tool(f"incident_coord_{incident_id}", cmd)
 
 
@@ -1602,26 +1602,26 @@ async def _alga_triage_feedback(args: dict, **kw) -> str:
 
 
 async def _alga_set_incident_priority(args: dict, **kw) -> str:
-    incident_id = args.get("incident_id", "").strip()
+    incident_id = args.get("incident_number", "").strip()
     priority = args.get("priority", "").strip()
     if not incident_id or not priority:
-        return json.dumps({"error": "incident_id and priority are required"})
-    cmd = {"op": "set_incident_priority", "incident_id": incident_id, "priority": priority}
+        return json.dumps({"error": "incident_number and priority are required"})
+    cmd = {"op": "set_incident_priority", "incident_number": int(incident_id), "priority": priority}
     return await _inv_tool(f"incident_coord_{incident_id}", cmd)
 
 
 async def _alga_trigger_escalation(args: dict, **kw) -> str:
-    incident_id = args.get("incident_id", "").strip()
+    incident_id = args.get("incident_number", "").strip()
     if not incident_id:
-        return json.dumps({"error": "incident_id is required"})
-    cmd = {"op": "trigger_escalation", "incident_id": incident_id}
+        return json.dumps({"error": "incident_number is required"})
+    cmd = {"op": "trigger_escalation", "incident_number": int(incident_id)}
     return await _inv_tool(f"incident_coord_{incident_id}", cmd)
 
 
 async def _alga_dispatch_task(args: dict, **kw) -> str:
-    incident_id = args.get("incident_id", "").strip()
+    incident_id = args.get("incident_number", "").strip()
     if not incident_id:
-        return json.dumps({"error": "incident_id is required"})
+        return json.dumps({"error": "incident_number is required"})
     kind = args.get("kind", "investigate").strip()
     if kind not in ("investigate", "communicate", "verify", "mitigate"):
         return json.dumps({"error": "kind must be investigate, communicate, verify, or mitigate"})
@@ -1631,7 +1631,7 @@ async def _alga_dispatch_task(args: dict, **kw) -> str:
     goal = args.get("goal", "").strip()
     if not goal:
         return json.dumps({"error": "goal is required"})
-    cmd = {"op": "dispatch_task", "incident_id": incident_id, "task_kind": kind, "assignee_role": assignee_role, "goal": goal}
+    cmd = {"op": "dispatch_task", "incident_number": int(incident_id), "task_kind": kind, "assignee_role": assignee_role, "goal": goal}
     if (aid := args.get("assignee_agent_id", "").strip()):
         cmd["assignee_agent_id"] = aid
     if (ptid := args.get("parent_task_id", "").strip()):
@@ -1655,9 +1655,9 @@ async def _alga_complete_task(args: dict, **kw) -> str:
 
 
 async def _alga_list_tasks(args: dict, **kw) -> str:
-    incident_id = args.get("incident_id", "").strip()
+    incident_id = args.get("incident_number", "").strip()
     if not incident_id:
-        return json.dumps({"error": "incident_id is required"})
+        return json.dumps({"error": "incident_number is required"})
     params = {}
     for k in ("status", "assignee_role", "limit"):
         if (v := args.get(k)):
@@ -1670,21 +1670,21 @@ async def _alga_list_tasks(args: dict, **kw) -> str:
 
 
 async def _alga_synthesize_findings(args: dict, **kw) -> str:
-    incident_id = args.get("incident_id", "").strip()
+    incident_id = args.get("incident_number", "").strip()
     if not incident_id:
-        return json.dumps({"error": "incident_id is required"})
+        return json.dumps({"error": "incident_number is required"})
     summary = args.get("summary", "").strip()
     if not summary:
         return json.dumps({"error": "summary is required"})
-    cmd = {"op": "synthesize_findings", "incident_id": incident_id, "summary": summary}
+    cmd = {"op": "synthesize_findings", "incident_number": int(incident_id), "summary": summary}
     return await _inv_tool(f"incident_coord_{incident_id}", cmd)
 
 
 async def _alga_mitigate_incident(args: dict, **kw) -> str:
-    incident_id = args.get("incident_id", "").strip()
+    incident_id = args.get("incident_number", "").strip()
     if not incident_id:
-        return json.dumps({"error": "incident_id is required"})
-    cmd: Dict[str, Any] = {"op": "mitigate_incident", "incident_id": incident_id}
+        return json.dumps({"error": "incident_number is required"})
+    cmd: Dict[str, Any] = {"op": "mitigate_incident", "incident_number": int(incident_id)}
     reason = args.get("reason", "").strip()
     if reason:
         cmd["reason"] = reason
@@ -1692,10 +1692,10 @@ async def _alga_mitigate_incident(args: dict, **kw) -> str:
 
 
 async def _alga_resolve_incident(args: dict, **kw) -> str:
-    incident_id = args.get("incident_id", "").strip()
+    incident_id = args.get("incident_number", "").strip()
     if not incident_id:
-        return json.dumps({"error": "incident_id is required"})
-    cmd: Dict[str, Any] = {"op": "resolve_incident", "incident_id": incident_id}
+        return json.dumps({"error": "incident_number is required"})
+    cmd: Dict[str, Any] = {"op": "resolve_incident", "incident_number": int(incident_id)}
     reason = args.get("reason", "").strip()
     if reason:
         cmd["reason"] = reason
@@ -1711,10 +1711,10 @@ async def _alga_resolve_incident(args: dict, **kw) -> str:
 
 
 async def _alga_set_incident_resolution_docs(args: dict, **kw) -> str:
-    incident_id = args.get("incident_id", "").strip()
+    incident_id = args.get("incident_number", "").strip()
     if not incident_id:
-        return json.dumps({"error": "incident_id is required"})
-    cmd: Dict[str, Any] = {"op": "set_incident_resolution_docs", "incident_id": incident_id}
+        return json.dumps({"error": "incident_number is required"})
+    cmd: Dict[str, Any] = {"op": "set_incident_resolution_docs", "incident_number": int(incident_id)}
     provided = False
     for key in ("summary", "impact_assessment", "actions_taken"):
         val = args.get(key, "").strip()
@@ -1732,17 +1732,17 @@ async def _alga_set_incident_resolution_docs(args: dict, **kw) -> str:
 
 
 async def _alga_get_incident_context(args: dict, **kw) -> str:
-    incident_id = args.get("incident_id", "").strip()
+    incident_id = args.get("incident_number", "").strip()
     if not incident_id:
-        return json.dumps({"error": "incident_id is required"})
+        return json.dumps({"error": "incident_number is required"})
     result = await _agent_get(f"/api/v1/agent/incidents/{incident_id}")
     return json.dumps(result)
 
 
 async def _alga_get_incident_timeline(args: dict, **kw) -> str:
-    incident_id = args.get("incident_id", "").strip()
+    incident_id = args.get("incident_number", "").strip()
     if not incident_id:
-        return json.dumps({"error": "incident_id is required"})
+        return json.dumps({"error": "incident_number is required"})
     result = await _agent_get(f"/api/v1/agent/incidents/{incident_id}/timeline")
     return json.dumps(result)
 
@@ -1758,26 +1758,26 @@ async def _alga_who_is_on_call(args: dict, **kw) -> str:
 
 
 async def _alga_begin_triage(args: dict, **kw) -> str:
-    incident_id = args.get("incident_id", "").strip()
+    incident_id = args.get("incident_number", "").strip()
     if not incident_id:
-        return json.dumps({"error": "incident_id is required"})
-    cmd = {"op": "begin_triage", "incident_id": incident_id}
+        return json.dumps({"error": "incident_number is required"})
+    cmd = {"op": "begin_triage", "incident_number": int(incident_id)}
     return await _inv_tool(f"incident_coord_{incident_id}", cmd)
 
 
 async def _alga_promote_incident(args: dict, **kw) -> str:
-    incident_id = args.get("incident_id", "").strip()
+    incident_id = args.get("incident_number", "").strip()
     if not incident_id:
-        return json.dumps({"error": "incident_id is required"})
-    cmd = {"op": "promote_incident", "incident_id": incident_id}
+        return json.dumps({"error": "incident_number is required"})
+    cmd = {"op": "promote_incident", "incident_number": int(incident_id)}
     return await _inv_tool(f"incident_coord_{incident_id}", cmd)
 
 
 async def _alga_add_incident_timeline(args: dict, **kw) -> str:
-    incident_id = args.get("incident_id", "").strip()
+    incident_id = args.get("incident_number", "").strip()
     message = args.get("message", "").strip()
     if not incident_id or not message:
-        return json.dumps({"error": "incident_id and message are required"})
+        return json.dumps({"error": "incident_number and message are required"})
     event_type = args.get("event_type", "agent_note").strip()
     payload = {"message": message}
     if event_type:
@@ -1785,14 +1785,14 @@ async def _alga_add_incident_timeline(args: dict, **kw) -> str:
     result = await _agent_post(f"/api/v1/agent/incidents/{incident_id}/timeline", payload)
     if isinstance(result, dict) and result.get("ok") is False:
         return json.dumps({"error": result.get("error", "unknown error")})
-    return json.dumps({"success": True, "incident_id": incident_id})
+    return json.dumps({"success": True, "incident_number": int(incident_id)})
 
 
 async def _alga_assign_incident_role(args: dict, **kw) -> str:
-    incident_id = args.get("incident_id", "").strip()
+    incident_id = args.get("incident_number", "").strip()
     role_type = args.get("role_type", "").strip()
     if not incident_id or not role_type:
-        return json.dumps({"error": "incident_id and role_type are required"})
+        return json.dumps({"error": "incident_number and role_type are required"})
     if role_type not in ("incident_commander", "communications_lead", "responder"):
         return json.dumps({"error": "role_type must be one of: incident_commander, communications_lead, responder"})
     user_id = args.get("user_id", "").strip()
@@ -1803,7 +1803,7 @@ async def _alga_assign_incident_role(args: dict, **kw) -> str:
         return json.dumps({"error": "provide either user_id or agent_token_id, not both"})
     cmd = {
         "op": "assign_incident_role",
-        "incident_id": incident_id,
+        "incident_number": int(incident_id),
         "role_type": role_type,
     }
     if user_id:
@@ -1849,9 +1849,9 @@ def _validate_status_level(value: str) -> str:
 
 
 async def _alga_publish_status_update(args: dict, **kw) -> str:
-    incident_id = args.get("incident_id", "").strip()
+    incident_id = args.get("incident_number", "").strip()
     if not incident_id:
-        return json.dumps({"error": "incident_id is required"})
+        return json.dumps({"error": "incident_number is required"})
     message = args.get("message", "").strip()
     if not message:
         return json.dumps({"error": "message is required"})
@@ -1861,7 +1861,7 @@ async def _alga_publish_status_update(args: dict, **kw) -> str:
         return json.dumps({"error": str(exc)})
     cmd: Dict[str, Any] = {
         "op": "publish_status_update",
-        "incident_id": incident_id,
+        "incident_number": int(incident_id),
         "message": message,
         "status_level": status_level,
     }

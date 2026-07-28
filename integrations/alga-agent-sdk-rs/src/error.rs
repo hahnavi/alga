@@ -1,20 +1,17 @@
 use std::fmt;
+use std::time::Duration;
 
 #[derive(Debug)]
 pub enum AlgaError {
-    Auth {
-        status_code: u16,
-        message: String,
-    },
+    Auth { status_code: u16, message: String },
     Api {
         status_code: u16,
         message: String,
-        retry_after: Option<std::time::Duration>,
+        retry_after: Option<Duration>,
     },
     Connection(String),
     Request(reqwest::Error),
     Json(serde_json::Error),
-    /// The bearer token contained bytes that are illegal in an HTTP header value.
     InvalidToken,
 }
 
@@ -24,9 +21,7 @@ impl fmt::Display for AlgaError {
             AlgaError::Auth {
                 status_code,
                 message,
-            } => {
-                write!(f, "authentication failed ({}): {}", status_code, message)
-            }
+            } => write!(f, "auth error {}: {}", status_code, message),
             AlgaError::Api {
                 status_code,
                 message,
@@ -34,12 +29,12 @@ impl fmt::Display for AlgaError {
             } => match retry_after {
                 Some(d) => write!(
                     f,
-                    "api error ({}): {} (retry after {:.0}s)",
+                    "api error {}: {} (retry after {:.0}s)",
                     status_code,
                     message,
                     d.as_secs_f64()
                 ),
-                None => write!(f, "api error ({}): {}", status_code, message),
+                None => write!(f, "api error {}: {}", status_code, message),
             },
             AlgaError::Connection(s) => write!(f, "connection error: {}", s),
             AlgaError::Request(e) => write!(f, "request error: {}", e),
@@ -67,12 +62,32 @@ impl From<serde_json::Error> for AlgaError {
 }
 
 impl AlgaError {
-    /// Returns the retry delay the server requested via `Retry-After`, if any.
-    /// Most useful for 429 responses.
-    pub fn retry_after(&self) -> Option<std::time::Duration> {
+    pub fn is_retryable(&self) -> bool {
+        match self {
+            AlgaError::Auth { .. } => false,
+            AlgaError::Api { status_code, .. } => matches!(
+                status_code,
+                429 | 500 | 502 | 503 | 504
+            ),
+            AlgaError::Connection(_) => true,
+            AlgaError::Request(_) => true,
+            AlgaError::Json(_) => false,
+            AlgaError::InvalidToken => false,
+        }
+    }
+
+    pub fn retry_after(&self) -> Option<Duration> {
         match self {
             AlgaError::Api { retry_after, .. } => *retry_after,
             _ => None,
         }
     }
+}
+
+pub fn is_auth_error(err: &AlgaError) -> bool {
+    matches!(err, AlgaError::Auth { .. })
+}
+
+pub fn is_retryable_error(err: &AlgaError) -> bool {
+    err.is_retryable()
 }

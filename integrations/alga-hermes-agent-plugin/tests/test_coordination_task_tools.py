@@ -121,7 +121,7 @@ class TestDispatchTask:
         )
         got = json.loads(raw)
         assert "error" in got
-        assert "incident_id" in got["error"]
+        assert "incident_number" in got["error"]
         mock.assert_not_called()
 
     def test_rejects_invalid_kind(self):
@@ -129,7 +129,7 @@ class TestDispatchTask:
         _setup_inv_tool_mock(module)
         import asyncio
         raw = asyncio.run(module._alga_dispatch_task({
-            "incident_id": "24", "kind": "bogus", "assignee_role": "responder", "goal": "x",
+            "incident_number": "24", "kind": "bogus", "assignee_role": "responder", "goal": "x",
         }))
         got = json.loads(raw)
         assert "error" in got
@@ -140,7 +140,7 @@ class TestDispatchTask:
         _setup_inv_tool_mock(module)
         import asyncio
         raw = asyncio.run(module._alga_dispatch_task({
-            "incident_id": "24", "kind": "investigate", "assignee_role": "commander", "goal": "x",
+            "incident_number": "24", "kind": "investigate", "assignee_role": "commander", "goal": "x",
         }))
         got = json.loads(raw)
         assert "error" in got
@@ -151,7 +151,7 @@ class TestDispatchTask:
         mock = _setup_inv_tool_mock(module)
         import asyncio
         raw = asyncio.run(module._alga_dispatch_task({
-            "incident_id": "24", "kind": "investigate", "assignee_role": "responder",
+            "incident_number": "24", "kind": "investigate", "assignee_role": "responder",
         }))
         got = json.loads(raw)
         assert "error" in got
@@ -163,7 +163,7 @@ class TestDispatchTask:
         mock = _setup_inv_tool_mock(module)
         import asyncio
         raw = asyncio.run(module._alga_dispatch_task({
-            "incident_id": "24",
+            "incident_number": "24",
             "kind": "investigate",
             "assignee_role": "responder",
             "goal": "Find why api latency spiked",
@@ -178,7 +178,7 @@ class TestDispatchTask:
         assert chat_id == "incident_coord_24"
         assert cmd == {
             "op": "dispatch_task",
-            "incident_id": "24",
+            "incident_number": 24,
             "task_kind": "investigate",
             "assignee_role": "responder",
             "goal": "Find why api latency spiked",
@@ -192,7 +192,7 @@ class TestDispatchTask:
         mock = _setup_inv_tool_mock(module)
         import asyncio
         asyncio.run(module._alga_dispatch_task({
-            "incident_id": "7", "kind": "communicate", "assignee_role": "communicator", "goal": "publish update",
+            "incident_number": "7", "kind": "communicate", "assignee_role": "communicator", "goal": "publish update",
         }))
         _, cmd = mock.await_args.args
         assert "assignee_agent_id" not in cmd
@@ -262,14 +262,14 @@ class TestListTasks:
         raw = asyncio.run(module._alga_list_tasks({}))
         got = json.loads(raw) if isinstance(raw, str) else raw
         assert "error" in got
-        assert "incident_id" in got["error"]
+        assert "incident_number" in got["error"]
         mock.assert_not_called()
 
     def test_calls_agent_get_with_incident_path(self):
         module = _load_register_module()
         mock = _setup_agent_get_mock(module)
         import asyncio
-        asyncio.run(module._alga_list_tasks({"incident_id": "42"}))
+        asyncio.run(module._alga_list_tasks({"incident_number": "42"}))
         mock.assert_awaited_once_with("/api/v1/agent/incidents/42/tasks")
 
     def test_appends_query_string_for_filters(self):
@@ -277,7 +277,7 @@ class TestListTasks:
         mock = _setup_agent_get_mock(module)
         import asyncio
         asyncio.run(module._alga_list_tasks({
-            "incident_id": "42", "status": "complete", "assignee_role": "responder", "limit": 10,
+            "incident_number": "42", "status": "complete", "assignee_role": "responder", "limit": 10,
         }))
         path = mock.await_args.args[0]
         assert path.startswith("/api/v1/agent/incidents/42/tasks?")
@@ -298,14 +298,14 @@ class TestSynthesizeFindings:
         raw = asyncio.run(module._alga_synthesize_findings({"summary": "conclusion"}))
         got = json.loads(raw)
         assert "error" in got
-        assert "incident_id" in got["error"]
+        assert "incident_number" in got["error"]
         mock.assert_not_called()
 
     def test_requires_summary(self):
         module = _load_register_module()
         mock = _setup_inv_tool_mock(module)
         import asyncio
-        raw = asyncio.run(module._alga_synthesize_findings({"incident_id": "24"}))
+        raw = asyncio.run(module._alga_synthesize_findings({"incident_number": "24"}))
         got = json.loads(raw)
         assert "error" in got
         assert "summary" in got["error"]
@@ -316,7 +316,7 @@ class TestSynthesizeFindings:
         mock = _setup_inv_tool_mock(module)
         import asyncio
         raw = asyncio.run(module._alga_synthesize_findings({
-            "incident_id": "24", "summary": "Root cause was the deploy; rolled back.",
+            "incident_number": "24", "summary": "Root cause was the deploy; rolled back.",
         }))
         got = json.loads(raw)
         assert got["success"] is True
@@ -325,7 +325,7 @@ class TestSynthesizeFindings:
         assert chat_id == "incident_coord_24"
         assert cmd == {
             "op": "synthesize_findings",
-            "incident_id": "24",
+            "incident_number": 24,
             "summary": "Root cause was the deploy; rolled back.",
         }
 

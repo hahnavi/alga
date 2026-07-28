@@ -141,6 +141,16 @@ const capabilityCounts = computed(() => {
   return counts;
 });
 
+const emptyFilterMessage = computed(() => {
+  if (capabilityFilter.value) {
+    const label = agentCapabilities[capabilityFilter.value].label;
+    return agentSearchQuery.value.trim()
+      ? `No agents with the ${label} capability match your search.`
+      : `No agents have the ${label} capability.`;
+  }
+  return "No agents match your search.";
+});
+
 function toggleCapabilityFilter(cap: AgentCapability | "") {
   capabilityFilter.value = capabilityFilter.value === cap ? "" : cap;
 }
@@ -590,7 +600,7 @@ onMounted(() => {
             </div>
           </div>
         </Card>
-        <EmptyState v-if="filteredAgents.length === 0" message="No agents match your search." />
+        <EmptyState v-if="filteredAgents.length === 0" :message="emptyFilterMessage" />
       </div>
     </template>
 

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { ADMIN_USER, VIEWER_USER, mockAuthenticated } from "./helpers";
+import { ADMIN_USER, VIEWER_USER, dataEnvelope, mockAuthenticated } from "./helpers";
 
 test.describe("rbac: permission-based redirects", () => {
   test("viewer without incidents:write can still view /incidents (has incidents:read)", async ({
@@ -7,10 +7,7 @@ test.describe("rbac: permission-based redirects", () => {
   }) => {
     await mockAuthenticated(page, VIEWER_USER);
     await page.route("**/api/v1/incidents**", (route) =>
-      route.fulfill({
-        contentType: "application/json",
-        body: JSON.stringify({ data: { items: [], total: 0 } }),
-      }),
+      route.fulfill(dataEnvelope({ items: [], total: 0 })),
     );
     await page.goto("/incidents");
     await expect(page).toHaveURL(/\/incidents/);
@@ -52,36 +49,21 @@ test.describe("rbac: permission-based redirects", () => {
 test.describe("rbac: admin access", () => {
   test("admin with wildcard permission can access /routes", async ({ page }) => {
     await mockAuthenticated(page, ADMIN_USER);
-    await page.route("**/api/v1/routes**", (route) =>
-      route.fulfill({
-        contentType: "application/json",
-        body: JSON.stringify({ data: [] }),
-      }),
-    );
+    await page.route("**/api/v1/routes**", (route) => route.fulfill(dataEnvelope([])));
     await page.goto("/routes");
     await expect(page).toHaveURL(/\/routes/);
   });
 
   test("admin can access /users", async ({ page }) => {
     await mockAuthenticated(page, ADMIN_USER);
-    await page.route("**/api/v1/users**", (route) =>
-      route.fulfill({
-        contentType: "application/json",
-        body: JSON.stringify({ data: [ADMIN_USER] }),
-      }),
-    );
+    await page.route("**/api/v1/users**", (route) => route.fulfill(dataEnvelope([ADMIN_USER])));
     await page.goto("/users");
     await expect(page).toHaveURL(/\/users/);
   });
 
   test("admin can access /system/general", async ({ page }) => {
     await mockAuthenticated(page, ADMIN_USER);
-    await page.route("**/api/v1/system/**", (route) =>
-      route.fulfill({
-        contentType: "application/json",
-        body: JSON.stringify({ data: {} }),
-      }),
-    );
+    await page.route("**/api/v1/system/**", (route) => route.fulfill(dataEnvelope({})));
     await page.goto("/system/general");
     await expect(page).toHaveURL(/\/system\/general/);
   });

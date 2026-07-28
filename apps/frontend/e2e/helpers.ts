@@ -36,19 +36,22 @@ export function dataEnvelope(payload: unknown) {
 }
 
 export async function mockSetupStatus(page: Page, needsSetup: boolean) {
-  await page.route("**/api/v1/setup/status", (route: Route) =>
-    route.fulfill(json({ needs_setup: needsSetup })),
-  );
+  await page.route("**/api/v1/setup/status", (route: Route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    return route.fulfill(json({ needs_setup: needsSetup }));
+  });
 }
 
 export async function mockOnboardingStatus(page: Page, completed: boolean) {
-  await page.route("**/api/v1/onboarding/status", (route: Route) =>
-    route.fulfill(json({ completed })),
-  );
+  await page.route("**/api/v1/onboarding/status", (route: Route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    return route.fulfill(json({ completed }));
+  });
 }
 
 export async function mockAuthMe(page: Page, user: MockUser | null) {
   await page.route("**/api/v1/auth/me", (route: Route) => {
+    if (route.request().method() !== "GET") return route.fallback();
     if (!user) {
       return route.fulfill({ status: 401, ...json({ error: "Unauthorized" }) });
     }
@@ -57,15 +60,18 @@ export async function mockAuthMe(page: Page, user: MockUser | null) {
 }
 
 export async function mockOAuthDisabled(page: Page) {
-  await page.route("**/api/v1/auth/google/enabled", (route: Route) =>
-    route.fulfill(json({ enabled: false })),
-  );
-  await page.route("**/api/v1/auth/slack/enabled", (route: Route) =>
-    route.fulfill(json({ enabled: false })),
-  );
-  await page.route("**/api/v1/auth/oidc/providers", (route: Route) =>
-    route.fulfill(dataEnvelope([])),
-  );
+  await page.route("**/api/v1/auth/google/enabled", (route: Route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    return route.fulfill(json({ enabled: false }));
+  });
+  await page.route("**/api/v1/auth/slack/enabled", (route: Route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    return route.fulfill(json({ enabled: false }));
+  });
+  await page.route("**/api/v1/auth/oidc/providers", (route: Route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    return route.fulfill(dataEnvelope([]));
+  });
 }
 
 export async function mockAuthenticated(page: Page, user: MockUser = ADMIN_USER) {
@@ -81,7 +87,25 @@ export async function mockUnauthenticated(page: Page) {
   await mockOAuthDisabled(page);
 }
 
-export function makeAlert(overrides: Record<string, unknown> = {}) {
+export type MockAlert = {
+  fingerprint: string;
+  alert_number: number;
+  status: string;
+  acknowledged: boolean;
+  silenced: boolean;
+  labels: Record<string, string>;
+  annotations: Record<string, string>;
+  values: unknown;
+  starts_at: string;
+  ends_at: string | null;
+  generator_url: string;
+  events: unknown[];
+  updated_at: string;
+  created_at: string;
+  deleted_at: string | null;
+};
+
+export function makeAlert(overrides: Partial<MockAlert> = {}): MockAlert {
   return {
     fingerprint: "fp-test-001",
     alert_number: 1,
@@ -102,7 +126,23 @@ export function makeAlert(overrides: Record<string, unknown> = {}) {
   };
 }
 
-export function makeIncident(overrides: Record<string, unknown> = {}) {
+export type MockIncident = {
+  id: string;
+  incident_number: number;
+  title: string;
+  description: string;
+  status: string;
+  severity: string;
+  impact_level: string;
+  priority: string;
+  incident_type: string;
+  slack_channel_archived: boolean;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+};
+
+export function makeIncident(overrides: Partial<MockIncident> = {}): MockIncident {
   return {
     id: "inc-001",
     incident_number: 1,

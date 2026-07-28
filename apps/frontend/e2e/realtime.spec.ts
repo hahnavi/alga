@@ -4,15 +4,49 @@ import { dataEnvelope, json, makeAlert, mockAuthenticated } from "./helpers";
 test.describe("realtime: SSE alert updates", () => {
   test("new alert from SSE appears in list without reload", async ({ page }) => {
     await mockAuthenticated(page);
-    await page.route("**/api/v1/alerts**", (route) => {
-      if (route.request().url().includes("/stream") || route.request().url().includes("/events")) {
-        return route.abort();
+    // Quiets the SSE auth probe so reconnect handling stays inert.
+    await page.route("**/api/v1/notifications**", (route) => route.fulfill(dataEnvelope([])));
+    await page.route("**/api/v1/alerts**", (route) =>
+      route.fulfill(dataEnvelope([makeAlert({ alert_number: 1 })])),
+    );
+
+    const pushed = makeAlert({
+      alert_number: 2,
+      fingerprint: "fp-sse-002",
+      labels: { alertname: "SSEPushed", severity: "warning" },
+    });
+    // Hold the event stream open until the initial list has rendered, then
+    // deliver a single alert_created frame as a post-navigation push.
+    let releaseStream!: () => void;
+    const streamGate = new Promise<void>((resolve) => {
+      releaseStream = resolve;
+    });
+    await page.route("**/api/v1/events**", async (route) => {
+      await streamGate;
+      try {
+        await route.fulfill({
+          contentType: "text/event-stream",
+          body: `retry: 30000\nevent: alert_created\ndata: ${JSON.stringify(pushed)}\n\n`,
+        });
+      } catch {
+        // The activation reconnect replaces the first EventSource; its
+        // pending request is aborted and needs no response.
       }
-      return route.fulfill(dataEnvelope([makeAlert({ alert_number: 1 })]));
     });
 
     await page.goto("/alerts");
     await expect(page.getByText("HighCPU")).toBeVisible();
+    await page.evaluate(() => {
+      sessionStorage.setItem("sse_no_reload_marker", "1");
+    });
+    releaseStream();
+
+    // The second alert only arrives through the SSE stream above; the marker
+    // proves the list update happened without a full page reload.
+    await expect(page.getByText("SSEPushed")).toBeVisible();
+    await expect
+      .poll(() => page.evaluate(() => sessionStorage.getItem("sse_no_reload_marker")))
+      .toBe("1");
   });
 });
 
@@ -64,17 +98,15 @@ test.describe("edge: stale chunk recovery", () => {
       sessionStorage.removeItem("alga_chunk_reload");
     });
 
+    // Fail the lazy route module so navigation hits the router's stale-chunk
+    // handler for real, which recovers via a hard location.assign() reload.
+    await page.route("**/src/pages/AlertsPage.vue**", (route) => route.abort());
+
     const reloaded = page.waitForEvent("load", { timeout: 5000 }).catch(() => null);
-    await page.evaluate(() => {
-      window.dispatchEvent(
-        new ErrorEvent("error", {
-          message: "error loading dynamically imported module: /assets/AlertsPage-abc123.js",
-        }),
-      );
-    });
+    await page.getByRole("link", { name: "Alerts" }).click();
 
     const result = await reloaded;
-    expect(result !== null || true).toBeTruthy();
+    expect(result).not.toBeNull();
   });
 });
 
@@ -89,6 +121,6 @@ test.describe("edge: document title", () => {
     await mockAuthenticated(page);
     await page.route("**/api/v1/alerts**", (route) => route.fulfill(dataEnvelope([])));
     await page.goto("/alerts");
-    await expect(page).toHaveTitle(/Alerts.*Alga|Alga/);
+    await expect(page).toHaveTitle(/Alerts.*Alga/);
   });
 });

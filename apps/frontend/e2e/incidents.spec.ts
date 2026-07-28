@@ -69,13 +69,10 @@ test.describe("incidents: detail", () => {
     await expect(page.getByText("Kubernetes pod crash loop").first()).toBeVisible();
   });
 
-  test("status transition sends PATCH request", async ({ page }) => {
+  test("mitigate action sends POST via actions menu", async ({ page }) => {
     await mockAuthenticated(page);
     const incident = makeIncident({ incident_number: 11, status: "active" });
-    await page.route("**/api/v1/incidents/11", (route) => {
-      if (route.request().method() === "PATCH") {
-        return route.fulfill(dataEnvelope({ ...incident, status: "mitigated" }));
-      }
+    await page.route("**/api/v1/incidents/11**", (route) => {
       if (route.request().url().includes("/thread")) {
         return route.fulfill(
           dataEnvelope({ messages: [], thread_id: "t-1", provider: "internal" }),
@@ -84,26 +81,16 @@ test.describe("incidents: detail", () => {
       return route.fulfill(dataEnvelope({ incident }));
     });
 
-    let patchCalled = false;
-    await page.route("**/api/v1/incidents/11", (route) => {
-      if (route.request().method() === "PATCH") {
-        patchCalled = true;
-        return route.fulfill(dataEnvelope({ ...incident, status: "mitigated" }));
-      }
-      if (route.request().url().includes("/thread")) {
-        return route.fulfill(
-          dataEnvelope({ messages: [], thread_id: "t-1", provider: "internal" }),
-        );
-      }
-      return route.fulfill(dataEnvelope({ incident }));
+    let mitigateCalled = false;
+    await page.route("**/api/v1/incidents/11/mitigate", (route) => {
+      mitigateCalled = true;
+      return route.fulfill(dataEnvelope({ ...incident, status: "mitigated" }));
     });
 
     await page.goto("/incidents/11");
-    const mitigateBtn = page.getByRole("button", { name: /mitigate/i });
-    if (await mitigateBtn.isVisible()) {
-      await mitigateBtn.click();
-      await expect.poll(() => patchCalled).toBe(true);
-    }
+    await page.getByRole("button", { name: "Incident actions" }).click();
+    await page.getByRole("menuitem", { name: "Mitigate" }).click();
+    await expect.poll(() => mitigateCalled).toBe(true);
   });
 });
 
@@ -130,15 +117,10 @@ test.describe("incidents: create", () => {
     });
 
     await page.goto("/incidents");
-    const createBtn = page.getByRole("button", { name: /new incident|create/i });
-    if (await createBtn.isVisible()) {
-      await createBtn.click();
-      const titleInput = page.getByLabel(/title/i);
-      if (await titleInput.isVisible()) {
-        await titleInput.fill("Test incident");
-        await page.getByRole("button", { name: /create|submit/i }).click();
-        await expect.poll(() => postCalled).toBe(true);
-      }
-    }
+    await page.getByRole("button", { name: "Create incident", exact: true }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel(/title/i).fill("Test incident");
+    await dialog.getByRole("button", { name: /create incident/i }).click();
+    await expect.poll(() => postCalled).toBe(true);
   });
 });

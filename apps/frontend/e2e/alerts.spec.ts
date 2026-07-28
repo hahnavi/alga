@@ -86,7 +86,9 @@ test.describe("alerts: detail", () => {
 
   test("resolve action sends POST via actions menu", async ({ page }) => {
     await mockAuthenticated(page);
-    const alert = makeAlert({ alert_number: 8, status: "firing" });
+    // Acknowledged so the header renders the workflow actions menu with
+    // "Mark resolved" instead of the inline Acknowledge button.
+    const alert = makeAlert({ alert_number: 8, status: "firing", acknowledged: true });
     await page.route("**/api/v1/alerts/8", (route) => route.fulfill(dataEnvelope({ alert })));
     await page.route("**/api/v1/alerts/8/related", (route) =>
       route.fulfill(dataEnvelope({ related_alerts: [], incident: null })),
@@ -99,14 +101,8 @@ test.describe("alerts: detail", () => {
     });
 
     await page.goto("/alerts/8");
-    const menuTrigger = page.getByRole("button", { name: /actions|more/i });
-    if (await menuTrigger.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await menuTrigger.click();
-    }
-    const resolveItem = page.getByText(/mark resolved|resolve/i);
-    if (await resolveItem.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await resolveItem.click();
-      await expect.poll(() => resolveCalled).toBe(true);
-    }
+    await page.getByRole("button", { name: "Alert actions" }).click();
+    await page.getByRole("menuitem", { name: "Mark resolved" }).click();
+    await expect.poll(() => resolveCalled).toBe(true);
   });
 });

@@ -256,6 +256,23 @@ export async function agentGetIncidentTimeline(
   return await res.json();
 }
 
+export async function agentListTasks(
+  httpBase: string, token: string, incidentNumber: number,
+  params?: { status?: string; limit?: number; skip?: number },
+): Promise<unknown> {
+  const sp = new URLSearchParams();
+  if (params?.status) sp.set("status", params.status);
+  if (params?.limit) sp.set("limit", String(params.limit));
+  if (params?.skip) sp.set("skip", String(params.skip));
+  const qs = sp.toString() ? `?${sp.toString()}` : "";
+  const res = await fetch(
+    `${httpBase}/api/v1/agent/incidents/${incidentNumber}/tasks${qs}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  if (!res.ok) throw new Error(`Alga GET /agent/incidents/${incidentNumber}/tasks failed: ${res.status}`);
+  return await res.json();
+}
+
 export async function agentGetOnCall(
   httpBase: string, token: string,
 ): Promise<unknown> {

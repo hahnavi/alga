@@ -26,7 +26,6 @@ export const ALGA_TOOL_NAMES = [
   "alga_set_incident_priority",
   "alga_set_incident_severity",
   "alga_trigger_escalation",
-  "alga_request_status_update",
   "alga_mitigate_incident",
   "alga_resolve_incident",
   "alga_begin_triage",
@@ -35,6 +34,11 @@ export const ALGA_TOOL_NAMES = [
   "alga_post_handoff",
   "alga_publish_status_update",
   "alga_set_incident_resolution_docs",
+  "alga_dispatch_task",
+  "alga_claim_task",
+  "alga_complete_task",
+  "alga_list_tasks",
+  "alga_synthesize_findings",
 ];
 
 async function ensureAlgaToolsInAllowlist(api: {

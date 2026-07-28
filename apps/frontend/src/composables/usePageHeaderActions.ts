@@ -1,18 +1,8 @@
-import type { Component, Ref, VNode } from "vue";
-import {
-  h,
-  isRef,
-  isVNode,
-  nextTick,
-  onActivated,
-  onBeforeUnmount,
-  ref,
-  toValue,
-  watch,
-} from "vue";
+import type { Component, ComponentPublicInstance, Ref, VNode } from "vue";
+import { h, isRef, isVNode, nextTick, ref, toValue } from "vue";
 import { Plus, Search, SlidersHorizontal, X } from "@lucide/vue";
 import { HEADER_ICON_BTN_CLASS } from "@/lib/uiClasses";
-import { clearPageHeader, setPageHeader } from "@/lib/pageHeader";
+import { usePageHeader } from "@/composables/usePageHeader";
 
 interface UsePageHeaderActionsOptions {
   /** Page title shown in the shell header. */
@@ -71,11 +61,15 @@ export function usePageHeaderActions(
           h("input", {
             type: "search",
             "data-page-header-search": "",
-            value: searchInput.value,
             placeholder: options.searchPlaceholder ?? "Search...",
             class: SEARCH_INPUT_CLASS,
+            ref: (el: Element | ComponentPublicInstance | null) => {
+              if (el instanceof HTMLInputElement && el.value !== searchInput!.value) {
+                el.value = searchInput!.value;
+              }
+            },
             onInput: (e: Event) => {
-              searchInput.value = (e.target as HTMLInputElement).value;
+              searchInput!.value = (e.target as HTMLInputElement).value;
               options.onSearchInput?.();
             },
           }),
@@ -96,10 +90,9 @@ export function usePageHeaderActions(
               const wasOpen = showSearch.value;
               showSearch.value = !showSearch.value;
               if (wasOpen) {
-                searchInput.value = "";
+                searchInput!.value = "";
                 options.onSearchInput?.();
               }
-              syncHeader();
               if (showSearch.value) {
                 nextTick(() => {
                   document.querySelector<HTMLInputElement>("[data-page-header-search]")?.focus();
@@ -124,7 +117,6 @@ export function usePageHeaderActions(
             onClick: () => {
               showFilters.value = !showFilters.value;
               options.onToggleFilters?.();
-              syncHeader();
             },
           },
           [
@@ -162,7 +154,7 @@ export function usePageHeaderActions(
     return actions;
   }
 
-  function syncHeader() {
+  usePageHeader(() => {
     let titleIcon: VNode | undefined;
     if (options.titleIcon) {
       titleIcon = isVNode(options.titleIcon)
@@ -173,25 +165,13 @@ export function usePageHeaderActions(
           });
     }
 
-    setPageHeader(options.title, undefined, {
-      actions: buildActions(),
-      titleIcon,
-    });
-  }
-
-  const watchSources: Ref<unknown>[] = [showSearch];
-  if (filtersEnabled) watchSources.push(showFilters);
-  if (options.hasNonDefaultFilters) watchSources.push(options.hasNonDefaultFilters);
-  if (addRef) watchSources.push(addRef);
-
-  // `immediate: true` covers initial mount; `onActivated` covers keep-alive
-  // reactivation. A separate `onMounted(syncHeader)` would be redundant work
-  // and previously fired back-to-back with the immediate watch.
-  watch(watchSources, syncHeader, { immediate: true });
-  onActivated(syncHeader);
-
-  onBeforeUnmount(() => {
-    clearPageHeader();
+    return {
+      title: options.title,
+      options: {
+        actions: buildActions(),
+        titleIcon,
+      },
+    };
   });
 
   return { showSearch, showFilters };

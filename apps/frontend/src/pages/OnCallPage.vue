@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { getErrorMessage } from "@/lib/error";
-import { h, onBeforeUnmount, onMounted, ref } from "vue";
+import { h, onMounted, ref } from "vue";
 import { Clock } from "@lucide/vue";
 import { api, type OnCallScheduleRecord, type OnCallCurrent } from "@/lib/api";
 import { useToast } from "@/lib/toast";
@@ -8,7 +8,7 @@ import LoadingSpinner from "@/components/ui/LoadingSpinner.vue";
 import ErrorBanner from "@/components/ui/ErrorBanner.vue";
 import EmptyState from "@/components/ui/EmptyState.vue";
 import ScheduleCard from "@/components/oncall/ScheduleCard.vue";
-import { setPageHeader, clearPageHeader } from "@/lib/pageHeader";
+import { usePageHeader } from "@/composables/usePageHeader";
 
 defineOptions({ name: "OnCallPage" });
 
@@ -52,18 +52,18 @@ async function load() {
   }
 }
 
-onMounted(() => {
-  setPageHeader("On-Call", undefined, {
+usePageHeader(() => ({
+  title: "On-Call",
+  options: {
     titleIcon: h(Clock, {
       class: "h-5 w-5 shrink-0 text-[var(--text-muted)]",
       "aria-hidden": "true",
     }),
-  });
-  load();
-});
+  },
+}));
 
-onBeforeUnmount(() => {
-  clearPageHeader();
+onMounted(() => {
+  load();
 });
 </script>
 

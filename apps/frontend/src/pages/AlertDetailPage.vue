@@ -70,7 +70,8 @@ import MessageContextMenu, { type MessageAction } from "@/components/ui/MessageC
 import TypingIndicator from "@/components/ui/TypingIndicator.vue";
 import DeletedBadge from "@/components/ui/DeletedBadge.vue";
 import { useToast } from "@/lib/toast";
-import { clearPageHeader, createSearchActionButton, setPageHeader } from "@/lib/pageHeader";
+import { usePageHeader } from "@/composables/usePageHeader";
+import { createSearchActionButton } from "@/lib/pageHeader";
 import { useEntityPermissions } from "@/composables/useEntityPermissions";
 import { useDelete } from "@/composables/useDelete";
 import AlertActionsMenu from "@/components/ui/AlertActionsMenu.vue";
@@ -1069,7 +1070,6 @@ function chatDisplayName(msg: OwnerThreadMessage): string {
 }
 
 onBeforeUnmount(() => {
-  clearPageHeader();
   clearAgentTyping();
   if (reloadTimer != null) {
     clearTimeout(reloadTimer);
@@ -1111,43 +1111,39 @@ watch(chatDraft, () => {
   if (chatDraft.value.trim()) scheduleTypingNotify();
 });
 
-watch(
-  () => alert.value,
-  (a) => {
-    if (!a) return;
-    const raw = (a.labels?.alertname ?? "Alert").trim() || "Alert";
-    const name = raw.replace(/\p{Cc}/gu, "");
-    const idPrefix =
-      a.alert_number != null && a.alert_number > 0 ? `#${a.alert_number}` : undefined;
-    const actions: ReturnType<typeof h>[] = [];
-    if (showAlertThread.value || threadLayoutOpen.value) {
-      actions.push(createSearchActionButton(() => searchOpen()));
-    }
-    if (
-      !isDeleted.value &&
-      (!showAckButton.value ||
-        canWriteAlerts.value ||
-        canDeleteAlerts.value ||
-        canCreateIncident.value)
-    ) {
-      actions.push(
-        h(AlertActionsMenu, {
-          workflowStatus: workflowStatus.value,
-          statusBusy: statusWorkflowBusy.value,
-          canDelete: canDeleteAlerts.value,
-          canCreateIncident: canCreateIncident.value,
-          showAckButton: showAckButton.value,
-          onResolve: () => onWorkflowStatusChange("resolved"),
-          onReopen: () => onWorkflowStatusChange("open"),
-          onDelete: onDeleteFromHeader,
-          onCreateIncident: requestCreateIncidentFromAlert,
-        }),
-      );
-    }
-    setPageHeader(name, undefined, { titlePrefix: idPrefix, actions });
-  },
-  { immediate: true },
-);
+usePageHeader(() => {
+  const a = alert.value;
+  if (!a) return null;
+  const raw = (a.labels?.alertname ?? "Alert").trim() || "Alert";
+  const name = raw.replace(/\p{Cc}/gu, "");
+  const idPrefix = a.alert_number != null && a.alert_number > 0 ? `#${a.alert_number}` : undefined;
+  const actions: ReturnType<typeof h>[] = [];
+  if (showAlertThread.value || threadLayoutOpen.value) {
+    actions.push(createSearchActionButton(() => searchOpen()));
+  }
+  if (
+    !isDeleted.value &&
+    (!showAckButton.value ||
+      canWriteAlerts.value ||
+      canDeleteAlerts.value ||
+      canCreateIncident.value)
+  ) {
+    actions.push(
+      h(AlertActionsMenu, {
+        workflowStatus: workflowStatus.value,
+        statusBusy: statusWorkflowBusy.value,
+        canDelete: canDeleteAlerts.value,
+        canCreateIncident: canCreateIncident.value,
+        showAckButton: showAckButton.value,
+        onResolve: () => onWorkflowStatusChange("resolved"),
+        onReopen: () => onWorkflowStatusChange("open"),
+        onDelete: onDeleteFromHeader,
+        onCreateIncident: requestCreateIncidentFromAlert,
+      }),
+    );
+  }
+  return { title: name, options: { titlePrefix: idPrefix, actions } };
+});
 
 onMounted(async () => {
   await Promise.all([loadIntegrations(), load(), loadMentionTargets(), thread.reload()]);

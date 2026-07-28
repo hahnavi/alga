@@ -8,7 +8,7 @@ export type HeaderBadge = {
   cssClass: string;
 };
 
-type PageHeaderOptions = {
+export type PageHeaderOptions = {
   /** Rendered immediately before `title` (e.g. page icon). */
   titleIcon?: VNode;
   /** Shown before `title` (e.g. alert `#123`). */

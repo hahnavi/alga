@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref, computed, h, nextTick, watch } from "vue";
+import { onMounted, ref, computed, h, nextTick, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { Plus, X, Save, Trash2, ChevronDown, Search } from "@lucide/vue";
 import { api, type TeamMemberRecord, type UserInfo, type EscalationPolicyRecord } from "@/lib/api";
-import { setPageHeader, clearPageHeader } from "@/lib/pageHeader";
+import { usePageHeader } from "@/composables/usePageHeader";
 import Button from "@/components/ui/Button.vue";
 import Input from "@/components/ui/Input.vue";
 import UserLabel from "@/components/ui/UserLabel.vue";
@@ -50,7 +50,6 @@ const {
       : Promise.resolve({ items: [] as EscalationPolicyRecord[] }),
   ]);
   await loadPermittedUsers();
-  setPageHeader(t.name, undefined, { actions: headerActions.value });
   members.value = m;
   allUsers.value = permittedUsers.value;
   policies.value = "items" in p ? p.items : [];
@@ -114,6 +113,12 @@ const headerActions = computed(() => {
       ],
     }),
   ];
+});
+
+usePageHeader(() => {
+  const t = team.value;
+  if (!t) return null;
+  return { title: t.name, options: { actions: headerActions.value } };
 });
 
 function startEdit() {
@@ -303,7 +308,6 @@ function resetAddMemberState() {
 
 onMounted(loadTeam);
 watch(teamId, loadTeam);
-onBeforeUnmount(() => clearPageHeader());
 </script>
 
 <template>

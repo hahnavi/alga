@@ -69,7 +69,7 @@ import DeletedBadge from "@/components/ui/DeletedBadge.vue";
 import { useEntityPermissions } from "@/composables/useEntityPermissions";
 import { useDelete } from "@/composables/useDelete";
 import { useDocumentTitle } from "@/composables/useDocumentTitle";
-import { setPageHeader, clearPageHeader } from "@/lib/pageHeader";
+import { usePageHeader } from "@/composables/usePageHeader";
 
 defineOptions({ name: "IncidentDetailPage" });
 
@@ -119,7 +119,6 @@ async function loadIncident() {
   // one shot.
   await data.load();
   if (!incident.value) return;
-  updatePageHeader(incident.value);
   await Promise.all([
     docs.load(),
     coord.loadCoordinationMessages(),
@@ -291,7 +290,9 @@ const fetchStatusUpdates = coord.fetchStatusUpdates;
 
 const canPostStatusUpdate = canCommand;
 
-function updatePageHeader(inc: IncidentRecord) {
+usePageHeader(() => {
+  const inc = incident.value;
+  if (!inc) return null;
   const actions: ReturnType<typeof h>[] = [];
   if (!inc.deleted_at) {
     actions.push(
@@ -318,17 +319,13 @@ function updatePageHeader(inc: IncidentRecord) {
       }),
     );
   }
-  setPageHeader(inc.title, undefined, {
-    titlePrefix: `#${inc.incident_number}`,
-    actions,
-  });
-}
-
-// The editor composable mutates `incident` via `setIncident` after each
-// workflow action; re-sync the header (badges + actions menu) so the
-// actions menu reflects the new status without a full reload.
-watch(incident, (v) => {
-  if (v) updatePageHeader(v);
+  return {
+    title: inc.title,
+    options: {
+      titlePrefix: `#${inc.incident_number}`,
+      actions,
+    },
+  };
 });
 
 function resetIncidentState() {
@@ -595,7 +592,6 @@ const impactFilledBadgeCss = computed(() => {
 });
 
 onBeforeUnmount(() => {
-  clearPageHeader();
   data.reset();
   if (reloadDebounce) {
     clearTimeout(reloadDebounce);

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, h, onMounted, onBeforeUnmount, watch } from "vue";
+import { ref, computed, h, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { Bell, CheckCheck, Settings, Users, Inbox } from "@lucide/vue";
 import { useNotificationStore } from "@/stores/notifications";
@@ -7,7 +7,7 @@ import { useAuthStore } from "@/stores/auth";
 import type { NotificationRecord } from "@/lib/api";
 import { formatTimeAgo, formatTime } from "@/lib/time";
 import { handleNotificationClick } from "@/lib/notificationClick";
-import { setPageHeader, clearPageHeader } from "@/lib/pageHeader";
+import { usePageHeader } from "@/composables/usePageHeader";
 import { HEADER_ICON_BTN_CLASS } from "@/lib/uiClasses";
 import Button from "@/components/ui/Button.vue";
 import EmptyState from "@/components/ui/EmptyState.vue";
@@ -54,8 +54,9 @@ async function refresh() {
   await store.fetchNotifications(20, 0);
 }
 
-onMounted(() => {
-  setPageHeader("Notifications", undefined, {
+usePageHeader(() => ({
+  title: "Notifications",
+  options: {
     titleIcon: h(Bell, {
       class: "h-5 w-5 shrink-0 text-[var(--text-muted)]",
       "aria-hidden": "true",
@@ -73,11 +74,12 @@ onMounted(() => {
         [h(Settings, { class: "h-4 w-4", "aria-hidden": "true" })],
       ),
     ],
-  });
+  },
+}));
+
+onMounted(() => {
   refresh();
 });
-
-onBeforeUnmount(() => clearPageHeader());
 
 watch(
   () => auth.user,

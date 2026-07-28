@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onActivated, onDeactivated, onMounted, ref, computed, watch, h } from "vue";
+import { onMounted, ref, computed, h } from "vue";
 import { useRouter } from "vue-router";
 import {
   Flame,
@@ -42,7 +42,7 @@ import Card from "@/components/ui/Card.vue";
 import ErrorBanner from "@/components/ui/ErrorBanner.vue";
 import MarkdownRenderer from "@/components/ui/MarkdownRenderer.vue";
 import NotificationBell from "@/components/NotificationBell.vue";
-import { setPageHeader, clearPageHeader } from "@/lib/pageHeader";
+import { usePageHeader } from "@/composables/usePageHeader";
 import { HEADER_ICON_BTN_CLASS } from "@/lib/uiClasses";
 
 defineOptions({ name: "DashboardPage" });
@@ -75,8 +75,9 @@ const {
   formatMinutes,
 } = useDashboardData(selectedRange);
 
-function syncDashboardHeader() {
-  setPageHeader("Dashboard", undefined, {
+usePageHeader(() => ({
+  title: "Dashboard",
+  options: {
     actions: [
       h(
         "div",
@@ -121,23 +122,11 @@ function syncDashboardHeader() {
       class: "h-5 w-5 shrink-0 text-[var(--text-muted)]",
       "aria-hidden": "true",
     }),
-  });
-}
-
-watch(() => selectedRange.value, syncDashboardHeader, {
-  immediate: true,
-});
+  },
+}));
 
 onMounted(() => {
   void Promise.all([loadStats(), loadMetrics(), loadOnCall(), loadServices(), loadSummary()]);
-});
-
-onActivated(() => {
-  syncDashboardHeader();
-});
-
-onDeactivated(() => {
-  clearPageHeader();
 });
 
 function navigateToAlerts(filter: Record<string, string>) {

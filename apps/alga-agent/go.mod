@@ -8,7 +8,7 @@ require (
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
-	github.com/modelcontextprotocol/go-sdk v1.6.1
+	github.com/modelcontextprotocol/go-sdk v1.7.0
 	golang.org/x/term v0.45.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
@@ -41,8 +41,10 @@ require (
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
+	golang.org/x/sync v0.21.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.3.8 // indirect
+	golang.org/x/time v0.15.0 // indirect
 	golang.org/x/tools v0.47.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )
@@ -54,4 +56,4 @@ replace github.com/alga/agent-sdk-go => ../../integrations/alga-agent-sdk-go
 // goldmark is a transitive, non-built dependency (via golang.org/x/tools) that
 // Snyk flags for XSS below v1.7.17. A plain indirect require is dropped by
 // `go mod tidy`, so this replace pins the patched version durably.
-replace github.com/yuin/goldmark => github.com/yuin/goldmark v1.7.17
+replace github.com/yuin/goldmark => github.com/yuin/goldmark v1.8.4

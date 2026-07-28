@@ -92,7 +92,7 @@ Runtimes maintain presence by posting to `/api/v1/agent/heartbeat` roughly every
 - **Investigating** work gets a grace period (`AGENT_DISCONNECT_GRACE`, default 45s) before reset
 - The scheduler may circuit-break agents with sustained high failure rates
 
-Reconnect strategy is runtime-specific (for example, OpenClaw uses a fixed 5s delay; Hermes uses exponential backoff). See each runtime page for details.
+Reconnect strategy is runtime-specific (for example, all SDKs and plugins use exponential backoff 2s → 60s with jitter). See each runtime page for details.
 
 ## The alga_* Tool Catalog
 
@@ -146,7 +146,6 @@ Hermes does not register a named peer-ask tool, but Hermes agents can still use 
 | `alga_set_incident_priority`        | All      | Set incident priority (P1–P5). Affects SLA targets.                                                                                               |
 | `alga_set_incident_severity`        | All      | Set incident severity (critical, high, warning, info).                                                                                            |
 | `alga_trigger_escalation`           | All      | Trigger escalation for the incident — notifies on-call responders and escalation contacts.                                                        |
-| `alga_request_status_update`        | O        | Request a status update from incident responders — sends a notification asking for a progress report.                                             |
 | `alga_mitigate_incident`            | All      | Mark an incident as mitigated (impact contained, root cause may not be fully resolved).                                                           |
 | `alga_resolve_incident`             | All      | Resolve an incident (requires all five resolution docs).                                                                                          |
 | `alga_set_incident_resolution_docs` | All      | Stage structured resolution documents (summary, impact, actions, root cause, resolution) without resolving.                                       |
@@ -160,14 +159,15 @@ Hermes does not register a named peer-ask tool, but Hermes agents can still use 
 Every `alga_post_handoff` call **wakes up teammate agents** (commander, communicator) by forwarding the message to them, which can interrupt their current work and cause ping-pong loops. Reserve it for the single structured commander handoff that happens **after recovery is verified** and a `monitoring` status update has already been published via `alga_publish_status_update`. For status milestones during active work, always use `alga_publish_status_update` instead.
 :::
 
-### Coordination Tasks (Hermes task-driven model)
+### Coordination Tasks
 
 | Tool                       | Runtimes | Description                                                                                |
 | -------------------------- | -------- | ------------------------------------------------------------------------------------------ |
-| `alga_dispatch_task`       | H        | Dispatch a typed coordination task to a role (investigate, communicate, verify, mitigate). |
-| `alga_complete_task`       | H        | Complete a coordination task with a typed result.                                          |
-| `alga_list_tasks`          | H        | List coordination tasks (commander tracks dispatched progress).                            |
-| `alga_synthesize_findings` | H        | Synthesize findings from completed child investigations into the incident conclusion.      |
+| `alga_dispatch_task`       | All      | Dispatch a typed coordination task to a role (investigate, communicate, verify, mitigate). |
+| `alga_claim_task`          | All      | Claim a pending coordination task.                                                         |
+| `alga_complete_task`       | All      | Complete a coordination task with a typed result.                                          |
+| `alga_list_tasks`          | All      | List coordination tasks (commander tracks dispatched progress).                            |
+| `alga_synthesize_findings` | All      | Synthesize findings from completed child investigations into the incident conclusion.      |
 
 See [Coordination](/incident-management/coordination) for the multi-agent incident coordination model.
 

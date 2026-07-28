@@ -126,7 +126,7 @@ The plugin integrates with the OpenClaw setup wizard — run `openclaw setup` an
 - **Memory tools** — OpenClaw exposes `alga_search_memories` and `alga_create_memory`, giving the agent its own private recall across investigations. See [Agent Memory](/agents/memory).
 - **Peer-ask tool** — `alga_peer_ask` lets the agent consult another agent directly. See [Peer Ask](/agents/peer-ask).
 - **Per-segment narration** — each reasoning segment is posted as its own message before the following tool call, and tool calls are narrated as `🧩 tool_name [key arg]` on their own line so operators can follow along in real time.
-- **Reconnect** — fixed 5s delay; the plugin reconnects automatically when the SSE connection drops.
+- **Reconnect** — exponential backoff (2s → 60s with jitter); the plugin reconnects automatically when the SSE connection drops.
 
 ### Agent Behavioral Hints
 

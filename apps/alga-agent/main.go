@@ -24,6 +24,7 @@ import (
 	"alga-agent/internal/config"
 	"alga-agent/internal/llm"
 	"alga-agent/internal/logging"
+	"alga-agent/internal/logs"
 	"alga-agent/internal/mcp"
 	agentmetrics "alga-agent/internal/metrics"
 	"alga-agent/internal/service"
@@ -43,6 +44,9 @@ Commands:
   service <verb>   manage the systemd user service
                    verbs: install [--force] [--enable=false] [--now=false],
                           uninstall, start, stop, restart, status
+  logs [flags]     view the agent log file
+                   flags: -f (follow), -n/--tail N (last N lines),
+                          --file PATH (explicit log file)
   version          print the version
   help             show this help
 `
@@ -67,6 +71,12 @@ func main() {
 			return
 		case "service":
 			if err := runService(os.Args[2:]); err != nil {
+				fmt.Fprintf(os.Stderr, "alga-agent: %v\n", err)
+				os.Exit(1)
+			}
+			return
+		case "logs":
+			if err := logs.Run(os.Stdout, os.Args[2:]); err != nil {
 				fmt.Fprintf(os.Stderr, "alga-agent: %v\n", err)
 				os.Exit(1)
 			}

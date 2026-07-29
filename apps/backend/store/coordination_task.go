@@ -269,7 +269,7 @@ func (s *pgCoordinationTaskStore) ListTasksByIncident(ctx context.Context, incid
 	q = q.Limit(limit).Offset(skip)
 
 	var items []models.CoordinationTask
-	if err := q.Scan(ctx); err != nil {
+	if err := q.Scan(ctx, &items); err != nil {
 		return nil, fmt.Errorf("failed to list coordination tasks: %w", err)
 	}
 

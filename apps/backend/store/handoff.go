@@ -150,7 +150,7 @@ func (s *pgHandoffStore) List(ctx context.Context, filter HandoffFilter, limit, 
 		OrderExpr("created_at DESC").
 		Limit(limit).
 		Offset(skip).
-		Scan(ctx)
+		Scan(ctx, &records)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list handoff records: %w", err)
 	}

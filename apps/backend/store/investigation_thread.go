@@ -285,7 +285,7 @@ func (s *pgInvestigationThreadStore) getThreadByOwner(ctx context.Context, owner
 		msgQuery = msgQuery.Offset(int(skip))
 	}
 	var messages []models.InvestigationThreadMessage
-	if err := msgQuery.Scan(ctx); err != nil {
+	if err := msgQuery.Scan(ctx, &messages); err != nil {
 		return nil, 0, fmt.Errorf("failed to query investigation thread messages: %w", err)
 	}
 	if len(messages) > 0 {

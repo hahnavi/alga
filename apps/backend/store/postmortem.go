@@ -234,7 +234,7 @@ func (s *pgPostMortemStore) List(ctx context.Context, filter PostMortemListFilte
 	}
 
 	var items []models.PostMortem
-	err = listQ.Scan(ctx)
+	err = listQ.Scan(ctx, &items)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list post-mortems: %w", err)
 	}

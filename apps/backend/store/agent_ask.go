@@ -166,7 +166,7 @@ func (s *pgAgentAskStore) List(ctx context.Context, q AgentAskQuery) ([]AgentAsk
 	}
 
 	var asks []models.AgentAsk
-	err = listQ.Scan(ctx)
+	err = listQ.Scan(ctx, &asks)
 	if err != nil {
 		return nil, 0, fmt.Errorf("find peer asks: %w", err)
 	}

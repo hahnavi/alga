@@ -1536,6 +1536,22 @@ func (s *Service) handleAgentAddIncidentTimeline(w http.ResponseWriter, r *http.
 	if agentName == "" {
 		agentName = "Agent"
 	}
+	invs, err := s.incidentInvestigationStore.ListIncidentInvestigationsByIncident(r.Context(), incidentNumber)
+	if err != nil {
+		platform.WriteInternalError(w, err, "failed to list investigations")
+		return
+	}
+	authorized := false
+	for _, inv := range invs {
+		if inv.AgentID == agent.ID.String() {
+			authorized = true
+			break
+		}
+	}
+	if !authorized {
+		platform.WriteError(w, platform.ErrorCodeForbidden, "agent is not assigned to any investigation in this incident")
+		return
+	}
 	if err := s.incidentStore.AddTimelineEntry(r.Context(), &store.IncidentTimelineEntryRecord{
 		IncidentNumber: incidentNumber,
 		EventType:      eventType,

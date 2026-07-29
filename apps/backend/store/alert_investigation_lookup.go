@@ -62,7 +62,7 @@ func (s *pgAlertInvestigationStore) FindSimilarAlertInvestigations(ctx context.C
 	}
 
 	var invs []models.AlertInvestigation
-	if err := query.Scan(ctx); err != nil {
+	if err := query.Scan(ctx, &invs); err != nil {
 		return nil, fmt.Errorf("find similar alert investigations: %w", err)
 	}
 

@@ -522,7 +522,7 @@ func (s *pgAlertInvestigationStore) ListAlertInvestigations(ctx context.Context,
 	}
 
 	var invs []models.AlertInvestigation
-	if err := q.Scan(ctx); err != nil {
+	if err := q.Scan(ctx, &invs); err != nil {
 		return nil, fmt.Errorf("failed to list alert investigations: %w", err)
 	}
 

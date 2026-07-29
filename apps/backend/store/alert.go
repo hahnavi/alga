@@ -815,7 +815,7 @@ func (s *pgAlertStore) ListUninvestigatedAlerts(ctx context.Context, threshold t
 		// Not investigated: no non-terminal investigation linked via fingerprint
 		Where("NOT EXISTS (SELECT 1 FROM alert_investigation_alerts aia JOIN alert_investigations ai ON aia.alert_investigation_id = ai.id WHERE aia.fingerprint = alert.fingerprint AND ai.status NOT IN (?))", bun.List(invTerminal)).
 		// Not handled by active incident
-		Where("NOT EXISTS (SELECT 1 FROM incident_alerts ia JOIN incidents inc ON ia.incident_id = inc.id WHERE ia.alert_id = alert.id AND inc.status NOT IN (?))", bun.List(incTerminal)).
+		Where("NOT EXISTS (SELECT 1 FROM incident_alerts ia JOIN incidents inc ON ia.incident_id = inc.id WHERE ia.alert_id = alert.id AND inc.deleted_at IS NULL AND inc.status NOT IN (?))", bun.List(incTerminal)).
 		Order("created_at DESC").
 		Limit(500).
 		Scan(ctx)
@@ -1046,6 +1046,7 @@ func (s *pgAlertStore) ResolveAlertsByIncident(ctx context.Context, incidentNumb
 		Join("JOIN incident_alerts ia ON ia.alert_id = alert.id").
 		Join("JOIN incidents inc ON inc.id = ia.incident_id").
 		Where("inc.incident_number = ?", incidentNumber).
+		Where("inc.deleted_at IS NULL").
 		Where("alert.deleted_at IS NULL").
 		Scan(ctx)
 	if err != nil {
@@ -1058,6 +1059,7 @@ func (s *pgAlertStore) ResolveAlertsByIncident(ctx context.Context, incidentNumb
 	icErr := s.db.NewSelect().Model(&ic).
 		Join("JOIN incidents inc ON inc.id = ics_role_assignment.incident_id").
 		Where("inc.incident_number = ?", incidentNumber).
+		Where("inc.deleted_at IS NULL").
 		Where("ics_role_assignment.role_type = ?", "incident_commander").
 		Order("ics_role_assignment.status DESC, ics_role_assignment.started_at DESC").
 		Limit(1).

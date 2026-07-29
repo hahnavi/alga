@@ -285,7 +285,7 @@ func (s *pgPlaybookStore) List(ctx context.Context, filter PlaybookFilter, limit
 		OrderExpr("created_at DESC").
 		Limit(limit).
 		Offset(skip).
-		Scan(ctx)
+		Scan(ctx, &playbooks)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list playbooks: %w", err)
 	}

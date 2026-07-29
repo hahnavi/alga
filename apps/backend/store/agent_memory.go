@@ -252,7 +252,7 @@ func (s *pgAgentMemoryStore) List(ctx context.Context, f MemoryFilters) ([]Agent
 	}
 
 	var items []models.AgentMemory
-	err = listQ.Scan(ctx)
+	err = listQ.Scan(ctx, &items)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list agent memories: %w", err)
 	}

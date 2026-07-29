@@ -292,7 +292,7 @@ func (s *pgCredentialProviderStore) ListProviders(ctx context.Context, q Credent
 	}
 
 	var items []models.CredentialProvider
-	err = listQ.Scan(ctx)
+	err = listQ.Scan(ctx, &items)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list credential providers: %w", err)
 	}

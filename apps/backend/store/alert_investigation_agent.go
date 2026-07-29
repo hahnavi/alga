@@ -126,7 +126,7 @@ func (s *pgAlertInvestigationStore) listStalledAlertInvestigationsByStatus(ctx c
 	}
 
 	var invs []models.AlertInvestigation
-	if err := q.Scan(ctx); err != nil {
+	if err := q.Scan(ctx, &invs); err != nil {
 		return nil, fmt.Errorf("list stalled alert investigations %s: %w", status, err)
 	}
 
@@ -164,7 +164,7 @@ func (s *pgAlertInvestigationStore) resetStalledAlertInvestigationsByStatus(stat
 	}
 
 	var invs []models.AlertInvestigation
-	if err := q.Scan(ctx); err != nil {
+	if err := q.Scan(ctx, &invs); err != nil {
 		return nil, fmt.Errorf("reset stalled alert investigations %s: %w", status, err)
 	}
 

@@ -374,7 +374,7 @@ func (s *pgKnowledgeStore) List(ctx context.Context, q KnowledgeQuery) ([]Knowle
 	}
 
 	var notes []models.KnowledgeNote
-	err = listQ.Scan(ctx)
+	err = listQ.Scan(ctx, &notes)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list knowledge notes: %w", err)
 	}

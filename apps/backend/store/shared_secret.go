@@ -243,7 +243,7 @@ func (s *pgSharedSecretStore) ListSecrets(ctx context.Context, q SharedSecretQue
 	}
 
 	var items []models.SharedSecret
-	err = listQ.Scan(ctx)
+	err = listQ.Scan(ctx, &items)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list shared secrets: %w", err)
 	}

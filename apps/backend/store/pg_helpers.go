@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"crypto/rand"
+	"database/sql"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -10,23 +11,22 @@ import (
 	"time"
 
 	"alga/config"
-	"alga/ent"
-	entschema "alga/ent/schema"
-	"alga/pgclient"
+	"alga/db/models"
 
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/uptrace/bun"
 )
 
 func handleQueryErr[T any](err error, entity string) (T, error) {
 	var zero T
-	if ent.IsNotFound(err) {
+	if errors.Is(err, sql.ErrNoRows) {
 		return zero, nil
 	}
 	return zero, fmt.Errorf("failed to query %s: %w", entity, err)
 }
 
-func rollbackTx(tx *ent.Tx) {
-	_ = tx.Rollback()
+func isNotFound(err error) bool {
+	return errors.Is(err, sql.ErrNoRows)
 }
 
 func maskSuffix(s string) string {
@@ -45,12 +45,9 @@ func generateTokenBase64(prefix string, byteLen int) (string, error) {
 }
 
 type pgStoreBase struct {
-	client *ent.Client
+	db *bun.DB
 }
 
-// pgctx derives a store-query context from the caller's context with a bounded
-// timeout. The caller's cancellation, deadline, and trace are preserved. A nil
-// ctx falls back to context.Background() so legacy callers don't panic.
 func pgctx(ctx context.Context) (context.Context, context.CancelFunc) {
 	if ctx == nil {
 		ctx = context.Background()
@@ -58,10 +55,6 @@ func pgctx(ctx context.Context) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(ctx, 5*time.Second)
 }
 
-// pgIsDuplicateKey reports whether err is a PostgreSQL unique-violation
-// (SQLSTATE 23505). It checks the typed *pgconn.PgError first, then falls back
-// to a string match for wrapped or non-PG errors (e.g. errors surfaced through
-// Ent, middleware, or pooled connection wrappers).
 func pgIsDuplicateKey(err error) bool {
 	if err == nil {
 		return false
@@ -85,10 +78,6 @@ func containsDuplicateKey(err error) bool {
 
 func IsDuplicateKey(err error) bool {
 	return pgIsDuplicateKey(err)
-}
-
-func NewPostgresTriageResultStore(cli *pgclient.Client) TriageResultStore {
-	return newPGTriageResultStore(cli.Ent)
 }
 
 func extractLimitSkip(filter map[string]any, defaultLimit int) (limit, skip int) {
@@ -146,10 +135,10 @@ func parseSortFromFilter(filter map[string]any, defaultField string, defaultDesc
 	return f, d
 }
 
-func routeConditionsToSchema(in []config.RouteCondition) []entschema.RouteCondition {
-	out := make([]entschema.RouteCondition, len(in))
+func routeConditionsToModels(in []config.RouteCondition) []models.RouteCondition {
+	out := make([]models.RouteCondition, len(in))
 	for i, c := range in {
-		out[i] = entschema.RouteCondition{
+		out[i] = models.RouteCondition{
 			Source:   c.Source,
 			Field:    c.Field,
 			Operator: c.Operator,
@@ -159,7 +148,7 @@ func routeConditionsToSchema(in []config.RouteCondition) []entschema.RouteCondit
 	return out
 }
 
-func routeConditionsFromSchema(in []entschema.RouteCondition) []config.RouteCondition {
+func routeConditionsFromModels(in []models.RouteCondition) []config.RouteCondition {
 	out := make([]config.RouteCondition, len(in))
 	for i, c := range in {
 		out[i] = config.RouteCondition{
@@ -170,4 +159,43 @@ func routeConditionsFromSchema(in []entschema.RouteCondition) []config.RouteCond
 		}
 	}
 	return out
+}
+
+func nextPgCounter(ctx context.Context, db *bun.DB, name string) (int64, error) {
+	const maxCounterRetries = 10
+	for range maxCounterRetries {
+		c := new(models.Counter)
+		err := db.NewSelect().Model(c).Where("id = ?", name).Scan(ctx)
+		if err != nil && !isNotFound(err) {
+			return 0, fmt.Errorf("counter get: %w", err)
+		}
+		if isNotFound(err) {
+			newCounter := &models.Counter{ID: name, Seq: 1}
+			_, err := db.NewInsert().Model(newCounter).Exec(ctx)
+			if err != nil {
+				if pgIsDuplicateKey(err) {
+					continue
+				}
+				return 0, fmt.Errorf("counter create: %w", err)
+			}
+			return newCounter.Seq, nil
+		}
+		var newSeq int64
+		res, err := db.NewUpdate().Model((*models.Counter)(nil)).
+			Set("seq = seq + 1").
+			Where("id = ? AND seq = ?", name, c.Seq).
+			Returning("seq").
+			Exec(ctx, &newSeq)
+		if err != nil {
+			return 0, fmt.Errorf("counter increment: %w", err)
+		}
+		n, err := res.RowsAffected()
+		if err != nil {
+			return 0, fmt.Errorf("counter rows affected: %w", err)
+		}
+		if n == 1 {
+			return newSeq, nil
+		}
+	}
+	return 0, fmt.Errorf("counter increment: CAS failed after %d retries", maxCounterRetries)
 }

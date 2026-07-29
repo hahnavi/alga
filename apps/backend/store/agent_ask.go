@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
-	"alga/ent"
-	"alga/ent/agentask"
+	"alga/db/models"
 )
 
 type AgentAskStatus = string
@@ -62,8 +62,8 @@ type pgAgentAskStore struct {
 	pgStoreBase
 }
 
-func newPGAgentAskStore(client *ent.Client) AgentAskStore {
-	return &pgAgentAskStore{pgStoreBase{client: client}}
+func newPGAgentAskStore(db *bun.DB) AgentAskStore {
+	return &pgAgentAskStore{pgStoreBase{db: db}}
 }
 
 func (s *pgAgentAskStore) Create(ctx context.Context, r *AgentAskRecord) (*AgentAskRecord, error) {
@@ -86,32 +86,33 @@ func (s *pgAgentAskStore) Create(ctx context.Context, r *AgentAskRecord) (*Agent
 		r.ExpiresAt = now.Add(10 * time.Minute)
 	}
 	if r.ID == uuid.Nil {
-		r.ID = uuid.Must(uuid.NewV7())
+		r.ID = models.NewUUID()
 	}
 
-	b := s.client.AgentAsk.Create().
-		SetFromAgentID(r.FromAgentID).
-		SetFromAgentName(r.FromAgentName).
-		SetFromAgentType(agentask.FromAgentType(r.FromAgentType)).
-		SetInvestigationID(r.InvestigationID).
-		SetQuestion(r.Question).
-		SetStatus(agentask.Status(r.Status)).
-		SetExpiresAt(r.ExpiresAt).
-		SetCreatedAt(now)
-
-	if r.ToAgentID != nil {
-		b.SetToAgentID(*r.ToAgentID)
+	m := &models.AgentAsk{
+		FromAgentID:     r.FromAgentID,
+		FromAgentName:   r.FromAgentName,
+		FromAgentType:   r.FromAgentType,
+		InvestigationID: r.InvestigationID,
+		ToAgentID:       r.ToAgentID,
+		Question:        r.Question,
+		Status:          r.Status,
+		ExpiresAt:       r.ExpiresAt,
 	}
+	m.ID = r.ID
+	m.CreatedAt = now
+	m.UpdatedAt = now
+
 	if r.ToAgentType != "" {
-		b.SetToAgentType(agentask.ToAgentType(r.ToAgentType))
+		m.ToAgentType = &r.ToAgentType
 	}
 
-	saved, err := b.Save(ctx)
+	_, err := s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert peer ask: %w", err)
 	}
 
-	r.ID = saved.ID
+	r.ID = m.ID
 	return r, nil
 }
 
@@ -121,60 +122,58 @@ func (s *pgAgentAskStore) Get(ctx context.Context, id string) (*AgentAskRecord, 
 		return nil, fmt.Errorf("invalid ask id: %w", err)
 	}
 
-	a, err := s.client.AgentAsk.Get(ctx, uid)
+	var a models.AgentAsk
+	err = s.db.NewSelect().Model(&a).Where("id = ?", uid).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*AgentAskRecord](err, "peer ask")
 	}
-	return pgAgentAskToRecord(a), nil
+	return pgAgentAskToRecord(&a), nil
 }
 
 func (s *pgAgentAskStore) List(ctx context.Context, q AgentAskQuery) ([]AgentAskRecord, int64, error) {
-	query := s.client.AgentAsk.Query()
-
-	if q.Status != "" {
-		query = query.Where(agentask.StatusEQ(agentask.Status(q.Status)))
-	}
-	if q.FromAgentID != nil {
-		query = query.Where(agentask.FromAgentID(*q.FromAgentID))
-	}
-	if q.ForAgentID != nil {
-		uid := *q.ForAgentID
-		if q.ForAgentType != "" {
-			query = query.Where(agentask.Or(
-				agentask.ToAgentID(uid),
-				agentask.And(
-					agentask.ToAgentIDIsNil(),
-					agentask.ToAgentTypeEQ(agentask.ToAgentType(q.ForAgentType)),
-				),
-			))
-		} else {
-			query = query.Where(agentask.ToAgentID(uid))
+	applyAskFilters := func(sq *bun.SelectQuery) *bun.SelectQuery {
+		if q.Status != "" {
+			sq = sq.Where("status = ?", q.Status)
 		}
-	} else if q.ForAgentType != "" {
-		query = query.Where(agentask.ToAgentTypeEQ(agentask.ToAgentType(q.ForAgentType)))
+		if q.FromAgentID != nil {
+			sq = sq.Where("from_agent_id = ?", *q.FromAgentID)
+		}
+		if q.ForAgentID != nil {
+			uid := *q.ForAgentID
+			if q.ForAgentType != "" {
+				sq = sq.Where("(to_agent_id = ? OR (to_agent_id IS NULL AND to_agent_type = ?))", uid, q.ForAgentType)
+			} else {
+				sq = sq.Where("to_agent_id = ?", uid)
+			}
+		} else if q.ForAgentType != "" {
+			sq = sq.Where("to_agent_type = ?", q.ForAgentType)
+		}
+		return sq
 	}
 
-	total, err := query.Count(ctx)
+	total, err := applyAskFilters(s.db.NewSelect().Model((*models.AgentAsk)(nil))).Count(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("count peer asks: %w", err)
 	}
 
-	query = query.Order(ent.Desc(agentask.FieldCreatedAt))
+	listQ := applyAskFilters(s.db.NewSelect().Model((*models.AgentAsk)(nil)))
+	listQ = listQ.OrderExpr("created_at DESC")
 	if q.Limit > 0 {
-		query = query.Limit(q.Limit)
+		listQ = listQ.Limit(q.Limit)
 	}
 	if q.Skip > 0 {
-		query = query.Offset(q.Skip)
+		listQ = listQ.Offset(q.Skip)
 	}
 
-	asks, err := query.All(ctx)
+	var asks []models.AgentAsk
+	err = listQ.Scan(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("find peer asks: %w", err)
 	}
 
 	var out []AgentAskRecord
 	for _, a := range asks {
-		out = append(out, *pgAgentAskToRecord(a))
+		out = append(out, *pgAgentAskToRecord(&a))
 	}
 	if out == nil {
 		out = []AgentAskRecord{}
@@ -195,14 +194,20 @@ func (s *pgAgentAskStore) Reply(ctx context.Context, id string, reply string, re
 
 	now := time.Now().UTC()
 
-	n, err := s.client.AgentAsk.Update().
-		Where(agentask.ID(uid), agentask.StatusEQ(agentask.StatusPending)).
-		SetReply(reply).
-		SetRepliedByAgentID(repliedBy).
-		SetRepliedByAgentName(repliedByName).
-		SetStatus(agentask.StatusAnswered).
-		SetAnsweredAt(now).
-		Save(ctx)
+	res, err := s.db.NewUpdate().Model((*models.AgentAsk)(nil)).
+		Set("reply = ?", reply).
+		Set("replied_by_agent_id = ?", repliedBy).
+		Set("replied_by_agent_name = ?", repliedByName).
+		Set("status = ?", AgentAskAnswered).
+		Set("answered_at = ?", now).
+		Set("updated_at = ?", now).
+		Where("id = ?", uid).
+		Where("status = ?", AgentAskPending).
+		Exec(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("reply peer ask: %w", err)
+	}
+	n, err := res.RowsAffected()
 	if err != nil {
 		return nil, fmt.Errorf("reply peer ask: %w", err)
 	}
@@ -219,14 +224,17 @@ func (s *pgAgentAskStore) Cancel(ctx context.Context, id string, requesterID uui
 		return fmt.Errorf("invalid ask id: %w", err)
 	}
 
-	n, err := s.client.AgentAsk.Update().
-		Where(
-			agentask.ID(uid),
-			agentask.FromAgentID(requesterID),
-			agentask.StatusEQ(agentask.StatusPending),
-		).
-		SetStatus(agentask.StatusCancelled).
-		Save(ctx)
+	res, err := s.db.NewUpdate().Model((*models.AgentAsk)(nil)).
+		Set("status = ?", AgentAskCancelled).
+		Set("updated_at = ?", time.Now().UTC()).
+		Where("id = ?", uid).
+		Where("from_agent_id = ?", requesterID).
+		Where("status = ?", AgentAskPending).
+		Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("cancel peer ask: %w", err)
+	}
+	n, err := res.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("cancel peer ask: %w", err)
 	}
@@ -237,38 +245,41 @@ func (s *pgAgentAskStore) Cancel(ctx context.Context, id string, requesterID uui
 }
 
 func (s *pgAgentAskStore) ExpirePending(ctx context.Context) (int64, error) {
-	n, err := s.client.AgentAsk.Update().
-		Where(
-			agentask.StatusEQ(agentask.StatusPending),
-			agentask.ExpiresAtLT(time.Now().UTC()),
-		).
-		SetStatus(agentask.StatusExpired).
-		Save(ctx)
+	res, err := s.db.NewUpdate().Model((*models.AgentAsk)(nil)).
+		Set("status = ?", AgentAskExpired).
+		Set("updated_at = ?", time.Now().UTC()).
+		Where("status = ?", AgentAskPending).
+		Where("expires_at < ?", time.Now().UTC()).
+		Exec(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("expire peer asks: %w", err)
 	}
-	return int64(n), nil
+	n, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("expire peer asks: %w", err)
+	}
+	return n, nil
 }
 
-func pgAgentAskToRecord(a *ent.AgentAsk) *AgentAskRecord {
+func pgAgentAskToRecord(a *models.AgentAsk) *AgentAskRecord {
 	r := &AgentAskRecord{
 		ID:                 a.ID,
 		FromAgentID:        a.FromAgentID,
 		FromAgentName:      a.FromAgentName,
-		FromAgentType:      string(a.FromAgentType),
+		FromAgentType:      a.FromAgentType,
 		InvestigationID:    a.InvestigationID,
 		ToAgentID:          a.ToAgentID,
 		Question:           a.Question,
 		Reply:              a.Reply,
 		RepliedByAgentID:   a.RepliedByAgentID,
 		RepliedByAgentName: a.RepliedByAgentName,
-		Status:             AgentAskStatus(a.Status),
+		Status:             a.Status,
 		ExpiresAt:          a.ExpiresAt,
 		CreatedAt:          a.CreatedAt,
 		AnsweredAt:         a.AnsweredAt,
 	}
 	if a.ToAgentType != nil {
-		r.ToAgentType = string(*a.ToAgentType)
+		r.ToAgentType = *a.ToAgentType
 	}
 	return r
 }

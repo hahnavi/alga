@@ -6,11 +6,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
-	"alga/ent"
-	entoncallschedule "alga/ent/oncallschedule"
-	entschedulelayer "alga/ent/schedulelayer"
-	entscheduleoverride "alga/ent/scheduleoverride"
+	"alga/db/models"
 )
 
 type OnCallScheduleRecord struct {
@@ -70,32 +68,32 @@ type pgOnCallStore struct {
 	pgStoreBase
 }
 
-func newPGOnCallStore(client *ent.Client) OnCallStore {
-	return &pgOnCallStore{pgStoreBase{client: client}}
+func newPGOnCallStore(db *bun.DB) OnCallStore {
+	return &pgOnCallStore{pgStoreBase{db: db}}
 }
 
-func createScheduleLayers(ctx context.Context, tx *ent.Tx, scheduleID uuid.UUID, layers []ScheduleLayerRecord) error {
+func createScheduleLayers(ctx context.Context, tx bun.Tx, scheduleID uuid.UUID, layers []ScheduleLayerRecord) error {
 	for _, layer := range layers {
-		lb := tx.ScheduleLayer.Create().
-			SetScheduleID(scheduleID).
-			SetName(layer.Name).
-			SetRotationType(entschedulelayer.RotationType(layer.RotationType)).
-			SetRotationInterval(layer.RotationInterval).
-			SetStartDate(layer.StartDate).
-			SetTimezone(layer.Timezone).
-			SetStartTime(layer.StartTime).
-			SetEndTime(layer.EndTime).
-			SetDaysOfWeek(layer.DaysOfWeek).
-			SetPriority(layer.Priority).
-			SetUserIds(layer.UserIds).
-			SetCreatedAt(time.Now().UTC()).
-			SetUpdatedAt(time.Now().UTC())
-
-		if layer.EndDate != nil {
-			lb.SetEndDate(*layer.EndDate)
+		now := time.Now().UTC()
+		m := &models.ScheduleLayer{
+			ID:               models.NewUUID(),
+			ScheduleID:       scheduleID,
+			Name:             layer.Name,
+			RotationType:     layer.RotationType,
+			RotationInterval: layer.RotationInterval,
+			StartDate:        layer.StartDate,
+			EndDate:          layer.EndDate,
+			Timezone:         layer.Timezone,
+			StartTime:        layer.StartTime,
+			EndTime:          layer.EndTime,
+			DaysOfWeek:       layer.DaysOfWeek,
+			Priority:         layer.Priority,
+			UserIDs:          layer.UserIds,
+			CreatedAt:        now,
+			UpdatedAt:        now,
 		}
 
-		if _, err := lb.Save(ctx); err != nil {
+		if _, err := tx.NewInsert().Model(m).Exec(ctx); err != nil {
 			return fmt.Errorf("failed to create layer: %w", err)
 		}
 	}
@@ -106,36 +104,32 @@ func (s *pgOnCallStore) CreateSchedule(ctx context.Context, record *OnCallSchedu
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	tx, err := s.client.Tx(ctx)
+	now := time.Now().UTC()
+	schedID := models.NewUUID()
+
+	err := s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		m := &models.OnCallSchedule{
+			BaseModel: models.BaseModel{
+				ID:        schedID,
+				CreatedAt: now,
+				UpdatedAt: now,
+			},
+			TeamID: record.TeamID,
+		}
+
+		if _, err := tx.NewInsert().Model(m).Exec(ctx); err != nil {
+			return fmt.Errorf("failed to create schedule: %w", err)
+		}
+
+		return createScheduleLayers(ctx, tx, schedID, record.Layers)
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to start transaction: %w", err)
-	}
-	defer rollbackTx(tx)
-
-	b := tx.OnCallSchedule.Create().
-		SetCreatedAt(time.Now().UTC()).
-		SetUpdatedAt(time.Now().UTC())
-
-	if record.TeamID != nil {
-		b.SetTeamID(*record.TeamID)
-	}
-
-	saved, err := b.Save(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create schedule: %w", err)
-	}
-
-	if err := createScheduleLayers(ctx, tx, saved.ID, record.Layers); err != nil {
 		return nil, err
 	}
 
-	if err := tx.Commit(); err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	record.ID = saved.ID
-	record.CreatedAt = saved.CreatedAt
-	record.UpdatedAt = saved.UpdatedAt
+	record.ID = schedID
+	record.CreatedAt = now
+	record.UpdatedAt = now
 	return record, nil
 }
 
@@ -143,7 +137,8 @@ func (s *pgOnCallStore) GetSchedule(ctx context.Context, id uuid.UUID) (*OnCallS
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	sched, err := s.client.OnCallSchedule.Get(ctx, id)
+	var sched models.OnCallSchedule
+	err := s.db.NewSelect().Model(&sched).Where("id = ?", id).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*OnCallScheduleRecord](err, "schedule")
 	}
@@ -155,21 +150,23 @@ func (s *pgOnCallStore) GetSchedule(ctx context.Context, id uuid.UUID) (*OnCallS
 		UpdatedAt: sched.UpdatedAt,
 	}
 
-	layers, err := s.client.ScheduleLayer.Query().
-		Where(entschedulelayer.ScheduleIDEQ(id)).
-		Order(ent.Asc(entschedulelayer.FieldCreatedAt)).
-		All(ctx)
+	var layers []models.ScheduleLayer
+	err = s.db.NewSelect().Model(&layers).
+		Where("schedule_id = ?", id).
+		Order("created_at ASC").
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get layers: %w", err)
 	}
 
 	rec.Layers = make([]ScheduleLayerRecord, 0, len(layers))
-	for _, l := range layers {
+	for i := range layers {
+		l := &layers[i]
 		rec.Layers = append(rec.Layers, ScheduleLayerRecord{
 			ID:               l.ID,
 			ScheduleID:       l.ScheduleID,
 			Name:             l.Name,
-			RotationType:     string(l.RotationType),
+			RotationType:     l.RotationType,
 			RotationInterval: l.RotationInterval,
 			StartDate:        l.StartDate,
 			EndDate:          l.EndDate,
@@ -178,7 +175,7 @@ func (s *pgOnCallStore) GetSchedule(ctx context.Context, id uuid.UUID) (*OnCallS
 			EndTime:          l.EndTime,
 			DaysOfWeek:       l.DaysOfWeek,
 			Priority:         l.Priority,
-			UserIds:          l.UserIds,
+			UserIds:          l.UserIDs,
 			CreatedAt:        l.CreatedAt,
 			UpdatedAt:        l.UpdatedAt,
 		})
@@ -188,15 +185,14 @@ func (s *pgOnCallStore) GetSchedule(ctx context.Context, id uuid.UUID) (*OnCallS
 }
 
 // GetScheduleByTeam returns the schedule auto-provisioned for a team, with its
-// layers loaded. There is one schedule per team, so this uses Only(); a missing
-// schedule surfaces as ErrNotFound via handleQueryErr.
+// layers loaded. There is one schedule per team, so this uses a single-row
+// scan; a missing schedule surfaces as ErrNotFound via handleQueryErr.
 func (s *pgOnCallStore) GetScheduleByTeam(ctx context.Context, teamID uuid.UUID) (*OnCallScheduleRecord, error) {
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	sched, err := s.client.OnCallSchedule.Query().
-		Where(entoncallschedule.TeamIDEQ(teamID)).
-		Only(ctx)
+	var sched models.OnCallSchedule
+	err := s.db.NewSelect().Model(&sched).Where("team_id = ?", teamID).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*OnCallScheduleRecord](err, "schedule")
 	}
@@ -208,21 +204,23 @@ func (s *pgOnCallStore) GetScheduleByTeam(ctx context.Context, teamID uuid.UUID)
 		UpdatedAt: sched.UpdatedAt,
 	}
 
-	layers, err := s.client.ScheduleLayer.Query().
-		Where(entschedulelayer.ScheduleIDEQ(sched.ID)).
-		Order(ent.Asc(entschedulelayer.FieldCreatedAt)).
-		All(ctx)
+	var layers []models.ScheduleLayer
+	err = s.db.NewSelect().Model(&layers).
+		Where("schedule_id = ?", sched.ID).
+		Order("created_at ASC").
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get layers: %w", err)
 	}
 
 	rec.Layers = make([]ScheduleLayerRecord, 0, len(layers))
-	for _, l := range layers {
+	for i := range layers {
+		l := &layers[i]
 		rec.Layers = append(rec.Layers, ScheduleLayerRecord{
 			ID:               l.ID,
 			ScheduleID:       l.ScheduleID,
 			Name:             l.Name,
-			RotationType:     string(l.RotationType),
+			RotationType:     l.RotationType,
 			RotationInterval: l.RotationInterval,
 			StartDate:        l.StartDate,
 			EndDate:          l.EndDate,
@@ -231,7 +229,7 @@ func (s *pgOnCallStore) GetScheduleByTeam(ctx context.Context, teamID uuid.UUID)
 			EndTime:          l.EndTime,
 			DaysOfWeek:       l.DaysOfWeek,
 			Priority:         l.Priority,
-			UserIds:          l.UserIds,
+			UserIds:          l.UserIDs,
 			CreatedAt:        l.CreatedAt,
 			UpdatedAt:        l.UpdatedAt,
 		})
@@ -244,39 +242,32 @@ func (s *pgOnCallStore) UpdateSchedule(ctx context.Context, id uuid.UUID, record
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	tx, err := s.client.Tx(ctx)
+	err := s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		q := tx.NewUpdate().Model((*models.OnCallSchedule)(nil)).
+			Set("updated_at = ?", time.Now().UTC()).
+			Where("id = ?", id)
+
+		if record.TeamID != nil {
+			q = q.Set("team_id = ?", *record.TeamID)
+		} else {
+			q = q.Set("team_id = NULL")
+		}
+
+		if _, err := q.Exec(ctx); err != nil {
+			return fmt.Errorf("failed to update schedule: %w", err)
+		}
+
+		_, err := tx.NewDelete().Model((*models.ScheduleLayer)(nil)).
+			Where("schedule_id = ?", id).
+			Exec(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to delete old layers: %w", err)
+		}
+
+		return createScheduleLayers(ctx, tx, id, record.Layers)
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to start transaction: %w", err)
-	}
-	defer rollbackTx(tx)
-
-	ub := tx.OnCallSchedule.UpdateOneID(id).
-		SetUpdatedAt(time.Now().UTC())
-
-	if record.TeamID != nil {
-		ub.SetTeamID(*record.TeamID)
-	} else {
-		ub.ClearTeamID()
-	}
-
-	_, err = ub.Save(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to update schedule: %w", err)
-	}
-
-	_, err = tx.ScheduleLayer.Delete().
-		Where(entschedulelayer.ScheduleIDEQ(id)).
-		Exec(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to delete old layers: %w", err)
-	}
-
-	if err := createScheduleLayers(ctx, tx, id, record.Layers); err != nil {
 		return nil, err
-	}
-
-	if err := tx.Commit(); err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return s.GetSchedule(ctx, id)
@@ -291,22 +282,24 @@ func (s *pgOnCallStore) ListSchedules(ctx context.Context, limit, skip int) ([]O
 	}
 	limit = min(limit, 100)
 
-	total, err := s.client.OnCallSchedule.Query().Count(ctx)
+	total, err := s.db.NewSelect().Model((*models.OnCallSchedule)(nil)).Count(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count schedules: %w", err)
 	}
 
-	schedules, err := s.client.OnCallSchedule.Query().
-		Order(ent.Desc(entoncallschedule.FieldCreatedAt)).
+	var schedules []models.OnCallSchedule
+	err = s.db.NewSelect().Model(&schedules).
+		Order("created_at DESC").
 		Limit(limit).
 		Offset(skip).
-		All(ctx)
+		Scan(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list schedules: %w", err)
 	}
 
 	records := make([]OnCallScheduleRecord, 0, len(schedules))
-	for _, sched := range schedules {
+	for i := range schedules {
+		sched := &schedules[i]
 		records = append(records, OnCallScheduleRecord{
 			ID:        sched.ID,
 			TeamID:    sched.TeamID,
@@ -321,24 +314,24 @@ func (s *pgOnCallStore) CreateOverride(ctx context.Context, record *ScheduleOver
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	b := s.client.ScheduleOverride.Create().
-		SetScheduleID(record.ScheduleID).
-		SetUserID(record.UserID).
-		SetStartAt(record.StartAt).
-		SetEndAt(record.EndAt).
-		SetCreatedAt(time.Now().UTC())
-
-	if record.CreatedBy != nil {
-		b.SetCreatedBy(*record.CreatedBy)
+	now := time.Now().UTC()
+	m := &models.ScheduleOverride{
+		ID:         models.NewUUID(),
+		ScheduleID: record.ScheduleID,
+		UserID:     record.UserID,
+		StartAt:    record.StartAt,
+		EndAt:      record.EndAt,
+		CreatedBy:  record.CreatedBy,
+		CreatedAt:  now,
 	}
 
-	saved, err := b.Save(ctx)
+	_, err := s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create override: %w", err)
 	}
 
-	record.ID = saved.ID
-	record.CreatedAt = saved.CreatedAt
+	record.ID = m.ID
+	record.CreatedAt = m.CreatedAt
 	return record, nil
 }
 
@@ -346,7 +339,7 @@ func (s *pgOnCallStore) DeleteOverride(ctx context.Context, id uuid.UUID) error 
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	err := s.client.ScheduleOverride.DeleteOneID(id).Exec(ctx)
+	_, err := s.db.NewDelete().Model((*models.ScheduleOverride)(nil)).Where("id = ?", id).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to delete override: %w", err)
 	}
@@ -357,16 +350,18 @@ func (s *pgOnCallStore) ListOverrides(ctx context.Context, scheduleID uuid.UUID)
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	overrides, err := s.client.ScheduleOverride.Query().
-		Where(entscheduleoverride.ScheduleIDEQ(scheduleID)).
-		Order(ent.Asc(entscheduleoverride.FieldStartAt)).
-		All(ctx)
+	var overrides []models.ScheduleOverride
+	err := s.db.NewSelect().Model(&overrides).
+		Where("schedule_id = ?", scheduleID).
+		Order("start_at ASC").
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list overrides: %w", err)
 	}
 
 	records := make([]ScheduleOverrideRecord, 0, len(overrides))
-	for _, o := range overrides {
+	for i := range overrides {
+		o := &overrides[i]
 		records = append(records, ScheduleOverrideRecord{
 			ID:         o.ID,
 			ScheduleID: o.ScheduleID,

@@ -8,13 +8,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
-	"alga/ent"
-	"alga/ent/alertinvestigation"
-	"alga/ent/alertinvestigationalert"
-	"alga/ent/alertinvestigationevent"
-	"alga/ent/alertinvestigationupdateentry"
-	entschema "alga/ent/schema"
+	"alga/db/models"
 	"alga/logger"
 )
 
@@ -27,54 +23,65 @@ func (s *pgAlertInvestigationStore) CompleteAlertInvestigation(ctx context.Conte
 		return fmt.Errorf("invalid alert investigation id: %w", err)
 	}
 
-	tx, err := s.client.Tx(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to begin alert investigation completion transaction: %w", err)
-	}
-	defer rollbackTx(tx)
+	err = s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		now := time.Now().UTC()
 
-	now := time.Now().UTC()
-	inv, err := tx.Client().AlertInvestigation.UpdateOneID(invUUID).
-		Where(alertinvestigation.StatusIn(
-			alertinvestigation.Status(AlertInvestigationStatusPending),
-			alertinvestigation.Status(AlertInvestigationStatusAssigned),
-			alertinvestigation.Status(AlertInvestigationStatusInvestigating),
-			alertinvestigation.Status(AlertInvestigationStatusPaused),
-		)).
-		SetStatus(alertinvestigation.Status(AlertInvestigationStatusComplete)).
-		SetCompletedAt(now).
-		SetCompletedReason(completion.Reason).
-		SetCompletedByType(completion.ActorType).
-		SetCompletedByID(completion.ActorID).
-		SetCompletedByName(completion.ActorName).
-		SetUpdatedAt(now).
-		Save(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			if existing, lookupErr := tx.Client().AlertInvestigation.Get(ctx, invUUID); lookupErr == nil && existing != nil && IsTerminalInvestigationStatus(string(existing.Status)) {
-				logger.InfoCtx(ctx, "alert investigation already terminal, treating completion as idempotent", "alert_investigation_id", id, "status", string(existing.Status))
+		res, err := tx.NewUpdate().Model((*models.AlertInvestigation)(nil)).
+			Set("status = ?", AlertInvestigationStatusComplete).
+			Set("completed_at = ?", now).
+			Set("completed_reason = ?", completion.Reason).
+			Set("completed_by_type = ?", completion.ActorType).
+			Set("completed_by_id = ?", completion.ActorID).
+			Set("completed_by_name = ?", completion.ActorName).
+			Set("updated_at = ?", now).
+			Where("id = ?", invUUID).
+			Where("status IN (?)", bun.In([]string{
+				AlertInvestigationStatusPending,
+				AlertInvestigationStatusAssigned,
+				AlertInvestigationStatusInvestigating,
+				AlertInvestigationStatusPaused,
+			})).
+			Exec(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to complete alert investigation: %w", err)
+		}
+		n, err := res.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("failed to complete alert investigation: %w", err)
+		}
+		if n == 0 {
+			// Check if already terminal for idempotency.
+			var existing models.AlertInvestigation
+			if lookupErr := tx.NewSelect().Model(&existing).Where("id = ?", invUUID).Scan(ctx); lookupErr == nil && IsTerminalInvestigationStatus(existing.Status) {
+				logger.InfoCtx(ctx, "alert investigation already terminal, treating completion as idempotent", "alert_investigation_id", id, "status", existing.Status)
 				return nil
 			}
+			return fmt.Errorf("failed to complete alert investigation: %w", ErrInvestigationNotFound)
 		}
-		return fmt.Errorf("failed to complete alert investigation: %w", err)
-	}
 
-	if err := createAlertInvestigationEvent(ctx, tx.Client(), inv.ID, AlertInvestigationEvent{
-		EventType: AlertInvestigationEventCompleted,
-		Reason:    completion.EventReason,
-		ActorType: completion.ActorType,
-		ActorID:   completion.ActorID,
-		ActorName: completion.ActorName,
-		AgentID:   inv.AgentID,
-		AgentName: inv.AgentName,
-		AgentType: inv.AgentType,
-		CreatedAt: now,
-	}); err != nil {
+		// Load the investigation to get agent fields for the event.
+		var inv models.AlertInvestigation
+		if err := tx.NewSelect().Model(&inv).Where("id = ?", invUUID).Scan(ctx); err != nil {
+			return fmt.Errorf("failed to reload alert investigation for event: %w", err)
+		}
+
+		if err := createAlertInvestigationEvent(ctx, tx, inv.ID, AlertInvestigationEvent{
+			EventType: AlertInvestigationEventCompleted,
+			Reason:    completion.EventReason,
+			ActorType: completion.ActorType,
+			ActorID:   completion.ActorID,
+			ActorName: completion.ActorName,
+			AgentID:   inv.AgentID,
+			AgentName: inv.AgentName,
+			AgentType: inv.AgentType,
+			CreatedAt: now,
+		}); err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
 		return err
-	}
-
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit alert investigation completion: %w", err)
 	}
 	return nil
 }
@@ -88,47 +95,58 @@ func (s *pgAlertInvestigationStore) RequeueAlertInvestigation(ctx context.Contex
 		return fmt.Errorf("invalid alert investigation id: %w", err)
 	}
 
-	tx, err := s.client.Tx(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to begin alert investigation requeue transaction: %w", err)
-	}
-	defer rollbackTx(tx)
+	err = s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		now := time.Now().UTC()
 
-	now := time.Now().UTC()
-	inv, err := tx.Client().AlertInvestigation.UpdateOneID(invUUID).
-		Where(alertinvestigation.StatusIn(
-			alertinvestigation.Status(AlertInvestigationStatusAssigned),
-			alertinvestigation.Status(AlertInvestigationStatusInvestigating),
-			alertinvestigation.Status(AlertInvestigationStatusPaused),
-		)).
-		SetStatus(alertinvestigation.Status(AlertInvestigationStatusPending)).
-		ClearStartedAt().
-		SetUpdatedAt(now).
-		Save(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to requeue alert investigation: %w", err)
-	}
+		res, err := tx.NewUpdate().Model((*models.AlertInvestigation)(nil)).
+			Set("status = ?", AlertInvestigationStatusPending).
+			Set("started_at = NULL").
+			Set("updated_at = ?", now).
+			Where("id = ?", invUUID).
+			Where("status IN (?)", bun.In([]string{
+				AlertInvestigationStatusAssigned,
+				AlertInvestigationStatusInvestigating,
+				AlertInvestigationStatusPaused,
+			})).
+			Exec(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to requeue alert investigation: %w", err)
+		}
+		n, err := res.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("failed to requeue alert investigation: %w", err)
+		}
+		if n == 0 {
+			return fmt.Errorf("failed to requeue alert investigation: %w", ErrInvestigationNotFound)
+		}
 
-	eventType := requeue.EventType
-	if eventType == "" {
-		eventType = AlertInvestigationEventRequeued
-	}
-	if err := createAlertInvestigationEvent(ctx, tx.Client(), inv.ID, AlertInvestigationEvent{
-		EventType: eventType,
-		Reason:    requeue.Reason,
-		ActorType: requeue.ActorType,
-		ActorName: requeue.ActorName,
-		AgentID:   inv.AgentID,
-		AgentName: inv.AgentName,
-		AgentType: inv.AgentType,
-		Metadata:  requeue.Metadata,
-		CreatedAt: now,
-	}); err != nil {
+		// Load the investigation to get agent fields for the event.
+		var inv models.AlertInvestigation
+		if err := tx.NewSelect().Model(&inv).Where("id = ?", invUUID).Scan(ctx); err != nil {
+			return fmt.Errorf("failed to reload alert investigation for event: %w", err)
+		}
+
+		eventType := requeue.EventType
+		if eventType == "" {
+			eventType = AlertInvestigationEventRequeued
+		}
+		if err := createAlertInvestigationEvent(ctx, tx, inv.ID, AlertInvestigationEvent{
+			EventType: eventType,
+			Reason:    requeue.Reason,
+			ActorType: requeue.ActorType,
+			ActorName: requeue.ActorName,
+			AgentID:   inv.AgentID,
+			AgentName: inv.AgentName,
+			AgentType: inv.AgentType,
+			Metadata:  requeue.Metadata,
+			CreatedAt: now,
+		}); err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
 		return err
-	}
-
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit alert investigation requeue: %w", err)
 	}
 	return nil
 }
@@ -146,43 +164,38 @@ func (s *pgAlertInvestigationStore) MarkAlertInvestigationPromoted(ctx context.C
 		return nil, fmt.Errorf("invalid incident investigation id: %w", err)
 	}
 
-	tx, err := s.client.Tx(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to begin alert investigation promotion transaction: %w", err)
-	}
-	defer rollbackTx(tx)
+	err = s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		var inv models.AlertInvestigation
+		if err := tx.NewSelect().Model(&inv).Where("alert_investigation_id = ?", id).Scan(ctx); err != nil {
+			return fmt.Errorf("alert investigation not found: %w", ErrInvestigationNotFound)
+		}
 
-	inv, err := tx.Client().AlertInvestigation.Query().
-		Where(alertinvestigation.AlertInvestigationID(id)).
-		Only(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("alert investigation not found: %w", ErrInvestigationNotFound)
-	}
+		now := time.Now().UTC()
+		_, err := tx.NewUpdate().Model((*models.AlertInvestigation)(nil)).
+			Set("status = ?", AlertInvestigationStatusPromoted).
+			Set("promoted_incident_id = ?", incidentUUID).
+			Set("promoted_incident_investigation_id = ?", incidentInvestigationUUID).
+			Set("updated_at = ?", now).
+			Where("id = ?", inv.ID).
+			Exec(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to mark alert investigation promoted: %w", err)
+		}
 
-	now := time.Now().UTC()
-	updated, err := tx.Client().AlertInvestigation.UpdateOneID(inv.ID).
-		SetStatus(alertinvestigation.Status(AlertInvestigationStatusPromoted)).
-		SetPromotedIncidentID(incidentUUID).
-		SetPromotedIncidentInvestigationID(incidentInvestigationUUID).
-		SetUpdatedAt(now).
-		Save(ctx)
+		message := fmt.Sprintf("Promoted alert investigation to incident **#%d**.", incidentNumber)
+		if err := createAlertInvestigationUpdate(ctx, tx, inv.ID, InvestigationUpdate{
+			Type:      UpdateTypeProgress,
+			Message:   message,
+			Source:    UpdateSourceSystem,
+			Internal:  true,
+			CreatedAt: now,
+		}); err != nil {
+			return err
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to mark alert investigation promoted: %w", err)
-	}
-
-	message := fmt.Sprintf("Promoted alert investigation to incident **#%d**.", incidentNumber)
-	if err := createAlertInvestigationUpdate(ctx, tx.Client(), updated.ID, InvestigationUpdate{
-		Type:      UpdateTypeProgress,
-		Message:   message,
-		Source:    UpdateSourceSystem,
-		Internal:  true,
-		CreatedAt: now,
-	}); err != nil {
 		return nil, err
-	}
-
-	if err := tx.Commit(); err != nil {
-		return nil, fmt.Errorf("failed to commit alert investigation promotion: %w", err)
 	}
 
 	return s.GetAlertInvestigation(ctx, id)
@@ -192,11 +205,15 @@ func (s *pgAlertInvestigationStore) UpdateAlertInvestigationStatus(ctx context.C
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	n, err := s.client.AlertInvestigation.Update().
-		Where(alertinvestigation.AlertInvestigationID(id)).
-		SetStatus(alertinvestigation.Status(status)).
-		SetUpdatedAt(time.Now().UTC()).
-		Save(ctx)
+	res, err := s.db.NewUpdate().Model((*models.AlertInvestigation)(nil)).
+		Set("status = ?", status).
+		Set("updated_at = ?", time.Now().UTC()).
+		Where("alert_investigation_id = ?", id).
+		Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to update alert investigation status: %w", err)
+	}
+	n, err := res.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("failed to update alert investigation status: %w", err)
 	}
@@ -215,24 +232,24 @@ func (s *pgAlertInvestigationStore) TransitionAlertInvestigationStatus(ctx conte
 		return fmt.Errorf("invalid alert investigation id: %w", err)
 	}
 
-	entStatuses := make([]alertinvestigation.Status, len(fromStatuses))
-	for i, s := range fromStatuses {
-		entStatuses[i] = alertinvestigation.Status(s)
-	}
+	now := time.Now().UTC()
+	q := s.db.NewUpdate().Model((*models.AlertInvestigation)(nil)).
+		Set("status = ?", toStatus).
+		Set("updated_at = ?", now).
+		Where("id = ?", invUUID)
 
-	b := s.client.AlertInvestigation.UpdateOneID(invUUID).
-		Where(alertinvestigation.StatusIn(entStatuses...)).
-		SetStatus(alertinvestigation.Status(toStatus)).
-		SetUpdatedAt(time.Now().UTC())
+	if len(fromStatuses) > 0 {
+		q = q.Where("status IN (?)", bun.In(fromStatuses))
+	}
 
 	switch toStatus {
 	case AlertInvestigationStatusInvestigating:
-		b.SetStartedAt(time.Now().UTC())
+		q = q.Set("started_at = ?", now)
 	case AlertInvestigationStatusComplete, AlertInvestigationStatusFailed, AlertInvestigationStatusCancelled, AlertInvestigationStatusTimedOut:
-		b.SetCompletedAt(time.Now().UTC())
+		q = q.Set("completed_at = ?", now)
 	}
 
-	_, err = b.Save(ctx)
+	_, err = q.Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to transition alert investigation status: %w", err)
 	}
@@ -248,9 +265,9 @@ func (s *pgAlertInvestigationStore) PatchAlertInvestigationOutcome(ctx context.C
 		return fmt.Errorf("invalid alert investigation id: %w", err)
 	}
 
-	inv, err := s.client.AlertInvestigation.Get(ctx, invUUID)
-	if err != nil {
-		if ent.IsNotFound(err) {
+	var inv models.AlertInvestigation
+	if err := s.db.NewSelect().Model(&inv).Where("id = ?", invUUID).Scan(ctx); err != nil {
+		if isNotFound(err) {
 			return ErrAlertInvestigationNotFound
 		}
 		return fmt.Errorf("load alert investigation: %w", err)
@@ -258,7 +275,7 @@ func (s *pgAlertInvestigationStore) PatchAlertInvestigationOutcome(ctx context.C
 
 	summary := inv.Summary
 	if summary == nil {
-		summary = &entschema.AlertInvestigationSummary{}
+		summary = &models.AlertInvestigationSummary{}
 	}
 	if rootCause != nil {
 		summary.RootCause = *rootCause
@@ -267,10 +284,11 @@ func (s *pgAlertInvestigationStore) PatchAlertInvestigationOutcome(ctx context.C
 		summary.Resolution = *resolution
 	}
 
-	_, err = s.client.AlertInvestigation.UpdateOneID(invUUID).
-		SetSummary(summary).
-		SetUpdatedAt(time.Now().UTC()).
-		Save(ctx)
+	_, err = s.db.NewUpdate().Model((*models.AlertInvestigation)(nil)).
+		Set("summary = ?", summary).
+		Set("updated_at = ?", time.Now().UTC()).
+		Where("id = ?", invUUID).
+		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to patch alert investigation outcome: %w", err)
 	}
@@ -286,12 +304,13 @@ func (s *pgAlertInvestigationStore) UpdateAlertInvestigationAgent(ctx context.Co
 		return fmt.Errorf("invalid alert investigation id: %w", err)
 	}
 
-	_, err = s.client.AlertInvestigation.UpdateOneID(invUUID).
-		SetAgentID(agentID).
-		SetAgentName(agentName).
-		SetAgentType(agentType).
-		SetUpdatedAt(time.Now().UTC()).
-		Save(ctx)
+	_, err = s.db.NewUpdate().Model((*models.AlertInvestigation)(nil)).
+		Set("agent_id = ?", agentID).
+		Set("agent_name = ?", agentName).
+		Set("agent_type = ?", agentType).
+		Set("updated_at = ?", time.Now().UTC()).
+		Where("id = ?", invUUID).
+		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to update alert investigation agent: %w", err)
 	}
@@ -308,38 +327,50 @@ func (s *pgAlertInvestigationStore) ClaimPendingAlertInvestigation(ctx context.C
 	}
 
 	now := time.Now().UTC()
-	n, err := s.client.AlertInvestigation.UpdateOneID(invUUID).
-		Where(alertinvestigation.StatusEQ(alertinvestigation.Status(AlertInvestigationStatusPending))).
-		SetStatus(alertinvestigation.Status(AlertInvestigationStatusAssigned)).
-		SetAgentID(agentID).
-		SetAgentName(agentName).
-		SetAgentType(agentType).
-		SetStartedAt(now).
-		SetUpdatedAt(now).
-		Save(ctx)
+	res, err := s.db.NewUpdate().Model((*models.AlertInvestigation)(nil)).
+		Set("status = ?", AlertInvestigationStatusAssigned).
+		Set("agent_id = ?", agentID).
+		Set("agent_name = ?", agentName).
+		Set("agent_type = ?", agentType).
+		Set("started_at = ?", now).
+		Set("updated_at = ?", now).
+		Where("id = ?", invUUID).
+		Where("status = ?", AlertInvestigationStatusPending).
+		Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to claim pending alert investigation: %w", err)
 	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return nil, fmt.Errorf("failed to claim pending alert investigation: %w", err)
+	}
+	if n == 0 {
+		return nil, fmt.Errorf("failed to claim pending alert investigation: %w", ErrInvestigationNotFound)
+	}
 
-	return s.toAlertInvestigationRecord(ctx, n)
+	var inv models.AlertInvestigation
+	if err := s.db.NewSelect().Model(&inv).Where("id = ?", invUUID).Scan(ctx); err != nil {
+		return nil, fmt.Errorf("failed to reload claimed alert investigation: %w", err)
+	}
+	return s.toAlertInvestigationRecord(ctx, &inv)
 }
 
 func (s *pgAlertInvestigationStore) ListPendingAlertInvestigations(ctx context.Context, limit int64) ([]AlertInvestigationRecord, error) {
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	invs, err := s.client.AlertInvestigation.Query().
-		Where(alertinvestigation.StatusEQ(alertinvestigation.Status(AlertInvestigationStatusPending))).
-		Order(ent.Asc(alertinvestigation.FieldCreatedAt)).
+	var invs []models.AlertInvestigation
+	if err := s.db.NewSelect().Model(&invs).
+		Where("status = ?", AlertInvestigationStatusPending).
+		Order("created_at ASC").
 		Limit(int(limit)).
-		All(ctx)
-	if err != nil {
+		Scan(ctx); err != nil {
 		return nil, fmt.Errorf("failed to list pending alert investigations: %w", err)
 	}
 
 	records := make([]AlertInvestigationRecord, 0, len(invs))
-	for _, inv := range invs {
-		rec, err := s.toAlertInvestigationRecord(ctx, inv)
+	for i := range invs {
+		rec, err := s.toAlertInvestigationRecord(ctx, &invs[i])
 		if err != nil {
 			return nil, err
 		}
@@ -352,48 +383,40 @@ func (s *pgAlertInvestigationStore) DeleteAlertInvestigation(ctx context.Context
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	tx, err := s.client.Tx(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to begin delete alert investigation transaction: %w", err)
-	}
-	defer rollbackTx(tx)
-
-	inv, err := tx.Client().AlertInvestigation.Query().
-		Where(alertinvestigation.AlertInvestigationID(id)).
-		Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return ErrAlertInvestigationNotFound
+	return s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		var inv models.AlertInvestigation
+		if err := tx.NewSelect().Model(&inv).Where("alert_investigation_id = ?", id).Scan(ctx); err != nil {
+			if isNotFound(err) {
+				return ErrAlertInvestigationNotFound
+			}
+			return fmt.Errorf("load alert investigation for delete: %w", err)
 		}
-		return fmt.Errorf("load alert investigation for delete: %w", err)
-	}
 
-	if _, err := tx.Client().AlertInvestigationAlert.Delete().
-		Where(alertinvestigationalert.AlertInvestigationID(inv.ID)).
-		Exec(ctx); err != nil {
-		return fmt.Errorf("failed to delete alert investigation alerts: %w", err)
-	}
+		if _, err := tx.NewDelete().Model((*models.AlertInvestigationAlert)(nil)).
+			Where("alert_investigation_id = ?", inv.ID).
+			Exec(ctx); err != nil {
+			return fmt.Errorf("failed to delete alert investigation alerts: %w", err)
+		}
 
-	if _, err := tx.Client().AlertInvestigationUpdateEntry.Delete().
-		Where(alertinvestigationupdateentry.AlertInvestigationID(inv.ID)).
-		Exec(ctx); err != nil {
-		return fmt.Errorf("failed to delete alert investigation updates: %w", err)
-	}
+		if _, err := tx.NewDelete().Model((*models.AlertInvestigationUpdate)(nil)).
+			Where("alert_investigation_id = ?", inv.ID).
+			Exec(ctx); err != nil {
+			return fmt.Errorf("failed to delete alert investigation updates: %w", err)
+		}
 
-	if _, err := tx.Client().AlertInvestigationEvent.Delete().
-		Where(alertinvestigationevent.AlertInvestigationID(inv.ID)).
-		Exec(ctx); err != nil {
-		return fmt.Errorf("failed to delete alert investigation events: %w", err)
-	}
+		if _, err := tx.NewDelete().Model((*models.AlertInvestigationEvent)(nil)).
+			Where("alert_investigation_id = ?", inv.ID).
+			Exec(ctx); err != nil {
+			return fmt.Errorf("failed to delete alert investigation events: %w", err)
+		}
 
-	if err := tx.Client().AlertInvestigation.DeleteOneID(inv.ID).Exec(ctx); err != nil {
-		return fmt.Errorf("failed to delete alert investigation: %w", err)
-	}
-
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit delete alert investigation: %w", err)
-	}
-	return nil
+		if _, err := tx.NewDelete().Model((*models.AlertInvestigation)(nil)).
+			Where("id = ?", inv.ID).
+			Exec(ctx); err != nil {
+			return fmt.Errorf("failed to delete alert investigation: %w", err)
+		}
+		return nil
+	})
 }
 
 func (s *pgAlertInvestigationStore) SetAlertInvestigationAssignee(ctx context.Context, id string, assigneeType string, assigneeID *uuid.UUID) error {
@@ -405,21 +428,22 @@ func (s *pgAlertInvestigationStore) SetAlertInvestigationAssignee(ctx context.Co
 		return fmt.Errorf("invalid alert investigation id: %w", err)
 	}
 
-	u := s.client.AlertInvestigation.UpdateOneID(invUUID).
-		SetAssigneeType(alertinvestigation.AssigneeType(assigneeType)).
-		SetUpdatedAt(time.Now().UTC())
+	q := s.db.NewUpdate().Model((*models.AlertInvestigation)(nil)).
+		Set("assignee_type = ?", assigneeType).
+		Set("updated_at = ?", time.Now().UTC()).
+		Where("id = ?", invUUID)
 
 	if assigneeID != nil {
-		u.SetAssigneeID(*assigneeID)
+		q = q.Set("assignee_id = ?", *assigneeID)
 	} else {
-		u.ClearAssigneeID()
+		q = q.Set("assignee_id = NULL")
 	}
 
 	if assigneeType != InvestigationActorAgent {
-		u.SetAgentID("").SetAgentName("").SetAgentType("")
+		q = q.Set("agent_id = ''").Set("agent_name = ''").Set("agent_type = ''")
 	}
 
-	if _, err := u.Save(ctx); err != nil {
+	if _, err := q.Exec(ctx); err != nil {
 		return fmt.Errorf("failed to set alert investigation assignee: %w", err)
 	}
 	return nil

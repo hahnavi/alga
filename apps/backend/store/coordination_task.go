@@ -6,15 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
-	"alga/ent"
-	"alga/ent/coordinationtask"
-	"alga/ent/incident"
-	"alga/ent/incidentinvestigation"
-	"alga/ent/predicate"
-	entschema "alga/ent/schema"
+	"alga/db/models"
 )
 
 const (
@@ -90,8 +85,8 @@ type pgCoordinationTaskStore struct {
 	pgStoreBase
 }
 
-func newPGCoordinationTaskStore(client *ent.Client) CoordinationTaskStore {
-	return &pgCoordinationTaskStore{pgStoreBase{client: client}}
+func newPGCoordinationTaskStore(db *bun.DB) CoordinationTaskStore {
+	return &pgCoordinationTaskStore{pgStoreBase{db: db}}
 }
 
 // CreateTask creates a coordination task. When the kind is "investigate", the
@@ -115,121 +110,108 @@ func (s *pgCoordinationTaskStore) CreateTask(ctx context.Context, record *Coordi
 		inputContext = map[string]any{}
 	}
 
-	tx, err := s.client.Tx(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to begin coordination task transaction: %w", err)
-	}
-	defer rollbackTx(tx)
-
-	// Resolve the incident when an incident number is provided.
-	var inc *ent.Incident
-	if record.IncidentNumber != 0 {
-		inc, err = tx.Client().Incident.Query().
-			Where(incident.IncidentNumber(record.IncidentNumber), incident.DeletedAtIsNil()).
-			Only(ctx)
-		if err != nil {
-			if ent.IsNotFound(err) {
-				return nil, fmt.Errorf("incident not found: %w", ErrIncidentNotFound)
+	var createdID uuid.UUID
+	err := s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		// Resolve the incident when an incident number is provided.
+		var inc *models.Incident
+		if record.IncidentNumber != 0 {
+			var found models.Incident
+			if err := tx.NewSelect().Model(&found).
+				Where("incident_number = ? AND deleted_at IS NULL", record.IncidentNumber).
+				Scan(ctx); err != nil {
+				if isNotFound(err) {
+					return fmt.Errorf("incident not found: %w", ErrIncidentNotFound)
+				}
+				return fmt.Errorf("failed to find incident for coordination task: %w", err)
 			}
-			return nil, fmt.Errorf("failed to find incident for coordination task: %w", err)
+			inc = &found
 		}
-	}
 
-	b := tx.Client().CoordinationTask.Create().
-		SetKind(coordinationtask.Kind(record.Kind)).
-		SetAssigneeRole(coordinationtask.AssigneeRole(record.AssigneeRole)).
-		SetAssigneeAgentID(record.AssigneeAgentID).
-		SetAssigneeAgentName(record.AssigneeAgentName).
-		SetGoal(record.Goal).
-		SetInputContext(inputContext).
-		SetStatus(coordinationtask.Status(status)).
-		SetPriority(record.Priority).
-		SetCreatedByAgentID(record.CreatedByAgentID).
-		SetCreatedByName(record.CreatedByName).
-		SetFailureReason(record.FailureReason).
-		SetDispatchAttempts(record.DispatchAttempts).
-		SetCreatedAt(now).
-		SetUpdatedAt(now)
+		m := &models.CoordinationTask{
+			IncidentID:        nil,
+			ParentTaskID:      record.ParentTaskID,
+			Kind:              record.Kind,
+			AssigneeRole:      record.AssigneeRole,
+			AssigneeAgentID:   record.AssigneeAgentID,
+			AssigneeAgentName: record.AssigneeAgentName,
+			Goal:              record.Goal,
+			InputContext:      inputContext,
+			Result:            record.Result,
+			ResultSchema:      record.ResultSchema,
+			Status:            status,
+			Priority:          record.Priority,
+			DueAt:             record.DueAt,
+			ClaimedAt:         record.ClaimedAt,
+			CompletedAt:       record.CompletedAt,
+			CreatedByAgentID:  record.CreatedByAgentID,
+			CreatedByName:     record.CreatedByName,
+			FailureReason:     record.FailureReason,
+			DispatchAttempts:  record.DispatchAttempts,
+		}
+		m.ID = models.NewUUID()
+		m.CreatedAt = now
+		m.UpdatedAt = now
 
-	if inc != nil {
-		b.SetIncidentID(inc.ID)
-	}
-	if record.ParentTaskID != nil {
-		b.SetParentTaskID(*record.ParentTaskID)
-	}
-	if record.Result != nil {
-		b.SetResult(record.Result)
-	}
-	if record.ResultSchema != nil {
-		b.SetResultSchema(record.ResultSchema)
-	}
-	if record.DueAt != nil {
-		b.SetDueAt(*record.DueAt)
-	}
-	if record.ClaimedAt != nil {
-		b.SetClaimedAt(*record.ClaimedAt)
-	}
-	if record.CompletedAt != nil {
-		b.SetCompletedAt(*record.CompletedAt)
-	}
+		if inc != nil {
+			m.IncidentID = &inc.ID
+		}
 
-	// Auto-link a child investigation for top-level investigate tasks.
-	if record.Kind == CoordinationTaskKindInvestigate &&
-		record.ParentTaskID == nil &&
-		inc != nil {
-		parent, qerr := tx.Client().IncidentInvestigation.Query().
-			Where(
-				incidentinvestigation.HasIncidentWith(incident.ID(inc.ID)),
-				incidentinvestigation.StatusEQ(IncidentInvestigationStatusCoordinating),
-			).
-			Only(ctx)
-		if qerr == nil && parent != nil {
-			childID := fmt.Sprintf("incident_inv_%d_%s", record.IncidentNumber, uuid.NewString()[:8])
-			child, cerr := tx.Client().IncidentInvestigation.Create().
-				SetIncidentInvestigationID(childID).
-				SetIncidentID(inc.ID).
-				SetStatus(IncidentInvestigationStatusPending).
-				SetParentInvestigationID(parent.ID).
-				SetCreatedAt(now).
-				SetUpdatedAt(now).
-				Save(ctx)
-			if cerr != nil {
-				return nil, fmt.Errorf("failed to create child incident investigation: %w", cerr)
+		// Auto-link a child investigation for top-level investigate tasks.
+		if record.Kind == CoordinationTaskKindInvestigate &&
+			record.ParentTaskID == nil &&
+			inc != nil {
+			var parent models.IncidentInvestigation
+			qerr := tx.NewSelect().Model(&parent).
+				Where("incident_id = ?", inc.ID).
+				Where("status = ?", IncidentInvestigationStatusCoordinating).
+				Scan(ctx)
+			if qerr == nil {
+				childID := fmt.Sprintf("incident_inv_%d_%s", record.IncidentNumber, uuid.NewString()[:8])
+				child := &models.IncidentInvestigation{
+					IncidentInvestigationID: childID,
+					IncidentID:              &inc.ID,
+					Status:                  IncidentInvestigationStatusPending,
+					ParentInvestigationID:   &parent.ID,
+				}
+				child.ID = models.NewUUID()
+				child.CreatedAt = now
+				child.UpdatedAt = now
+				if _, cerr := tx.NewInsert().Model(child).Exec(ctx); cerr != nil {
+					return fmt.Errorf("failed to create child incident investigation: %w", cerr)
+				}
+				m.LinkedInvestigationID = &child.ID
+			} else if !isNotFound(qerr) {
+				return fmt.Errorf("failed to query coordinating investigation: %w", qerr)
 			}
-			b.SetLinkedInvestigationID(child.ID)
-		} else if qerr != nil && !ent.IsNotFound(qerr) {
-			return nil, fmt.Errorf("failed to query coordinating investigation: %w", qerr)
+			// If no coordinating investigation found, proceed without a link.
 		}
-		// If no coordinating investigation found, proceed without a link.
-	}
 
-	created, err := b.Save(ctx)
+		if _, err := tx.NewInsert().Model(m).Exec(ctx); err != nil {
+			return fmt.Errorf("failed to create coordination task: %w", err)
+		}
+		createdID = m.ID
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create coordination task: %w", err)
+		return nil, err
 	}
 
-	if err := tx.Commit(); err != nil {
-		return nil, fmt.Errorf("failed to commit coordination task transaction: %w", err)
-	}
-
-	return s.GetTask(ctx, created.ID)
+	return s.GetTask(ctx, createdID)
 }
 
 func (s *pgCoordinationTaskStore) GetTask(ctx context.Context, taskID uuid.UUID) (*CoordinationTaskRecord, error) {
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	t, err := s.client.CoordinationTask.Query().
-		Where(coordinationtask.ID(taskID)).
-		WithIncident().
-		Only(ctx)
+	var t models.CoordinationTask
+	err := s.db.NewSelect().Model(&t).Where("id = ?", taskID).Scan(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
+		if isNotFound(err) {
 			return nil, fmt.Errorf("coordination task not found: %w", ErrCoordinationTaskNotFound)
 		}
 		return nil, fmt.Errorf("failed to query coordination task: %w", err)
 	}
-	return coordinationTaskFromEnt(t), nil
+	return s.coordinationTaskFromModel(ctx, &t)
 }
 
 func (s *pgCoordinationTaskStore) ListTasksByIncident(ctx context.Context, incidentNumber int64, filter map[string]any) ([]CoordinationTaskRecord, error) {
@@ -241,60 +223,62 @@ func (s *pgCoordinationTaskStore) ListTasksByIncident(ctx context.Context, incid
 	}
 	limit, skip := extractLimitSkip(filter, 100)
 
-	inc, err := s.client.Incident.Query().
-		Where(incident.IncidentNumber(incidentNumber), incident.DeletedAtIsNil()).
-		Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
+	var inc models.Incident
+	if err := s.db.NewSelect().Model(&inc).
+		Where("incident_number = ? AND deleted_at IS NULL", incidentNumber).
+		Scan(ctx); err != nil {
+		if isNotFound(err) {
 			return nil, fmt.Errorf("incident not found: %w", ErrIncidentNotFound)
 		}
 		return nil, fmt.Errorf("failed to find incident for coordination task listing: %w", err)
 	}
 
-	preds := []predicate.CoordinationTask{
-		coordinationtask.HasIncidentWith(incident.ID(inc.ID)),
-	}
+	q := s.db.NewSelect().Model((*models.CoordinationTask)(nil)).
+		Where("incident_id = ?", inc.ID)
+
 	if v, ok := filter["parent_task_id"]; ok {
 		switch p := v.(type) {
 		case uuid.UUID:
-			preds = append(preds, coordinationtask.ParentTaskID(p))
+			q = q.Where("parent_task_id = ?", p)
 		case *uuid.UUID:
 			if p != nil {
-				preds = append(preds, coordinationtask.ParentTaskID(*p))
+				q = q.Where("parent_task_id = ?", *p)
 			}
 		case string:
 			if pid, perr := uuid.Parse(p); perr == nil {
-				preds = append(preds, coordinationtask.ParentTaskID(pid))
+				q = q.Where("parent_task_id = ?", pid)
 			}
 		}
 	}
 	if v, ok := filter["status"].(string); ok && v != "" {
-		preds = append(preds, coordinationtask.StatusEQ(coordinationtask.Status(v)))
+		q = q.Where("status = ?", v)
 	}
 	if v, ok := filter["assignee_role"].(string); ok && v != "" {
-		preds = append(preds, coordinationtask.AssigneeRoleEQ(coordinationtask.AssigneeRole(v)))
+		q = q.Where("assignee_role = ?", v)
 	}
 
 	sortField, _ := filter["$sort"].(string)
-	q := s.client.CoordinationTask.Query().Where(preds...).WithIncident()
 	switch sortField {
 	case "priority":
-		q.Order(coordinationtask.ByPriority(), coordinationtask.ByCreatedAt())
+		q = q.Order("priority ASC, created_at ASC")
 	case "-priority":
-		q.Order(coordinationtask.ByPriority(sql.OrderDesc()), coordinationtask.ByCreatedAt())
+		q = q.Order("priority DESC, created_at ASC")
 	default:
-		q.Order(ent.Desc(coordinationtask.FieldCreatedAt))
+		q = q.Order("created_at DESC")
 	}
-	q.Limit(limit).Offset(skip)
+	q = q.Limit(limit).Offset(skip)
 
-	items, err := q.All(ctx)
-	if err != nil {
+	var items []models.CoordinationTask
+	if err := q.Scan(ctx); err != nil {
 		return nil, fmt.Errorf("failed to list coordination tasks: %w", err)
 	}
 
 	records := make([]CoordinationTaskRecord, 0, len(items))
-	for _, item := range items {
-		rec := coordinationTaskFromEnt(item)
+	for i := range items {
+		rec, err := s.coordinationTaskFromModel(ctx, &items[i])
+		if err != nil {
+			return nil, err
+		}
 		rec.IncidentNumber = incidentNumber
 		records = append(records, *rec)
 	}
@@ -309,25 +293,23 @@ func (s *pgCoordinationTaskStore) ListPendingTasks(ctx context.Context, role str
 		limit = 100
 	}
 
-	items, err := s.client.CoordinationTask.Query().
-		Where(
-			coordinationtask.StatusEQ(coordinationtask.Status(CoordinationTaskStatusPending)),
-			coordinationtask.AssigneeRoleEQ(coordinationtask.AssigneeRole(role)),
-		).
-		WithIncident().
-		Order(
-			coordinationtask.ByPriority(sql.OrderDesc()),
-			coordinationtask.ByCreatedAt(),
-		).
+	var items []models.CoordinationTask
+	if err := s.db.NewSelect().Model(&items).
+		Where("status = ?", CoordinationTaskStatusPending).
+		Where("assignee_role = ?", role).
+		Order("priority DESC, created_at ASC").
 		Limit(limit).
-		All(ctx)
-	if err != nil {
+		Scan(ctx); err != nil {
 		return nil, fmt.Errorf("failed to list pending coordination tasks: %w", err)
 	}
 
 	records := make([]CoordinationTaskRecord, 0, len(items))
-	for _, item := range items {
-		records = append(records, *coordinationTaskFromEnt(item))
+	for i := range items {
+		rec, err := s.coordinationTaskFromModel(ctx, &items[i])
+		if err != nil {
+			return nil, err
+		}
+		records = append(records, *rec)
 	}
 	return records, nil
 }
@@ -343,23 +325,24 @@ func (s *pgCoordinationTaskStore) ListOverdueTasks(ctx context.Context, now time
 		limit = 100
 	}
 
-	items, err := s.client.CoordinationTask.Query().
-		Where(
-			coordinationtask.StatusEQ(coordinationtask.Status(CoordinationTaskStatusInProgress)),
-			coordinationtask.DueAtNotNil(),
-			coordinationtask.DueAtLT(now),
-		).
-		WithIncident().
-		Order(coordinationtask.ByDueAt()).
+	var items []models.CoordinationTask
+	if err := s.db.NewSelect().Model(&items).
+		Where("status = ?", CoordinationTaskStatusInProgress).
+		Where("due_at IS NOT NULL").
+		Where("due_at < ?", now).
+		Order("due_at ASC").
 		Limit(limit).
-		All(ctx)
-	if err != nil {
+		Scan(ctx); err != nil {
 		return nil, fmt.Errorf("failed to list overdue coordination tasks: %w", err)
 	}
 
 	records := make([]CoordinationTaskRecord, 0, len(items))
-	for _, item := range items {
-		records = append(records, *coordinationTaskFromEnt(item))
+	for i := range items {
+		rec, err := s.coordinationTaskFromModel(ctx, &items[i])
+		if err != nil {
+			return nil, err
+		}
+		records = append(records, *rec)
 	}
 	return records, nil
 }
@@ -368,21 +351,22 @@ func (s *pgCoordinationTaskStore) ListInProgressByAgent(ctx context.Context, age
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	items, err := s.client.CoordinationTask.Query().
-		Where(
-			coordinationtask.AssigneeAgentID(agentIDHex),
-			coordinationtask.StatusIn(coordinationtask.Status(CoordinationTaskStatusAssigned), coordinationtask.Status(CoordinationTaskStatusInProgress)),
-		).
-		WithIncident().
-		Order(coordinationtask.ByCreatedAt()).
-		All(ctx)
-	if err != nil {
+	var items []models.CoordinationTask
+	if err := s.db.NewSelect().Model(&items).
+		Where("assignee_agent_id = ?", agentIDHex).
+		Where("status IN (?)", bun.In([]string{CoordinationTaskStatusAssigned, CoordinationTaskStatusInProgress})).
+		Order("created_at ASC").
+		Scan(ctx); err != nil {
 		return nil, fmt.Errorf("failed to list in-progress coordination tasks by agent: %w", err)
 	}
 
 	records := make([]CoordinationTaskRecord, 0, len(items))
-	for _, item := range items {
-		records = append(records, *coordinationTaskFromEnt(item))
+	for i := range items {
+		rec, err := s.coordinationTaskFromModel(ctx, &items[i])
+		if err != nil {
+			return nil, err
+		}
+		records = append(records, *rec)
 	}
 	return records, nil
 }
@@ -395,18 +379,20 @@ func (s *pgCoordinationTaskStore) ClaimTask(ctx context.Context, taskID uuid.UUI
 	defer cancel()
 
 	now := time.Now().UTC()
-	n, err := s.client.CoordinationTask.Update().
-		Where(
-			coordinationtask.ID(taskID),
-			coordinationtask.StatusEQ(coordinationtask.Status(CoordinationTaskStatusPending)),
-			coordinationtask.AssigneeRoleEQ(coordinationtask.AssigneeRole(role)),
-		).
-		SetStatus(coordinationtask.Status(CoordinationTaskStatusAssigned)).
-		SetAssigneeAgentID(agentIDHex).
-		SetAssigneeAgentName(agentName).
-		SetClaimedAt(now).
-		SetUpdatedAt(now).
-		Save(ctx)
+	res, err := s.db.NewUpdate().Model((*models.CoordinationTask)(nil)).
+		Set("status = ?", CoordinationTaskStatusAssigned).
+		Set("assignee_agent_id = ?", agentIDHex).
+		Set("assignee_agent_name = ?", agentName).
+		Set("claimed_at = ?", now).
+		Set("updated_at = ?", now).
+		Where("id = ?", taskID).
+		Where("status = ?", CoordinationTaskStatusPending).
+		Where("assignee_role = ?", role).
+		Exec(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to claim coordination task: %w", err)
+	}
+	n, err := res.RowsAffected()
 	if err != nil {
 		return nil, fmt.Errorf("failed to claim coordination task: %w", err)
 	}
@@ -422,14 +408,16 @@ func (s *pgCoordinationTaskStore) MarkInProgress(ctx context.Context, taskID uui
 	defer cancel()
 
 	now := time.Now().UTC()
-	n, err := s.client.CoordinationTask.Update().
-		Where(
-			coordinationtask.ID(taskID),
-			coordinationtask.StatusEQ(coordinationtask.Status(CoordinationTaskStatusAssigned)),
-		).
-		SetStatus(coordinationtask.Status(CoordinationTaskStatusInProgress)).
-		SetUpdatedAt(now).
-		Save(ctx)
+	res, err := s.db.NewUpdate().Model((*models.CoordinationTask)(nil)).
+		Set("status = ?", CoordinationTaskStatusInProgress).
+		Set("updated_at = ?", now).
+		Where("id = ?", taskID).
+		Where("status = ?", CoordinationTaskStatusAssigned).
+		Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to mark coordination task in progress: %w", err)
+	}
+	n, err := res.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("failed to mark coordination task in progress: %w", err)
 	}
@@ -448,22 +436,24 @@ func (s *pgCoordinationTaskStore) RevertByAgent(ctx context.Context, agentIDHex 
 	defer cancel()
 
 	now := time.Now().UTC()
-	n, err := s.client.CoordinationTask.Update().
-		Where(
-			coordinationtask.AssigneeAgentID(agentIDHex),
-			coordinationtask.StatusIn(coordinationtask.Status(CoordinationTaskStatusAssigned), coordinationtask.Status(CoordinationTaskStatusInProgress)),
-		).
-		SetStatus(coordinationtask.Status(CoordinationTaskStatusPending)).
-		SetAssigneeAgentID("").
-		SetAssigneeAgentName("").
-		ClearClaimedAt().
-		AddDispatchAttempts(1).
-		SetUpdatedAt(now).
-		Save(ctx)
+	res, err := s.db.NewUpdate().Model((*models.CoordinationTask)(nil)).
+		Set("status = ?", CoordinationTaskStatusPending).
+		Set("assignee_agent_id = ''").
+		Set("assignee_agent_name = ''").
+		Set("claimed_at = NULL").
+		Set("dispatch_attempts = dispatch_attempts + 1").
+		Set("updated_at = ?", now).
+		Where("assignee_agent_id = ?", agentIDHex).
+		Where("status IN (?)", bun.In([]string{CoordinationTaskStatusAssigned, CoordinationTaskStatusInProgress})).
+		Exec(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to revert coordination tasks by agent: %w", err)
 	}
-	return n, nil
+	n, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("failed to revert coordination tasks by agent: %w", err)
+	}
+	return int(n), nil
 }
 
 // CompleteTask performs an atomic CAS from in_progress to complete, persists the
@@ -477,46 +467,38 @@ func (s *pgCoordinationTaskStore) CompleteTask(ctx context.Context, taskID uuid.
 
 	now := time.Now().UTC()
 
-	tx, err := s.client.Tx(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to begin coordination task completion transaction: %w", err)
-	}
-	defer rollbackTx(tx)
-
-	n, err := tx.Client().CoordinationTask.Update().
-		Where(
-			coordinationtask.ID(taskID),
-			coordinationtask.StatusEQ(coordinationtask.Status(CoordinationTaskStatusInProgress)),
-		).
-		SetStatus(coordinationtask.Status(CoordinationTaskStatusComplete)).
-		SetResult(result).
-		SetCompletedAt(now).
-		SetUpdatedAt(now).
-		Save(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to complete coordination task: %w", err)
-	}
-	if n == 0 {
-		return fmt.Errorf("coordination task %s not in progress: %w", taskID, ErrCoordinationTaskStatusConflict)
-	}
-
-	// Roll up linked child investigation findings/evidence into the parent.
-	task, err := tx.Client().CoordinationTask.Query().
-		Where(coordinationtask.ID(taskID)).
-		Only(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to reload completed coordination task: %w", err)
-	}
-	if task.LinkedInvestigationID != nil {
-		if err := rollupChildInvestigation(ctx, tx.Client(), *task.LinkedInvestigationID); err != nil {
-			return err
+	return s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		res, err := tx.NewUpdate().Model((*models.CoordinationTask)(nil)).
+			Set("status = ?", CoordinationTaskStatusComplete).
+			Set("result = ?", result).
+			Set("completed_at = ?", now).
+			Set("updated_at = ?", now).
+			Where("id = ?", taskID).
+			Where("status = ?", CoordinationTaskStatusInProgress).
+			Exec(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to complete coordination task: %w", err)
 		}
-	}
+		n, err := res.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("failed to complete coordination task: %w", err)
+		}
+		if n == 0 {
+			return fmt.Errorf("coordination task %s not in progress: %w", taskID, ErrCoordinationTaskStatusConflict)
+		}
 
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit coordination task completion: %w", err)
-	}
-	return nil
+		// Roll up linked child investigation findings/evidence into the parent.
+		var task models.CoordinationTask
+		if err := tx.NewSelect().Model(&task).Where("id = ?", taskID).Scan(ctx); err != nil {
+			return fmt.Errorf("failed to reload completed coordination task: %w", err)
+		}
+		if task.LinkedInvestigationID != nil {
+			if err := rollupChildInvestigation(ctx, tx, *task.LinkedInvestigationID); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 func (s *pgCoordinationTaskStore) FailTask(ctx context.Context, taskID uuid.UUID, reason string) error {
@@ -524,13 +506,17 @@ func (s *pgCoordinationTaskStore) FailTask(ctx context.Context, taskID uuid.UUID
 	defer cancel()
 
 	now := time.Now().UTC()
-	n, err := s.client.CoordinationTask.Update().
-		Where(coordinationtask.ID(taskID)).
-		SetStatus(coordinationtask.Status(CoordinationTaskStatusFailed)).
-		SetFailureReason(reason).
-		SetCompletedAt(now).
-		SetUpdatedAt(now).
-		Save(ctx)
+	res, err := s.db.NewUpdate().Model((*models.CoordinationTask)(nil)).
+		Set("status = ?", CoordinationTaskStatusFailed).
+		Set("failure_reason = ?", reason).
+		Set("completed_at = ?", now).
+		Set("updated_at = ?", now).
+		Where("id = ?", taskID).
+		Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to fail coordination task: %w", err)
+	}
+	n, err := res.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("failed to fail coordination task: %w", err)
 	}
@@ -548,11 +534,15 @@ func (s *pgCoordinationTaskStore) CancelTask(ctx context.Context, taskID uuid.UU
 	defer cancel()
 
 	now := time.Now().UTC()
-	n, err := s.client.CoordinationTask.Update().
-		Where(coordinationtask.ID(taskID)).
-		SetStatus(coordinationtask.Status(CoordinationTaskStatusCancelled)).
-		SetUpdatedAt(now).
-		Save(ctx)
+	res, err := s.db.NewUpdate().Model((*models.CoordinationTask)(nil)).
+		Set("status = ?", CoordinationTaskStatusCancelled).
+		Set("updated_at = ?", now).
+		Where("id = ?", taskID).
+		Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to cancel coordination task: %w", err)
+	}
+	n, err := res.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("failed to cancel coordination task: %w", err)
 	}
@@ -563,25 +553,19 @@ func (s *pgCoordinationTaskStore) CancelTask(ctx context.Context, taskID uuid.UU
 }
 
 func (s *pgCoordinationTaskStore) cancelChildTasks(ctx context.Context, parentTaskID uuid.UUID, now time.Time) error {
-	children, err := s.client.CoordinationTask.Query().
-		Where(
-			coordinationtask.ParentTaskID(parentTaskID),
-			coordinationtask.StatusNotIn(
-				coordinationtask.Status(CoordinationTaskStatusComplete),
-				coordinationtask.Status(CoordinationTaskStatusFailed),
-				coordinationtask.Status(CoordinationTaskStatusCancelled),
-			),
-		).
-		All(ctx)
-	if err != nil {
+	var children []models.CoordinationTask
+	if err := s.db.NewSelect().Model(&children).
+		Where("parent_task_id = ?", parentTaskID).
+		Where("status NOT IN (?)", bun.In([]string{CoordinationTaskStatusComplete, CoordinationTaskStatusFailed, CoordinationTaskStatusCancelled})).
+		Scan(ctx); err != nil {
 		return fmt.Errorf("failed to query child coordination tasks: %w", err)
 	}
 	for _, child := range children {
-		if _, err := s.client.CoordinationTask.Update().
-			Where(coordinationtask.ID(child.ID)).
-			SetStatus(coordinationtask.Status(CoordinationTaskStatusCancelled)).
-			SetUpdatedAt(now).
-			Save(ctx); err != nil {
+		if _, err := s.db.NewUpdate().Model((*models.CoordinationTask)(nil)).
+			Set("status = ?", CoordinationTaskStatusCancelled).
+			Set("updated_at = ?", now).
+			Where("id = ?", child.ID).
+			Exec(ctx); err != nil {
 			return fmt.Errorf("failed to cancel child coordination task %s: %w", child.ID, err)
 		}
 		if err := s.cancelChildTasks(ctx, child.ID, now); err != nil {
@@ -598,18 +582,18 @@ func (s *pgCoordinationTaskStore) UpdateTaskStatus(ctx context.Context, taskID u
 	defer cancel()
 
 	now := time.Now().UTC()
-	q := s.client.CoordinationTask.Update().
-		Where(coordinationtask.ID(taskID)).
-		SetStatus(coordinationtask.Status(toStatus)).
-		SetUpdatedAt(now)
+	q := s.db.NewUpdate().Model((*models.CoordinationTask)(nil)).
+		Set("status = ?", toStatus).
+		Set("updated_at = ?", now).
+		Where("id = ?", taskID)
 	if len(fromStatuses) > 0 {
-		statuses := make([]coordinationtask.Status, len(fromStatuses))
-		for i, s := range fromStatuses {
-			statuses[i] = coordinationtask.Status(s)
-		}
-		q.Where(coordinationtask.StatusIn(statuses...))
+		q = q.Where("status IN (?)", bun.In(fromStatuses))
 	}
-	n, err := q.Save(ctx)
+	res, err := q.Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to update coordination task status: %w", err)
+	}
+	n, err := res.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("failed to update coordination task status: %w", err)
 	}
@@ -627,22 +611,20 @@ func (s *pgCoordinationTaskStore) BumpDispatchAttempts(ctx context.Context, task
 	defer cancel()
 
 	now := time.Now().UTC()
-	n, err := s.client.CoordinationTask.Update().
-		Where(
-			coordinationtask.ID(taskID),
-			coordinationtask.StatusIn(
-				coordinationtask.Status(CoordinationTaskStatusPending),
-				coordinationtask.Status(CoordinationTaskStatusAssigned),
-				coordinationtask.Status(CoordinationTaskStatusInProgress),
-			),
-		).
-		SetStatus(coordinationtask.Status(CoordinationTaskStatusPending)).
-		SetAssigneeAgentID("").
-		SetAssigneeAgentName("").
-		ClearClaimedAt().
-		AddDispatchAttempts(1).
-		SetUpdatedAt(now).
-		Save(ctx)
+	res, err := s.db.NewUpdate().Model((*models.CoordinationTask)(nil)).
+		Set("status = ?", CoordinationTaskStatusPending).
+		Set("assignee_agent_id = ''").
+		Set("assignee_agent_name = ''").
+		Set("claimed_at = NULL").
+		Set("dispatch_attempts = dispatch_attempts + 1").
+		Set("updated_at = ?", now).
+		Where("id = ?", taskID).
+		Where("status IN (?)", bun.In([]string{CoordinationTaskStatusPending, CoordinationTaskStatusAssigned, CoordinationTaskStatusInProgress})).
+		Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to bump coordination task dispatch attempts: %w", err)
+	}
+	n, err := res.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("failed to bump coordination task dispatch attempts: %w", err)
 	}
@@ -656,10 +638,10 @@ func (s *pgCoordinationTaskStore) BumpDispatchAttempts(ctx context.Context, task
 // evidence into its parent investigation (the coordinating investigation of the
 // incident), deduping findings by Title and evidence by Source+Type+Content.
 // The parent summary is left untouched.
-func rollupChildInvestigation(ctx context.Context, client *ent.Client, childID uuid.UUID) error {
-	child, err := client.IncidentInvestigation.Get(ctx, childID)
-	if err != nil {
-		if ent.IsNotFound(err) {
+func rollupChildInvestigation(ctx context.Context, db bun.IDB, childID uuid.UUID) error {
+	var child models.IncidentInvestigation
+	if err := db.NewSelect().Model(&child).Where("id = ?", childID).Scan(ctx); err != nil {
+		if isNotFound(err) {
 			return nil
 		}
 		return fmt.Errorf("failed to load linked child investigation: %w", err)
@@ -667,21 +649,24 @@ func rollupChildInvestigation(ctx context.Context, client *ent.Client, childID u
 
 	// Resolve the parent: prefer the child's parent_investigation_id, otherwise
 	// the incident's coordinating investigation.
-	var parent *ent.IncidentInvestigation
+	var parent *models.IncidentInvestigation
 	if child.ParentInvestigationID != nil {
-		parent, err = client.IncidentInvestigation.Get(ctx, *child.ParentInvestigationID)
-		if err != nil && !ent.IsNotFound(err) {
+		var p models.IncidentInvestigation
+		if err := db.NewSelect().Model(&p).Where("id = ?", *child.ParentInvestigationID).Scan(ctx); err == nil {
+			parent = &p
+		} else if !isNotFound(err) {
 			return fmt.Errorf("failed to load parent investigation: %w", err)
 		}
 	}
 	if parent == nil && child.IncidentID != nil {
-		parent, err = client.IncidentInvestigation.Query().
-			Where(
-				incidentinvestigation.HasIncidentWith(incident.ID(*child.IncidentID)),
-				incidentinvestigation.StatusEQ(IncidentInvestigationStatusCoordinating),
-			).
-			Only(ctx)
-		if err != nil && !ent.IsNotFound(err) {
+		var p models.IncidentInvestigation
+		err := db.NewSelect().Model(&p).
+			Where("incident_id = ?", *child.IncidentID).
+			Where("status = ?", IncidentInvestigationStatusCoordinating).
+			Scan(ctx)
+		if err == nil {
+			parent = &p
+		} else if !isNotFound(err) {
 			return fmt.Errorf("failed to load coordinating investigation: %w", err)
 		}
 	}
@@ -692,19 +677,20 @@ func rollupChildInvestigation(ctx context.Context, client *ent.Client, childID u
 	mergedFindings := mergeFindings(parent.Findings, child.Findings)
 	mergedEvidence := mergeEvidence(parent.Evidence, child.Evidence)
 
-	upd := client.IncidentInvestigation.UpdateOneID(parent.ID).
-		SetFindings(mergedFindings).
-		SetEvidence(mergedEvidence).
-		SetUpdatedAt(time.Now().UTC())
-	if _, err := upd.Save(ctx); err != nil {
+	if _, err := db.NewUpdate().Model((*models.IncidentInvestigation)(nil)).
+		Set("findings = ?", mergedFindings).
+		Set("evidence = ?", mergedEvidence).
+		Set("updated_at = ?", time.Now().UTC()).
+		Where("id = ?", parent.ID).
+		Exec(ctx); err != nil {
 		return fmt.Errorf("failed to roll up child investigation into parent: %w", err)
 	}
 	return nil
 }
 
-func mergeFindings(existing, incoming []entschema.InvestigationFinding) []entschema.InvestigationFinding {
+func mergeFindings(existing, incoming []models.InvestigationFinding) []models.InvestigationFinding {
 	seen := make(map[string]bool, len(existing))
-	out := make([]entschema.InvestigationFinding, 0, len(existing)+len(incoming))
+	out := make([]models.InvestigationFinding, 0, len(existing)+len(incoming))
 	for _, f := range existing {
 		if !seen[f.Title] {
 			seen[f.Title] = true
@@ -720,10 +706,10 @@ func mergeFindings(existing, incoming []entschema.InvestigationFinding) []entsch
 	return out
 }
 
-func mergeEvidence(existing, incoming []entschema.EvidenceItem) []entschema.EvidenceItem {
+func mergeEvidence(existing, incoming []models.EvidenceItem) []models.EvidenceItem {
 	type key struct{ source, typ, content string }
 	seen := make(map[key]bool, len(existing))
-	out := make([]entschema.EvidenceItem, 0, len(existing)+len(incoming))
+	out := make([]models.EvidenceItem, 0, len(existing)+len(incoming))
 	for _, e := range existing {
 		k := key{e.Source, e.Type, e.Content}
 		if !seen[k] {
@@ -741,40 +727,43 @@ func mergeEvidence(existing, incoming []entschema.EvidenceItem) []entschema.Evid
 	return out
 }
 
-func coordinationTaskFromEnt(e *ent.CoordinationTask) *CoordinationTaskRecord {
-	if e == nil {
-		return nil
+func (s *pgCoordinationTaskStore) coordinationTaskFromModel(ctx context.Context, m *models.CoordinationTask) (*CoordinationTaskRecord, error) {
+	if m == nil {
+		return nil, nil
 	}
 	rec := &CoordinationTaskRecord{
-		ID:                    e.ID,
-		IncidentID:            e.IncidentID,
-		ParentTaskID:          e.ParentTaskID,
-		Kind:                  string(e.Kind),
-		AssigneeRole:          string(e.AssigneeRole),
-		AssigneeAgentID:       e.AssigneeAgentID,
-		AssigneeAgentName:     e.AssigneeAgentName,
-		Goal:                  e.Goal,
-		InputContext:          e.InputContext,
-		Result:                e.Result,
-		ResultSchema:          e.ResultSchema,
-		LinkedInvestigationID: e.LinkedInvestigationID,
-		Status:                string(e.Status),
-		Priority:              e.Priority,
-		DueAt:                 e.DueAt,
-		ClaimedAt:             e.ClaimedAt,
-		CompletedAt:           e.CompletedAt,
-		CreatedByAgentID:      e.CreatedByAgentID,
-		CreatedByName:         e.CreatedByName,
-		FailureReason:         e.FailureReason,
-		DispatchAttempts:      e.DispatchAttempts,
-		CreatedAt:             e.CreatedAt,
-		UpdatedAt:             e.UpdatedAt,
+		ID:                    m.ID,
+		IncidentID:            m.IncidentID,
+		ParentTaskID:          m.ParentTaskID,
+		Kind:                  m.Kind,
+		AssigneeRole:          m.AssigneeRole,
+		AssigneeAgentID:       m.AssigneeAgentID,
+		AssigneeAgentName:     m.AssigneeAgentName,
+		Goal:                  m.Goal,
+		InputContext:          m.InputContext,
+		Result:                m.Result,
+		ResultSchema:          m.ResultSchema,
+		LinkedInvestigationID: m.LinkedInvestigationID,
+		Status:                m.Status,
+		Priority:              m.Priority,
+		DueAt:                 m.DueAt,
+		ClaimedAt:             m.ClaimedAt,
+		CompletedAt:           m.CompletedAt,
+		CreatedByAgentID:      m.CreatedByAgentID,
+		CreatedByName:         m.CreatedByName,
+		FailureReason:         m.FailureReason,
+		DispatchAttempts:      m.DispatchAttempts,
+		CreatedAt:             m.CreatedAt,
+		UpdatedAt:             m.UpdatedAt,
 	}
-	if e.Edges.Incident != nil {
-		rec.IncidentNumber = e.Edges.Incident.IncidentNumber
+	if m.IncidentID != nil {
+		var inc models.Incident
+		if err := s.db.NewSelect().Model(&inc).Column("incident_number").Where("id = ?", *m.IncidentID).Scan(ctx); err == nil {
+			rec.IncidentNumber = inc.IncidentNumber
+		}
 	}
 	if rec.InputContext == nil {
 		rec.InputContext = map[string]any{}
 	}
-	return rec
+	return rec, nil
 }

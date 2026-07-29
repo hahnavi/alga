@@ -8,19 +8,18 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
-	"alga/ent"
-	"alga/ent/escalationpolicy"
-	entschema "alga/ent/schema"
+	"alga/db/models"
 )
 
 // EscalationLevelRecord and EscalationTargetRecord are aliases for the JSONB
-// inner types declared on the ent schema. The schema package owns the
-// authoritative definition so Ent can generate the marshalling code; the store
-// re-exports them so callers can stay in the `store` import path.
+// inner types declared in the models package. The models package owns the
+// authoritative definition; the store re-exports them so callers can stay in
+// the `store` import path.
 type (
-	EscalationLevelRecord  = entschema.EscalationLevelRecord
-	EscalationTargetRecord = entschema.EscalationTargetRecord
+	EscalationLevelRecord  = models.EscalationLevelRecord
+	EscalationTargetRecord = models.EscalationTargetRecord
 )
 
 // EscalationPolicyRecord is the on-disk and wire-format representation of an
@@ -52,8 +51,8 @@ type pgEscalationStore struct {
 	pgStoreBase
 }
 
-func newPGEscalationStore(client *ent.Client) EscalationStore {
-	return &pgEscalationStore{pgStoreBase{client: client}}
+func newPGEscalationStore(db *bun.DB) EscalationStore {
+	return &pgEscalationStore{pgStoreBase{db: db}}
 }
 
 // normalizeLevels clamps negative repeat counts to zero and returns a
@@ -78,22 +77,27 @@ func (s *pgEscalationStore) CreatePolicy(ctx context.Context, record *Escalation
 	levels := normalizeLevels(record.Levels)
 	now := time.Now().UTC()
 
-	saved, err := s.client.EscalationPolicy.Create().
-		SetName(record.Name).
-		SetDescription(record.Description).
-		SetRepeatCount(record.RepeatCount).
-		SetLevels(levels).
-		SetCreatedAt(now).
-		SetUpdatedAt(now).
-		Save(ctx)
+	m := &models.EscalationPolicy{
+		BaseModel: models.BaseModel{
+			ID:        models.NewUUID(),
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+		Name:        record.Name,
+		Description: record.Description,
+		RepeatCount: record.RepeatCount,
+		Levels:      levels,
+	}
+
+	_, err := s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create escalation policy: %w", err)
 	}
 
-	record.ID = saved.ID
+	record.ID = m.ID
 	record.Levels = levels
-	record.CreatedAt = saved.CreatedAt
-	record.UpdatedAt = saved.UpdatedAt
+	record.CreatedAt = m.CreatedAt
+	record.UpdatedAt = m.UpdatedAt
 	return record, nil
 }
 
@@ -101,11 +105,12 @@ func (s *pgEscalationStore) GetPolicy(ctx context.Context, id uuid.UUID) (*Escal
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	policy, err := s.client.EscalationPolicy.Get(ctx, id)
+	var policy models.EscalationPolicy
+	err := s.db.NewSelect().Model(&policy).Where("id = ?", id).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*EscalationPolicyRecord](err, "escalation policy")
 	}
-	return escalationPolicyToRecord(policy), nil
+	return escalationPolicyToRecord(&policy), nil
 }
 
 func (s *pgEscalationStore) UpdatePolicy(ctx context.Context, id uuid.UUID, record *EscalationPolicyRecord) (*EscalationPolicyRecord, error) {
@@ -118,31 +123,47 @@ func (s *pgEscalationStore) UpdatePolicy(ctx context.Context, id uuid.UUID, reco
 	levels := normalizeLevels(record.Levels)
 	now := time.Now().UTC()
 
-	updated, err := s.client.EscalationPolicy.UpdateOneID(id).
-		SetName(record.Name).
-		SetDescription(record.Description).
-		SetRepeatCount(record.RepeatCount).
-		SetLevels(levels).
-		SetUpdatedAt(now).
-		Save(ctx)
+	res, err := s.db.NewUpdate().Model((*models.EscalationPolicy)(nil)).
+		Set("name = ?", record.Name).
+		Set("description = ?", record.Description).
+		Set("repeat_count = ?", record.RepeatCount).
+		Set("levels = ?", levels).
+		Set("updated_at = ?", now).
+		Where("id = ?", id).
+		Exec(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, fmt.Errorf("escalation policy not found: %w", ErrNotFound)
-		}
 		return nil, fmt.Errorf("failed to update escalation policy: %w", err)
 	}
-	return escalationPolicyToRecord(updated), nil
+	n, err := res.RowsAffected()
+	if err != nil {
+		return nil, fmt.Errorf("failed to update escalation policy: %w", err)
+	}
+	if n == 0 {
+		return nil, fmt.Errorf("escalation policy not found: %w", ErrNotFound)
+	}
+
+	// Re-fetch to return the updated record
+	var updated models.EscalationPolicy
+	if err := s.db.NewSelect().Model(&updated).Where("id = ?", id).Scan(ctx); err != nil {
+		return nil, fmt.Errorf("failed to re-fetch updated escalation policy: %w", err)
+	}
+	return escalationPolicyToRecord(&updated), nil
 }
 
 func (s *pgEscalationStore) DeletePolicy(ctx context.Context, id uuid.UUID) error {
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	if err := s.client.EscalationPolicy.DeleteOneID(id).Exec(ctx); err != nil {
-		if ent.IsNotFound(err) {
-			return fmt.Errorf("escalation policy not found: %w", ErrNotFound)
-		}
+	res, err := s.db.NewDelete().Model((*models.EscalationPolicy)(nil)).Where("id = ?", id).Exec(ctx)
+	if err != nil {
 		return fmt.Errorf("failed to delete escalation policy: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to delete escalation policy: %w", err)
+	}
+	if n == 0 {
+		return fmt.Errorf("escalation policy not found: %w", ErrNotFound)
 	}
 	return nil
 }
@@ -156,31 +177,32 @@ func (s *pgEscalationStore) ListPolicies(ctx context.Context, limit, skip int) (
 	}
 	limit = min(limit, 100)
 
-	total, err := s.client.EscalationPolicy.Query().Count(ctx)
+	total, err := s.db.NewSelect().Model((*models.EscalationPolicy)(nil)).Count(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count policies: %w", err)
 	}
 
-	policies, err := s.client.EscalationPolicy.Query().
-		Order(ent.Desc(escalationpolicy.FieldCreatedAt)).
+	var policies []models.EscalationPolicy
+	err = s.db.NewSelect().Model(&policies).
+		Order("created_at DESC").
 		Limit(limit).
 		Offset(skip).
-		All(ctx)
+		Scan(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list policies: %w", err)
 	}
 
 	records := make([]EscalationPolicyRecord, 0, len(policies))
-	for _, p := range policies {
-		records = append(records, *escalationPolicyToRecord(p))
+	for i := range policies {
+		records = append(records, *escalationPolicyToRecord(&policies[i]))
 	}
 	return records, int64(total), nil
 }
 
-// escalationPolicyToRecord copies an ent EscalationPolicy into a store record.
+// escalationPolicyToRecord copies a models EscalationPolicy into a store record.
 // The levels slice is sorted by LevelNumber so callers can rely on ascending
 // order without re-sorting; this is the only place we enforce the convention.
-func escalationPolicyToRecord(p *ent.EscalationPolicy) *EscalationPolicyRecord {
+func escalationPolicyToRecord(p *models.EscalationPolicy) *EscalationPolicyRecord {
 	rec := &EscalationPolicyRecord{
 		ID:          p.ID,
 		Name:        p.Name,

@@ -9,11 +9,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
-	"alga/ent"
-	entincident "alga/ent/incident"
-	"alga/ent/incidenttimelineentry"
-	"alga/ent/predicate"
+	"alga/db/models"
 
 	"alga/incident"
 	"alga/incmetrics"
@@ -124,12 +122,12 @@ type pgIncidentStore struct {
 	pgStoreBase
 }
 
-func newPGIncidentStore(client *ent.Client) IncidentStore {
-	return &pgIncidentStore{pgStoreBase{client: client}}
+func newPGIncidentStore(db *bun.DB) IncidentStore {
+	return &pgIncidentStore{pgStoreBase{db: db}}
 }
 
 func (s *pgIncidentStore) ReserveIncidentNumber(ctx context.Context) (int64, error) {
-	return nextPgCounter(ctx, s.client, "incident_number")
+	return nextPgCounter(ctx, s.db, "incident_number")
 }
 
 func (s *pgIncidentStore) CreateIncident(ctx context.Context, record *IncidentRecord) (*IncidentRecord, error) {
@@ -157,93 +155,62 @@ func (s *pgIncidentStore) CreateIncident(ctx context.Context, record *IncidentRe
 	}
 
 	if record.IncidentNumber == 0 {
-		n, err := nextPgCounter(ctx, s.client, "incident_number")
+		n, err := nextPgCounter(ctx, s.db, "incident_number")
 		if err != nil {
 			return nil, fmt.Errorf("failed to allocate incident number: %w", err)
 		}
 		record.IncidentNumber = n
 	}
 
-	b := s.client.Incident.Create().
-		SetIncidentNumber(record.IncidentNumber).
-		SetTitle(record.Title).
-		SetDescription(record.Description).
-		SetStatus(entincident.Status(record.Status)).
-		SetSeverity(entincident.Severity(record.Severity)).
-		SetImpactLevel(entincident.ImpactLevel(record.ImpactLevel)).
-		SetPriority(entincident.Priority(record.Priority)).
-		SetIncidentType(entincident.IncidentType(record.IncidentType)).
-		SetConferenceURL(record.ConferenceURL).
-		SetStatusPageIncidentID(record.StatusPageIncidentID).
-		SetCreatedAt(record.CreatedAt).
-		SetUpdatedAt(record.UpdatedAt)
-
+	var slackChannelID *string
 	if record.SlackChannelID != "" {
-		b.SetSlackChannelID(record.SlackChannelID)
-	}
-	if record.SlackChannelName != "" {
-		b.SetSlackChannelName(record.SlackChannelName)
-	}
-	b.SetSlackChannelArchived(record.SlackChannelArchived)
-
-	if record.CommanderID != nil {
-		b.SetCommanderID(*record.CommanderID)
-	}
-	if record.CommunicatorID != nil {
-		b.SetCommunicatorID(*record.CommunicatorID)
-	}
-	if record.OnCallResponderID != nil {
-		b.SetOnCallResponderID(*record.OnCallResponderID)
-	}
-	if record.ServiceID != nil {
-		b.SetServiceID(*record.ServiceID)
-	}
-	if record.EscalationPolicyID != nil {
-		b.SetEscalationPolicyID(*record.EscalationPolicyID)
-	}
-	if record.SLATargetRespondAt != nil {
-		b.SetSLATargetRespondAt(*record.SLATargetRespondAt)
-	}
-	if record.SLATargetResolveAt != nil {
-		b.SetSLATargetResolveAt(*record.SLATargetResolveAt)
-	}
-	if record.SLAAcknowledgedAt != nil {
-		b.SetSLAAcknowledgedAt(*record.SLAAcknowledgedAt)
-	}
-	if record.SLAResolvedAt != nil {
-		b.SetSLAResolvedAt(*record.SLAResolvedAt)
-	}
-	if record.StartedAt != nil {
-		b.SetStartedAt(*record.StartedAt)
-	}
-	if record.MitigatedAt != nil {
-		b.SetMitigatedAt(*record.MitigatedAt)
-	}
-	if record.ResolvedAt != nil {
-		b.SetResolvedAt(*record.ResolvedAt)
-	}
-	if record.ClosedAt != nil {
-		b.SetClosedAt(*record.ClosedAt)
-	}
-	if record.TriagedAt != nil {
-		b.SetTriagedAt(*record.TriagedAt)
-	}
-	if record.TriageReport != nil {
-		b.SetTriageReport(record.TriageReport)
-	}
-	b.SetAutoConfirmed(record.AutoConfirmed)
-	if len(record.Tags) > 0 {
-		b.SetTags(record.Tags)
-	}
-	if record.CustomFields != nil {
-		b.SetCustomFields(record.CustomFields)
+		slackChannelID = &record.SlackChannelID
 	}
 
-	saved, err := b.Save(ctx)
+	m := &models.Incident{
+		BaseModel: models.BaseModel{
+			ID:        models.NewUUID(),
+			CreatedAt: record.CreatedAt,
+			UpdatedAt: record.UpdatedAt,
+		},
+		IncidentNumber:       record.IncidentNumber,
+		Title:                record.Title,
+		Description:          record.Description,
+		Status:               record.Status,
+		Severity:             record.Severity,
+		ImpactLevel:          record.ImpactLevel,
+		Priority:             record.Priority,
+		IncidentType:         record.IncidentType,
+		CommanderID:          record.CommanderID,
+		CommunicatorID:       record.CommunicatorID,
+		OnCallResponderID:    record.OnCallResponderID,
+		ServiceID:            record.ServiceID,
+		EscalationPolicyID:   record.EscalationPolicyID,
+		ConferenceURL:        record.ConferenceURL,
+		SlackChannelID:       slackChannelID,
+		SlackChannelName:     record.SlackChannelName,
+		SlackChannelArchived: record.SlackChannelArchived,
+		StatusPageIncidentID: record.StatusPageIncidentID,
+		SLATargetRespondAt:   record.SLATargetRespondAt,
+		SLATargetResolveAt:   record.SLATargetResolveAt,
+		SLAAcknowledgedAt:    record.SLAAcknowledgedAt,
+		SLAResolvedAt:        record.SLAResolvedAt,
+		StartedAt:            record.StartedAt,
+		MitigatedAt:          record.MitigatedAt,
+		ResolvedAt:           record.ResolvedAt,
+		ClosedAt:             record.ClosedAt,
+		TriagedAt:            record.TriagedAt,
+		TriageReport:         record.TriageReport,
+		AutoConfirmed:        record.AutoConfirmed,
+		Tags:                 record.Tags,
+		CustomFields:         record.CustomFields,
+	}
+
+	_, err := s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create incident: %w", err)
 	}
-	record.ID = saved.ID
+	record.ID = m.ID
 	return record, nil
 }
 
@@ -251,173 +218,225 @@ func (s *pgIncidentStore) GetIncident(ctx context.Context, incidentNumber int64)
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	inc, err := s.client.Incident.Query().
-		Where(entincident.IncidentNumber(incidentNumber)).
-		WithTimeline(func(q *ent.IncidentTimelineEntryQuery) {
-			q.Order(ent.Asc(incidenttimelineentry.FieldCreatedAt))
-		}).
-		Only(ctx)
+	var inc models.Incident
+	err := s.db.NewSelect().Model(&inc).Where("incident_number = ?", incidentNumber).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*IncidentRecord](err, "incident")
 	}
-	return s.toIncidentRecord(inc), nil
+
+	rec := s.toIncidentRecord(&inc)
+
+	// Load timeline
+	var entries []models.IncidentTimelineEntry
+	err = s.db.NewSelect().Model(&entries).
+		Where("incident_id = ?", inc.ID).
+		Order("created_at ASC").
+		Scan(ctx)
+	if err == nil {
+		rec.Timeline = make([]IncidentTimelineEntryRecord, 0, len(entries))
+		for i := range entries {
+			e := &entries[i]
+			rec.Timeline = append(rec.Timeline, IncidentTimelineEntryRecord{
+				ID:        e.ID,
+				EventType: e.EventType,
+				ActorID:   e.ActorID,
+				ActorType: e.ActorType,
+				Message:   e.Message,
+				Metadata:  e.Metadata,
+				CreatedAt: e.CreatedAt,
+			})
+		}
+	}
+
+	return rec, nil
 }
 
 func (s *pgIncidentStore) GetIncidentByID(ctx context.Context, id uuid.UUID) (*IncidentRecord, error) {
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	inc, err := s.client.Incident.Query().
-		Where(entincident.ID(id)).
-		WithTimeline(func(q *ent.IncidentTimelineEntryQuery) {
-			q.Order(ent.Asc(incidenttimelineentry.FieldCreatedAt))
-		}).
-		Only(ctx)
+	var inc models.Incident
+	err := s.db.NewSelect().Model(&inc).Where("id = ?", id).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*IncidentRecord](err, "incident")
 	}
-	return s.toIncidentRecord(inc), nil
+
+	rec := s.toIncidentRecord(&inc)
+
+	// Load timeline
+	var entries []models.IncidentTimelineEntry
+	err = s.db.NewSelect().Model(&entries).
+		Where("incident_id = ?", inc.ID).
+		Order("created_at ASC").
+		Scan(ctx)
+	if err == nil {
+		rec.Timeline = make([]IncidentTimelineEntryRecord, 0, len(entries))
+		for i := range entries {
+			e := &entries[i]
+			rec.Timeline = append(rec.Timeline, IncidentTimelineEntryRecord{
+				ID:        e.ID,
+				EventType: e.EventType,
+				ActorID:   e.ActorID,
+				ActorType: e.ActorType,
+				Message:   e.Message,
+				Metadata:  e.Metadata,
+				CreatedAt: e.CreatedAt,
+			})
+		}
+	}
+
+	return rec, nil
 }
 
 func (s *pgIncidentStore) UpdateIncident(ctx context.Context, incidentNumber int64, record *IncidentRecord) (*IncidentRecord, error) {
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	inc, err := s.client.Incident.Query().
-		Where(entincident.IncidentNumber(incidentNumber), entincident.DeletedAtIsNil()).
-		Only(ctx)
+	var inc models.Incident
+	err := s.db.NewSelect().Model(&inc).
+		Where("incident_number = ?", incidentNumber).
+		Where("deleted_at IS NULL").
+		Scan(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
+		if isNotFound(err) {
 			return nil, fmt.Errorf("incident not found: %w", ErrIncidentNotFound)
 		}
 		return nil, fmt.Errorf("failed to lookup incident for update: %w", err)
 	}
 
-	b := s.client.Incident.UpdateOneID(inc.ID).
-		SetTitle(record.Title).
-		SetDescription(record.Description).
-		SetSummary(record.Summary).
-		SetSeverity(entincident.Severity(record.Severity)).
-		SetImpactLevel(entincident.ImpactLevel(record.ImpactLevel)).
-		SetPriority(entincident.Priority(record.Priority)).
-		SetIncidentType(entincident.IncidentType(record.IncidentType)).
-		SetConferenceURL(record.ConferenceURL).
-		SetStatusPageIncidentID(record.StatusPageIncidentID).
-		SetUpdatedAt(time.Now().UTC())
+	now := time.Now().UTC()
+	q := s.db.NewUpdate().Model((*models.Incident)(nil)).
+		Set("title = ?", record.Title).
+		Set("description = ?", record.Description).
+		Set("summary = ?", record.Summary).
+		Set("severity = ?", record.Severity).
+		Set("impact_level = ?", record.ImpactLevel).
+		Set("priority = ?", record.Priority).
+		Set("incident_type = ?", record.IncidentType).
+		Set("conference_url = ?", record.ConferenceURL).
+		Set("status_page_incident_id = ?", record.StatusPageIncidentID).
+		Set("updated_at = ?", now).
+		Where("id = ?", inc.ID)
 
 	if record.SlackChannelID != "" {
-		b.SetSlackChannelID(record.SlackChannelID)
+		q = q.Set("slack_channel_id = ?", record.SlackChannelID)
 	} else {
-		b.ClearSlackChannelID()
+		q = q.Set("slack_channel_id = NULL")
 	}
 	if record.SlackChannelName != "" {
-		b.SetSlackChannelName(record.SlackChannelName)
+		q = q.Set("slack_channel_name = ?", record.SlackChannelName)
 	}
-	b.SetSlackChannelArchived(record.SlackChannelArchived)
+	q = q.Set("slack_channel_archived = ?", record.SlackChannelArchived)
 
 	if record.Status != "" {
-		b.SetStatus(entincident.Status(record.Status))
+		q = q.Set("status = ?", record.Status)
 	}
 	if record.CommanderID != nil {
-		b.SetCommanderID(*record.CommanderID)
+		q = q.Set("commander_id = ?", *record.CommanderID)
 	} else {
-		b.ClearCommanderID()
+		q = q.Set("commander_id = NULL")
 	}
 	if record.CommunicatorID != nil {
-		b.SetCommunicatorID(*record.CommunicatorID)
+		q = q.Set("communicator_id = ?", *record.CommunicatorID)
 	} else {
-		b.ClearCommunicatorID()
+		q = q.Set("communicator_id = NULL")
 	}
 	if record.OnCallResponderID != nil {
-		b.SetOnCallResponderID(*record.OnCallResponderID)
+		q = q.Set("on_call_responder_id = ?", *record.OnCallResponderID)
 	} else {
-		b.ClearOnCallResponderID()
+		q = q.Set("on_call_responder_id = NULL")
 	}
 	if record.ServiceID != nil {
-		b.SetServiceID(*record.ServiceID)
+		q = q.Set("service_id = ?", *record.ServiceID)
 	} else {
-		b.ClearServiceID()
+		q = q.Set("service_id = NULL")
 	}
 	if record.EscalationPolicyID != nil {
-		b.SetEscalationPolicyID(*record.EscalationPolicyID)
+		q = q.Set("escalation_policy_id = ?", *record.EscalationPolicyID)
 	} else {
-		b.ClearEscalationPolicyID()
+		q = q.Set("escalation_policy_id = NULL")
 	}
 	if record.SLATargetRespondAt != nil {
-		b.SetSLATargetRespondAt(*record.SLATargetRespondAt)
+		q = q.Set("sla_target_respond_at = ?", *record.SLATargetRespondAt)
 	}
 	if record.SLATargetResolveAt != nil {
-		b.SetSLATargetResolveAt(*record.SLATargetResolveAt)
+		q = q.Set("sla_target_resolve_at = ?", *record.SLATargetResolveAt)
 	}
 	if record.StartedAt != nil {
-		b.SetStartedAt(*record.StartedAt)
+		q = q.Set("started_at = ?", *record.StartedAt)
 	}
 	if record.MitigatedAt != nil {
-		b.SetMitigatedAt(*record.MitigatedAt)
+		q = q.Set("mitigated_at = ?", *record.MitigatedAt)
 	}
 	if record.ResolvedAt != nil {
-		b.SetResolvedAt(*record.ResolvedAt)
+		q = q.Set("resolved_at = ?", *record.ResolvedAt)
 	}
 	if record.ClosedAt != nil {
-		b.SetClosedAt(*record.ClosedAt)
+		q = q.Set("closed_at = ?", *record.ClosedAt)
 	}
 	if record.TriagedAt != nil {
-		b.SetTriagedAt(*record.TriagedAt)
+		q = q.Set("triaged_at = ?", *record.TriagedAt)
 	}
 	if record.TriageReport != nil {
-		b.SetTriageReport(record.TriageReport)
+		q = q.Set("triage_report = ?", record.TriageReport)
 	}
-	b.SetAutoConfirmed(record.AutoConfirmed)
+	q = q.Set("auto_confirmed = ?", record.AutoConfirmed)
 	if record.Tags != nil {
-		b.SetTags(record.Tags)
+		q = q.Set("tags = ?", record.Tags)
 	}
 	if record.CustomFields != nil {
-		b.SetCustomFields(record.CustomFields)
+		q = q.Set("custom_fields = ?", record.CustomFields)
 	}
 
-	updated, err := b.Save(ctx)
+	_, err = q.Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update incident: %w", err)
 	}
-	return s.toIncidentRecord(updated), nil
+
+	// Re-fetch to return the updated record
+	var updated models.Incident
+	if err := s.db.NewSelect().Model(&updated).Where("id = ?", inc.ID).Scan(ctx); err != nil {
+		return nil, fmt.Errorf("failed to re-fetch updated incident: %w", err)
+	}
+	return s.toIncidentRecord(&updated), nil
 }
 
 func (s *pgIncidentStore) DeleteIncident(ctx context.Context, incidentNumber int64) error {
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	inc, err := s.client.Incident.Query().
-		Where(entincident.IncidentNumber(incidentNumber), entincident.DeletedAtIsNil()).
-		First(ctx)
+	var inc models.Incident
+	err := s.db.NewSelect().Model(&inc).
+		Where("incident_number = ?", incidentNumber).
+		Where("deleted_at IS NULL").
+		Scan(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
+		if isNotFound(err) {
 			return fmt.Errorf("incident not found: %w", ErrIncidentNotFound)
 		}
 		return fmt.Errorf("failed to lookup incident: %w", err)
 	}
 
-	tx, err := s.client.Tx(ctx)
-	if err != nil {
-		return fmt.Errorf("begin incident delete tx: %w", err)
-	}
-	defer rollbackTx(tx)
+	return s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		if err := hardDeleteIncidentCascade(ctx, tx, inc.ID, inc.IncidentNumber); err != nil {
+			return err
+		}
 
-	if err := hardDeleteIncidentCascade(ctx, tx, inc); err != nil {
-		return err
-	}
-
-	now := time.Now().UTC()
-	if err := tx.Incident.UpdateOneID(inc.ID).
-		SetDeletedAt(now).
-		SetUpdatedAt(now).
-		Exec(ctx); err != nil {
-		if ent.IsNotFound(err) {
+		now := time.Now().UTC()
+		res, err := tx.NewUpdate().Model((*models.Incident)(nil)).
+			Set("deleted_at = ?", now).
+			Set("updated_at = ?", now).
+			Where("id = ?", inc.ID).
+			Exec(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to soft-delete incident: %w", err)
+		}
+		n, _ := res.RowsAffected()
+		if n == 0 {
 			return fmt.Errorf("incident not found: %w", ErrIncidentNotFound)
 		}
-		return fmt.Errorf("failed to soft-delete incident: %w", err)
-	}
-
-	return tx.Commit()
+		return nil
+	})
 }
 
 // ExpungeSoftDeletedIncidentsChildren hard-deletes the investigation artifacts
@@ -427,23 +446,17 @@ func (s *pgIncidentStore) ExpungeSoftDeletedIncidentsChildren(ctx context.Contex
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	rows, err := s.client.Incident.Query().Where(entincident.DeletedAtNotNil()).All(ctx)
+	var rows []models.Incident
+	err := s.db.NewSelect().Model(&rows).Where("deleted_at IS NOT NULL").Scan(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("query soft-deleted incidents: %w", err)
 	}
 	processed := 0
-	for _, inc := range rows {
-		err := func() error {
-			tx, err := s.client.Tx(ctx)
-			if err != nil {
-				return err
-			}
-			defer rollbackTx(tx)
-			if err := hardDeleteIncidentCascade(ctx, tx, inc); err != nil {
-				return err
-			}
-			return tx.Commit()
-		}()
+	for i := range rows {
+		inc := &rows[i]
+		err := s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+			return hardDeleteIncidentCascade(ctx, tx, inc.ID, inc.IncidentNumber)
+		})
 		if err != nil {
 			return processed, fmt.Errorf("expunge incident %d: %w", inc.IncidentNumber, err)
 		}
@@ -452,71 +465,97 @@ func (s *pgIncidentStore) ExpungeSoftDeletedIncidentsChildren(ctx context.Contex
 	return processed, nil
 }
 
-func (s *pgIncidentStore) buildIncidentPredicates(filter IncidentListFilter) []predicate.Incident {
-	preds := []predicate.Incident{entincident.DeletedAtIsNil()}
-	if filter.Status != "" {
-		preds = append(preds, entincident.StatusEQ(entincident.Status(filter.Status)))
-	}
-	if filter.Severity != "" {
-		preds = append(preds, entincident.SeverityEQ(entincident.Severity(filter.Severity)))
-	}
-	if filter.Priority != "" {
-		preds = append(preds, entincident.PriorityEQ(entincident.Priority(filter.Priority)))
-	}
-	if filter.ServiceID != "" {
-		if sid, err := uuid.Parse(filter.ServiceID); err == nil {
-			preds = append(preds, entincident.ServiceIDEQ(sid))
-		}
-	}
-	if filter.CommanderID != "" {
-		if cid, err := uuid.Parse(filter.CommanderID); err == nil {
-			preds = append(preds, entincident.CommanderIDEQ(cid))
-		}
-	}
-	if filter.Search != "" {
-		preds = append(preds, entincident.TitleContainsFold(filter.Search))
-	}
-	if filter.StartDate != nil {
-		preds = append(preds, entincident.CreatedAtGTE(*filter.StartDate))
-	}
-	if filter.EndDate != nil {
-		preds = append(preds, entincident.CreatedAtLTE(*filter.EndDate))
-	}
-	return preds
-}
-
 func (s *pgIncidentStore) ListIncidents(ctx context.Context, filter IncidentListFilter) ([]IncidentRecord, int64, error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	preds := s.buildIncidentPredicates(filter)
-	query := s.client.Incident.Query().Where(preds...)
+	// Build count query
+	countQ := s.db.NewSelect().Model((*models.Incident)(nil)).Where("deleted_at IS NULL")
+	if filter.Status != "" {
+		countQ = countQ.Where("status = ?", filter.Status)
+	}
+	if filter.Severity != "" {
+		countQ = countQ.Where("severity = ?", filter.Severity)
+	}
+	if filter.Priority != "" {
+		countQ = countQ.Where("priority = ?", filter.Priority)
+	}
+	if filter.ServiceID != "" {
+		if sid, err := uuid.Parse(filter.ServiceID); err == nil {
+			countQ = countQ.Where("service_id = ?", sid)
+		}
+	}
+	if filter.CommanderID != "" {
+		if cid, err := uuid.Parse(filter.CommanderID); err == nil {
+			countQ = countQ.Where("commander_id = ?", cid)
+		}
+	}
+	if filter.Search != "" {
+		countQ = countQ.Where("title ILIKE ?", "%"+filter.Search+"%")
+	}
+	if filter.StartDate != nil {
+		countQ = countQ.Where("created_at >= ?", *filter.StartDate)
+	}
+	if filter.EndDate != nil {
+		countQ = countQ.Where("created_at <= ?", *filter.EndDate)
+	}
+
+	total, err := countQ.Count(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count incidents: %w", err)
+	}
+
+	// Build list query
+	var incs []models.Incident
+	listQ := s.db.NewSelect().Model(&incs).Where("deleted_at IS NULL")
+	if filter.Status != "" {
+		listQ = listQ.Where("status = ?", filter.Status)
+	}
+	if filter.Severity != "" {
+		listQ = listQ.Where("severity = ?", filter.Severity)
+	}
+	if filter.Priority != "" {
+		listQ = listQ.Where("priority = ?", filter.Priority)
+	}
+	if filter.ServiceID != "" {
+		if sid, err := uuid.Parse(filter.ServiceID); err == nil {
+			listQ = listQ.Where("service_id = ?", sid)
+		}
+	}
+	if filter.CommanderID != "" {
+		if cid, err := uuid.Parse(filter.CommanderID); err == nil {
+			listQ = listQ.Where("commander_id = ?", cid)
+		}
+	}
+	if filter.Search != "" {
+		listQ = listQ.Where("title ILIKE ?", "%"+filter.Search+"%")
+	}
+	if filter.StartDate != nil {
+		listQ = listQ.Where("created_at >= ?", *filter.StartDate)
+	}
+	if filter.EndDate != nil {
+		listQ = listQ.Where("created_at <= ?", *filter.EndDate)
+	}
 
 	switch filter.Sort {
 	case "created_at", "":
-		query = query.Order(ent.Desc(entincident.FieldCreatedAt))
+		listQ = listQ.Order("created_at DESC")
 	case "-created_at":
-		query = query.Order(ent.Asc(entincident.FieldCreatedAt))
+		listQ = listQ.Order("created_at ASC")
 	case "updated_at":
-		query = query.Order(ent.Desc(entincident.FieldUpdatedAt))
+		listQ = listQ.Order("updated_at DESC")
 	case "-updated_at":
-		query = query.Order(ent.Asc(entincident.FieldUpdatedAt))
+		listQ = listQ.Order("updated_at ASC")
 	case "severity":
-		query = query.Order(ent.Asc(entincident.FieldSeverity))
+		listQ = listQ.Order("severity ASC")
 	case "-severity":
-		query = query.Order(ent.Desc(entincident.FieldSeverity))
+		listQ = listQ.Order("severity DESC")
 	case "priority", "priority_asc":
-		query = query.Order(ent.Asc(entincident.FieldCreatedAt))
+		listQ = listQ.Order("created_at ASC")
 	case "priority_desc":
-		query = query.Order(ent.Desc(entincident.FieldCreatedAt))
+		listQ = listQ.Order("created_at DESC")
 	default:
-		query = query.Order(ent.Desc(entincident.FieldCreatedAt))
-	}
-
-	countQuery := s.client.Incident.Query().Where(preds...)
-	total, err := countQuery.Count(ctx)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count incidents: %w", err)
+		listQ = listQ.Order("created_at DESC")
 	}
 
 	limit := filter.Limit
@@ -526,19 +565,19 @@ func (s *pgIncidentStore) ListIncidents(ctx context.Context, filter IncidentList
 	if limit > 100 {
 		limit = 100
 	}
-	query = query.Limit(limit)
+	listQ = listQ.Limit(limit)
 	if filter.Skip > 0 {
-		query = query.Offset(filter.Skip)
+		listQ = listQ.Offset(filter.Skip)
 	}
 
-	incs, err := query.All(ctx)
+	err = listQ.Scan(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list incidents: %w", err)
 	}
 
 	records := make([]IncidentRecord, 0, len(incs))
-	for _, inc := range incs {
-		records = append(records, *s.toIncidentRecord(inc))
+	for i := range incs {
+		records = append(records, *s.toIncidentRecord(&incs[i]))
 	}
 
 	switch filter.Sort {
@@ -555,42 +594,44 @@ func (s *pgIncidentStore) ListIncidents(ctx context.Context, filter IncidentList
 	return records, int64(total), nil
 }
 
-func applyStatusTimestamps(b *ent.IncidentUpdate, toStatus string, now time.Time) {
-	switch toStatus {
-	case "triaging":
-		b.SetTriagedAt(now)
-	case "active":
-		b.SetSLAAcknowledgedAt(now)
-	case "mitigated":
-		b.SetMitigatedAt(now)
-	case "resolved":
-		b.SetResolvedAt(now)
-		b.SetSLAResolvedAt(now)
-	case "closed":
-		b.SetClosedAt(now)
-	}
-}
-
 func (s *pgIncidentStore) UpdateIncidentStatus(ctx context.Context, incidentNumber int64, status string) error {
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
 	now := time.Now().UTC()
-	b := s.client.Incident.Update().
-		Where(entincident.IncidentNumber(incidentNumber), entincident.DeletedAtIsNil()).
-		SetStatus(entincident.Status(status)).
-		SetUpdatedAt(now)
+	q := s.db.NewUpdate().Model((*models.Incident)(nil)).
+		Set("status = ?", status).
+		Set("updated_at = ?", now).
+		Where("incident_number = ?", incidentNumber).
+		Where("deleted_at IS NULL")
 
-	applyStatusTimestamps(b, status, now)
+	q = applyStatusTimestampsBun(q, status, now)
 
-	n, err := b.Save(ctx)
+	res, err := q.Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to update incident status: %w", err)
 	}
+	n, _ := res.RowsAffected()
 	if n == 0 {
 		return ErrIncidentNotFound
 	}
 	return nil
+}
+
+func applyStatusTimestampsBun(q *bun.UpdateQuery, toStatus string, now time.Time) *bun.UpdateQuery {
+	switch toStatus {
+	case "triaging":
+		q = q.Set("triaged_at = ?", now)
+	case "active":
+		q = q.Set("sla_acknowledged_at = ?", now)
+	case "mitigated":
+		q = q.Set("mitigated_at = ?", now)
+	case "resolved":
+		q = q.Set("resolved_at = ?", now).Set("sla_resolved_at = ?", now)
+	case "closed":
+		q = q.Set("closed_at = ?", now)
+	}
+	return q
 }
 
 // SetIncidentWarRoomMeet persists the Google Meet war room for an incident.
@@ -601,15 +642,17 @@ func (s *pgIncidentStore) SetIncidentWarRoomMeet(ctx context.Context, incidentNu
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	n, err := s.client.Incident.Update().
-		Where(entincident.IncidentNumber(incidentNumber), entincident.DeletedAtIsNil()).
-		SetGoogleMeetSpaceName(spaceName).
-		SetConferenceURL(conferenceURL).
-		SetUpdatedAt(time.Now().UTC()).
-		Save(ctx)
+	res, err := s.db.NewUpdate().Model((*models.Incident)(nil)).
+		Set("google_meet_space_name = ?", spaceName).
+		Set("conference_url = ?", conferenceURL).
+		Set("updated_at = ?", time.Now().UTC()).
+		Where("incident_number = ?", incidentNumber).
+		Where("deleted_at IS NULL").
+		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("set incident google meet war room: %w", err)
 	}
+	n, _ := res.RowsAffected()
 	if n == 0 {
 		return ErrIncidentNotFound
 	}
@@ -621,25 +664,20 @@ func (s *pgIncidentStore) TransitionIncidentStatus(ctx context.Context, incident
 	defer cancel()
 
 	now := time.Now().UTC()
-	fromEnt := make([]entincident.Status, len(fromStatuses))
-	for i, s := range fromStatuses {
-		fromEnt[i] = entincident.Status(s)
-	}
-	b := s.client.Incident.Update().
-		Where(
-			entincident.IncidentNumber(incidentNumber),
-			entincident.StatusIn(fromEnt...),
-			entincident.DeletedAtIsNil(),
-		).
-		SetStatus(entincident.Status(toStatus)).
-		SetUpdatedAt(now)
+	q := s.db.NewUpdate().Model((*models.Incident)(nil)).
+		Set("status = ?", toStatus).
+		Set("updated_at = ?", now).
+		Where("incident_number = ?", incidentNumber).
+		Where("status IN (?)", bun.In(fromStatuses)).
+		Where("deleted_at IS NULL")
 
-	applyStatusTimestamps(b, toStatus, now)
+	q = applyStatusTimestampsBun(q, toStatus, now)
 
-	n, err := b.Save(ctx)
+	res, err := q.Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to transition incident status: %w", err)
 	}
+	n, _ := res.RowsAffected()
 	if n == 0 {
 		return ErrIncidentStatusConflict
 	}
@@ -650,35 +688,34 @@ func (s *pgIncidentStore) AddTimelineEntry(ctx context.Context, record *Incident
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	inc, err := s.client.Incident.Query().
-		Where(entincident.IncidentNumber(record.IncidentNumber), entincident.DeletedAtIsNil()).
-		Only(ctx)
+	var inc models.Incident
+	err := s.db.NewSelect().Model(&inc).
+		Where("incident_number = ?", record.IncidentNumber).
+		Where("deleted_at IS NULL").
+		Scan(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
+		if isNotFound(err) {
 			return fmt.Errorf("incident not found: %w", ErrIncidentNotFound)
 		}
 		return fmt.Errorf("failed to find incident for timeline entry: %w", err)
 	}
 
-	b := s.client.IncidentTimelineEntry.Create().
-		SetEventType(record.EventType).
-		SetActorType(record.ActorType).
-		SetMessage(record.Message).
-		SetCreatedAt(time.Now().UTC()).
-		SetIncidentID(inc.ID)
-
-	if record.ActorID != nil {
-		b.SetActorID(*record.ActorID)
-	}
-	if record.Metadata != nil {
-		b.SetMetadata(record.Metadata)
+	m := &models.IncidentTimelineEntry{
+		ID:         models.NewUUID(),
+		EventType:  record.EventType,
+		ActorID:    record.ActorID,
+		ActorType:  record.ActorType,
+		Message:    record.Message,
+		Metadata:   record.Metadata,
+		CreatedAt:  time.Now().UTC(),
+		IncidentID: inc.ID,
 	}
 
-	saved, err := b.Save(ctx)
+	_, err = s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to add timeline entry: %w", err)
 	}
-	record.ID = saved.ID
+	record.ID = m.ID
 	return nil
 }
 
@@ -686,19 +723,24 @@ func (s *pgIncidentStore) GetTimeline(ctx context.Context, incidentNumber int64)
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	inc, err := s.client.Incident.Query().
-		Where(entincident.IncidentNumber(incidentNumber)).
-		WithTimeline(func(q *ent.IncidentTimelineEntryQuery) {
-			q.Order(ent.Asc(incidenttimelineentry.FieldCreatedAt))
-		}).
-		Only(ctx)
+	var inc models.Incident
+	err := s.db.NewSelect().Model(&inc).Where("incident_number = ?", incidentNumber).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[[]IncidentTimelineEntryRecord](err, "incident timeline")
 	}
 
-	entries := inc.Edges.Timeline
+	var entries []models.IncidentTimelineEntry
+	err = s.db.NewSelect().Model(&entries).
+		Where("incident_id = ?", inc.ID).
+		Order("created_at ASC").
+		Scan(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get timeline entries: %w", err)
+	}
+
 	records := make([]IncidentTimelineEntryRecord, 0, len(entries))
-	for _, e := range entries {
+	for i := range entries {
+		e := &entries[i]
 		records = append(records, IncidentTimelineEntryRecord{
 			ID:        e.ID,
 			EventType: e.EventType,
@@ -713,25 +755,25 @@ func (s *pgIncidentStore) GetTimeline(ctx context.Context, incidentNumber int64)
 }
 
 func (s *pgIncidentStore) GetIncidentMetrics(ctx context.Context, startDate, endDate time.Time) (*incmetrics.Metrics, error) {
-	incs, err := s.client.Incident.Query().
-		Where(
-			entincident.CreatedAtGTE(startDate),
-			entincident.CreatedAtLTE(endDate),
-			entincident.DeletedAtIsNil(),
-		).
-		All(ctx)
+	var incs []models.Incident
+	err := s.db.NewSelect().Model(&incs).
+		Where("created_at >= ?", startDate).
+		Where("created_at <= ?", endDate).
+		Where("deleted_at IS NULL").
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query incidents for metrics: %w", err)
 	}
 
 	data := make([]incmetrics.IncidentData, 0, len(incs))
-	for _, inc := range incs {
+	for i := range incs {
+		inc := &incs[i]
 		d := incmetrics.IncidentData{
 			CreatedAt:         inc.CreatedAt,
 			AcknowledgedAt:    inc.SLAAcknowledgedAt,
 			MitigatedAt:       inc.MitigatedAt,
 			ResolvedAt:        inc.ResolvedAt,
-			Severity:          string(inc.Severity),
+			Severity:          inc.Severity,
 			SLATargetRespond:  inc.SLATargetRespondAt,
 			SLATargetResolve:  inc.SLATargetResolveAt,
 			SLAAcknowledgedAt: inc.SLAAcknowledgedAt,
@@ -750,47 +792,39 @@ func (s *pgIncidentStore) ListSLAEligibleIncidents(ctx context.Context) ([]Incid
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	incs, err := s.client.Incident.Query().
-		Where(
-			entincident.StatusIn(entincident.StatusDetected, entincident.StatusTriaging, entincident.StatusActive, entincident.StatusMitigated),
-			entincident.Or(
-				entincident.SLATargetRespondAtNotNil(),
-				entincident.SLATargetResolveAtNotNil(),
-			),
-			entincident.DeletedAtIsNil(),
-		).
-		All(ctx)
+	var incs []models.Incident
+	err := s.db.NewSelect().Model(&incs).
+		Where("status IN (?)", bun.In([]string{"detected", "triaging", "active", "mitigated"})).
+		Where("(sla_target_respond_at IS NOT NULL OR sla_target_resolve_at IS NOT NULL)").
+		Where("deleted_at IS NULL").
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list SLA-eligible incidents: %w", err)
 	}
 
 	records := make([]IncidentRecord, 0, len(incs))
-	for _, inc := range incs {
-		records = append(records, *s.toIncidentRecord(inc))
+	for i := range incs {
+		records = append(records, *s.toIncidentRecord(&incs[i]))
 	}
 	return records, nil
 }
 
 func (s *pgIncidentStore) CountActiveByService(ctx context.Context) (map[string]int64, error) {
-	terminalStatuses := make([]entincident.Status, len(IncidentTerminalStatuses))
-	for i, st := range IncidentTerminalStatuses {
-		terminalStatuses[i] = entincident.Status(st)
-	}
-	incs, err := s.client.Incident.Query().
-		Where(
-			entincident.StatusNotIn(terminalStatuses...),
-			entincident.ServiceIDNotNil(),
-			entincident.DeletedAtIsNil(),
-		).
-		All(ctx)
+	var incs []models.Incident
+	err := s.db.NewSelect().Model(&incs).
+		Column("service_id").
+		Where("status NOT IN (?)", bun.In(IncidentTerminalStatuses)).
+		Where("service_id IS NOT NULL").
+		Where("deleted_at IS NULL").
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query active incidents by service: %w", err)
 	}
 
 	counts := make(map[string]int64)
-	for _, inc := range incs {
-		if inc.ServiceID != nil {
-			counts[inc.ServiceID.String()]++
+	for i := range incs {
+		if incs[i].ServiceID != nil {
+			counts[incs[i].ServiceID.String()]++
 		}
 	}
 	return counts, nil
@@ -801,16 +835,10 @@ func (s *pgIncidentStore) CountActiveByServiceID(ctx context.Context, serviceID 
 	if err != nil {
 		return 0, fmt.Errorf("invalid service ID: %w", err)
 	}
-	terminalStatuses := make([]entincident.Status, len(IncidentTerminalStatuses))
-	for i, st := range IncidentTerminalStatuses {
-		terminalStatuses[i] = entincident.Status(st)
-	}
-	return s.client.Incident.Query().
-		Where(
-			entincident.StatusNotIn(terminalStatuses...),
-			entincident.ServiceID(svcUUID),
-			entincident.DeletedAtIsNil(),
-		).
+	return s.db.NewSelect().Model((*models.Incident)(nil)).
+		Where("status NOT IN (?)", bun.In(IncidentTerminalStatuses)).
+		Where("service_id = ?", svcUUID).
+		Where("deleted_at IS NULL").
 		Count(ctx)
 }
 
@@ -824,19 +852,18 @@ func (s *pgIncidentStore) CountActiveByPriority(ctx context.Context, serviceID s
 	defer cancel()
 
 	type groupResult struct {
-		Priority string
-		Count    int
+		Priority string `bun:"priority"`
+		Count    int    `bun:"count"`
 	}
 
 	var results []groupResult
-	err = s.client.Incident.Query().
-		Where(
-			entincident.StatusNotIn(entincident.StatusResolved, entincident.StatusClosed, entincident.StatusCancelled),
-			entincident.ServiceID(svcUUID),
-			entincident.DeletedAtIsNil(),
-		).
-		GroupBy(entincident.FieldPriority).
-		Aggregate(ent.Count()).
+	err = s.db.NewSelect().
+		TableExpr("incidents").
+		ColumnExpr("priority, COUNT(*) as count").
+		Where("status NOT IN (?)", bun.In([]string{"resolved", "closed", "cancelled"})).
+		Where("service_id = ?", svcUUID).
+		Where("deleted_at IS NULL").
+		Group("priority").
 		Scan(ctx, &results)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query incidents by priority: %w", err)
@@ -857,20 +884,19 @@ func (s *pgIncidentStore) ListActiveSummarizableIncidents(ctx context.Context) (
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	rows, err := s.client.Incident.Query().
-		Where(
-			entincident.StatusIn(entincident.StatusDetected, entincident.StatusTriaging, entincident.StatusActive, entincident.StatusMitigated),
-			entincident.SlackChannelIDNEQ(""),
-			entincident.DeletedAtIsNil(),
-		).
-		Order(ent.Asc(entincident.FieldCreatedAt)).
-		All(ctx)
+	var rows []models.Incident
+	err := s.db.NewSelect().Model(&rows).
+		Where("status IN (?)", bun.In([]string{"detected", "triaging", "active", "mitigated"})).
+		Where("slack_channel_id != ''").
+		Where("deleted_at IS NULL").
+		Order("created_at ASC").
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("query summarizable incidents: %w", err)
 	}
 	out := make([]IncidentRecord, 0, len(rows))
-	for _, r := range rows {
-		out = append(out, *s.toIncidentRecord(r))
+	for i := range rows {
+		out = append(out, *s.toIncidentRecord(&rows[i]))
 	}
 	return out, nil
 }
@@ -879,50 +905,48 @@ func (s *pgIncidentStore) ListActiveIncidents(ctx context.Context) ([]IncidentRe
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	rows, err := s.client.Incident.Query().
-		Where(
-			entincident.StatusNotIn(entincident.StatusResolved, entincident.StatusClosed, entincident.StatusCancelled),
-			entincident.DeletedAtIsNil(),
-		).
-		Order(ent.Asc(entincident.FieldCreatedAt)).
-		All(ctx)
+	var rows []models.Incident
+	err := s.db.NewSelect().Model(&rows).
+		Where("status NOT IN (?)", bun.In([]string{"resolved", "closed", "cancelled"})).
+		Where("deleted_at IS NULL").
+		Order("created_at ASC").
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("query active incidents: %w", err)
 	}
 	out := make([]IncidentRecord, 0, len(rows))
-	for _, r := range rows {
-		out = append(out, *s.toIncidentRecord(r))
+	for i := range rows {
+		out = append(out, *s.toIncidentRecord(&rows[i]))
 	}
 	return out, nil
 }
 
 func (s *pgIncidentStore) GetIncidentBySlackChannel(ctx context.Context, channelID string) (*IncidentRecord, error) {
-	item, err := s.client.Incident.Query().
-		Where(entincident.SlackChannelIDEQ(channelID)).
-		Only(ctx)
+	var item models.Incident
+	err := s.db.NewSelect().Model(&item).Where("slack_channel_id = ?", channelID).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*IncidentRecord](err, "incident by slack channel")
 	}
-	return s.toIncidentRecord(item), nil
+	return s.toIncidentRecord(&item), nil
 }
 
-func (s *pgIncidentStore) toIncidentRecord(inc *ent.Incident) *IncidentRecord {
+func (s *pgIncidentStore) toIncidentRecord(inc *models.Incident) *IncidentRecord {
 	rec := &IncidentRecord{
 		ID:                       inc.ID,
 		IncidentNumber:           inc.IncidentNumber,
 		Title:                    inc.Title,
 		Description:              inc.Description,
 		Summary:                  inc.Summary,
-		Status:                   string(inc.Status),
-		Severity:                 string(inc.Severity),
-		ImpactLevel:              string(inc.ImpactLevel),
-		Priority:                 string(inc.Priority),
-		IncidentType:             string(inc.IncidentType),
+		Status:                   inc.Status,
+		Severity:                 inc.Severity,
+		ImpactLevel:              inc.ImpactLevel,
+		Priority:                 inc.Priority,
+		IncidentType:             inc.IncidentType,
 		CommanderID:              inc.CommanderID,
 		CommunicatorID:           inc.CommunicatorID,
 		OnCallResponderID:        inc.OnCallResponderID,
-		CommanderAssigneeType:    string(inc.CommanderAssigneeType),
-		CommunicatorAssigneeType: string(inc.CommunicatorAssigneeType),
+		CommanderAssigneeType:    inc.CommanderAssigneeType,
+		CommunicatorAssigneeType: inc.CommunicatorAssigneeType,
 		ServiceID:                inc.ServiceID,
 		EscalationPolicyID:       inc.EscalationPolicyID,
 		ConferenceURL:            inc.ConferenceURL,
@@ -970,21 +994,5 @@ func (s *pgIncidentStore) toIncidentRecord(inc *ent.Incident) *IncidentRecord {
 		UpdatedAt:            inc.UpdatedAt,
 		DeletedAt:            inc.DeletedAt,
 	}
-
-	if timeline := inc.Edges.Timeline; timeline != nil {
-		rec.Timeline = make([]IncidentTimelineEntryRecord, 0, len(timeline))
-		for _, e := range timeline {
-			rec.Timeline = append(rec.Timeline, IncidentTimelineEntryRecord{
-				ID:        e.ID,
-				EventType: e.EventType,
-				ActorID:   e.ActorID,
-				ActorType: e.ActorType,
-				Message:   e.Message,
-				Metadata:  e.Metadata,
-				CreatedAt: e.CreatedAt,
-			})
-		}
-	}
-
 	return rec
 }

@@ -7,10 +7,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
-	"alga/ent"
-	"alga/ent/statuspage"
-	"alga/ent/statuspagecomponent"
+	"alga/db/models"
 )
 
 const (
@@ -78,8 +77,8 @@ type pgStatusPageStore struct {
 	pgStoreBase
 }
 
-func newPGStatusPageStore(client *ent.Client) StatusPageStore {
-	return &pgStatusPageStore{pgStoreBase{client: client}}
+func newPGStatusPageStore(db *bun.DB) StatusPageStore {
+	return &pgStatusPageStore{pgStoreBase{db: db}}
 }
 
 func (s *pgStatusPageStore) CreatePage(ctx context.Context, record *StatusPageRecord) (*StatusPageRecord, error) {
@@ -93,81 +92,98 @@ func (s *pgStatusPageStore) CreatePage(ctx context.Context, record *StatusPageRe
 	record.CreatedAt = now
 	record.UpdatedAt = now
 
-	saved, err := s.client.StatusPage.Create().
-		SetName(record.Name).
-		SetSlug(record.Slug).
-		SetDescription(record.Description).
-		SetVisibility(statuspage.Visibility(record.Visibility)).
-		SetEnabled(record.Enabled).
-		SetNillableOwnerTeamID(record.OwnerTeamID).
-		SetCreatedAt(now).
-		SetUpdatedAt(now).
-		Save(ctx)
+	m := &models.StatusPage{
+		ID:          models.NewUUID(),
+		Name:        record.Name,
+		Slug:        record.Slug,
+		Description: record.Description,
+		Visibility:  record.Visibility,
+		Enabled:     record.Enabled,
+		OwnerTeamID: record.OwnerTeamID,
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}
+
+	_, err := s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert status page: %w", err)
 	}
-	return pgStatusPageToRecord(saved), nil
+	return pgStatusPageToRecord(m), nil
 }
 
 func (s *pgStatusPageStore) UpdatePage(ctx context.Context, id uuid.UUID, patch *StatusPageRecord) (*StatusPageRecord, error) {
 	if patch == nil {
 		return nil, errors.New("nil patch")
 	}
-	b := s.client.StatusPage.UpdateOneID(id).SetUpdatedAt(time.Now().UTC())
+	now := time.Now().UTC()
+	q := s.db.NewUpdate().Model((*models.StatusPage)(nil)).
+		Set("updated_at = ?", now).
+		Where("id = ?", id)
+
 	if patch.Name != "" {
-		b.SetName(patch.Name)
+		q = q.Set("name = ?", patch.Name)
 	}
 	if patch.Slug != "" {
-		b.SetSlug(patch.Slug)
+		q = q.Set("slug = ?", patch.Slug)
 	}
 	if patch.Description != "" {
-		b.SetDescription(patch.Description)
+		q = q.Set("description = ?", patch.Description)
 	}
 	if patch.Visibility != "" {
-		b.SetVisibility(statuspage.Visibility(patch.Visibility))
+		q = q.Set("visibility = ?", patch.Visibility)
 	}
 	if patch.OwnerTeamID != nil {
-		b.SetOwnerTeamID(*patch.OwnerTeamID)
+		q = q.Set("owner_team_id = ?", *patch.OwnerTeamID)
 	}
 	if patch.EnabledSet {
-		b.SetEnabled(patch.Enabled)
+		q = q.Set("enabled = ?", patch.Enabled)
 	}
 
-	saved, err := b.Save(ctx)
+	res, err := q.Exec(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, ErrStatusPageNotFound
-		}
 		return nil, fmt.Errorf("failed to update status page: %w", err)
 	}
-	return pgStatusPageToRecord(saved), nil
+	n, err := res.RowsAffected()
+	if err != nil {
+		return nil, fmt.Errorf("failed to update status page: %w", err)
+	}
+	if n == 0 {
+		return nil, ErrStatusPageNotFound
+	}
+
+	// Reload the updated record.
+	updated := new(models.StatusPage)
+	if err := s.db.NewSelect().Model(updated).Where("id = ?", id).Scan(ctx); err != nil {
+		return nil, fmt.Errorf("failed to reload status page: %w", err)
+	}
+	return pgStatusPageToRecord(updated), nil
 }
 
 func (s *pgStatusPageStore) DeletePage(ctx context.Context, id uuid.UUID) error {
-	tx, err := s.client.Tx(ctx)
-	if err != nil {
-		return fmt.Errorf("begin tx: %w", err)
-	}
-	defer rollbackTx(tx)
-
-	if _, err := tx.StatusPageComponent.Delete().
-		Where(statuspagecomponent.StatusPageIDEQ(id)).Exec(ctx); err != nil {
-		return fmt.Errorf("failed to delete status page components: %w", err)
-	}
-	if err := tx.StatusPage.DeleteOneID(id).Exec(ctx); err != nil {
-		if ent.IsNotFound(err) {
+	return s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		if _, err := tx.NewDelete().Model((*models.StatusPageComponent)(nil)).
+			Where("status_page_id = ?", id).Exec(ctx); err != nil {
+			return fmt.Errorf("failed to delete status page components: %w", err)
+		}
+		res, err := tx.NewDelete().Model((*models.StatusPage)(nil)).
+			Where("id = ?", id).Exec(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to delete status page: %w", err)
+		}
+		n, err := res.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("failed to delete status page: %w", err)
+		}
+		if n == 0 {
 			return ErrStatusPageNotFound
 		}
-		return fmt.Errorf("failed to delete status page: %w", err)
-	}
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit: %w", err)
-	}
-	return nil
+		return nil
+	})
 }
 
 func (s *pgStatusPageStore) GetPage(ctx context.Context, id uuid.UUID) (*StatusPageRecord, error) {
-	p, err := s.client.StatusPage.Get(ctx, id)
+	p := new(models.StatusPage)
+	err := s.db.NewSelect().Model(p).Where("id = ?", id).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*StatusPageRecord](err, "status page")
 	}
@@ -175,9 +191,8 @@ func (s *pgStatusPageStore) GetPage(ctx context.Context, id uuid.UUID) (*StatusP
 }
 
 func (s *pgStatusPageStore) GetPageBySlug(ctx context.Context, slug string) (*StatusPageRecord, error) {
-	p, err := s.client.StatusPage.Query().
-		Where(statuspage.SlugEQ(slug)).
-		Only(ctx)
+	p := new(models.StatusPage)
+	err := s.db.NewSelect().Model(p).Where("slug = ?", slug).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*StatusPageRecord](err, "status page")
 	}
@@ -185,46 +200,56 @@ func (s *pgStatusPageStore) GetPageBySlug(ctx context.Context, slug string) (*St
 }
 
 func (s *pgStatusPageStore) ListPages(ctx context.Context, q StatusPageQuery) ([]StatusPageRecord, int64, error) {
-	query := s.client.StatusPage.Query()
+	countQ := s.db.NewSelect().Model((*models.StatusPage)(nil))
+	listQ := s.db.NewSelect().Model((*models.StatusPage)(nil))
+
 	if q.Enabled != nil {
-		query = query.Where(statuspage.EnabledEQ(*q.Enabled))
+		countQ = countQ.Where("enabled = ?", *q.Enabled)
+		listQ = listQ.Where("enabled = ?", *q.Enabled)
 	}
 	if q.Search != "" {
-		query = query.Where(statuspage.NameContains(q.Search))
+		countQ = countQ.Where("name LIKE ?", "%"+q.Search+"%")
+		listQ = listQ.Where("name LIKE ?", "%"+q.Search+"%")
 	}
-	total, err := query.Count(ctx)
+
+	total, err := countQ.Count(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("count status pages: %w", err)
 	}
-	query = query.Order(ent.Desc(statuspage.FieldCreatedAt))
+
+	listQ = listQ.Order("created_at DESC")
 	if q.Limit > 0 {
-		query = query.Limit(q.Limit)
+		listQ = listQ.Limit(q.Limit)
 	}
 	if q.Skip > 0 {
-		query = query.Offset(q.Skip)
+		listQ = listQ.Offset(q.Skip)
 	}
-	items, err := query.All(ctx)
+
+	var items []models.StatusPage
+	err = listQ.Scan(ctx, &items)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list status pages: %w", err)
 	}
+
 	out := make([]StatusPageRecord, 0, len(items))
-	for _, p := range items {
-		out = append(out, *pgStatusPageToRecord(p))
+	for i := range items {
+		out = append(out, *pgStatusPageToRecord(&items[i]))
 	}
 	return out, int64(total), nil
 }
 
 func (s *pgStatusPageStore) ListComponents(ctx context.Context, pageID uuid.UUID) ([]StatusPageComponentRecord, error) {
-	items, err := s.client.StatusPageComponent.Query().
-		Where(statuspagecomponent.StatusPageIDEQ(pageID)).
-		Order(ent.Asc(statuspagecomponent.FieldDisplayOrder), ent.Asc(statuspagecomponent.FieldCreatedAt)).
-		All(ctx)
+	var items []models.StatusPageComponent
+	err := s.db.NewSelect().Model(&items).
+		Where("status_page_id = ?", pageID).
+		Order("display_order ASC", "created_at ASC").
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list status page components: %w", err)
 	}
 	out := make([]StatusPageComponentRecord, 0, len(items))
-	for _, c := range items {
-		out = append(out, *pgStatusPageComponentToRecord(c))
+	for i := range items {
+		out = append(out, *pgStatusPageComponentToRecord(&items[i]))
 	}
 	return out, nil
 }
@@ -240,82 +265,101 @@ func (s *pgStatusPageStore) CreateComponent(ctx context.Context, record *StatusP
 	record.CreatedAt = now
 	record.UpdatedAt = now
 
-	b := s.client.StatusPageComponent.Create().
-		SetStatusPageID(record.StatusPageID).
-		SetName(record.Name).
-		SetDescription(record.Description).
-		SetDisplayOrder(record.DisplayOrder).
-		SetStatus(statuspagecomponent.Status(record.Status)).
-		SetCreatedAt(now).
-		SetUpdatedAt(now)
-	if record.ServiceID != nil {
-		b.SetServiceID(*record.ServiceID)
+	m := &models.StatusPageComponent{
+		ID:           models.NewUUID(),
+		StatusPageID: record.StatusPageID,
+		Name:         record.Name,
+		Description:  record.Description,
+		ServiceID:    record.ServiceID,
+		DisplayOrder: record.DisplayOrder,
+		Status:       record.Status,
+		CreatedAt:    now,
+		UpdatedAt:    now,
 	}
 
-	saved, err := b.Save(ctx)
+	_, err := s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert status page component: %w", err)
 	}
-	return pgStatusPageComponentToRecord(saved), nil
+	return pgStatusPageComponentToRecord(m), nil
 }
 
 func (s *pgStatusPageStore) UpdateComponent(ctx context.Context, id uuid.UUID, patch *StatusPageComponentRecord) (*StatusPageComponentRecord, error) {
 	if patch == nil {
 		return nil, errors.New("nil patch")
 	}
-	b := s.client.StatusPageComponent.UpdateOneID(id).SetUpdatedAt(time.Now().UTC())
+	now := time.Now().UTC()
+	q := s.db.NewUpdate().Model((*models.StatusPageComponent)(nil)).
+		Set("updated_at = ?", now).
+		Where("id = ?", id)
+
 	if patch.Name != "" {
-		b.SetName(patch.Name)
+		q = q.Set("name = ?", patch.Name)
 	}
 	if patch.Description != "" {
-		b.SetDescription(patch.Description)
+		q = q.Set("description = ?", patch.Description)
 	}
 	if patch.Status != "" {
-		b.SetStatus(statuspagecomponent.Status(patch.Status))
+		q = q.Set("status = ?", patch.Status)
 	}
 	if patch.DisplayOrderSet {
-		b.SetDisplayOrder(patch.DisplayOrder)
+		q = q.Set("display_order = ?", patch.DisplayOrder)
 	}
 	if patch.ServiceID != nil {
-		b.SetServiceID(*patch.ServiceID)
+		q = q.Set("service_id = ?", *patch.ServiceID)
 	}
 
-	saved, err := b.Save(ctx)
+	res, err := q.Exec(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, ErrStatusPageComponentNotFound
-		}
 		return nil, fmt.Errorf("failed to update status page component: %w", err)
 	}
-	return pgStatusPageComponentToRecord(saved), nil
+	n, err := res.RowsAffected()
+	if err != nil {
+		return nil, fmt.Errorf("failed to update status page component: %w", err)
+	}
+	if n == 0 {
+		return nil, ErrStatusPageComponentNotFound
+	}
+
+	// Reload the updated record.
+	updated := new(models.StatusPageComponent)
+	if err := s.db.NewSelect().Model(updated).Where("id = ?", id).Scan(ctx); err != nil {
+		return nil, fmt.Errorf("failed to reload status page component: %w", err)
+	}
+	return pgStatusPageComponentToRecord(updated), nil
 }
 
 func (s *pgStatusPageStore) DeleteComponent(ctx context.Context, id uuid.UUID) error {
-	err := s.client.StatusPageComponent.DeleteOneID(id).Exec(ctx)
+	res, err := s.db.NewDelete().Model((*models.StatusPageComponent)(nil)).Where("id = ?", id).Exec(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return ErrStatusPageComponentNotFound
-		}
 		return fmt.Errorf("failed to delete status page component: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to delete status page component: %w", err)
+	}
+	if n == 0 {
+		return ErrStatusPageComponentNotFound
 	}
 	return nil
 }
 
 func (s *pgStatusPageStore) GetComponent(ctx context.Context, id uuid.UUID) (*StatusPageComponentRecord, error) {
-	c, err := s.client.StatusPageComponent.Get(ctx, id)
+	c := new(models.StatusPageComponent)
+	err := s.db.NewSelect().Model(c).Where("id = ?", id).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*StatusPageComponentRecord](err, "status page component")
 	}
 	return pgStatusPageComponentToRecord(c), nil
 }
 
-func pgStatusPageToRecord(p *ent.StatusPage) *StatusPageRecord {
+func pgStatusPageToRecord(p *models.StatusPage) *StatusPageRecord {
 	return &StatusPageRecord{
 		ID:          p.ID,
 		Name:        p.Name,
 		Slug:        p.Slug,
 		Description: p.Description,
-		Visibility:  string(p.Visibility),
+		Visibility:  p.Visibility,
 		Enabled:     p.Enabled,
 		OwnerTeamID: p.OwnerTeamID,
 		CreatedAt:   p.CreatedAt,
@@ -323,7 +367,7 @@ func pgStatusPageToRecord(p *ent.StatusPage) *StatusPageRecord {
 	}
 }
 
-func pgStatusPageComponentToRecord(c *ent.StatusPageComponent) *StatusPageComponentRecord {
+func pgStatusPageComponentToRecord(c *models.StatusPageComponent) *StatusPageComponentRecord {
 	return &StatusPageComponentRecord{
 		ID:           c.ID,
 		StatusPageID: c.StatusPageID,
@@ -331,7 +375,7 @@ func pgStatusPageComponentToRecord(c *ent.StatusPageComponent) *StatusPageCompon
 		Description:  c.Description,
 		ServiceID:    c.ServiceID,
 		DisplayOrder: c.DisplayOrder,
-		Status:       string(c.Status),
+		Status:       c.Status,
 		CreatedAt:    c.CreatedAt,
 		UpdatedAt:    c.UpdatedAt,
 	}

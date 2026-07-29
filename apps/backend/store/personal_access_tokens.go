@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
 	algacrypto "alga/crypto"
-	"alga/ent"
-	"alga/ent/personalaccesstoken"
+	"alga/db/models"
 	"alga/logger"
 )
 
@@ -41,8 +41,8 @@ type pgPersonalAccessTokenStore struct {
 	pgStoreBase
 }
 
-func newPGPersonalAccessTokenStore(client *ent.Client) PersonalAccessTokenStore {
-	return &pgPersonalAccessTokenStore{pgStoreBase{client: client}}
+func newPGPersonalAccessTokenStore(db *bun.DB) PersonalAccessTokenStore {
+	return &pgPersonalAccessTokenStore{pgStoreBase{db: db}}
 }
 
 func generatePATToken() (string, error) {
@@ -58,32 +58,32 @@ func (s *pgPersonalAccessTokenStore) CreateToken(userID uuid.UUID, name string, 
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	b := s.client.PersonalAccessToken.Create().
-		SetUserID(userID).
-		SetName(name).
-		SetTokenHash(hashToken(tokenStr)).
-		SetLookupPrefix(lookupPrefix(tokenStr)).
-		SetPermissions(permissions).
-		SetCreatedAt(time.Now().UTC()).
-		SetRevoked(false)
-
-	if expiresAt != nil {
-		b.SetExpiresAt(*expiresAt)
+	now := time.Now().UTC()
+	m := &models.PersonalAccessToken{
+		ID:           models.NewUUID(),
+		UserID:       userID,
+		Name:         name,
+		TokenHash:    hashToken(tokenStr),
+		LookupPrefix: lookupPrefix(tokenStr),
+		Permissions:  permissions,
+		CreatedAt:    now,
+		Revoked:      false,
+		ExpiresAt:    expiresAt,
 	}
 
-	saved, err := b.Save(ctx)
+	_, err = s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create personal access token: %w", err)
 	}
 
 	return &PATRecord{
-		ID:          saved.ID,
+		ID:          m.ID,
 		UserID:      userID,
 		Name:        name,
 		Token:       tokenStr,
 		Permissions: permissions,
 		ExpiresAt:   expiresAt,
-		CreatedAt:   saved.CreatedAt,
+		CreatedAt:   m.CreatedAt,
 		Revoked:     false,
 	}, nil
 }
@@ -92,18 +92,18 @@ func (s *pgPersonalAccessTokenStore) ListByUser(userID uuid.UUID) ([]PATRecord, 
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	results, err := s.client.PersonalAccessToken.Query().
-		Where(
-			personalaccesstoken.UserIDEQ(userID),
-		).
-		Order(ent.Desc(personalaccesstoken.FieldCreatedAt)).
-		All(ctx)
+	var results []models.PersonalAccessToken
+	err := s.db.NewSelect().Model(&results).
+		Where("user_id = ?", userID).
+		Order("created_at DESC").
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list personal access tokens: %w", err)
 	}
 
 	out := make([]PATRecord, 0, len(results))
-	for _, r := range results {
+	for i := range results {
+		r := &results[i]
 		out = append(out, PATRecord{
 			ID:          r.ID,
 			UserID:      r.UserID,
@@ -122,15 +122,17 @@ func (s *pgPersonalAccessTokenStore) ListAll() ([]PATRecord, error) {
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	results, err := s.client.PersonalAccessToken.Query().
-		Order(ent.Desc(personalaccesstoken.FieldCreatedAt)).
-		All(ctx)
+	var results []models.PersonalAccessToken
+	err := s.db.NewSelect().Model(&results).
+		Order("created_at DESC").
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list all personal access tokens: %w", err)
 	}
 
 	out := make([]PATRecord, 0, len(results))
-	for _, r := range results {
+	for i := range results {
+		r := &results[i]
 		out = append(out, PATRecord{
 			ID:          r.ID,
 			UserID:      r.UserID,
@@ -149,18 +151,21 @@ func (s *pgPersonalAccessTokenStore) RevokeToken(id uuid.UUID, userID uuid.UUID)
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	_, err := s.client.PersonalAccessToken.UpdateOneID(id).
-		SetRevoked(true).
-		Where(
-			personalaccesstoken.UserIDEQ(userID),
-			personalaccesstoken.RevokedEQ(false),
-		).
-		Save(ctx)
+	res, err := s.db.NewUpdate().Model((*models.PersonalAccessToken)(nil)).
+		Set("revoked = ?", true).
+		Where("id = ?", id).
+		Where("user_id = ?", userID).
+		Where("revoked = ?", false).
+		Exec(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return ErrTokenNotFound
-		}
 		return fmt.Errorf("failed to revoke personal access token: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to revoke personal access token: %w", err)
+	}
+	if n == 0 {
+		return ErrTokenNotFound
 	}
 	return nil
 }
@@ -169,17 +174,20 @@ func (s *pgPersonalAccessTokenStore) RevokeTokenAdmin(id uuid.UUID) error {
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	_, err := s.client.PersonalAccessToken.UpdateOneID(id).
-		SetRevoked(true).
-		Where(
-			personalaccesstoken.RevokedEQ(false),
-		).
-		Save(ctx)
+	res, err := s.db.NewUpdate().Model((*models.PersonalAccessToken)(nil)).
+		Set("revoked = ?", true).
+		Where("id = ?", id).
+		Where("revoked = ?", false).
+		Exec(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return ErrTokenNotFound
-		}
 		return fmt.Errorf("failed to revoke personal access token: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to revoke personal access token: %w", err)
+	}
+	if n == 0 {
+		return ErrTokenNotFound
 	}
 	return nil
 }
@@ -191,17 +199,17 @@ func (s *pgPersonalAccessTokenStore) ValidateToken(token string) (*PATRecord, er
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	candidates, err := s.client.PersonalAccessToken.Query().
-		Where(
-			personalaccesstoken.LookupPrefixEQ(prefix),
-			personalaccesstoken.RevokedEQ(false),
-		).
-		All(ctx)
+	var candidates []models.PersonalAccessToken
+	err := s.db.NewSelect().Model(&candidates).
+		Where("lookup_prefix = ?", prefix).
+		Where("revoked = ?", false).
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to validate personal access token: %w", err)
 	}
 
-	for _, c := range candidates {
+	for i := range candidates {
+		c := &candidates[i]
 		if !algacrypto.ConstantTimeEqual([]byte(hmac), []byte(c.TokenHash)) {
 			continue
 		}
@@ -238,8 +246,9 @@ func (s *pgPersonalAccessTokenStore) updateLastUsed(id uuid.UUID, lastUsedAt *ti
 	}
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
-	_ = s.client.PersonalAccessToken.UpdateOneID(id).
-		SetLastUsedAt(time.Now().UTC()).
+	_, _ = s.db.NewUpdate().Model((*models.PersonalAccessToken)(nil)).
+		Set("last_used_at = ?", time.Now().UTC()).
+		Where("id = ?", id).
 		Exec(ctx)
 }
 

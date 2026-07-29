@@ -6,13 +6,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
 	"alga/capability"
-	"alga/ent"
-	entagenttoken "alga/ent/agenttoken"
-	enticsrole "alga/ent/icsroleassignment"
-	entincident "alga/ent/incident"
-
+	"alga/db/models"
 	"alga/ics"
 )
 
@@ -53,55 +50,62 @@ type pgICSRoleStore struct {
 	pgStoreBase
 }
 
-func newPGICSRoleStore(client *ent.Client) ICSRoleStore {
-	return &pgICSRoleStore{pgStoreBase{client: client}}
+func newPGICSRoleStore(db *bun.DB) ICSRoleStore {
+	return &pgICSRoleStore{pgStoreBase{db: db}}
+}
+
+func (s *pgICSRoleStore) findIncidentByNumber(ctx context.Context, incidentNumber int64) (*models.Incident, error) {
+	var inc models.Incident
+	err := s.db.NewSelect().Model(&inc).
+		Where("incident_number = ?", incidentNumber).
+		Where("deleted_at IS NULL").
+		Scan(ctx)
+	if err != nil {
+		if isNotFound(err) {
+			return nil, fmt.Errorf("incident not found: %w", ErrIncidentNotFound)
+		}
+		return nil, fmt.Errorf("failed to find incident: %w", err)
+	}
+	return &inc, nil
 }
 
 func (s *pgICSRoleStore) AssignRole(ctx context.Context, incidentNumber int64, roleType ics.RoleType, userID uuid.UUID, parentAssignmentID *uuid.UUID, scope *string) (*ICSRoleRecord, error) {
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	inc, err := s.client.Incident.Query().
-		Where(entincident.IncidentNumber(incidentNumber), entincident.DeletedAtIsNil()).
-		Only(ctx)
+	inc, err := s.findIncidentByNumber(ctx, incidentNumber)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, fmt.Errorf("incident not found: %w", ErrIncidentNotFound)
-		}
-		return nil, fmt.Errorf("failed to find incident: %w", err)
+		return nil, err
 	}
 
-	b := s.client.ICSRoleAssignment.Create().
-		SetRoleType(enticsrole.RoleType(roleType)).
-		SetStatus(enticsrole.StatusActive).
-		SetAssigneeType(enticsrole.AssigneeTypeUser).
-		SetUserID(userID).
-		SetIncidentID(inc.ID).
-		SetStartedAt(time.Now().UTC())
-
-	if parentAssignmentID != nil {
-		b.SetParentID(*parentAssignmentID)
-	}
-	if scope != nil {
-		b.SetScopeDescription(*scope)
+	m := &models.ICSRoleAssignment{
+		ID:               models.NewUUID(),
+		RoleType:         string(roleType),
+		Status:           "active",
+		AssigneeType:     "user",
+		UserID:           &userID,
+		IncidentID:       inc.ID,
+		ParentID:         parentAssignmentID,
+		ScopeDescription: scope,
+		StartedAt:        time.Now().UTC(),
 	}
 
-	saved, err := b.Save(ctx)
+	_, err = s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to assign ICS role: %w", err)
 	}
 
 	uidCopy := userID
 	return &ICSRoleRecord{
-		ID:                 saved.ID,
+		ID:                 m.ID,
 		IncidentNumber:     incidentNumber,
-		RoleType:           string(saved.RoleType),
+		RoleType:           m.RoleType,
 		AssigneeType:       "user",
 		UserID:             &uidCopy,
 		ParentAssignmentID: parentAssignmentID,
-		ScopeDescription:   saved.ScopeDescription,
-		Status:             string(saved.Status),
-		StartedAt:          saved.StartedAt,
+		ScopeDescription:   m.ScopeDescription,
+		Status:             m.Status,
+		StartedAt:          m.StartedAt,
 	}, nil
 }
 
@@ -110,16 +114,22 @@ func (s *pgICSRoleStore) EndRole(ctx context.Context, assignmentID uuid.UUID, re
 	defer cancel()
 
 	now := time.Now().UTC()
-	_, err := s.client.ICSRoleAssignment.UpdateOneID(assignmentID).
-		SetStatus(enticsrole.StatusEnded).
-		SetEndedReason(enticsrole.EndedReason(reason)).
-		SetEndedAt(now).
-		Save(ctx)
+	reasonStr := string(reason)
+	res, err := s.db.NewUpdate().Model((*models.ICSRoleAssignment)(nil)).
+		Set("status = ?", "ended").
+		Set("ended_reason = ?", reasonStr).
+		Set("ended_at = ?", now).
+		Where("id = ?", assignmentID).
+		Exec(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return fmt.Errorf("ICS role assignment not found: %w", ErrICSRoleNotFound)
-		}
 		return fmt.Errorf("failed to end ICS role: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to end ICS role: %w", err)
+	}
+	if n == 0 {
+		return fmt.Errorf("ICS role assignment not found: %w", ErrICSRoleNotFound)
 	}
 	return nil
 }
@@ -128,22 +138,25 @@ func (s *pgICSRoleStore) GetActiveRoles(ctx context.Context, incidentNumber int6
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	assignments, err := s.client.ICSRoleAssignment.Query().
-		Where(
-			enticsrole.HasIncidentWith(entincident.IncidentNumber(incidentNumber)),
-			enticsrole.StatusEQ(enticsrole.StatusActive),
-		).
-		WithUser().
-		WithAgentToken().
-		Order(ent.Asc(enticsrole.FieldStartedAt)).
-		All(ctx)
+	inc, err := s.findIncidentByNumber(ctx, incidentNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	var assignments []models.ICSRoleAssignment
+	err = s.db.NewSelect().Model(&assignments).
+		Where("incident_id = ?", inc.ID).
+		Where("status = ?", "active").
+		OrderExpr("started_at ASC").
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query active ICS roles: %w", err)
 	}
 
 	records := make([]ICSRoleRecord, 0, len(assignments))
 	for _, a := range assignments {
-		records = append(records, s.toICSRoleRecord(a, incidentNumber))
+		rec := s.toICSRoleRecord(ctx, &a, incidentNumber)
+		records = append(records, rec)
 	}
 	return records, nil
 }
@@ -152,20 +165,22 @@ func (s *pgICSRoleStore) GetActiveIC(ctx context.Context, incidentNumber int64) 
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	a, err := s.client.ICSRoleAssignment.Query().
-		Where(
-			enticsrole.HasIncidentWith(entincident.IncidentNumber(incidentNumber)),
-			enticsrole.StatusEQ(enticsrole.StatusActive),
-			enticsrole.RoleTypeEQ(enticsrole.RoleTypeIncidentCommander),
-		).
-		WithUser().
-		WithAgentToken().
-		Only(ctx)
+	inc, err := s.findIncidentByNumber(ctx, incidentNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	var a models.ICSRoleAssignment
+	err = s.db.NewSelect().Model(&a).
+		Where("incident_id = ?", inc.ID).
+		Where("status = ?", "active").
+		Where("role_type = ?", string(ics.RoleIncidentCommander)).
+		Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*ICSRoleRecord](err, "active incident commander")
 	}
 
-	rec := s.toICSRoleRecord(a, incidentNumber)
+	rec := s.toICSRoleRecord(ctx, &a, incidentNumber)
 	return &rec, nil
 }
 
@@ -173,21 +188,24 @@ func (s *pgICSRoleStore) GetAllRoles(ctx context.Context, incidentNumber int64) 
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	assignments, err := s.client.ICSRoleAssignment.Query().
-		Where(
-			enticsrole.HasIncidentWith(entincident.IncidentNumber(incidentNumber)),
-		).
-		WithUser().
-		WithAgentToken().
-		Order(ent.Asc(enticsrole.FieldStartedAt)).
-		All(ctx)
+	inc, err := s.findIncidentByNumber(ctx, incidentNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	var assignments []models.ICSRoleAssignment
+	err = s.db.NewSelect().Model(&assignments).
+		Where("incident_id = ?", inc.ID).
+		OrderExpr("started_at ASC").
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query all ICS roles: %w", err)
 	}
 
 	records := make([]ICSRoleRecord, 0, len(assignments))
 	for _, a := range assignments {
-		records = append(records, s.toICSRoleRecord(a, incidentNumber))
+		rec := s.toICSRoleRecord(ctx, &a, incidentNumber)
+		records = append(records, rec)
 	}
 	return records, nil
 }
@@ -200,16 +218,20 @@ func (s *pgICSRoleStore) EndAllRolesForIncident(ctx context.Context, incidentNum
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
+	inc, err := s.findIncidentByNumber(ctx, incidentNumber)
+	if err != nil {
+		return err
+	}
+
 	now := time.Now().UTC()
-	_, err := s.client.ICSRoleAssignment.Update().
-		Where(
-			enticsrole.HasIncidentWith(entincident.IncidentNumber(incidentNumber)),
-			enticsrole.StatusEQ(enticsrole.StatusActive),
-		).
-		SetStatus(enticsrole.StatusEnded).
-		SetEndedReason(enticsrole.EndedReason(reason)).
-		SetEndedAt(now).
-		Save(ctx)
+	reasonStr := string(reason)
+	_, err = s.db.NewUpdate().Model((*models.ICSRoleAssignment)(nil)).
+		Set("status = ?", "ended").
+		Set("ended_reason = ?", reasonStr).
+		Set("ended_at = ?", now).
+		Where("incident_id = ?", inc.ID).
+		Where("status = ?", "active").
+		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to end all ICS roles for incident: %w", err)
 	}
@@ -220,25 +242,19 @@ func (s *pgICSRoleStore) AssignAgentRole(ctx context.Context, incidentNumber int
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	inc, err := s.client.Incident.Query().
-		Where(entincident.IncidentNumber(incidentNumber), entincident.DeletedAtIsNil()).
-		Only(ctx)
+	inc, err := s.findIncidentByNumber(ctx, incidentNumber)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, fmt.Errorf("incident not found: %w", ErrIncidentNotFound)
-		}
-		return nil, fmt.Errorf("failed to find incident: %w", err)
+		return nil, err
 	}
 
-	agentToken, err := s.client.AgentToken.Query().
-		Where(
-			entagenttoken.ID(agentTokenID),
-			entagenttoken.Revoked(false),
-			entagenttoken.Enabled(true),
-		).
-		Only(ctx)
+	var agentToken models.AgentToken
+	err = s.db.NewSelect().Model(&agentToken).
+		Where("id = ?", agentTokenID).
+		Where("revoked = ?", false).
+		Where("enabled = ?", true).
+		Scan(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
+		if isNotFound(err) {
 			return nil, fmt.Errorf("agent not found or inactive: %w", ErrAgentNotFoundInactive)
 		}
 		return nil, fmt.Errorf("failed to find agent: %w", err)
@@ -248,40 +264,24 @@ func (s *pgICSRoleStore) AssignAgentRole(ctx context.Context, incidentNumber int
 		return nil, fmt.Errorf("%w: role %s requires %s", ErrAgentCapabilityMismatch, roleType, requiredCap)
 	}
 
-	b := s.client.ICSRoleAssignment.Create().
-		SetRoleType(enticsrole.RoleType(roleType)).
-		SetStatus(enticsrole.StatusActive).
-		SetAssigneeType(enticsrole.AssigneeTypeAgent).
-		SetAgentTokenID(agentTokenID).
-		SetIncidentID(inc.ID).
-		SetStartedAt(time.Now().UTC())
-
-	if parentAssignmentID != nil {
-		b.SetParentID(*parentAssignmentID)
-	}
-	if scope != nil {
-		b.SetScopeDescription(*scope)
+	m := &models.ICSRoleAssignment{
+		ID:               models.NewUUID(),
+		RoleType:         string(roleType),
+		Status:           "active",
+		AssigneeType:     "agent",
+		AgentTokenID:     &agentTokenID,
+		IncidentID:       inc.ID,
+		ParentID:         parentAssignmentID,
+		ScopeDescription: scope,
+		StartedAt:        time.Now().UTC(),
 	}
 
-	saved, err := b.Save(ctx)
+	_, err = s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to assign agent ICS role: %w", err)
 	}
 
-	savedWithAgent, err := s.client.ICSRoleAssignment.Query().
-		Where(enticsrole.ID(saved.ID)).
-		WithAgentToken().
-		Only(ctx)
-	if err != nil {
-		atid := agentTokenID
-		return &ICSRoleRecord{
-			ID: saved.ID, IncidentNumber: incidentNumber, RoleType: string(saved.RoleType),
-			AssigneeType: "agent", AgentTokenID: &atid,
-			Status: string(saved.Status), StartedAt: saved.StartedAt,
-		}, nil
-	}
-
-	rec := s.toICSRoleRecord(savedWithAgent, incidentNumber)
+	rec := s.toICSRoleRecord(ctx, m, incidentNumber)
 	return &rec, nil
 }
 
@@ -289,14 +289,11 @@ func (s *pgICSRoleStore) GetActiveRolesForAgent(ctx context.Context, agentTokenI
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	results, err := s.client.ICSRoleAssignment.Query().
-		Where(
-			enticsrole.HasAgentTokenWith(entagenttoken.ID(agentTokenID)),
-			enticsrole.StatusEQ(enticsrole.StatusActive),
-		).
-		WithIncident().
-		WithAgentToken().
-		All(ctx)
+	var results []models.ICSRoleAssignment
+	err := s.db.NewSelect().Model(&results).
+		Where("agent_token_id = ?", agentTokenID).
+		Where("status = ?", "active").
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query agent ICS roles: %w", err)
 	}
@@ -304,10 +301,12 @@ func (s *pgICSRoleStore) GetActiveRolesForAgent(ctx context.Context, agentTokenI
 	records := make([]ICSRoleRecord, 0, len(results))
 	for _, r := range results {
 		incNumber := int64(0)
-		if inc := r.Edges.Incident; inc != nil {
+		var inc models.Incident
+		if err := s.db.NewSelect().Model(&inc).Where("id = ?", r.IncidentID).Scan(ctx); err == nil {
 			incNumber = inc.IncidentNumber
 		}
-		records = append(records, s.toICSRoleRecord(r, incNumber))
+		rec := s.toICSRoleRecord(ctx, &r, incNumber)
+		records = append(records, rec)
 	}
 	return records, nil
 }
@@ -317,53 +316,52 @@ func (s *pgICSRoleStore) EndRolesForAgent(ctx context.Context, agentTokenID uuid
 	defer cancel()
 
 	now := time.Now().UTC()
-	_, err := s.client.ICSRoleAssignment.Update().
-		Where(
-			enticsrole.HasAgentTokenWith(entagenttoken.ID(agentTokenID)),
-			enticsrole.StatusEQ(enticsrole.StatusActive),
-		).
-		SetStatus(enticsrole.StatusEnded).
-		SetEndedReason(enticsrole.EndedReason(reason)).
-		SetEndedAt(now).
-		Save(ctx)
+	reasonStr := string(reason)
+	_, err := s.db.NewUpdate().Model((*models.ICSRoleAssignment)(nil)).
+		Set("status = ?", "ended").
+		Set("ended_reason = ?", reasonStr).
+		Set("ended_at = ?", now).
+		Where("agent_token_id = ?", agentTokenID).
+		Where("status = ?", "active").
+		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to end agent ICS roles: %w", err)
 	}
 	return nil
 }
 
-func (s *pgICSRoleStore) toICSRoleRecord(a *ent.ICSRoleAssignment, incidentNumber int64) ICSRoleRecord {
-	var endedReason *string
-	if a.EndedReason != nil {
-		r := string(*a.EndedReason)
-		endedReason = &r
-	}
-
+func (s *pgICSRoleStore) toICSRoleRecord(ctx context.Context, a *models.ICSRoleAssignment, incidentNumber int64) ICSRoleRecord {
 	rec := ICSRoleRecord{
 		ID:               a.ID,
 		IncidentNumber:   incidentNumber,
-		RoleType:         string(a.RoleType),
-		AssigneeType:     string(a.AssigneeType),
-		Status:           string(a.Status),
+		RoleType:         a.RoleType,
+		AssigneeType:     a.AssigneeType,
+		Status:           a.Status,
 		ScopeDescription: a.ScopeDescription,
-		EndedReason:      endedReason,
+		EndedReason:      a.EndedReason,
 		StartedAt:        a.StartedAt,
 		EndedAt:          a.EndedAt,
 	}
 
-	if u := a.Edges.User; u != nil {
-		uid := u.ID
-		rec.UserID = &uid
-		rec.UserName = u.FullName
-		rec.UserEmail = u.Email
+	if a.UserID != nil {
+		var u models.User
+		if err := s.db.NewSelect().Model(&u).Where("id = ?", *a.UserID).Scan(ctx); err == nil {
+			uid := u.ID
+			rec.UserID = &uid
+			rec.UserName = u.FullName
+			rec.UserEmail = u.Email
+		}
 	}
 
-	if at := a.Edges.AgentToken; at != nil {
-		atid := at.ID
-		rec.AgentTokenID = &atid
-		rec.AgentName = at.Name
-		rec.AgentType = string(at.AgentType)
-		rec.AgentRevoked = at.Revoked
+	if a.AgentTokenID != nil {
+		var at models.AgentToken
+		if err := s.db.NewSelect().Model(&at).Where("id = ?", *a.AgentTokenID).Scan(ctx); err == nil {
+			atid := at.ID
+			rec.AgentTokenID = &atid
+			rec.AgentName = at.Name
+			rec.AgentType = at.AgentType
+			rec.AgentRevoked = at.Revoked
+		}
 	}
 
 	return rec

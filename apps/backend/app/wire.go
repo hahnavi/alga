@@ -20,6 +20,7 @@ import (
 	"alga/config"
 	"alga/correlator"
 	algacrypto "alga/crypto"
+	"alga/db"
 	"alga/email"
 	"alga/escalation"
 	"alga/ics"
@@ -30,7 +31,6 @@ import (
 	"alga/memory"
 	"alga/notification"
 	"alga/oncall"
-	"alga/pgclient"
 	"alga/prompt"
 	"alga/rabbitmq"
 	"alga/routing"
@@ -93,7 +93,7 @@ func (a *App) wire() error {
 
 	if a.cfg.PostgresAutoMigrate {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		if err := pgclient.ApplyMigrations(ctx, a.cfg.PostgresDSN); err != nil {
+		if err := db.ApplyMigrations(ctx, a.cfg.PostgresDSN); err != nil {
 			cancel()
 			return fmt.Errorf("failed to run Postgres startup migrations: %w", err)
 		}
@@ -145,13 +145,13 @@ func (a *App) wire() error {
 
 	var memorySvc memory.Service
 
-	a.pgCli, err = pgclient.New(a.cfg.PostgresDSN)
+	a.dbCli, err = db.New(a.cfg.PostgresDSN)
 	if err != nil {
 		return fmt.Errorf("failed to connect to Postgres: %w", err)
 	}
 	logger.Info("Connected to Postgres", "addr", redactURI(a.cfg.PostgresDSN))
 
-	a.stores, err = store.NewStores(a.pgCli, sessionExpiry, sessionMaxLifetime)
+	a.stores, err = store.NewStores(a.dbCli, sessionExpiry, sessionMaxLifetime)
 	if err != nil {
 		return fmt.Errorf("failed to initialize Postgres stores: %w", err)
 	}

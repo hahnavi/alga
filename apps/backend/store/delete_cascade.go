@@ -6,17 +6,9 @@ import (
 	"strconv"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
-	"alga/ent"
-	"alga/ent/agentmemory"
-	"alga/ent/alertinvestigation"
-	"alga/ent/alertinvestigationalert"
-	"alga/ent/alertinvestigationevent"
-	"alga/ent/alertinvestigationupdateentry"
-	"alga/ent/incidentinvestigation"
-	"alga/ent/incidentinvestigationupdateentry"
-	"alga/ent/investigationthread"
-	"alga/ent/investigationthreadmessage"
+	"alga/db/models"
 )
 
 // hardDeleteAlertCascade removes every investigation artifact linked to the
@@ -27,23 +19,24 @@ import (
 // only — never by fingerprint, which can be shared across sibling alerts.
 // It must run inside the alert delete tx so the tombstone set and the child
 // cleanup commit atomically.
-func hardDeleteAlertCascade(ctx context.Context, tx *ent.Tx, a *ent.Alert) error {
-	if a == nil {
-		return nil
+func hardDeleteAlertCascade(ctx context.Context, tx bun.Tx, alertID uuid.UUID, alertNumber int64) error {
+	// Find linked investigations via the alert_investigation_alerts join table
+	type invRef struct {
+		ID                   uuid.UUID `bun:"id"`
+		AlertInvestigationID string    `bun:"alert_investigation_id"`
 	}
-
-	invs, err := tx.Client().AlertInvestigation.Query().
-		Where(alertinvestigation.HasAlertsWith(alertinvestigationalert.Or(
-			alertinvestigationalert.AlertIDEQ(a.ID),
-			alertinvestigationalert.AlertNumber(a.AlertNumber),
-		))).
-		Select(alertinvestigation.FieldID, alertinvestigation.FieldAlertInvestigationID).
-		All(ctx)
+	var invs []invRef
+	err := tx.NewSelect().
+		TableExpr("alert_investigations AS ai").
+		ColumnExpr("ai.id, ai.alert_investigation_id").
+		Join("JOIN alert_investigation_alerts AS aia ON aia.alert_investigation_id = ai.id").
+		Where("(aia.alert_id = ? OR aia.alert_number = ?)", alertID, alertNumber).
+		Scan(ctx, &invs)
 	if err != nil {
 		return fmt.Errorf("query linked alert investigations: %w", err)
 	}
 	if len(invs) == 0 {
-		return deleteOwnerThreadInTx(ctx, tx, ThreadOwnerAlert, strconv.FormatInt(a.AlertNumber, 10))
+		return deleteOwnerThreadInTx(ctx, tx, ThreadOwnerAlert, strconv.FormatInt(alertNumber, 10))
 	}
 
 	invUUIDs := make([]uuid.UUID, 0, len(invs))
@@ -53,38 +46,35 @@ func hardDeleteAlertCascade(ctx context.Context, tx *ent.Tx, a *ent.Alert) error
 		invStrIDs = append(invStrIDs, inv.AlertInvestigationID)
 	}
 
-	if _, err := tx.Client().AlertInvestigationAlert.Delete().
-		Where(alertinvestigationalert.AlertInvestigationIDIn(invUUIDs...)).
+	if _, err := tx.NewDelete().Model((*models.AlertInvestigationAlert)(nil)).
+		Where("alert_investigation_id IN (?)", bun.In(invUUIDs)).
 		Exec(ctx); err != nil {
 		return fmt.Errorf("delete alert investigation alerts: %w", err)
 	}
-	if _, err := tx.Client().AlertInvestigationUpdateEntry.Delete().
-		Where(alertinvestigationupdateentry.AlertInvestigationIDIn(invUUIDs...)).
+	if _, err := tx.NewDelete().Model((*models.AlertInvestigationUpdate)(nil)).
+		Where("alert_investigation_id IN (?)", bun.In(invUUIDs)).
 		Exec(ctx); err != nil {
 		return fmt.Errorf("delete alert investigation updates: %w", err)
 	}
-	if _, err := tx.Client().AlertInvestigationEvent.Delete().
-		Where(alertinvestigationevent.AlertInvestigationIDIn(invUUIDs...)).
+	if _, err := tx.NewDelete().Model((*models.AlertInvestigationEvent)(nil)).
+		Where("alert_investigation_id IN (?)", bun.In(invUUIDs)).
 		Exec(ctx); err != nil {
 		return fmt.Errorf("delete alert investigation events: %w", err)
 	}
-	if _, err := tx.Client().AlertInvestigation.Delete().
-		Where(alertinvestigation.IDIn(invUUIDs...)).
+	if _, err := tx.NewDelete().Model((*models.AlertInvestigation)(nil)).
+		Where("id IN (?)", bun.In(invUUIDs)).
 		Exec(ctx); err != nil {
 		return fmt.Errorf("delete alert investigations: %w", err)
 	}
 
-	// Agent memories are scoped by the investigation's string business id. This
-	// assumes alert-investigation ids are distinct from incident-investigation
-	// ids (they are generated as UUIDs / prefixed human ids), so no cross-type
-	// collision is expected.
-	if _, err := tx.Client().AgentMemory.Delete().
-		Where(agentmemory.InvestigationIDIn(invStrIDs...)).
+	// Agent memories are scoped by the investigation's string business id.
+	if _, err := tx.NewDelete().Model((*models.AgentMemory)(nil)).
+		Where("investigation_id IN (?)", bun.In(invStrIDs)).
 		Exec(ctx); err != nil {
 		return fmt.Errorf("delete agent memories: %w", err)
 	}
 
-	return deleteOwnerThreadInTx(ctx, tx, ThreadOwnerAlert, strconv.FormatInt(a.AlertNumber, 10))
+	return deleteOwnerThreadInTx(ctx, tx, ThreadOwnerAlert, strconv.FormatInt(alertNumber, 10))
 }
 
 // hardDeleteIncidentCascade removes every investigation artifact for the
@@ -93,14 +83,17 @@ func hardDeleteAlertCascade(ctx context.Context, tx *ent.Tx, a *ent.Alert) error
 // incident-owned investigation thread + its messages. source_alert_investigation_id
 // back-refs on alert investigations are SET NULL via the existing FK, so they
 // need no handling here. It must run inside the incident delete tx.
-func hardDeleteIncidentCascade(ctx context.Context, tx *ent.Tx, inc *ent.Incident) error {
-	if inc == nil {
-		return nil
+func hardDeleteIncidentCascade(ctx context.Context, tx bun.Tx, incidentID uuid.UUID, incidentNumber int64) error {
+	type invRef struct {
+		ID                      uuid.UUID `bun:"id"`
+		IncidentInvestigationID string    `bun:"incident_investigation_id"`
 	}
-	invs, err := tx.Client().IncidentInvestigation.Query().
-		Where(incidentinvestigation.IncidentIDEQ(inc.ID)).
-		Select(incidentinvestigation.FieldID, incidentinvestigation.FieldIncidentInvestigationID).
-		All(ctx)
+	var invs []invRef
+	err := tx.NewSelect().
+		TableExpr("incident_investigations").
+		ColumnExpr("id, incident_investigation_id").
+		Where("incident_id = ?", incidentID).
+		Scan(ctx, &invs)
 	if err != nil {
 		return fmt.Errorf("query incident investigations: %w", err)
 	}
@@ -111,48 +104,48 @@ func hardDeleteIncidentCascade(ctx context.Context, tx *ent.Tx, inc *ent.Inciden
 			invUUIDs = append(invUUIDs, inv.ID)
 			invStrIDs = append(invStrIDs, inv.IncidentInvestigationID)
 		}
-		if _, err := tx.Client().IncidentInvestigationUpdateEntry.Delete().
-			Where(incidentinvestigationupdateentry.IncidentInvestigationIDIn(invUUIDs...)).
+		if _, err := tx.NewDelete().Model((*models.IncidentInvestigationUpdate)(nil)).
+			Where("incident_investigation_id IN (?)", bun.In(invUUIDs)).
 			Exec(ctx); err != nil {
 			return fmt.Errorf("delete incident investigation updates: %w", err)
 		}
-		if _, err := tx.Client().IncidentInvestigation.Delete().
-			Where(incidentinvestigation.IDIn(invUUIDs...)).
+		if _, err := tx.NewDelete().Model((*models.IncidentInvestigation)(nil)).
+			Where("id IN (?)", bun.In(invUUIDs)).
 			Exec(ctx); err != nil {
 			return fmt.Errorf("delete incident investigations: %w", err)
 		}
-		if _, err := tx.Client().AgentMemory.Delete().
-			Where(agentmemory.InvestigationIDIn(invStrIDs...)).
+		if _, err := tx.NewDelete().Model((*models.AgentMemory)(nil)).
+			Where("investigation_id IN (?)", bun.In(invStrIDs)).
 			Exec(ctx); err != nil {
 			return fmt.Errorf("delete agent memories: %w", err)
 		}
 	}
-	return deleteOwnerThreadInTx(ctx, tx, ThreadOwnerIncidentInvestigation, strconv.FormatInt(inc.IncidentNumber, 10))
+	return deleteOwnerThreadInTx(ctx, tx, ThreadOwnerIncidentInvestigation, strconv.FormatInt(incidentNumber, 10))
 }
 
 // deleteOwnerThreadInTx deletes the polymorphic owner thread (and its messages)
 // for (ownerType, ownerID). ownerID is the entity NUMBER as a string for both
 // alert-owned and incident-owned threads.
-func deleteOwnerThreadInTx(ctx context.Context, tx *ent.Tx, ownerType, ownerID string) error {
-	threadIDs, err := tx.Client().InvestigationThread.Query().
-		Where(
-			investigationthread.OwnerTypeEQ(ownerType),
-			investigationthread.OwnerIDEQ(ownerID),
-		).
-		IDs(ctx)
+func deleteOwnerThreadInTx(ctx context.Context, tx bun.Tx, ownerType, ownerID string) error {
+	var threadIDs []uuid.UUID
+	err := tx.NewSelect().Model((*models.InvestigationThread)(nil)).
+		Column("id").
+		Where("owner_type = ?", ownerType).
+		Where("owner_id = ?", ownerID).
+		Scan(ctx, &threadIDs)
 	if err != nil {
 		return fmt.Errorf("query owner thread: %w", err)
 	}
 	if len(threadIDs) == 0 {
 		return nil
 	}
-	if _, err := tx.Client().InvestigationThreadMessage.Delete().
-		Where(investigationthreadmessage.ThreadIDIn(threadIDs...)).
+	if _, err := tx.NewDelete().Model((*models.InvestigationThreadMessage)(nil)).
+		Where("thread_id IN (?)", bun.In(threadIDs)).
 		Exec(ctx); err != nil {
 		return fmt.Errorf("delete thread messages: %w", err)
 	}
-	if _, err := tx.Client().InvestigationThread.Delete().
-		Where(investigationthread.IDIn(threadIDs...)).
+	if _, err := tx.NewDelete().Model((*models.InvestigationThread)(nil)).
+		Where("id IN (?)", bun.In(threadIDs)).
 		Exec(ctx); err != nil {
 		return fmt.Errorf("delete owner thread: %w", err)
 	}

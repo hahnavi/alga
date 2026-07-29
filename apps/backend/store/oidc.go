@@ -7,11 +7,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
 	algacrypto "alga/crypto"
-	"alga/ent"
-	"alga/ent/oidcidentity"
-	"alga/ent/oidcprovider"
+	"alga/db/models"
 )
 
 type OIDCProviderRecord struct {
@@ -77,8 +76,8 @@ type pgOIDCProviderStore struct {
 	pgStoreBase
 }
 
-func newPGOIDCProviderStore(client *ent.Client) OIDCProviderStore {
-	return &pgOIDCProviderStore{pgStoreBase{client: client}}
+func newPGOIDCProviderStore(db *bun.DB) OIDCProviderStore {
+	return &pgOIDCProviderStore{pgStoreBase{db: db}}
 }
 
 func (s *pgOIDCProviderStore) CreateProvider(ctx context.Context, record *OIDCProviderRecord, clientSecret string) (*OIDCProviderRecord, error) {
@@ -96,20 +95,21 @@ func (s *pgOIDCProviderStore) CreateProvider(ctx context.Context, record *OIDCPr
 	record.CreatedAt = now
 	record.UpdatedAt = now
 
-	saved, err := s.client.OIDCProvider.Create().
-		SetName(record.Name).
-		SetIssuer(record.Issuer).
-		SetClientID(record.ClientID).
-		SetClientSecretEncrypted(encSecret).
-		SetScopes(record.Scopes).
-		SetEnabled(record.Enabled).
-		SetCreatedAt(now).
-		SetUpdatedAt(now).
-		Save(ctx)
+	m := &models.OIDCProvider{
+		BaseModel:             models.BaseModel{ID: models.NewUUID(), CreatedAt: now, UpdatedAt: now},
+		Name:                  record.Name,
+		Issuer:                record.Issuer,
+		ClientID:              record.ClientID,
+		ClientSecretEncrypted: encSecret,
+		Scopes:                record.Scopes,
+		Enabled:               record.Enabled,
+	}
+
+	_, err = s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert oidc provider: %w", err)
 	}
-	out := pgOIDCProviderToRecord(saved)
+	out := pgOIDCProviderToRecord(m)
 	out.ClientSecretConfigured = clientSecret != ""
 	return out, nil
 }
@@ -118,72 +118,85 @@ func (s *pgOIDCProviderStore) UpdateProvider(ctx context.Context, id uuid.UUID, 
 	if patch == nil {
 		return nil, errors.New("nil patch")
 	}
-	b := s.client.OIDCProvider.UpdateOneID(id).SetUpdatedAt(time.Now().UTC())
+	now := time.Now().UTC()
+	q := s.db.NewUpdate().Model((*models.OIDCProvider)(nil)).
+		Set("updated_at = ?", now).
+		Where("id = ?", id)
+
 	if patch.Name != "" {
-		b.SetName(patch.Name)
+		q = q.Set("name = ?", patch.Name)
 	}
 	if patch.Issuer != "" {
-		b.SetIssuer(patch.Issuer)
+		q = q.Set("issuer = ?", patch.Issuer)
 	}
 	if patch.ClientID != "" {
-		b.SetClientID(patch.ClientID)
+		q = q.Set("client_id = ?", patch.ClientID)
 	}
 	if patch.Scopes != nil {
-		b.SetScopes(patch.Scopes)
+		q = q.Set("scopes = ?", patch.Scopes)
 	}
 	if patch.EnabledSet {
-		b.SetEnabled(patch.Enabled)
+		q = q.Set("enabled = ?", patch.Enabled)
 	}
 	if clientSecret != nil {
 		enc, err := encryptSecret(*clientSecret)
 		if err != nil {
 			return nil, err
 		}
-		b.SetClientSecretEncrypted(enc)
+		q = q.Set("client_secret_encrypted = ?", enc)
 	}
 
-	saved, err := b.Save(ctx)
+	res, err := q.Exec(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, errors.New("oidc provider not found")
-		}
 		return nil, fmt.Errorf("failed to update oidc provider: %w", err)
 	}
-	out := pgOIDCProviderToRecord(saved)
+	n, err := res.RowsAffected()
+	if err != nil {
+		return nil, fmt.Errorf("failed to update oidc provider: %w", err)
+	}
+	if n == 0 {
+		return nil, errors.New("oidc provider not found")
+	}
+
+	// Reload the updated record.
+	updated := new(models.OIDCProvider)
+	if err := s.db.NewSelect().Model(updated).Where("id = ?", id).Scan(ctx); err != nil {
+		return nil, fmt.Errorf("failed to reload oidc provider: %w", err)
+	}
+	out := pgOIDCProviderToRecord(updated)
 	if clientSecret != nil {
 		out.ClientSecretConfigured = *clientSecret != ""
 	} else {
-		// Preserve the configured flag based on the stored value.
-		existing, _ := s.client.OIDCProvider.Get(ctx, id)
-		out.ClientSecretConfigured = existing != nil && existing.ClientSecretEncrypted != ""
+		out.ClientSecretConfigured = updated.ClientSecretEncrypted != ""
 	}
 	return out, nil
 }
 
 func (s *pgOIDCProviderStore) DeleteProvider(ctx context.Context, id uuid.UUID) error {
-	tx, err := s.client.Tx(ctx)
-	if err != nil {
-		return fmt.Errorf("begin tx: %w", err)
-	}
-	defer rollbackTx(tx)
-
-	if _, err := tx.OIDCIdentity.Delete().Where(oidcidentity.ProviderIDEQ(id)).Exec(ctx); err != nil {
-		return fmt.Errorf("failed to delete linked oidc identities: %w", err)
-	}
-	if err := tx.OIDCProvider.DeleteOneID(id).Exec(ctx); err != nil {
-		if ent.IsNotFound(err) {
+	return s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		if _, err := tx.NewDelete().Model((*models.OIDCIdentity)(nil)).
+			Where("provider_id = ?", id).Exec(ctx); err != nil {
+			return fmt.Errorf("failed to delete linked oidc identities: %w", err)
+		}
+		res, err := tx.NewDelete().Model((*models.OIDCProvider)(nil)).
+			Where("id = ?", id).Exec(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to delete oidc provider: %w", err)
+		}
+		n, err := res.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("failed to delete oidc provider: %w", err)
+		}
+		if n == 0 {
 			return fmt.Errorf("oidc provider not found: %w", ErrNotFound)
 		}
-		return fmt.Errorf("failed to delete oidc provider: %w", err)
-	}
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit: %w", err)
-	}
-	return nil
+		return nil
+	})
 }
 
 func (s *pgOIDCProviderStore) GetProvider(ctx context.Context, id uuid.UUID) (*OIDCProviderRecord, error) {
-	p, err := s.client.OIDCProvider.Get(ctx, id)
+	p := new(models.OIDCProvider)
+	err := s.db.NewSelect().Model(p).Where("id = ?", id).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*OIDCProviderRecord](err, "oidc provider")
 	}
@@ -193,7 +206,8 @@ func (s *pgOIDCProviderStore) GetProvider(ctx context.Context, id uuid.UUID) (*O
 }
 
 func (s *pgOIDCProviderStore) GetProviderWithSecret(ctx context.Context, id uuid.UUID) (*OIDCProviderRecord, error) {
-	p, err := s.client.OIDCProvider.Get(ctx, id)
+	p := new(models.OIDCProvider)
+	err := s.db.NewSelect().Model(p).Where("id = ?", id).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*OIDCProviderRecord](err, "oidc provider")
 	}
@@ -208,49 +222,59 @@ func (s *pgOIDCProviderStore) GetProviderWithSecret(ctx context.Context, id uuid
 }
 
 func (s *pgOIDCProviderStore) ListProviders(ctx context.Context, q OIDCProviderQuery) ([]OIDCProviderRecord, int64, error) {
-	query := s.client.OIDCProvider.Query()
+	countQ := s.db.NewSelect().Model((*models.OIDCProvider)(nil))
+	listQ := s.db.NewSelect().Model((*models.OIDCProvider)(nil))
+
 	if q.Enabled != nil {
-		query = query.Where(oidcprovider.EnabledEQ(*q.Enabled))
+		countQ = countQ.Where("enabled = ?", *q.Enabled)
+		listQ = listQ.Where("enabled = ?", *q.Enabled)
 	}
 	if q.Search != "" {
-		query = query.Where(oidcprovider.NameContains(q.Search))
+		countQ = countQ.Where("name LIKE ?", "%"+q.Search+"%")
+		listQ = listQ.Where("name LIKE ?", "%"+q.Search+"%")
 	}
-	total, err := query.Count(ctx)
+
+	total, err := countQ.Count(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("count oidc providers: %w", err)
 	}
-	query = query.Order(ent.Desc(oidcprovider.FieldCreatedAt))
+
+	listQ = listQ.Order("created_at DESC")
 	if q.Limit > 0 {
-		query = query.Limit(q.Limit)
+		listQ = listQ.Limit(q.Limit)
 	}
 	if q.Skip > 0 {
-		query = query.Offset(q.Skip)
+		listQ = listQ.Offset(q.Skip)
 	}
-	items, err := query.All(ctx)
+
+	var items []models.OIDCProvider
+	err = listQ.Scan(ctx, &items)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list oidc providers: %w", err)
 	}
+
 	out := make([]OIDCProviderRecord, 0, len(items))
-	for _, p := range items {
-		rec := pgOIDCProviderToRecord(p)
-		rec.ClientSecretConfigured = p.ClientSecretEncrypted != ""
+	for i := range items {
+		rec := pgOIDCProviderToRecord(&items[i])
+		rec.ClientSecretConfigured = items[i].ClientSecretEncrypted != ""
 		out = append(out, *rec)
 	}
 	return out, int64(total), nil
 }
 
 func (s *pgOIDCProviderStore) ListEnabledProviders(ctx context.Context) ([]OIDCProviderRecord, error) {
-	items, err := s.client.OIDCProvider.Query().
-		Where(oidcprovider.EnabledEQ(true)).
-		Order(ent.Asc(oidcprovider.FieldName)).
-		All(ctx)
+	var items []models.OIDCProvider
+	err := s.db.NewSelect().Model(&items).
+		Where("enabled = ?", true).
+		Order("name ASC").
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list enabled oidc providers: %w", err)
 	}
 	out := make([]OIDCProviderRecord, 0, len(items))
-	for _, p := range items {
-		rec := pgOIDCProviderToRecord(p)
-		rec.ClientSecretConfigured = p.ClientSecretEncrypted != ""
+	for i := range items {
+		rec := pgOIDCProviderToRecord(&items[i])
+		rec.ClientSecretConfigured = items[i].ClientSecretEncrypted != ""
 		out = append(out, *rec)
 	}
 	return out, nil
@@ -267,7 +291,7 @@ func encryptSecret(secret string) (string, error) {
 	return enc, nil
 }
 
-func pgOIDCProviderToRecord(p *ent.OIDCProvider) *OIDCProviderRecord {
+func pgOIDCProviderToRecord(p *models.OIDCProvider) *OIDCProviderRecord {
 	scopes := p.Scopes
 	if scopes == nil {
 		scopes = []string{"openid", "email", "profile"}
@@ -288,8 +312,8 @@ type pgOIDCIdentityStore struct {
 	pgStoreBase
 }
 
-func newPGOIDCIdentityStore(client *ent.Client) OIDCIdentityStore {
-	return &pgOIDCIdentityStore{pgStoreBase{client: client}}
+func newPGOIDCIdentityStore(db *bun.DB) OIDCIdentityStore {
+	return &pgOIDCIdentityStore{pgStoreBase{db: db}}
 }
 
 func (s *pgOIDCIdentityStore) CreateLink(ctx context.Context, record *OIDCIdentityRecord) (*OIDCIdentityRecord, error) {
@@ -300,25 +324,28 @@ func (s *pgOIDCIdentityStore) CreateLink(ctx context.Context, record *OIDCIdenti
 	record.CreatedAt = now
 	record.UpdatedAt = now
 
-	saved, err := s.client.OIDCIdentity.Create().
-		SetUserID(record.UserID).
-		SetProviderID(record.ProviderID).
-		SetSubject(record.Subject).
-		SetIssuer(record.Issuer).
-		SetEmail(record.Email).
-		SetCreatedAt(now).
-		SetUpdatedAt(now).
-		Save(ctx)
+	m := &models.OIDCIdentity{
+		BaseModel:  models.BaseModel{ID: models.NewUUID(), CreatedAt: now, UpdatedAt: now},
+		UserID:     record.UserID,
+		ProviderID: record.ProviderID,
+		Subject:    record.Subject,
+		Issuer:     record.Issuer,
+		Email:      record.Email,
+	}
+
+	_, err := s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert oidc identity: %w", err)
 	}
-	return pgOIDCIdentityToRecord(saved), nil
+	return pgOIDCIdentityToRecord(m), nil
 }
 
 func (s *pgOIDCIdentityStore) GetByProviderSubject(ctx context.Context, providerID uuid.UUID, subject string) (*OIDCIdentityRecord, error) {
-	item, err := s.client.OIDCIdentity.Query().
-		Where(oidcidentity.ProviderIDEQ(providerID), oidcidentity.SubjectEQ(subject)).
-		Only(ctx)
+	item := new(models.OIDCIdentity)
+	err := s.db.NewSelect().Model(item).
+		Where("provider_id = ?", providerID).
+		Where("subject = ?", subject).
+		Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*OIDCIdentityRecord](err, "oidc identity")
 	}
@@ -326,32 +353,37 @@ func (s *pgOIDCIdentityStore) GetByProviderSubject(ctx context.Context, provider
 }
 
 func (s *pgOIDCIdentityStore) ListByUser(ctx context.Context, userID uuid.UUID) ([]OIDCIdentityRecord, error) {
-	items, err := s.client.OIDCIdentity.Query().
-		Where(oidcidentity.UserIDEQ(userID)).
-		Order(ent.Desc(oidcidentity.FieldCreatedAt)).
-		All(ctx)
+	var items []models.OIDCIdentity
+	err := s.db.NewSelect().Model(&items).
+		Where("user_id = ?", userID).
+		Order("created_at DESC").
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list oidc identities: %w", err)
 	}
 	out := make([]OIDCIdentityRecord, 0, len(items))
-	for _, i := range items {
-		out = append(out, *pgOIDCIdentityToRecord(i))
+	for i := range items {
+		out = append(out, *pgOIDCIdentityToRecord(&items[i]))
 	}
 	return out, nil
 }
 
 func (s *pgOIDCIdentityStore) Delete(ctx context.Context, id uuid.UUID) error {
-	err := s.client.OIDCIdentity.DeleteOneID(id).Exec(ctx)
+	res, err := s.db.NewDelete().Model((*models.OIDCIdentity)(nil)).Where("id = ?", id).Exec(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return errors.New("oidc identity not found")
-		}
 		return fmt.Errorf("failed to delete oidc identity: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to delete oidc identity: %w", err)
+	}
+	if n == 0 {
+		return errors.New("oidc identity not found")
 	}
 	return nil
 }
 
-func pgOIDCIdentityToRecord(i *ent.OIDCIdentity) *OIDCIdentityRecord {
+func pgOIDCIdentityToRecord(i *models.OIDCIdentity) *OIDCIdentityRecord {
 	return &OIDCIdentityRecord{
 		ID:         i.ID,
 		UserID:     i.UserID,

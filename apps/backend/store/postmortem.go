@@ -6,10 +6,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
-	"alga/ent"
-	entpostmortem "alga/ent/postmortem"
-	"alga/ent/predicate"
+	"alga/db/models"
 )
 
 type PostMortemRecord struct {
@@ -58,8 +57,8 @@ type pgPostMortemStore struct {
 	actionItemStore ActionItemStore
 }
 
-func newPGPostMortemStore(client *ent.Client, actionItemStore ActionItemStore) PostMortemStore {
-	return &pgPostMortemStore{pgStoreBase: pgStoreBase{client: client}, actionItemStore: actionItemStore}
+func newPGPostMortemStore(db *bun.DB, actionItemStore ActionItemStore) PostMortemStore {
+	return &pgPostMortemStore{pgStoreBase: pgStoreBase{db: db}, actionItemStore: actionItemStore}
 }
 
 func (s *pgPostMortemStore) Create(ctx context.Context, record *PostMortemRecord) (*PostMortemRecord, error) {
@@ -69,114 +68,135 @@ func (s *pgPostMortemStore) Create(ctx context.Context, record *PostMortemRecord
 		record.Status = "draft"
 	}
 
-	b := s.client.PostMortem.Create().
-		SetIncidentID(record.IncidentID).
-		SetTitle(record.Title).
-		SetStatus(entpostmortem.Status(record.Status)).
-		SetSummary(record.Summary).
-		SetRootCause(record.RootCause).
-		SetImpact(record.Impact).
-		SetLessonsLearned(record.LessonsLearned).
-		SetWhatWentWell(record.WhatWentWell).
-		SetWhatWentWrong(record.WhatWentWrong).
-		SetBlamelessConfirmed(record.BlamelessConfirmed).
-		SetBlamelessNotes(record.BlamelessNotes).
-		SetCreatedAt(now).
-		SetUpdatedAt(now)
-
-	if record.Timeline != nil {
-		b.SetTimeline(record.Timeline)
-	}
-	if record.ContributingFactors != nil {
-		b.SetContributingFactors(record.ContributingFactors)
-	}
-	if record.ApprovedByID != nil {
-		b.SetApprovedByID(*record.ApprovedByID)
+	m := &models.PostMortem{
+		ID:                  models.NewUUID(),
+		IncidentID:          record.IncidentID,
+		Title:               record.Title,
+		Status:              record.Status,
+		Summary:             record.Summary,
+		Timeline:            record.Timeline,
+		RootCause:           record.RootCause,
+		ContributingFactors: record.ContributingFactors,
+		Impact:              record.Impact,
+		LessonsLearned:      record.LessonsLearned,
+		WhatWentWell:        record.WhatWentWell,
+		WhatWentWrong:       record.WhatWentWrong,
+		BlamelessConfirmed:  record.BlamelessConfirmed,
+		BlamelessNotes:      record.BlamelessNotes,
+		ApprovedByID:        record.ApprovedByID,
+		CreatedAt:           now,
+		UpdatedAt:           now,
 	}
 
-	saved, err := b.Save(ctx)
+	_, err := s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create post-mortem: %w", err)
 	}
 
-	return s.toRecord(ctx, saved)
+	return s.toRecord(ctx, m)
 }
 
 func (s *pgPostMortemStore) GetByIncidentID(ctx context.Context, incidentID uuid.UUID) (*PostMortemRecord, error) {
-	pm, err := s.client.PostMortem.Query().
-		Where(entpostmortem.IncidentID(incidentID)).
-		Only(ctx)
+	var pm models.PostMortem
+	err := s.db.NewSelect().Model(&pm).Where("incident_id = ?", incidentID).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*PostMortemRecord](err, "post-mortem by incident id")
 	}
-	return s.toRecord(ctx, pm)
+	return s.toRecord(ctx, &pm)
 }
 
 func (s *pgPostMortemStore) GetByID(ctx context.Context, id uuid.UUID) (*PostMortemRecord, error) {
-	pm, err := s.client.PostMortem.Get(ctx, id)
+	var pm models.PostMortem
+	err := s.db.NewSelect().Model(&pm).Where("id = ?", id).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*PostMortemRecord](err, "post-mortem")
 	}
-	return s.toRecord(ctx, pm)
+	return s.toRecord(ctx, &pm)
 }
 
 func (s *pgPostMortemStore) Update(ctx context.Context, id uuid.UUID, record *PostMortemRecord) (*PostMortemRecord, error) {
-	b := s.client.PostMortem.UpdateOneID(id).
-		SetTitle(record.Title).
-		SetStatus(entpostmortem.Status(record.Status)).
-		SetSummary(record.Summary).
-		SetRootCause(record.RootCause).
-		SetImpact(record.Impact).
-		SetLessonsLearned(record.LessonsLearned).
-		SetWhatWentWell(record.WhatWentWell).
-		SetWhatWentWrong(record.WhatWentWrong).
-		SetBlamelessConfirmed(record.BlamelessConfirmed).
-		SetBlamelessNotes(record.BlamelessNotes).
-		SetUpdatedAt(time.Now().UTC())
+	upd := s.db.NewUpdate().Model((*models.PostMortem)(nil)).
+		Set("title = ?", record.Title).
+		Set("status = ?", record.Status).
+		Set("summary = ?", record.Summary).
+		Set("root_cause = ?", record.RootCause).
+		Set("impact = ?", record.Impact).
+		Set("lessons_learned = ?", record.LessonsLearned).
+		Set("what_went_well = ?", record.WhatWentWell).
+		Set("what_went_wrong = ?", record.WhatWentWrong).
+		Set("blameless_confirmed = ?", record.BlamelessConfirmed).
+		Set("blameless_notes = ?", record.BlamelessNotes).
+		Set("updated_at = ?", time.Now().UTC()).
+		Where("id = ?", id)
 
 	if record.Timeline != nil {
-		b.SetTimeline(record.Timeline)
+		upd = upd.Set("timeline = ?", record.Timeline)
 	}
 	if record.ContributingFactors != nil {
-		b.SetContributingFactors(record.ContributingFactors)
+		upd = upd.Set("contributing_factors = ?", record.ContributingFactors)
 	}
 	if record.ApprovedByID != nil {
-		b.SetApprovedByID(*record.ApprovedByID)
+		upd = upd.Set("approved_by_id = ?", *record.ApprovedByID)
 	} else {
-		b.ClearApprovedByID()
+		upd = upd.Set("approved_by_id = NULL")
 	}
 
-	saved, err := b.Save(ctx)
+	res, err := upd.Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update post-mortem: %w", err)
 	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return nil, fmt.Errorf("failed to update post-mortem: %w", err)
+	}
+	if n == 0 {
+		return nil, fmt.Errorf("post-mortem not found: %w", ErrNotFound)
+	}
 
-	return s.toRecord(ctx, saved)
+	var pm models.PostMortem
+	err = s.db.NewSelect().Model(&pm).Where("id = ?", id).Scan(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to reload post-mortem: %w", err)
+	}
+	return s.toRecord(ctx, &pm)
 }
 
 func (s *pgPostMortemStore) UpdateStatus(ctx context.Context, id uuid.UUID, status string, approvedBy *uuid.UUID) (*PostMortemRecord, error) {
-	b := s.client.PostMortem.UpdateOneID(id).
-		SetStatus(entpostmortem.Status(status)).
-		SetUpdatedAt(time.Now().UTC())
+	now := time.Now().UTC()
+	upd := s.db.NewUpdate().Model((*models.PostMortem)(nil)).
+		Set("status = ?", status).
+		Set("updated_at = ?", now).
+		Where("id = ?", id)
 
 	if approvedBy != nil {
-		b.SetApprovedByID(*approvedBy)
+		upd = upd.Set("approved_by_id = ?", *approvedBy)
 	}
 	if status == "published" {
-		now := time.Now().UTC()
-		b.SetPublishedAt(now)
+		upd = upd.Set("published_at = ?", now)
 	}
 
-	saved, err := b.Save(ctx)
+	res, err := upd.Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update post-mortem status: %w", err)
 	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return nil, fmt.Errorf("failed to update post-mortem status: %w", err)
+	}
+	if n == 0 {
+		return nil, fmt.Errorf("post-mortem not found: %w", ErrNotFound)
+	}
 
-	return s.toRecord(ctx, saved)
+	var pm models.PostMortem
+	err = s.db.NewSelect().Model(&pm).Where("id = ?", id).Scan(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to reload post-mortem: %w", err)
+	}
+	return s.toRecord(ctx, &pm)
 }
 
 func (s *pgPostMortemStore) Delete(ctx context.Context, id uuid.UUID) error {
-	err := s.client.PostMortem.DeleteOneID(id).Exec(ctx)
+	_, err := s.db.NewDelete().Model((*models.PostMortem)(nil)).Where("id = ?", id).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to delete post-mortem: %w", err)
 	}
@@ -187,37 +207,41 @@ func (s *pgPostMortemStore) List(ctx context.Context, filter PostMortemListFilte
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	var preds []predicate.PostMortem
+	countQ := s.db.NewSelect().Model((*models.PostMortem)(nil))
 	if filter.Status != "" {
-		preds = append(preds, entpostmortem.StatusEQ(entpostmortem.Status(filter.Status)))
+		countQ = countQ.Where("status = ?", filter.Status)
 	}
 
-	total, err := s.client.PostMortem.Query().Where(preds...).Count(ctx)
+	total, err := countQ.Count(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count post-mortems: %w", err)
 	}
 
-	query := s.client.PostMortem.Query().Where(preds...).
-		Order(ent.Desc(entpostmortem.FieldCreatedAt))
+	listQ := s.db.NewSelect().Model((*models.PostMortem)(nil))
+	if filter.Status != "" {
+		listQ = listQ.Where("status = ?", filter.Status)
+	}
+	listQ = listQ.OrderExpr("created_at DESC")
 
 	limit := filter.Limit
 	if limit <= 0 {
 		limit = 20
 	}
 	limit = min(limit, 100)
-	query = query.Limit(limit)
+	listQ = listQ.Limit(limit)
 	if filter.Skip > 0 {
-		query = query.Offset(filter.Skip)
+		listQ = listQ.Offset(filter.Skip)
 	}
 
-	items, err := query.All(ctx)
+	var items []models.PostMortem
+	err = listQ.Scan(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list post-mortems: %w", err)
 	}
 
 	records := make([]PostMortemRecord, 0, len(items))
 	for _, pm := range items {
-		rec, recErr := s.toRecord(ctx, pm)
+		rec, recErr := s.toRecord(ctx, &pm)
 		if recErr != nil {
 			return nil, 0, recErr
 		}
@@ -227,12 +251,12 @@ func (s *pgPostMortemStore) List(ctx context.Context, filter PostMortemListFilte
 	return records, total, nil
 }
 
-func (s *pgPostMortemStore) toRecord(ctx context.Context, pm *ent.PostMortem) (*PostMortemRecord, error) {
+func (s *pgPostMortemStore) toRecord(ctx context.Context, pm *models.PostMortem) (*PostMortemRecord, error) {
 	rec := &PostMortemRecord{
 		ID:                  pm.ID,
 		IncidentID:          pm.IncidentID,
 		Title:               pm.Title,
-		Status:              string(pm.Status),
+		Status:              pm.Status,
 		Summary:             pm.Summary,
 		Timeline:            pm.Timeline,
 		RootCause:           pm.RootCause,

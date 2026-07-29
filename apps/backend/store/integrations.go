@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"time"
 
-	"alga/config"
-	"alga/ent"
-	"alga/ent/integration"
+	"github.com/uptrace/bun"
 
+	"alga/config"
 	algacrypto "alga/crypto"
+	"alga/db/models"
 )
 
 type IntegrationConfig struct {
@@ -99,15 +99,16 @@ type pgIntegrationStore struct {
 	pgStoreBase
 }
 
-func newPGIntegrationStore(client *ent.Client) IntegrationStore {
-	return &pgIntegrationStore{pgStoreBase{client: client}}
+func newPGIntegrationStore(db *bun.DB) IntegrationStore {
+	return &pgIntegrationStore{pgStoreBase{db: db}}
 }
 
 func (s *pgIntegrationStore) Get() (*IntegrationConfig, error) {
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	cfg, err := s.client.Integration.Get(ctx, singletonUUID())
+	cfg := new(models.Integration)
+	err := s.db.NewSelect().Model(cfg).Where("id = ?", singletonUUID()).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*IntegrationConfig](err, "integration config")
 	}
@@ -135,10 +136,10 @@ func (s *pgIntegrationStore) Get() (*IntegrationConfig, error) {
 		TelnyxFromNumber:         cfg.TelnyxFromNumber,
 		TelnyxPublicKey:          cfg.TelnyxPublicKey,
 		TelnyxDisabled:           cfg.TelnyxDisabled,
-		TelnyxTTSVoice:           cfg.TelnyxTtsVoice,
-		TelnyxTTSLanguage:        cfg.TelnyxTtsLanguage,
-		TelnyxTTSAPIKeyRef:       cfg.TelnyxTtsAPIKeyRef,
-		VoiceProvider:            config.NormalizeVoiceProvider(string(cfg.VoiceProvider)),
+		TelnyxTTSVoice:           cfg.TelnyxTTSVoice,
+		TelnyxTTSLanguage:        cfg.TelnyxTTSLanguage,
+		TelnyxTTSAPIKeyRef:       cfg.TelnyxTTSAPIKeyRef,
+		VoiceProvider:            config.NormalizeVoiceProvider(cfg.VoiceProvider),
 		HermesPlatformURL:        cfg.HermesPlatformURL,
 		HermesPlatformToken:      cfg.HermesPlatformToken,
 		UpdatedAt:                cfg.UpdatedAt,
@@ -162,83 +163,84 @@ func (s *pgIntegrationStore) Save(cfg IntegrationConfig) error {
 
 	sid := singletonUUID()
 
-	existing, err := s.client.Integration.Get(ctx, sid)
-	if err != nil && !ent.IsNotFound(err) {
+	existing := new(models.Integration)
+	err := s.db.NewSelect().Model(existing).Where("id = ?", sid).Scan(ctx)
+	if err != nil && !isNotFound(err) {
 		return fmt.Errorf("failed to check existing integration: %w", err)
 	}
 
-	if existing != nil {
-		_, err = s.client.Integration.UpdateOneID(sid).
-			SetMattermostURL(encrypted.MattermostURL).
-			SetMattermostWebhookSecret(encrypted.MattermostWebhookSecret).
-			SetMattermostTeam(encrypted.MattermostTeam).
-			SetMattermostDefaultChannel(encrypted.MattermostDefaultChannel).
-			SetMattermostDisabled(encrypted.MattermostDisabled).
-			SetSlackBotToken(encrypted.SlackBotToken).
-			SetSlackSigningSecret(encrypted.SlackSigningSecret).
-			SetSlackDefaultChannel(encrypted.SlackDefaultChannel).
-			SetSlackDisabled(encrypted.SlackDisabled).
-			SetSlackClientID(encrypted.SlackClientID).
-			SetSlackClientSecret(encrypted.SlackClientSecret).
-			SetSlackWorkspaceName(encrypted.SlackWorkspaceName).
-			SetSlackWorkspaceID(encrypted.SlackWorkspaceID).
-			SetTwilioAccountSid(encrypted.TwilioAccountSID).
-			SetTwilioAuthToken(encrypted.TwilioAuthToken).
-			SetTwilioFromNumber(encrypted.TwilioFromNumber).
-			SetTwilioDisabled(encrypted.TwilioDisabled).
-			SetTelnyxAPIKey(encrypted.TelnyxAPIKey).
-			SetTelnyxConnectionID(encrypted.TelnyxConnectionID).
-			SetTelnyxFromNumber(encrypted.TelnyxFromNumber).
-			SetTelnyxPublicKey(encrypted.TelnyxPublicKey).
-			SetTelnyxDisabled(encrypted.TelnyxDisabled).
-			SetTelnyxTtsVoice(encrypted.TelnyxTTSVoice).
-			SetTelnyxTtsLanguage(encrypted.TelnyxTTSLanguage).
-			SetTelnyxTtsAPIKeyRef(encrypted.TelnyxTTSAPIKeyRef).
-			SetVoiceProvider(integration.VoiceProvider(config.NormalizeVoiceProvider(encrypted.VoiceProvider))).
-			SetHermesPlatformURL(encrypted.HermesPlatformURL).
-			SetHermesPlatformToken(encrypted.HermesPlatformToken).
-			SetUpdatedAt(encrypted.UpdatedAt).
-			Save(ctx)
+	voiceProvider := config.NormalizeVoiceProvider(encrypted.VoiceProvider)
+
+	if err == nil {
+		_, err = s.db.NewUpdate().Model((*models.Integration)(nil)).
+			Set("mattermost_url = ?", encrypted.MattermostURL).
+			Set("mattermost_webhook_secret = ?", encrypted.MattermostWebhookSecret).
+			Set("mattermost_team = ?", encrypted.MattermostTeam).
+			Set("mattermost_default_channel = ?", encrypted.MattermostDefaultChannel).
+			Set("mattermost_disabled = ?", encrypted.MattermostDisabled).
+			Set("slack_bot_token = ?", encrypted.SlackBotToken).
+			Set("slack_signing_secret = ?", encrypted.SlackSigningSecret).
+			Set("slack_default_channel = ?", encrypted.SlackDefaultChannel).
+			Set("slack_disabled = ?", encrypted.SlackDisabled).
+			Set("slack_client_id = ?", encrypted.SlackClientID).
+			Set("slack_client_secret = ?", encrypted.SlackClientSecret).
+			Set("slack_workspace_name = ?", encrypted.SlackWorkspaceName).
+			Set("slack_workspace_id = ?", encrypted.SlackWorkspaceID).
+			Set("twilio_account_sid = ?", encrypted.TwilioAccountSID).
+			Set("twilio_auth_token = ?", encrypted.TwilioAuthToken).
+			Set("twilio_from_number = ?", encrypted.TwilioFromNumber).
+			Set("twilio_disabled = ?", encrypted.TwilioDisabled).
+			Set("telnyx_api_key = ?", encrypted.TelnyxAPIKey).
+			Set("telnyx_connection_id = ?", encrypted.TelnyxConnectionID).
+			Set("telnyx_from_number = ?", encrypted.TelnyxFromNumber).
+			Set("telnyx_public_key = ?", encrypted.TelnyxPublicKey).
+			Set("telnyx_disabled = ?", encrypted.TelnyxDisabled).
+			Set("telnyx_tts_voice = ?", encrypted.TelnyxTTSVoice).
+			Set("telnyx_tts_language = ?", encrypted.TelnyxTTSLanguage).
+			Set("telnyx_tts_api_key_ref = ?", encrypted.TelnyxTTSAPIKeyRef).
+			Set("voice_provider = ?", voiceProvider).
+			Set("hermes_platform_url = ?", encrypted.HermesPlatformURL).
+			Set("hermes_platform_token = ?", encrypted.HermesPlatformToken).
+			Set("updated_at = ?", encrypted.UpdatedAt).
+			Where("id = ?", sid).
+			Exec(ctx)
 	} else {
-		_, err = s.client.Integration.Create().
-			SetID(sid).
-			SetMattermostURL(encrypted.MattermostURL).
-			SetMattermostWebhookSecret(encrypted.MattermostWebhookSecret).
-			SetMattermostTeam(encrypted.MattermostTeam).
-			SetMattermostDefaultChannel(encrypted.MattermostDefaultChannel).
-			SetMattermostDisabled(encrypted.MattermostDisabled).
-			SetSlackBotToken(encrypted.SlackBotToken).
-			SetSlackSigningSecret(encrypted.SlackSigningSecret).
-			SetSlackDefaultChannel(encrypted.SlackDefaultChannel).
-			SetSlackDisabled(encrypted.SlackDisabled).
-			SetSlackClientID(encrypted.SlackClientID).
-			SetSlackClientSecret(encrypted.SlackClientSecret).
-			SetSlackWorkspaceName(encrypted.SlackWorkspaceName).
-			SetSlackWorkspaceID(encrypted.SlackWorkspaceID).
-			SetTwilioAccountSid(encrypted.TwilioAccountSID).
-			SetTwilioAuthToken(encrypted.TwilioAuthToken).
-			SetTwilioFromNumber(encrypted.TwilioFromNumber).
-			SetTwilioDisabled(encrypted.TwilioDisabled).
-			SetTelnyxAPIKey(encrypted.TelnyxAPIKey).
-			SetTelnyxConnectionID(encrypted.TelnyxConnectionID).
-			SetTelnyxFromNumber(encrypted.TelnyxFromNumber).
-			SetTelnyxPublicKey(encrypted.TelnyxPublicKey).
-			SetTelnyxDisabled(encrypted.TelnyxDisabled).
-			SetTelnyxTtsVoice(encrypted.TelnyxTTSVoice).
-			SetTelnyxTtsLanguage(encrypted.TelnyxTTSLanguage).
-			SetTelnyxTtsAPIKeyRef(encrypted.TelnyxTTSAPIKeyRef).
-			SetVoiceProvider(integration.VoiceProvider(config.NormalizeVoiceProvider(encrypted.VoiceProvider))).
-			SetHermesPlatformURL(encrypted.HermesPlatformURL).
-			SetHermesPlatformToken(encrypted.HermesPlatformToken).
-			SetUpdatedAt(encrypted.UpdatedAt).
-			Save(ctx)
+		m := &models.Integration{
+			ID:                       sid,
+			MattermostURL:            encrypted.MattermostURL,
+			MattermostWebhookSecret:  encrypted.MattermostWebhookSecret,
+			MattermostTeam:           encrypted.MattermostTeam,
+			MattermostDefaultChannel: encrypted.MattermostDefaultChannel,
+			MattermostDisabled:       encrypted.MattermostDisabled,
+			SlackBotToken:            encrypted.SlackBotToken,
+			SlackSigningSecret:       encrypted.SlackSigningSecret,
+			SlackDefaultChannel:      encrypted.SlackDefaultChannel,
+			SlackDisabled:            encrypted.SlackDisabled,
+			SlackClientID:            encrypted.SlackClientID,
+			SlackClientSecret:        encrypted.SlackClientSecret,
+			SlackWorkspaceName:       encrypted.SlackWorkspaceName,
+			SlackWorkspaceID:         encrypted.SlackWorkspaceID,
+			TwilioAccountSid:         encrypted.TwilioAccountSID,
+			TwilioAuthToken:          encrypted.TwilioAuthToken,
+			TwilioFromNumber:         encrypted.TwilioFromNumber,
+			TwilioDisabled:           encrypted.TwilioDisabled,
+			TelnyxAPIKey:             encrypted.TelnyxAPIKey,
+			TelnyxConnectionID:       encrypted.TelnyxConnectionID,
+			TelnyxFromNumber:         encrypted.TelnyxFromNumber,
+			TelnyxPublicKey:          encrypted.TelnyxPublicKey,
+			TelnyxDisabled:           encrypted.TelnyxDisabled,
+			TelnyxTTSVoice:           encrypted.TelnyxTTSVoice,
+			TelnyxTTSLanguage:        encrypted.TelnyxTTSLanguage,
+			TelnyxTTSAPIKeyRef:       encrypted.TelnyxTTSAPIKeyRef,
+			VoiceProvider:            voiceProvider,
+			HermesPlatformURL:        encrypted.HermesPlatformURL,
+			HermesPlatformToken:      encrypted.HermesPlatformToken,
+			UpdatedAt:                encrypted.UpdatedAt,
+		}
+		_, err = s.db.NewInsert().Model(m).Exec(ctx)
 	}
 	if err != nil {
 		return fmt.Errorf("failed to save integration config: %w", err)
 	}
 	return nil
-}
-
-func singletonUUID() [16]byte {
-	return [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
 }

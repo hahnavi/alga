@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"alga/api/platform"
+	"alga/db"
 	"alga/logger"
-	"alga/pgclient"
 	"alga/rabbitmq"
 	"alga/valkey"
 )
@@ -121,7 +121,7 @@ func (h *Handler) Mux() *http.ServeMux {
 
 // CheckPostgres returns a probe for a PostgreSQL client, or nil when the client
 // is absent (dependency not configured).
-func CheckPostgres(cli *pgclient.Client) Check {
+func CheckPostgres(cli *db.Client) Check {
 	if cli == nil || cli.DB == nil {
 		return nil
 	}

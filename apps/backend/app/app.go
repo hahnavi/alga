@@ -13,8 +13,8 @@ import (
 	"alga/api"
 	"alga/config"
 	"alga/correlator"
+	"alga/db"
 	"alga/logger"
-	"alga/pgclient"
 	"alga/rabbitmq"
 	"alga/sse"
 	"alga/store"
@@ -24,7 +24,7 @@ import (
 
 type App struct {
 	cfg              *config.Config
-	pgCli            *pgclient.Client
+	dbCli            *db.Client
 	valkeyClient     *valkey.Client
 	rabbitClient     *rabbitmq.Client
 	sseBroker        *sse.Broker
@@ -151,8 +151,8 @@ func (a *App) Shutdown(ctx context.Context) error {
 	if a.valkeyClient != nil {
 		a.valkeyClient.Close()
 	}
-	if a.pgCli != nil {
-		a.pgCli.Close()
+	if a.dbCli != nil {
+		a.dbCli.Close()
 	}
 
 	logger.Info("Server exited")

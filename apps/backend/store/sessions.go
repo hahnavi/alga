@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
 	"alga/crypto"
-	"alga/ent"
-	"alga/ent/session"
+	"alga/db/models"
 )
 
 type SessionRecord struct {
@@ -50,9 +50,9 @@ type pgSessionStore struct {
 	sessionMaxLifetime time.Duration
 }
 
-func newPGSessionStore(client *ent.Client, expiry, maxLifetime time.Duration) SessionStore {
+func newPGSessionStore(db *bun.DB, expiry, maxLifetime time.Duration) SessionStore {
 	return &pgSessionStore{
-		pgStoreBase:        pgStoreBase{client: client},
+		pgStoreBase:        pgStoreBase{db: db},
 		sessionExpiry:      expiry,
 		sessionMaxLifetime: maxLifetime,
 	}
@@ -72,7 +72,7 @@ func hashSessionToken(token string) string {
 	return crypto.Default().HMACString(token)
 }
 
-func pgSessionToRecord(e *ent.Session) *SessionRecord {
+func pgSessionToRecord(e *models.Session) *SessionRecord {
 	return &SessionRecord{
 		IDHash:                 e.IDHash,
 		UserID:                 e.UserID,
@@ -108,17 +108,20 @@ func (s *pgSessionStore) CreateSession(userID uuid.UUID, ip, userAgent string) (
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	_, err = s.client.Session.Create().
-		SetUserID(userID).
-		SetIDHash(idHash).
-		SetRefreshTokenHash(rtHash).
-		SetFamilyID(familyID).
-		SetCreatedAt(now).
-		SetExpiresAt(now.Add(s.sessionExpiry)).
-		SetLastUsedAt(now).
-		SetIP(ip).
-		SetUserAgent(userAgent).
-		Save(ctx)
+	m := &models.Session{
+		ID:               models.NewUUID(),
+		UserID:           userID,
+		IDHash:           idHash,
+		RefreshTokenHash: rtHash,
+		FamilyID:         familyID,
+		CreatedAt:        now,
+		ExpiresAt:        now.Add(s.sessionExpiry),
+		LastUsedAt:       now,
+		IP:               ip,
+		UserAgent:        userAgent,
+	}
+
+	_, err = s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session: %w", err)
 	}
@@ -146,12 +149,11 @@ func (s *pgSessionStore) GetSession(id string) (*SessionRecord, error) {
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	e, err := s.client.Session.Query().
-		Where(
-			session.IDHash(hashSessionToken(id)),
-			session.ExpiresAtGT(time.Now()),
-		).
-		Only(ctx)
+	e := new(models.Session)
+	err := s.db.NewSelect().Model(e).
+		Where("id_hash = ?", hashSessionToken(id)).
+		Where("expires_at > ?", time.Now()).
+		Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*SessionRecord](err, "session")
 	}
@@ -174,19 +176,18 @@ func (s *pgSessionStore) GetSessionByRefreshToken(token string) (*SessionRecord,
 	defer cancel()
 
 	hash := hashSessionToken(token)
-	e, err := s.client.Session.Query().
-		Where(
-			session.RefreshTokenHash(hash),
-			session.ExpiresAtGT(time.Now()),
-		).
-		Only(ctx)
+	e := new(models.Session)
+	err := s.db.NewSelect().Model(e).
+		Where("refresh_token_hash = ?", hash).
+		Where("expires_at > ?", time.Now()).
+		Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*SessionRecord](err, "session")
 	}
 	rec := pgSessionToRecord(e)
 	if !isWithinAbsoluteLifetime(rec, s.sessionMaxLifetime) {
 		// Expired by absolute cap; delete the row so it cannot be reused.
-		_, _ = s.client.Session.Delete().Where(session.IDHash(rec.IDHash)).Exec(ctx)
+		_, _ = s.db.NewDelete().Model((*models.Session)(nil)).Where("id_hash = ?", rec.IDHash).Exec(ctx)
 		return nil, nil
 	}
 	return rec, nil
@@ -200,9 +201,10 @@ func (s *pgSessionStore) RefreshSession(sessionID string, ip, userAgent string) 
 	defer cancel()
 
 	idHash := hashSessionToken(sessionID)
-	current, err := s.client.Session.Query().
-		Where(session.IDHash(idHash)).
-		Only(ctx)
+	current := new(models.Session)
+	err := s.db.NewSelect().Model(current).
+		Where("id_hash = ?", idHash).
+		Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*SessionRecord](err, "session")
 	}
@@ -210,7 +212,7 @@ func (s *pgSessionStore) RefreshSession(sessionID string, ip, userAgent string) 
 	// Absolute (max) lifetime cap: never refresh a session past its max age.
 	nowRec := pgSessionToRecord(current)
 	if !isWithinAbsoluteLifetime(nowRec, s.sessionMaxLifetime) {
-		_, _ = s.client.Session.Delete().Where(session.IDHash(idHash)).Exec(ctx)
+		_, _ = s.db.NewDelete().Model((*models.Session)(nil)).Where("id_hash = ?", idHash).Exec(ctx)
 		return nil, nil
 	}
 
@@ -241,15 +243,16 @@ func (s *pgSessionStore) RefreshSession(sessionID string, ip, userAgent string) 
 	// Update the existing row in place to the new ID hash + rotated tokens.
 	// CreatedAt is intentionally preserved so the absolute lifetime cap keeps
 	// counting from the original login.
-	_, err = current.Update().
-		SetIDHash(newIDHash).
-		SetRefreshTokenHash(newHash).
-		SetPrevRefreshTokenHashes(prev).
-		SetExpiresAt(newExpiry).
-		SetLastUsedAt(now).
-		SetIP(ip).
-		SetUserAgent(userAgent).
-		Save(ctx)
+	_, err = s.db.NewUpdate().Model((*models.Session)(nil)).
+		Set("id_hash = ?", newIDHash).
+		Set("refresh_token_hash = ?", newHash).
+		Set("prev_refresh_token_hashes = ?", prev).
+		Set("expires_at = ?", newExpiry).
+		Set("last_used_at = ?", now).
+		Set("ip = ?", ip).
+		Set("user_agent = ?", userAgent).
+		Where("id = ?", current.ID).
+		Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to refresh session: %w", err)
 	}
@@ -274,14 +277,11 @@ func (s *pgSessionStore) DeleteSession(id string) error {
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	n, err := s.client.Session.Delete().
-		Where(session.IDHash(hashSessionToken(id))).
+	_, err := s.db.NewDelete().Model((*models.Session)(nil)).
+		Where("id_hash = ?", hashSessionToken(id)).
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to delete session: %w", err)
-	}
-	if n == 0 {
-		return nil
 	}
 	return nil
 }
@@ -290,8 +290,8 @@ func (s *pgSessionStore) DeleteAllUserSessions(userID uuid.UUID) error {
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	_, err := s.client.Session.Delete().
-		Where(session.UserID(userID)).
+	_, err := s.db.NewDelete().Model((*models.Session)(nil)).
+		Where("user_id = ?", userID).
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to delete user sessions: %w", err)
@@ -304,15 +304,24 @@ func (s *pgSessionStore) DeleteAllUserSessions(userID uuid.UUID) error {
 // for the PostgreSQL path; it keeps the sessions table from growing unbounded.
 func (s *pgSessionStore) DeleteExpired(ctx context.Context) (int, error) {
 	now := time.Now()
-	pred := session.ExpiresAtLT(now)
+
+	q := s.db.NewDelete().Model((*models.Session)(nil)).
+		Where("expires_at < ?", now)
+
 	if s.sessionMaxLifetime > 0 {
 		// Also reap sessions past their absolute max age even if a recent
 		// refresh pushed expires_at forward.
-		pred = session.Or(pred, session.CreatedAtLT(now.Add(-s.sessionMaxLifetime)))
+		q = s.db.NewDelete().Model((*models.Session)(nil)).
+			Where("(expires_at < ? OR created_at < ?)", now, now.Add(-s.sessionMaxLifetime))
 	}
-	n, err := s.client.Session.Delete().Where(pred).Exec(ctx)
+
+	res, err := q.Exec(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to delete expired sessions: %w", err)
 	}
-	return n, nil
+	n, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("failed to delete expired sessions: %w", err)
+	}
+	return int(n), nil
 }

@@ -1,7 +1,7 @@
 // alert_investigation.go defines the AlertInvestigationStore interface,
 // record/event/summary types, the pgAlertInvestigationStore
 // implementation, and the core create/get/list operations plus the
-// standalone ent edge-creator helpers used across the package.
+// standalone edge-creator helpers used across the package.
 package store
 
 import (
@@ -11,55 +11,50 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
-	"alga/ent"
-	"alga/ent/alertinvestigation"
-	"alga/ent/alertinvestigationalert"
-	"alga/ent/alertinvestigationevent"
-	"alga/ent/alertinvestigationupdateentry"
-	"alga/ent/predicate"
-	entschema "alga/ent/schema"
+	"alga/db/models"
 	"alga/rabbitmq"
 )
 
 type AlertInvestigationRecord struct {
-	ID                              uuid.UUID                            `json:"id"`
-	AlertInvestigationID            string                               `json:"alert_investigation_id"`
-	Alerts                          []rabbitmq.CorrelatedAlert           `json:"alerts"`
-	CorrelationKey                  string                               `json:"correlation_key"`
-	Status                          string                               `json:"status"`
-	AgentID                         string                               `json:"agent_id,omitempty"`
-	AgentName                       string                               `json:"agent_name,omitempty"`
-	AgentType                       string                               `json:"agent_type,omitempty"`
-	PrimaryThreadID                 string                               `json:"primary_thread_id,omitempty"`
-	SlackChannelID                  string                               `json:"slack_channel_id,omitempty"`
-	SlackThreadTS                   string                               `json:"slack_thread_ts,omitempty"`
-	MMPostID                        string                               `json:"mm_post_id,omitempty"`
-	MMThreadID                      string                               `json:"mm_thread_id,omitempty"`
-	PromotedIncidentID              *uuid.UUID                           `json:"promoted_incident_id,omitempty"`
-	PromotedIncidentInvestigationID *uuid.UUID                           `json:"promoted_incident_investigation_id,omitempty"`
-	Summary                         *entschema.AlertInvestigationSummary `json:"summary,omitempty"`
-	Findings                        []entschema.InvestigationFinding     `json:"findings,omitempty"`
-	Evidence                        []entschema.EvidenceItem             `json:"evidence,omitempty"`
-	PrimaryAlertFingerprint         string                               `json:"primary_alert_fingerprint,omitempty"`
-	PrimaryAlertNumber              int64                                `json:"primary_alert_number,omitempty"`
-	EscalationLevel                 string                               `json:"escalation_level,omitempty"`
-	TriageResultID                  *uuid.UUID                           `json:"triage_result_id,omitempty"`
-	TriageDecision                  string                               `json:"triage_decision,omitempty"`
-	TriageEnrichment                map[string]any                       `json:"triage_enrichment,omitempty"`
-	AssigneeType                    string                               `json:"assignee_type,omitempty"`
-	AssigneeID                      *uuid.UUID                           `json:"assignee_id,omitempty"`
-	Updates                         []InvestigationUpdate                `json:"updates"`
-	CreatedAt                       time.Time                            `json:"created_at"`
-	UpdatedAt                       time.Time                            `json:"updated_at"`
-	CompletedAt                     *time.Time                           `json:"completed_at,omitempty"`
-	CompletedReason                 string                               `json:"completed_reason,omitempty"`
-	CompletedByType                 string                               `json:"completed_by_type,omitempty"`
-	CompletedByID                   string                               `json:"completed_by_id,omitempty"`
-	CompletedByName                 string                               `json:"completed_by_name,omitempty"`
-	StartedAt                       *time.Time                           `json:"started_at,omitempty"`
-	InvestigatingDurationMs         int64                                `json:"investigating_duration_ms"`
-	Events                          []AlertInvestigationEvent            `json:"events,omitempty"`
+	ID                              uuid.UUID                         `json:"id"`
+	AlertInvestigationID            string                            `json:"alert_investigation_id"`
+	Alerts                          []rabbitmq.CorrelatedAlert        `json:"alerts"`
+	CorrelationKey                  string                            `json:"correlation_key"`
+	Status                          string                            `json:"status"`
+	AgentID                         string                            `json:"agent_id,omitempty"`
+	AgentName                       string                            `json:"agent_name,omitempty"`
+	AgentType                       string                            `json:"agent_type,omitempty"`
+	PrimaryThreadID                 string                            `json:"primary_thread_id,omitempty"`
+	SlackChannelID                  string                            `json:"slack_channel_id,omitempty"`
+	SlackThreadTS                   string                            `json:"slack_thread_ts,omitempty"`
+	MMPostID                        string                            `json:"mm_post_id,omitempty"`
+	MMThreadID                      string                            `json:"mm_thread_id,omitempty"`
+	PromotedIncidentID              *uuid.UUID                        `json:"promoted_incident_id,omitempty"`
+	PromotedIncidentInvestigationID *uuid.UUID                        `json:"promoted_incident_investigation_id,omitempty"`
+	Summary                         *models.AlertInvestigationSummary `json:"summary,omitempty"`
+	Findings                        []models.InvestigationFinding     `json:"findings,omitempty"`
+	Evidence                        []models.EvidenceItem             `json:"evidence,omitempty"`
+	PrimaryAlertFingerprint         string                            `json:"primary_alert_fingerprint,omitempty"`
+	PrimaryAlertNumber              int64                             `json:"primary_alert_number,omitempty"`
+	EscalationLevel                 string                            `json:"escalation_level,omitempty"`
+	TriageResultID                  *uuid.UUID                        `json:"triage_result_id,omitempty"`
+	TriageDecision                  string                            `json:"triage_decision,omitempty"`
+	TriageEnrichment                map[string]any                    `json:"triage_enrichment,omitempty"`
+	AssigneeType                    string                            `json:"assignee_type,omitempty"`
+	AssigneeID                      *uuid.UUID                        `json:"assignee_id,omitempty"`
+	Updates                         []InvestigationUpdate             `json:"updates"`
+	CreatedAt                       time.Time                         `json:"created_at"`
+	UpdatedAt                       time.Time                         `json:"updated_at"`
+	CompletedAt                     *time.Time                        `json:"completed_at,omitempty"`
+	CompletedReason                 string                            `json:"completed_reason,omitempty"`
+	CompletedByType                 string                            `json:"completed_by_type,omitempty"`
+	CompletedByID                   string                            `json:"completed_by_id,omitempty"`
+	CompletedByName                 string                            `json:"completed_by_name,omitempty"`
+	StartedAt                       *time.Time                        `json:"started_at,omitempty"`
+	InvestigatingDurationMs         int64                             `json:"investigating_duration_ms"`
+	Events                          []AlertInvestigationEvent         `json:"events,omitempty"`
 }
 
 type AlertInvestigationEvent struct {
@@ -185,8 +180,8 @@ type pgAlertInvestigationStore struct {
 	pgStoreBase
 }
 
-func newPGAlertInvestigationStore(client *ent.Client) AlertInvestigationStore {
-	return &pgAlertInvestigationStore{pgStoreBase{client: client}}
+func newPGAlertInvestigationStore(db *bun.DB) AlertInvestigationStore {
+	return &pgAlertInvestigationStore{pgStoreBase{db: db}}
 }
 
 func (s *pgAlertInvestigationStore) CreateAlertInvestigation(ctx context.Context, record AlertInvestigationRecord) (*AlertInvestigationRecord, error) {
@@ -206,87 +201,61 @@ func (s *pgAlertInvestigationStore) CreateAlertInvestigation(ctx context.Context
 		record.AlertInvestigationID = uuid.NewString()
 	}
 
-	tx, err := s.client.Tx(ctx)
+	err := s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		m := &models.AlertInvestigation{
+			AlertInvestigationID:            record.AlertInvestigationID,
+			CorrelationKey:                  record.CorrelationKey,
+			Status:                          record.Status,
+			AgentID:                         record.AgentID,
+			AgentName:                       record.AgentName,
+			AgentType:                       record.AgentType,
+			PrimaryThreadID:                 record.PrimaryThreadID,
+			SlackChannelID:                  record.SlackChannelID,
+			SlackThreadTS:                   record.SlackThreadTS,
+			MMPostID:                        record.MMPostID,
+			MMThreadID:                      record.MMThreadID,
+			PrimaryAlertFingerprint:         record.PrimaryAlertFingerprint,
+			PrimaryAlertNumber:              record.PrimaryAlertNumber,
+			EscalationLevel:                 record.EscalationLevel,
+			TriageDecision:                  record.TriageDecision,
+			AssigneeType:                    record.AssigneeType,
+			InvestigatingDurationMs:         record.InvestigatingDurationMs,
+			PromotedIncidentID:              record.PromotedIncidentID,
+			PromotedIncidentInvestigationID: record.PromotedIncidentInvestigationID,
+			Summary:                         record.Summary,
+			Findings:                        record.Findings,
+			Evidence:                        record.Evidence,
+			StartedAt:                       record.StartedAt,
+			CompletedAt:                     record.CompletedAt,
+			TriageResultID:                  record.TriageResultID,
+			TriageEnrichment:                record.TriageEnrichment,
+			AssigneeID:                      record.AssigneeID,
+		}
+		m.ID = models.NewUUID()
+		m.CreatedAt = now
+		m.UpdatedAt = now
+
+		if _, err := tx.NewInsert().Model(m).Exec(ctx); err != nil {
+			return fmt.Errorf("failed to insert alert investigation: %w", err)
+		}
+
+		if err := retireCurrentAlertInvestigationLinks(ctx, tx, record.Alerts); err != nil {
+			return err
+		}
+		for _, alert := range record.Alerts {
+			if err := createAlertInvestigationAlert(ctx, tx, m.ID, alert); err != nil {
+				return err
+			}
+		}
+		for _, update := range record.Updates {
+			if err := createAlertInvestigationUpdate(ctx, tx, m.ID, update); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to begin alert investigation transaction: %w", err)
-	}
-	defer rollbackTx(tx)
-
-	b := tx.Client().AlertInvestigation.Create().
-		SetAlertInvestigationID(record.AlertInvestigationID).
-		SetCorrelationKey(record.CorrelationKey).
-		SetStatus(alertinvestigation.Status(record.Status)).
-		SetAgentID(record.AgentID).
-		SetAgentName(record.AgentName).
-		SetAgentType(record.AgentType).
-		SetPrimaryThreadID(record.PrimaryThreadID).
-		SetSlackChannelID(record.SlackChannelID).
-		SetSlackThreadTs(record.SlackThreadTS).
-		SetMmPostID(record.MMPostID).
-		SetMmThreadID(record.MMThreadID).
-		SetCreatedAt(now).
-		SetUpdatedAt(now).
-		SetInvestigatingDurationMs(record.InvestigatingDurationMs).
-		SetPrimaryAlertFingerprint(record.PrimaryAlertFingerprint).
-		SetEscalationLevel(record.EscalationLevel).
-		SetTriageDecision(record.TriageDecision).
-		SetAssigneeType(alertinvestigation.AssigneeType(record.AssigneeType))
-
-	if record.PromotedIncidentID != nil {
-		b.SetPromotedIncidentID(*record.PromotedIncidentID)
-	}
-	if record.PromotedIncidentInvestigationID != nil {
-		b.SetPromotedIncidentInvestigationID(*record.PromotedIncidentInvestigationID)
-	}
-	if record.Summary != nil {
-		b.SetSummary(record.Summary)
-	}
-	if record.Findings != nil {
-		b.SetFindings(record.Findings)
-	}
-	if record.Evidence != nil {
-		b.SetEvidence(record.Evidence)
-	}
-	if record.StartedAt != nil {
-		b.SetStartedAt(*record.StartedAt)
-	}
-	if record.CompletedAt != nil {
-		b.SetCompletedAt(*record.CompletedAt)
-	}
-	if record.PrimaryAlertNumber != 0 {
-		b.SetPrimaryAlertNumber(record.PrimaryAlertNumber)
-	}
-	if record.TriageResultID != nil {
-		b.SetTriageResultID(*record.TriageResultID)
-	}
-	if record.TriageEnrichment != nil {
-		b.SetTriageEnrichment(record.TriageEnrichment)
-	}
-	if record.AssigneeID != nil {
-		b.SetAssigneeID(*record.AssigneeID)
-	}
-
-	saved, err := b.Save(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to insert alert investigation: %w", err)
-	}
-
-	if err := retireCurrentAlertInvestigationLinks(ctx, tx.Client(), record.Alerts); err != nil {
 		return nil, err
-	}
-	for _, alert := range record.Alerts {
-		if err := createAlertInvestigationAlert(ctx, tx.Client(), saved.ID, alert); err != nil {
-			return nil, err
-		}
-	}
-	for _, update := range record.Updates {
-		if err := createAlertInvestigationUpdate(ctx, tx.Client(), saved.ID, update); err != nil {
-			return nil, err
-		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		return nil, fmt.Errorf("failed to commit alert investigation transaction: %w", err)
 	}
 
 	return s.GetAlertInvestigation(ctx, record.AlertInvestigationID)
@@ -296,43 +265,37 @@ func (s *pgAlertInvestigationStore) GetAlertInvestigation(ctx context.Context, i
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	return s.getAlertInvestigationBy(ctx, alertinvestigation.AlertInvestigationID(id))
-}
-
-func (s *pgAlertInvestigationStore) getAlertInvestigationBy(ctx context.Context, preds ...predicate.AlertInvestigation) (*AlertInvestigationRecord, error) {
-	inv, err := s.client.AlertInvestigation.Query().Where(preds...).Only(ctx)
+	var inv models.AlertInvestigation
+	err := s.db.NewSelect().Model(&inv).Where("alert_investigation_id = ?", id).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*AlertInvestigationRecord](err, "alert investigation")
 	}
-	return s.toAlertInvestigationRecord(ctx, inv)
+	return s.toAlertInvestigationRecord(ctx, &inv)
 }
 
-func (s *pgAlertInvestigationStore) toAlertInvestigationRecord(ctx context.Context, inv *ent.AlertInvestigation) (*AlertInvestigationRecord, error) {
-	alerts := inv.Edges.Alerts
-	if alerts == nil {
-		var err error
-		alerts, err = inv.QueryAlerts().All(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to query alert investigation alerts: %w", err)
-		}
+func (s *pgAlertInvestigationStore) toAlertInvestigationRecord(ctx context.Context, inv *models.AlertInvestigation) (*AlertInvestigationRecord, error) {
+	var alerts []models.AlertInvestigationAlert
+	if err := s.db.NewSelect().Model(&alerts).
+		Where("alert_investigation_id = ?", inv.ID).
+		Order("id ASC").
+		Scan(ctx); err != nil {
+		return nil, fmt.Errorf("failed to query alert investigation alerts: %w", err)
 	}
 
-	updates := inv.Edges.Updates
-	if updates == nil {
-		var err error
-		updates, err = inv.QueryUpdates().Order(ent.Asc(alertinvestigationupdateentry.FieldCreatedAt)).All(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to query alert investigation updates: %w", err)
-		}
+	var updates []models.AlertInvestigationUpdate
+	if err := s.db.NewSelect().Model(&updates).
+		Where("alert_investigation_id = ?", inv.ID).
+		Order("created_at ASC").
+		Scan(ctx); err != nil {
+		return nil, fmt.Errorf("failed to query alert investigation updates: %w", err)
 	}
 
-	events := inv.Edges.Events
-	if events == nil {
-		var err error
-		events, err = inv.QueryEvents().Order(ent.Asc(alertinvestigationevent.FieldCreatedAt)).All(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to query alert investigation events: %w", err)
-		}
+	var events []models.AlertInvestigationEvent
+	if err := s.db.NewSelect().Model(&events).
+		Where("alert_investigation_id = ?", inv.ID).
+		Order("created_at ASC").
+		Scan(ctx); err != nil {
+		return nil, fmt.Errorf("failed to query alert investigation events: %w", err)
 	}
 
 	correlatedAlerts := make([]rabbitmq.CorrelatedAlert, 0, len(alerts))
@@ -362,8 +325,8 @@ func (s *pgAlertInvestigationStore) toAlertInvestigationRecord(ctx context.Conte
 			Edited:         update.Edited,
 			UserID:         update.UserID,
 			Username:       update.Username,
-			MMPostID:       update.MmPostID,
-			SlackMessageTS: update.SlackMessageTs,
+			MMPostID:       update.MMPostID,
+			SlackMessageTS: update.SlackMessageTS,
 			QuotedUpdateID: update.QuotedUpdateID,
 			Mentions:       update.Mentions,
 			CreatedAt:      update.CreatedAt,
@@ -375,7 +338,7 @@ func (s *pgAlertInvestigationStore) toAlertInvestigationRecord(ctx context.Conte
 		investigationEvents = append(investigationEvents, AlertInvestigationEvent{
 			ID:                   event.ID,
 			AlertInvestigationID: event.AlertInvestigationID,
-			EventType:            string(event.EventType),
+			EventType:            event.EventType,
 			Reason:               event.Reason,
 			ActorType:            event.ActorType,
 			ActorID:              event.ActorID,
@@ -393,15 +356,15 @@ func (s *pgAlertInvestigationStore) toAlertInvestigationRecord(ctx context.Conte
 		AlertInvestigationID:            inv.AlertInvestigationID,
 		Alerts:                          correlatedAlerts,
 		CorrelationKey:                  inv.CorrelationKey,
-		Status:                          string(inv.Status),
+		Status:                          inv.Status,
 		AgentID:                         inv.AgentID,
 		AgentName:                       inv.AgentName,
 		AgentType:                       inv.AgentType,
 		PrimaryThreadID:                 inv.PrimaryThreadID,
 		SlackChannelID:                  inv.SlackChannelID,
-		SlackThreadTS:                   inv.SlackThreadTs,
-		MMPostID:                        inv.MmPostID,
-		MMThreadID:                      inv.MmThreadID,
+		SlackThreadTS:                   inv.SlackThreadTS,
+		MMPostID:                        inv.MMPostID,
+		MMThreadID:                      inv.MMThreadID,
 		PromotedIncidentID:              inv.PromotedIncidentID,
 		PromotedIncidentInvestigationID: inv.PromotedIncidentInvestigationID,
 		Summary:                         inv.Summary,
@@ -413,7 +376,7 @@ func (s *pgAlertInvestigationStore) toAlertInvestigationRecord(ctx context.Conte
 		TriageResultID:                  inv.TriageResultID,
 		TriageDecision:                  inv.TriageDecision,
 		TriageEnrichment:                inv.TriageEnrichment,
-		AssigneeType:                    string(inv.AssigneeType),
+		AssigneeType:                    inv.AssigneeType,
 		AssigneeID:                      inv.AssigneeID,
 		Updates:                         investigationUpdates,
 		CreatedAt:                       inv.CreatedAt,
@@ -429,99 +392,96 @@ func (s *pgAlertInvestigationStore) toAlertInvestigationRecord(ctx context.Conte
 	}, nil
 }
 
-func createAlertInvestigationAlert(ctx context.Context, client *ent.Client, alertInvestigationID uuid.UUID, alert rabbitmq.CorrelatedAlert) error {
+func createAlertInvestigationAlert(ctx context.Context, db bun.IDB, alertInvestigationID uuid.UUID, alert rabbitmq.CorrelatedAlert) error {
 	alertname := alert.Labels["alertname"]
 	namespace := alert.Labels["namespace"]
 	summary := alert.Annotations["summary"]
 
-	b := client.AlertInvestigationAlert.Create().
-		SetAlertInvestigationID(alertInvestigationID).
-		SetFingerprint(alert.Fingerprint).
-		SetAlertNumber(alert.AlertNumber).
-		SetStatus(alert.Status).
-		SetAlertname(alertname).
-		SetNamespace(namespace).
-		SetLabels(alert.Labels).
-		SetAnnotations(alert.Annotations).
-		SetGeneratorURL(alert.GeneratorURL).
-		SetSummary(summary)
+	m := &models.AlertInvestigationAlert{
+		AlertInvestigationID: alertInvestigationID,
+		Fingerprint:          alert.Fingerprint,
+		AlertNumber:          alert.AlertNumber,
+		Status:               alert.Status,
+		Alertname:            alertname,
+		Namespace:            namespace,
+		Labels:               alert.Labels,
+		Annotations:          alert.Annotations,
+		GeneratorURL:         alert.GeneratorURL,
+		Summary:              summary,
+	}
+	m.ID = models.NewUUID()
+	m.CreatedAt = time.Now().UTC()
+	m.UpdatedAt = time.Now().UTC()
+
 	if alert.StartsAt != "" {
 		if startsAt, err := time.Parse(time.RFC3339, alert.StartsAt); err == nil {
-			b.SetStartsAt(startsAt)
+			m.StartsAt = &startsAt
 		}
 	}
 
-	if _, err := b.Save(ctx); err != nil {
+	if _, err := db.NewInsert().Model(m).Exec(ctx); err != nil {
 		return fmt.Errorf("failed to create alert investigation alert for fingerprint %s: %w", alert.Fingerprint, err)
 	}
 	return nil
 }
 
-func createAlertInvestigationEvent(ctx context.Context, client *ent.Client, alertInvestigationID uuid.UUID, event AlertInvestigationEvent) error {
+func createAlertInvestigationEvent(ctx context.Context, db bun.IDB, alertInvestigationID uuid.UUID, event AlertInvestigationEvent) error {
 	createdAt := event.CreatedAt
 	if createdAt.IsZero() {
 		createdAt = time.Now().UTC()
 	}
 
-	b := client.AlertInvestigationEvent.Create().
-		SetAlertInvestigationID(alertInvestigationID).
-		SetEventType(alertinvestigationevent.EventType(event.EventType)).
-		SetReason(event.Reason).
-		SetActorType(event.ActorType).
-		SetActorID(event.ActorID).
-		SetActorName(event.ActorName).
-		SetAgentID(event.AgentID).
-		SetAgentName(event.AgentName).
-		SetAgentType(event.AgentType).
-		SetCreatedAt(createdAt)
+	m := &models.AlertInvestigationEvent{
+		AlertInvestigationID: alertInvestigationID,
+		EventType:            event.EventType,
+		Reason:               event.Reason,
+		ActorType:            event.ActorType,
+		ActorID:              event.ActorID,
+		ActorName:            event.ActorName,
+		AgentID:              event.AgentID,
+		AgentName:            event.AgentName,
+		AgentType:            event.AgentType,
+		Metadata:             event.Metadata,
+	}
 	if event.ID != uuid.Nil {
-		b.SetID(event.ID)
+		m.ID = event.ID
+	} else {
+		m.ID = models.NewUUID()
 	}
-	if event.Metadata != nil {
-		b.SetMetadata(event.Metadata)
-	}
+	m.CreatedAt = createdAt
+	m.UpdatedAt = createdAt
 
-	if _, err := b.Save(ctx); err != nil {
+	if _, err := db.NewInsert().Model(m).Exec(ctx); err != nil {
 		return fmt.Errorf("failed to create alert investigation event: %w", err)
 	}
 	return nil
 }
 
-func createAlertInvestigationUpdate(ctx context.Context, client *ent.Client, alertInvestigationID uuid.UUID, update InvestigationUpdate) error {
+func createAlertInvestigationUpdate(ctx context.Context, db bun.IDB, alertInvestigationID uuid.UUID, update InvestigationUpdate) error {
 	createdAt := update.CreatedAt
 	if createdAt.IsZero() {
 		createdAt = time.Now().UTC()
 	}
 
-	b := client.AlertInvestigationUpdateEntry.Create().
-		SetAlertInvestigationID(alertInvestigationID).
-		SetType(string(update.Type)).
-		SetMessage(update.Message).
-		SetSource(string(update.Source)).
-		SetInternal(update.Internal).
-		SetEdited(update.Edited).
-		SetCreatedAt(createdAt)
+	m := &models.AlertInvestigationUpdate{
+		AlertInvestigationID: alertInvestigationID,
+		Type:                 string(update.Type),
+		Message:              update.Message,
+		Source:               string(update.Source),
+		Internal:             update.Internal,
+		Edited:               update.Edited,
+		UserID:               update.UserID,
+		Username:             update.Username,
+		MMPostID:             update.MMPostID,
+		SlackMessageTS:       update.SlackMessageTS,
+		QuotedUpdateID:       update.QuotedUpdateID,
+		Mentions:             update.Mentions,
+	}
+	m.ID = models.NewUUID()
+	m.CreatedAt = createdAt
+	m.UpdatedAt = createdAt
 
-	if update.UserID != nil {
-		b.SetUserID(*update.UserID)
-	}
-	if update.Username != nil {
-		b.SetUsername(*update.Username)
-	}
-	if update.MMPostID != "" {
-		b.SetMmPostID(update.MMPostID)
-	}
-	if update.SlackMessageTS != "" {
-		b.SetSlackMessageTs(update.SlackMessageTS)
-	}
-	if update.QuotedUpdateID != nil {
-		b.SetQuotedUpdateID(*update.QuotedUpdateID)
-	}
-	if update.Mentions != nil {
-		b.SetMentions(update.Mentions)
-	}
-
-	if _, err := b.Save(ctx); err != nil {
+	if _, err := db.NewInsert().Model(m).Exec(ctx); err != nil {
 		return fmt.Errorf("failed to create alert investigation update: %w", err)
 	}
 	return nil
@@ -531,30 +491,26 @@ func (s *pgAlertInvestigationStore) ListAlertInvestigations(ctx context.Context,
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	var preds []predicate.AlertInvestigation
+	q := s.db.NewSelect().Model((*models.AlertInvestigation)(nil))
+
 	if v, ok := filter["status"].(string); ok && v != "" {
-		preds = append(preds, alertinvestigation.StatusEQ(alertinvestigation.Status(v)))
+		q = q.Where("status = ?", v)
 	}
 	if v, ok := filter["status_in"].([]string); ok && len(v) > 0 {
-		entStatuses := make([]alertinvestigation.Status, len(v))
-		for i, s := range v {
-			entStatuses[i] = alertinvestigation.Status(s)
-		}
-		preds = append(preds, alertinvestigation.StatusIn(entStatuses...))
+		q = q.Where("status IN (?)", bun.In(v))
 	}
 	if v, ok := filter["correlation_key"].(string); ok && v != "" {
-		preds = append(preds, alertinvestigation.CorrelationKeyEQ(v))
+		q = q.Where("correlation_key = ?", v)
 	}
 	if v, ok := filter["promoted_incident_id"].(string); ok && v != "" {
 		if u, err := uuid.Parse(v); err == nil {
-			preds = append(preds, alertinvestigation.PromotedIncidentIDEQ(u))
+			q = q.Where("promoted_incident_id = ?", u)
 		}
 	} else if v, ok := filter["promoted_incident_id"].(uuid.UUID); ok {
-		preds = append(preds, alertinvestigation.PromotedIncidentIDEQ(v))
+		q = q.Where("promoted_incident_id = ?", v)
 	}
 
-	q := s.client.AlertInvestigation.Query().Where(preds...).
-		Order(ent.Desc(alertinvestigation.FieldCreatedAt))
+	q = q.Order("created_at DESC")
 
 	if v, ok := filter["limit"].(int); ok && v > 0 {
 		q = q.Limit(v)
@@ -565,20 +521,14 @@ func (s *pgAlertInvestigationStore) ListAlertInvestigations(ctx context.Context,
 		q = q.Offset(v)
 	}
 
-	invs, err := q.
-		WithAlerts().
-		WithUpdates(func(q *ent.AlertInvestigationUpdateEntryQuery) {
-			q.Order(ent.Asc(alertinvestigationupdateentry.FieldCreatedAt))
-		}).
-		WithEvents(func(q *ent.AlertInvestigationEventQuery) { q.Order(ent.Asc(alertinvestigationevent.FieldCreatedAt)) }).
-		All(ctx)
-	if err != nil {
+	var invs []models.AlertInvestigation
+	if err := q.Scan(ctx); err != nil {
 		return nil, fmt.Errorf("failed to list alert investigations: %w", err)
 	}
 
 	records := make([]AlertInvestigationRecord, 0, len(invs))
-	for _, inv := range invs {
-		rec, err := s.toAlertInvestigationRecord(ctx, inv)
+	for i := range invs {
+		rec, err := s.toAlertInvestigationRecord(ctx, &invs[i])
 		if err != nil {
 			return nil, err
 		}
@@ -591,29 +541,29 @@ func (s *pgAlertInvestigationStore) ListAlertInvestigationsByAlertNumber(ctx con
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	alerts, err := s.client.AlertInvestigationAlert.Query().
-		Where(alertinvestigationalert.AlertNumber(alertNumber)).
-		WithAlertInvestigation().
-		All(ctx)
-	if err != nil {
+	var links []models.AlertInvestigationAlert
+	if err := s.db.NewSelect().Model(&links).
+		Where("alert_number = ?", alertNumber).
+		Scan(ctx); err != nil {
 		return nil, fmt.Errorf("failed to query alert investigation alerts by alert_number: %w", err)
 	}
-	if len(alerts) == 0 {
+	if len(links) == 0 {
 		return []AlertInvestigationRecord{}, nil
 	}
 
-	seen := make(map[uuid.UUID]struct{}, len(alerts))
-	records := make([]AlertInvestigationRecord, 0, len(alerts))
-	for _, alert := range alerts {
-		inv := alert.Edges.AlertInvestigation
-		if inv == nil {
+	seen := make(map[uuid.UUID]struct{}, len(links))
+	records := make([]AlertInvestigationRecord, 0, len(links))
+	for _, link := range links {
+		if _, ok := seen[link.AlertInvestigationID]; ok {
 			continue
 		}
-		if _, ok := seen[inv.ID]; ok {
+		seen[link.AlertInvestigationID] = struct{}{}
+
+		var inv models.AlertInvestigation
+		if err := s.db.NewSelect().Model(&inv).Where("id = ?", link.AlertInvestigationID).Scan(ctx); err != nil {
 			continue
 		}
-		seen[inv.ID] = struct{}{}
-		rec, err := s.toAlertInvestigationRecord(ctx, inv)
+		rec, err := s.toAlertInvestigationRecord(ctx, &inv)
 		if err != nil {
 			return nil, err
 		}
@@ -630,22 +580,21 @@ func (s *pgAlertInvestigationStore) GetCurrentAlertInvestigationByAlertNumber(ct
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	alerts, err := s.client.AlertInvestigationAlert.Query().
-		Where(
-			alertinvestigationalert.AlertNumber(alertNumber),
-			alertinvestigationalert.Current(true),
-		).
-		WithAlertInvestigation().
-		Order(ent.Desc(alertinvestigationalert.FieldID)).
+	var link models.AlertInvestigationAlert
+	err := s.db.NewSelect().Model(&link).
+		Where("alert_number = ? AND current = true", alertNumber).
+		Order("id DESC").
 		Limit(1).
-		All(ctx)
+		Scan(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query current alert investigation alert by alert_number: %w", err)
-	}
-	if len(alerts) == 0 || alerts[0].Edges.AlertInvestigation == nil {
 		return nil, fmt.Errorf("current alert investigation not found for alert_number %d: %w", alertNumber, ErrInvestigationNotFound)
 	}
-	return s.toAlertInvestigationRecord(ctx, alerts[0].Edges.AlertInvestigation)
+
+	var inv models.AlertInvestigation
+	if err := s.db.NewSelect().Model(&inv).Where("id = ?", link.AlertInvestigationID).Scan(ctx); err != nil {
+		return nil, fmt.Errorf("current alert investigation not found for alert_number %d: %w", alertNumber, ErrInvestigationNotFound)
+	}
+	return s.toAlertInvestigationRecord(ctx, &inv)
 }
 
 // GetCurrentAlertInvestigationSummariesByAlertNumbers returns a slim
@@ -666,35 +615,33 @@ func (s *pgAlertInvestigationStore) GetCurrentAlertInvestigationSummariesByAlert
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	rows, err := s.client.AlertInvestigationAlert.Query().
-		Where(
-			alertinvestigationalert.AlertNumberIn(alertNumbers...),
-			alertinvestigationalert.Current(true),
-		).
-		WithAlertInvestigation(func(q *ent.AlertInvestigationQuery) {
-			q.WithPromotedIncident()
-		}).
-		All(ctx)
-	if err != nil {
+	var links []models.AlertInvestigationAlert
+	if err := s.db.NewSelect().Model(&links).
+		Where("alert_number IN (?) AND current = true", bun.In(alertNumbers)).
+		Scan(ctx); err != nil {
 		return nil, fmt.Errorf("failed to query current alert investigations: %w", err)
 	}
 
-	for _, row := range rows {
-		if row.AlertNumber <= 0 || row.Edges.AlertInvestigation == nil {
+	for _, link := range links {
+		if link.AlertNumber <= 0 {
 			continue
 		}
-		inv := row.Edges.AlertInvestigation
+		var inv models.AlertInvestigation
+		if err := s.db.NewSelect().Model(&inv).Where("id = ?", link.AlertInvestigationID).Scan(ctx); err != nil {
+			continue
+		}
 		summary := AlertInvestigationSummary{
 			AlertInvestigationID: inv.AlertInvestigationID,
-			Status:               string(inv.Status),
+			Status:               inv.Status,
 			AgentID:              inv.AgentID,
 			AgentName:            inv.AgentName,
 			AgentType:            inv.AgentType,
-			AssigneeType:         string(inv.AssigneeType),
+			AssigneeType:         inv.AssigneeType,
 		}
 		if inv.PromotedIncidentID != nil {
 			summary.PromotedIncidentID = inv.PromotedIncidentID.String()
-			if inc := inv.Edges.PromotedIncident; inc != nil && inc.IncidentNumber > 0 {
+			var inc models.Incident
+			if err := s.db.NewSelect().Model(&inc).Where("id = ?", *inv.PromotedIncidentID).Scan(ctx); err == nil && inc.IncidentNumber > 0 {
 				summary.PromotedIncidentNumber = inc.IncidentNumber
 			}
 		}
@@ -702,7 +649,7 @@ func (s *pgAlertInvestigationStore) GetCurrentAlertInvestigationSummariesByAlert
 		// most one current row per alert_number, so a later row will never
 		// overwrite the first. Still, last-write-wins keeps the map deterministic
 		// if the index is ever relaxed.
-		out[row.AlertNumber] = summary
+		out[link.AlertNumber] = summary
 	}
 	return out, nil
 }
@@ -711,33 +658,38 @@ func (s *pgAlertInvestigationStore) GetActiveAlertInvestigationByCorrelationKey(
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	return s.getAlertInvestigationBy(ctx,
-		alertinvestigation.CorrelationKey(correlationKey),
-		alertinvestigation.StatusIn(
-			alertinvestigation.Status(AlertInvestigationStatusPending),
-			alertinvestigation.Status(AlertInvestigationStatusAssigned),
-			alertinvestigation.Status(AlertInvestigationStatusInvestigating),
-		),
-	)
+	var inv models.AlertInvestigation
+	err := s.db.NewSelect().Model(&inv).
+		Where("correlation_key = ?", correlationKey).
+		Where("status IN (?)", bun.In([]string{
+			AlertInvestigationStatusPending,
+			AlertInvestigationStatusAssigned,
+			AlertInvestigationStatusInvestigating,
+		})).
+		Scan(ctx)
+	if err != nil {
+		return handleQueryErr[*AlertInvestigationRecord](err, "alert investigation")
+	}
+	return s.toAlertInvestigationRecord(ctx, &inv)
 }
 
 func (s *pgAlertInvestigationStore) GetAlertInvestigationByAlertNumber(ctx context.Context, alertNumber int64) (*AlertInvestigationRecord, error) {
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	alerts, err := s.client.AlertInvestigationAlert.Query().
-		Where(alertinvestigationalert.AlertNumber(alertNumber)).
-		WithAlertInvestigation().
-		All(ctx)
-	if err != nil {
+	var links []models.AlertInvestigationAlert
+	if err := s.db.NewSelect().Model(&links).
+		Where("alert_number = ?", alertNumber).
+		Scan(ctx); err != nil {
 		return nil, fmt.Errorf("failed to query alert investigation alerts by alert_number: %w", err)
 	}
-	if len(alerts) == 0 {
+	if len(links) == 0 {
 		return nil, fmt.Errorf("alert investigation not found for alert_number %d: %w", alertNumber, ErrInvestigationNotFound)
 	}
-	inv := alerts[0].Edges.AlertInvestigation
-	if inv == nil {
+
+	var inv models.AlertInvestigation
+	if err := s.db.NewSelect().Model(&inv).Where("id = ?", links[0].AlertInvestigationID).Scan(ctx); err != nil {
 		return nil, fmt.Errorf("alert investigation not found for alert_number %d: %w", alertNumber, ErrInvestigationNotFound)
 	}
-	return s.toAlertInvestigationRecord(ctx, inv)
+	return s.toAlertInvestigationRecord(ctx, &inv)
 }

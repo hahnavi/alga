@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
 	"alga/capability"
 	"alga/config"
 	algacrypto "alga/crypto"
-	"alga/ent"
-	"alga/ent/agenttoken"
+	"alga/db/models"
 	"alga/logger"
 )
 
@@ -86,8 +86,8 @@ type pgAgentTokenStore struct {
 	pgStoreBase
 }
 
-func newPGAgentTokenStore(client *ent.Client) AgentTokenStore {
-	return &pgAgentTokenStore{pgStoreBase{client: client}}
+func newPGAgentTokenStore(db *bun.DB) AgentTokenStore {
+	return &pgAgentTokenStore{pgStoreBase{db: db}}
 }
 
 func (s *pgAgentTokenStore) CreateToken(name string, expiresAt *time.Time, agentType string, capabilities []string) (*AgentTokenRecord, error) {
@@ -106,33 +106,34 @@ func (s *pgAgentTokenStore) CreateToken(name string, expiresAt *time.Time, agent
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	b := s.client.AgentToken.Create().
-		SetName(name).
-		SetAgentType(agenttoken.AgentType(at)).
-		SetTokenHash(tokenHash).
-		SetLookupPrefix(prefix).
-		SetCreatedAt(time.Now().UTC()).
-		SetRevoked(false).
-		SetEnabled(true).
-		SetCapabilities(caps)
-
-	if expiresAt != nil {
-		b.SetExpiresAt(*expiresAt)
+	now := time.Now().UTC()
+	m := &models.AgentToken{
+		Name:         name,
+		AgentType:    at,
+		TokenHash:    tokenHash,
+		LookupPrefix: prefix,
+		Revoked:      false,
+		Enabled:      true,
+		Capabilities: caps,
+		ExpiresAt:    expiresAt,
 	}
+	m.ID = models.NewUUID()
+	m.CreatedAt = now
+	m.UpdatedAt = now
 
-	saved, err := b.Save(ctx)
+	_, err = s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create agent token: %w", err)
 	}
 
 	return &AgentTokenRecord{
-		ID:           saved.ID,
-		Name:         saved.Name,
+		ID:           m.ID,
+		Name:         m.Name,
 		AgentType:    at,
 		TokenHash:    tokenHash,
 		LookupPrefix: prefix,
 		Token:        tokenStr,
-		CreatedAt:    saved.CreatedAt,
+		CreatedAt:    m.CreatedAt,
 		Revoked:      false,
 		Enabled:      true,
 		ExpiresAt:    expiresAt,
@@ -144,7 +145,8 @@ func (s *pgAgentTokenStore) ListTokens() ([]AgentTokenRecord, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	tokens, err := s.client.AgentToken.Query().Where(agenttoken.Revoked(false)).All(ctx)
+	var tokens []models.AgentToken
+	err := s.db.NewSelect().Model(&tokens).Where("revoked = ?", false).Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list agent tokens: %w", err)
 	}
@@ -154,7 +156,7 @@ func (s *pgAgentTokenStore) ListTokens() ([]AgentTokenRecord, error) {
 		records = append(records, AgentTokenRecord{
 			ID:           t.ID,
 			Name:         t.Name,
-			AgentType:    NormalizeAgentType(string(t.AgentType)),
+			AgentType:    NormalizeAgentType(t.AgentType),
 			TokenHash:    t.TokenHash,
 			LookupPrefix: t.LookupPrefix,
 			Token:        maskSuffix(t.TokenHash),
@@ -174,15 +176,21 @@ func (s *pgAgentTokenStore) RevokeToken(id uuid.UUID) error {
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	_, err := s.client.AgentToken.UpdateOneID(id).
-		SetRevoked(true).
-		SetEnabled(false).
-		Save(ctx)
+	res, err := s.db.NewUpdate().Model((*models.AgentToken)(nil)).
+		Set("revoked = ?", true).
+		Set("enabled = ?", false).
+		Set("updated_at = ?", time.Now().UTC()).
+		Where("id = ?", id).
+		Exec(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return ErrTokenNotFound
-		}
 		return fmt.Errorf("failed to revoke agent token: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to revoke agent token: %w", err)
+	}
+	if n == 0 {
+		return ErrTokenNotFound
 	}
 	return nil
 }
@@ -191,9 +199,10 @@ func (s *pgAgentTokenStore) RegenerateToken(id uuid.UUID) (*AgentTokenRecord, er
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	rec, err := s.client.AgentToken.Get(ctx, id)
+	var rec models.AgentToken
+	err := s.db.NewSelect().Model(&rec).Where("id = ?", id).Scan(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
+		if isNotFound(err) {
 			return nil, fmt.Errorf("agent not found or inactive: %w", ErrAgentNotFoundInactive)
 		}
 		return nil, fmt.Errorf("failed to load agent token: %w", err)
@@ -212,11 +221,13 @@ func (s *pgAgentTokenStore) RegenerateToken(id uuid.UUID) (*AgentTokenRecord, er
 	tokenHash := hashToken(tokenStr)
 	prefix := lookupPrefix(tokenStr)
 
-	_, err = s.client.AgentToken.UpdateOneID(id).
-		SetTokenHash(tokenHash).
-		SetLookupPrefix(prefix).
-		ClearLastUsedAt().
-		Save(ctx)
+	_, err = s.db.NewUpdate().Model((*models.AgentToken)(nil)).
+		Set("token_hash = ?", tokenHash).
+		Set("lookup_prefix = ?", prefix).
+		Set("last_used_at = NULL").
+		Set("updated_at = ?", time.Now().UTC()).
+		Where("id = ?", id).
+		Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to regenerate agent token: %w", err)
 	}
@@ -224,7 +235,7 @@ func (s *pgAgentTokenStore) RegenerateToken(id uuid.UUID) (*AgentTokenRecord, er
 	return &AgentTokenRecord{
 		ID:           rec.ID,
 		Name:         rec.Name,
-		AgentType:    NormalizeAgentType(string(rec.AgentType)),
+		AgentType:    NormalizeAgentType(rec.AgentType),
 		TokenHash:    tokenHash,
 		LookupPrefix: prefix,
 		Token:        tokenStr,
@@ -235,6 +246,7 @@ func (s *pgAgentTokenStore) RegenerateToken(id uuid.UUID) (*AgentTokenRecord, er
 		Capabilities: rec.Capabilities,
 	}, nil
 }
+
 func (s *pgAgentTokenStore) ValidateToken(token string) (*AgentTokenRecord, error) {
 	if token == "" {
 		return nil, nil
@@ -245,9 +257,12 @@ func (s *pgAgentTokenStore) ValidateToken(token string) (*AgentTokenRecord, erro
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	tokens, err := s.client.AgentToken.Query().
-		Where(agenttoken.LookupPrefix(prefix), agenttoken.Revoked(false), agenttoken.Enabled(true)).
-		All(ctx)
+	var tokens []models.AgentToken
+	err := s.db.NewSelect().Model(&tokens).
+		Where("lookup_prefix = ?", prefix).
+		Where("revoked = ?", false).
+		Where("enabled = ?", true).
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to validate agent token: %w", err)
 	}
@@ -263,7 +278,7 @@ func (s *pgAgentTokenStore) ValidateToken(token string) (*AgentTokenRecord, erro
 		return &AgentTokenRecord{
 			ID:           t.ID,
 			Name:         t.Name,
-			AgentType:    NormalizeAgentType(string(t.AgentType)),
+			AgentType:    NormalizeAgentType(t.AgentType),
 			TokenHash:    t.TokenHash,
 			LookupPrefix: t.LookupPrefix,
 			CreatedAt:    t.CreatedAt,
@@ -287,8 +302,9 @@ func (s *pgAgentTokenStore) updateAgentTokenLastUsed(id uuid.UUID, lastUsedAt *t
 	}
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
-	_ = s.client.AgentToken.UpdateOneID(id).
-		SetLastUsedAt(time.Now().UTC()).
+	_, _ = s.db.NewUpdate().Model((*models.AgentToken)(nil)).
+		Set("last_used_at = ?", time.Now().UTC()).
+		Where("id = ?", id).
 		Exec(ctx)
 }
 
@@ -296,7 +312,8 @@ func (s *pgAgentTokenStore) GetActiveAgentTokenByID(id uuid.UUID) (*AgentTokenRe
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	rec, err := s.client.AgentToken.Get(ctx, id)
+	var rec models.AgentToken
+	err := s.db.NewSelect().Model(&rec).Where("id = ?", id).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*AgentTokenRecord](err, "agent token")
 	}
@@ -309,7 +326,7 @@ func (s *pgAgentTokenStore) GetActiveAgentTokenByID(id uuid.UUID) (*AgentTokenRe
 	return &AgentTokenRecord{
 		ID:           rec.ID,
 		Name:         rec.Name,
-		AgentType:    NormalizeAgentType(string(rec.AgentType)),
+		AgentType:    NormalizeAgentType(rec.AgentType),
 		TokenHash:    rec.TokenHash,
 		LookupPrefix: rec.LookupPrefix,
 		Token:        maskSuffix(rec.TokenHash),
@@ -330,17 +347,23 @@ func (s *pgAgentTokenStore) UpdateAgentConfig(id uuid.UUID, scope string, select
 	}
 	caps := capability.Normalize(capabilities)
 
-	_, err := s.client.AgentToken.UpdateOneID(id).
-		Where(agenttoken.Revoked(false)).
-		SetScope(scope).
-		SetLabelSelectors(routeConditionsToSchema(selectors)).
-		SetCapabilities(caps).
-		Save(ctx)
+	res, err := s.db.NewUpdate().Model((*models.AgentToken)(nil)).
+		Set("scope = ?", scope).
+		Set("label_selectors = ?", routeConditionsToModels(selectors)).
+		Set("capabilities = ?", caps).
+		Set("updated_at = ?", time.Now().UTC()).
+		Where("id = ?", id).
+		Where("revoked = ?", false).
+		Exec(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return fmt.Errorf("agent not found or inactive: %w", ErrAgentNotFoundInactive)
-		}
 		return fmt.Errorf("failed to update agent config: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to update agent config: %w", err)
+	}
+	if n == 0 {
+		return fmt.Errorf("agent not found or inactive: %w", ErrAgentNotFoundInactive)
 	}
 	return nil
 }
@@ -349,15 +372,21 @@ func (s *pgAgentTokenStore) SetAgentEnabled(id uuid.UUID, enabled bool) error {
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	_, err := s.client.AgentToken.UpdateOneID(id).
-		Where(agenttoken.Revoked(false)).
-		SetEnabled(enabled).
-		Save(ctx)
+	res, err := s.db.NewUpdate().Model((*models.AgentToken)(nil)).
+		Set("enabled = ?", enabled).
+		Set("updated_at = ?", time.Now().UTC()).
+		Where("id = ?", id).
+		Where("revoked = ?", false).
+		Exec(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return fmt.Errorf("agent not found or inactive: %w", ErrAgentNotFoundInactive)
-		}
 		return fmt.Errorf("failed to update agent enabled state: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to update agent enabled state: %w", err)
+	}
+	if n == 0 {
+		return fmt.Errorf("agent not found or inactive: %w", ErrAgentNotFoundInactive)
 	}
 	return nil
 }
@@ -366,9 +395,11 @@ func (s *pgAgentTokenStore) ListActiveAgents() ([]AgentTokenRecord, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	tokens, err := s.client.AgentToken.Query().
-		Where(agenttoken.Revoked(false), agenttoken.Enabled(true)).
-		All(ctx)
+	var tokens []models.AgentToken
+	err := s.db.NewSelect().Model(&tokens).
+		Where("revoked = ?", false).
+		Where("enabled = ?", true).
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list active agents: %w", err)
 	}
@@ -384,12 +415,12 @@ func (s *pgAgentTokenStore) ListActiveAgents() ([]AgentTokenRecord, error) {
 		}
 		var labelSelectors []config.RouteCondition
 		if t.LabelSelectors != nil {
-			labelSelectors = routeConditionsFromSchema(t.LabelSelectors)
+			labelSelectors = routeConditionsFromModels(t.LabelSelectors)
 		}
 		records = append(records, AgentTokenRecord{
 			ID:             t.ID,
 			Name:           t.Name,
-			AgentType:      NormalizeAgentType(string(t.AgentType)),
+			AgentType:      NormalizeAgentType(t.AgentType),
 			CreatedAt:      t.CreatedAt,
 			Enabled:        t.Enabled,
 			Scope:          scope,

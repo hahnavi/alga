@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
 	algacrypto "alga/crypto"
-	"alga/ent"
-	"alga/ent/credentialprovider"
+	"alga/db/models"
 	"alga/secretprovider"
 )
 
@@ -71,8 +71,8 @@ type pgCredentialProviderStore struct {
 	pgStoreBase
 }
 
-func newPGCredentialProviderStore(client *ent.Client) CredentialProviderStore {
-	return &pgCredentialProviderStore{pgStoreBase{client: client}}
+func newPGCredentialProviderStore(db *bun.DB) CredentialProviderStore {
+	return &pgCredentialProviderStore{pgStoreBase{db: db}}
 }
 
 func normalizeProviderType(t string) (string, error) {
@@ -104,19 +104,22 @@ func (s *pgCredentialProviderStore) CreateProvider(ctx context.Context, record *
 	record.UpdatedAt = now
 	record.ConfigConfigured = len(config) > 0
 
-	saved, err := s.client.CredentialProvider.Create().
-		SetName(record.Name).
-		SetType(credentialprovider.Type(pt)).
-		SetConfigEncrypted(encConfig).
-		SetEnabled(record.Enabled).
-		SetSystem(record.System).
-		SetCreatedAt(now).
-		SetUpdatedAt(now).
-		Save(ctx)
+	m := &models.CredentialProvider{
+		Name:            record.Name,
+		Type:            pt,
+		ConfigEncrypted: encConfig,
+		Enabled:         record.Enabled,
+		System:          record.System,
+	}
+	m.ID = models.NewUUID()
+	m.CreatedAt = now
+	m.UpdatedAt = now
+
+	_, err = s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert credential provider: %w", err)
 	}
-	out := pgCredentialProviderToRecord(saved)
+	out := pgCredentialProviderToRecord(m)
 	out.ConfigConfigured = record.ConfigConfigured
 	return out, nil
 }
@@ -125,11 +128,11 @@ func (s *pgCredentialProviderStore) UpdateProvider(ctx context.Context, id uuid.
 	if patch == nil {
 		return nil, errors.New("nil patch")
 	}
-	// System providers (the seeded default) are fully immutable: they cannot be
-	// renamed, retyped, reconfigured, enabled, or disabled through the API.
-	existing, err := s.client.CredentialProvider.Get(ctx, id)
+	// System providers (the seeded default) are fully immutable.
+	var existing models.CredentialProvider
+	err := s.db.NewSelect().Model(&existing).Where("id = ?", id).Scan(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
+		if isNotFound(err) {
 			return nil, ErrCredentialProviderNotFound
 		}
 		return nil, fmt.Errorf("failed to load credential provider: %w", err)
@@ -137,19 +140,23 @@ func (s *pgCredentialProviderStore) UpdateProvider(ctx context.Context, id uuid.
 	if existing.System {
 		return nil, ErrSystemCredentialProvider
 	}
-	b := s.client.CredentialProvider.UpdateOneID(id).SetUpdatedAt(time.Now().UTC())
+
+	upd := s.db.NewUpdate().Model((*models.CredentialProvider)(nil)).
+		Set("updated_at = ?", time.Now().UTC()).
+		Where("id = ?", id)
+
 	if patch.Name != "" {
-		b.SetName(patch.Name)
+		upd = upd.Set("name = ?", patch.Name)
 	}
 	if patch.Type != "" {
 		pt, err := normalizeProviderType(patch.Type)
 		if err != nil {
 			return nil, err
 		}
-		b.SetType(credentialprovider.Type(pt))
+		upd = upd.Set("type = ?", pt)
 	}
 	if patch.EnabledSet {
-		b.SetEnabled(patch.Enabled)
+		upd = upd.Set("enabled = ?", patch.Enabled)
 	}
 	configConfigured := patch.ConfigConfigured
 	if config != nil {
@@ -157,31 +164,41 @@ func (s *pgCredentialProviderStore) UpdateProvider(ctx context.Context, id uuid.
 		if err != nil {
 			return nil, err
 		}
-		b.SetConfigEncrypted(enc)
+		upd = upd.Set("config_encrypted = ?", enc)
 		configConfigured = len(*config) > 0
 	}
 
-	saved, err := b.Save(ctx)
+	res, err := upd.Exec(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, ErrCredentialProviderNotFound
-		}
 		return nil, fmt.Errorf("failed to update credential provider: %w", err)
 	}
-	out := pgCredentialProviderToRecord(saved)
+	n, err := res.RowsAffected()
+	if err != nil {
+		return nil, fmt.Errorf("failed to update credential provider: %w", err)
+	}
+	if n == 0 {
+		return nil, ErrCredentialProviderNotFound
+	}
+
+	var saved models.CredentialProvider
+	err = s.db.NewSelect().Model(&saved).Where("id = ?", id).Scan(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to reload credential provider: %w", err)
+	}
+	out := pgCredentialProviderToRecord(&saved)
 	if config != nil {
 		out.ConfigConfigured = configConfigured
 	} else {
-		existing, _ := s.client.CredentialProvider.Get(ctx, id)
-		out.ConfigConfigured = existing != nil && existing.ConfigEncrypted != ""
+		out.ConfigConfigured = saved.ConfigEncrypted != ""
 	}
 	return out, nil
 }
 
 func (s *pgCredentialProviderStore) DeleteProvider(ctx context.Context, id uuid.UUID) error {
-	existing, err := s.client.CredentialProvider.Get(ctx, id)
+	var existing models.CredentialProvider
+	err := s.db.NewSelect().Model(&existing).Where("id = ?", id).Scan(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
+		if isNotFound(err) {
 			return ErrCredentialProviderNotFound
 		}
 		return fmt.Errorf("failed to load credential provider: %w", err)
@@ -189,44 +206,49 @@ func (s *pgCredentialProviderStore) DeleteProvider(ctx context.Context, id uuid.
 	if existing.System {
 		return ErrSystemCredentialProvider
 	}
-	err = s.client.CredentialProvider.DeleteOneID(id).Exec(ctx)
+	res, err := s.db.NewDelete().Model((*models.CredentialProvider)(nil)).Where("id = ?", id).Exec(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return ErrCredentialProviderNotFound
-		}
 		return fmt.Errorf("failed to delete credential provider: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to delete credential provider: %w", err)
+	}
+	if n == 0 {
+		return ErrCredentialProviderNotFound
 	}
 	return nil
 }
 
 func (s *pgCredentialProviderStore) GetProvider(ctx context.Context, id uuid.UUID) (*CredentialProviderRecord, error) {
-	p, err := s.client.CredentialProvider.Get(ctx, id)
+	var p models.CredentialProvider
+	err := s.db.NewSelect().Model(&p).Where("id = ?", id).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*CredentialProviderRecord](err, "credential provider")
 	}
-	out := pgCredentialProviderToRecord(p)
+	out := pgCredentialProviderToRecord(&p)
 	out.ConfigConfigured = p.ConfigEncrypted != ""
 	return out, nil
 }
 
 func (s *pgCredentialProviderStore) GetProviderByName(ctx context.Context, name string) (*CredentialProviderRecord, error) {
-	p, err := s.client.CredentialProvider.Query().
-		Where(credentialprovider.NameEQ(name)).
-		Only(ctx)
+	var p models.CredentialProvider
+	err := s.db.NewSelect().Model(&p).Where("name = ?", name).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*CredentialProviderRecord](err, "credential provider")
 	}
-	out := pgCredentialProviderToRecord(p)
+	out := pgCredentialProviderToRecord(&p)
 	out.ConfigConfigured = p.ConfigEncrypted != ""
 	return out, nil
 }
 
 func (s *pgCredentialProviderStore) GetProviderWithConfig(ctx context.Context, id uuid.UUID) (*CredentialProviderRecord, error) {
-	p, err := s.client.CredentialProvider.Get(ctx, id)
+	var p models.CredentialProvider
+	err := s.db.NewSelect().Model(&p).Where("id = ?", id).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*CredentialProviderRecord](err, "credential provider")
 	}
-	out := pgCredentialProviderToRecord(p)
+	out := pgCredentialProviderToRecord(&p)
 	cfg, err := decryptProviderConfig(p.ConfigEncrypted)
 	if err != nil {
 		return nil, err
@@ -237,37 +259,47 @@ func (s *pgCredentialProviderStore) GetProviderWithConfig(ctx context.Context, i
 }
 
 func (s *pgCredentialProviderStore) ListProviders(ctx context.Context, q CredentialProviderQuery) ([]CredentialProviderRecord, int64, error) {
-	query := s.client.CredentialProvider.Query()
+	countQ := s.db.NewSelect().Model((*models.CredentialProvider)(nil))
+	listQ := s.db.NewSelect().Model((*models.CredentialProvider)(nil))
+
 	if t := normalizeLower(q.Type); t != "" {
 		if !IsValidCredentialProviderType(t) {
 			return nil, 0, fmt.Errorf("invalid provider type %q", t)
 		}
-		query = query.Where(credentialprovider.TypeEQ(credentialprovider.Type(t)))
+		countQ = countQ.Where("type = ?", t)
+		listQ = listQ.Where("type = ?", t)
 	}
 	if q.Enabled != nil {
-		query = query.Where(credentialprovider.EnabledEQ(*q.Enabled))
+		countQ = countQ.Where("enabled = ?", *q.Enabled)
+		listQ = listQ.Where("enabled = ?", *q.Enabled)
 	}
 	if q.Search != "" {
-		query = query.Where(credentialprovider.NameContains(q.Search))
+		countQ = countQ.Where("name LIKE ?", "%"+q.Search+"%")
+		listQ = listQ.Where("name LIKE ?", "%"+q.Search+"%")
 	}
-	total, err := query.Count(ctx)
+
+	total, err := countQ.Count(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("count credential providers: %w", err)
 	}
-	query = query.Order(ent.Desc(credentialprovider.FieldCreatedAt))
+
+	listQ = listQ.OrderExpr("created_at DESC")
 	if q.Limit > 0 {
-		query = query.Limit(q.Limit)
+		listQ = listQ.Limit(q.Limit)
 	}
 	if q.Skip > 0 {
-		query = query.Offset(q.Skip)
+		listQ = listQ.Offset(q.Skip)
 	}
-	items, err := query.All(ctx)
+
+	var items []models.CredentialProvider
+	err = listQ.Scan(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list credential providers: %w", err)
 	}
+
 	out := make([]CredentialProviderRecord, 0, len(items))
 	for _, p := range items {
-		rec := pgCredentialProviderToRecord(p)
+		rec := pgCredentialProviderToRecord(&p)
 		rec.ConfigConfigured = p.ConfigEncrypted != ""
 		out = append(out, *rec)
 	}
@@ -279,45 +311,46 @@ func (s *pgCredentialProviderStore) ListProviders(ctx context.Context, q Credent
 const DefaultInternalProviderName = "Alga Internal"
 
 // SeedDefaultInternalProvider ensures the built-in "Alga Internal" provider
-// exists, is marked system, enabled, and typed internal. It is idempotent: if a
-// system internal provider already exists it is left alone. It runs at startup
-// so the secret store is usable without any admin setup.
+// exists, is marked system, enabled, and typed internal. It is idempotent.
 func (s *pgCredentialProviderStore) SeedDefaultInternalProvider(ctx context.Context) error {
-	existing, err := s.client.CredentialProvider.Query().
-		Where(credentialprovider.SystemEQ(true), credentialprovider.TypeEQ(CredentialProviderTypeInternal)).
-		First(ctx)
-	if err != nil && !ent.IsNotFound(err) {
+	exists, err := s.db.NewSelect().Model((*models.CredentialProvider)(nil)).
+		Where("system = ?", true).
+		Where("type = ?", CredentialProviderTypeInternal).
+		Exists(ctx)
+	if err != nil {
 		return fmt.Errorf("failed to check default credential provider: %w", err)
 	}
-	if existing != nil {
+	if exists {
 		return nil
 	}
 	// Name uniqueness: if a non-system provider already occupies the default
-	// name (e.g. created manually before seeding), rename it aside so the seed
-	// can claim the canonical name.
+	// name, rename it aside so the seed can claim the canonical name.
 	if clash, _ := s.GetProviderByName(ctx, DefaultInternalProviderName); clash != nil {
-		_, _ = s.client.CredentialProvider.UpdateOneID(clash.ID).
-			SetName(DefaultInternalProviderName + " (legacy)").
-			Save(ctx)
+		_, _ = s.db.NewUpdate().Model((*models.CredentialProvider)(nil)).
+			Set("name = ?", DefaultInternalProviderName+" (legacy)").
+			Set("updated_at = ?", time.Now().UTC()).
+			Where("id = ?", clash.ID).
+			Exec(ctx)
 	}
 	now := time.Now().UTC()
-	_, err = s.client.CredentialProvider.Create().
-		SetName(DefaultInternalProviderName).
-		SetType(CredentialProviderTypeInternal).
-		SetEnabled(true).
-		SetSystem(true).
-		SetCreatedAt(now).
-		SetUpdatedAt(now).
-		Save(ctx)
+	m := &models.CredentialProvider{
+		Name:    DefaultInternalProviderName,
+		Type:    CredentialProviderTypeInternal,
+		Enabled: true,
+		System:  true,
+	}
+	m.ID = models.NewUUID()
+	m.CreatedAt = now
+	m.UpdatedAt = now
+
+	_, err = s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to seed default credential provider: %w", err)
 	}
 	return nil
 }
 
-// encryptProviderConfig serializes config to JSON and encrypts the blob. An
-// empty/nil config encrypts to the empty string so internal providers store no
-// ciphertext.
+// encryptProviderConfig serializes config to JSON and encrypts the blob.
 func encryptProviderConfig(config map[string]string) (string, error) {
 	if len(config) == 0 {
 		return "", nil
@@ -366,14 +399,14 @@ func providerTypeDisplayName(t string) string {
 	}
 }
 
-func pgCredentialProviderToRecord(p *ent.CredentialProvider) *CredentialProviderRecord {
+func pgCredentialProviderToRecord(p *models.CredentialProvider) *CredentialProviderRecord {
 	return &CredentialProviderRecord{
 		ID:               p.ID,
 		Name:             p.Name,
-		Type:             string(p.Type),
+		Type:             p.Type,
 		Enabled:          p.Enabled,
 		System:           p.System,
-		ProviderTypeName: providerTypeDisplayName(string(p.Type)),
+		ProviderTypeName: providerTypeDisplayName(p.Type),
 		CreatedAt:        p.CreatedAt,
 		UpdatedAt:        p.UpdatedAt,
 	}

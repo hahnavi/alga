@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
-	"alga/ent"
-	"alga/ent/triageresult"
+	"alga/db/models"
 )
 
 const (
@@ -87,11 +87,11 @@ type pgTriageResultStore struct {
 	pgStoreBase
 }
 
-func newPGTriageResultStore(client *ent.Client) TriageResultStore {
-	return &pgTriageResultStore{pgStoreBase{client: client}}
+func newPGTriageResultStore(db *bun.DB) TriageResultStore {
+	return &pgTriageResultStore{pgStoreBase{db: db}}
 }
 
-func pgTriageResultToRecord(e *ent.TriageResult) *TriageResultRecord {
+func pgTriageResultToRecord(e *models.TriageResult) *TriageResultRecord {
 	var fps []string
 	if e.AlertFingerprints != nil {
 		fps = e.AlertFingerprints
@@ -122,25 +122,21 @@ func pgTriageResultToRecord(e *ent.TriageResult) *TriageResultRecord {
 	} else {
 		contextUsed = map[string]any{}
 	}
-	var overriddenBy *uuid.UUID
-	if e.OverriddenBy != uuid.Nil {
-		overriddenBy = &e.OverriddenBy
-	}
 	severityInput := ""
 	if e.SeverityInput != nil {
-		severityInput = string(*e.SeverityInput)
+		severityInput = *e.SeverityInput
 	}
 	severityClassified := ""
 	if e.SeverityClassified != nil {
-		severityClassified = string(*e.SeverityClassified)
+		severityClassified = *e.SeverityClassified
 	}
 	category := ""
 	if e.Category != nil {
-		category = string(*e.Category)
+		category = *e.Category
 	}
 	overriddenTo := ""
 	if e.OverriddenTo != nil {
-		overriddenTo = string(*e.OverriddenTo)
+		overriddenTo = *e.OverriddenTo
 	}
 	return &TriageResultRecord{
 		ID:                 e.ID,
@@ -150,7 +146,7 @@ func pgTriageResultToRecord(e *ent.TriageResult) *TriageResultRecord {
 		AlertFingerprints:  fps,
 		AlertLabels:        labels,
 		SeverityInput:      severityInput,
-		Decision:           string(e.Decision),
+		Decision:           e.Decision,
 		Confidence:         e.Confidence,
 		SeverityClassified: severityClassified,
 		Category:           category,
@@ -158,9 +154,9 @@ func pgTriageResultToRecord(e *ent.TriageResult) *TriageResultRecord {
 		SuggestedActions:   actions,
 		Enrichment:         enrichment,
 		ContextUsed:        contextUsed,
-		Outcome:            string(e.Outcome),
+		Outcome:            e.Outcome,
 		OverriddenTo:       overriddenTo,
-		OverriddenBy:       overriddenBy,
+		OverriddenBy:       e.OverriddenBy,
 		OverriddenAt:       e.OverriddenAt,
 		ModelUsed:          e.ModelUsed,
 		TriageDurationMs:   e.TriageDurationMs,
@@ -208,41 +204,55 @@ func (s *pgTriageResultStore) Create(ctx context.Context, record *TriageResultRe
 	}
 	record.TriageNumber = n
 
-	b := s.client.TriageResult.Create().
-		SetTriageNumber(record.TriageNumber).
-		SetCorrelationKey(record.CorrelationKey).
-		SetAlertCount(record.AlertCount).
-		SetAlertFingerprints(record.AlertFingerprints).
-		SetAlertLabels(record.AlertLabels).
-		SetSeverityInput(triageresult.SeverityInput(record.SeverityInput)).
-		SetDecision(triageresult.Decision(record.Decision)).
-		SetConfidence(record.Confidence).
-		SetSeverityClassified(triageresult.SeverityClassified(record.SeverityClassified)).
-		SetCategory(triageresult.Category(record.Category)).
-		SetReasoning(record.Reasoning).
-		SetSuggestedActions(record.SuggestedActions).
-		SetEnrichment(record.Enrichment).
-		SetContextUsed(record.ContextUsed).
-		SetOutcome(triageresult.Outcome(record.Outcome)).
-		SetOverriddenTo(triageresult.OverriddenTo(record.OverriddenTo)).
-		SetModelUsed(record.ModelUsed).
-		SetTriageDurationMs(record.TriageDurationMs).
-		SetTraceID(record.TraceID).
-		SetCreatedAt(now).
-		SetUpdatedAt(now)
-
-	if record.OverriddenBy != nil {
-		b.SetOverriddenBy(*record.OverriddenBy)
+	var severityInput *string
+	if record.SeverityInput != "" {
+		severityInput = &record.SeverityInput
 	}
-	if record.OverriddenAt != nil {
-		b.SetNillableOverriddenAt(record.OverriddenAt)
+	var severityClassified *string
+	if record.SeverityClassified != "" {
+		severityClassified = &record.SeverityClassified
+	}
+	var category *string
+	if record.Category != "" {
+		category = &record.Category
+	}
+	var overriddenTo *string
+	if record.OverriddenTo != "" {
+		overriddenTo = &record.OverriddenTo
 	}
 
-	saved, err := b.Save(ctx)
+	m := &models.TriageResult{
+		ID:                 models.NewUUID(),
+		TriageNumber:       record.TriageNumber,
+		CorrelationKey:     record.CorrelationKey,
+		AlertCount:         record.AlertCount,
+		AlertFingerprints:  record.AlertFingerprints,
+		AlertLabels:        record.AlertLabels,
+		SeverityInput:      severityInput,
+		Decision:           record.Decision,
+		Confidence:         record.Confidence,
+		SeverityClassified: severityClassified,
+		Category:           category,
+		Reasoning:          record.Reasoning,
+		SuggestedActions:   record.SuggestedActions,
+		Enrichment:         record.Enrichment,
+		ContextUsed:        record.ContextUsed,
+		Outcome:            record.Outcome,
+		OverriddenTo:       overriddenTo,
+		OverriddenBy:       record.OverriddenBy,
+		OverriddenAt:       record.OverriddenAt,
+		ModelUsed:          record.ModelUsed,
+		TriageDurationMs:   record.TriageDurationMs,
+		TraceID:            record.TraceID,
+		CreatedAt:          now,
+		UpdatedAt:          now,
+	}
+
+	_, err = s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert triage result: %w", err)
 	}
-	record.ID = saved.ID
+	record.ID = m.ID
 	return record, nil
 }
 
@@ -255,62 +265,71 @@ func (s *pgTriageResultStore) Update(ctx context.Context, id string, patch *Tria
 		return nil, fmt.Errorf("invalid id: %w", err)
 	}
 
-	b := s.client.TriageResult.UpdateOneID(uid).SetUpdatedAt(time.Now().UTC())
+	q := s.db.NewUpdate().Model((*models.TriageResult)(nil)).
+		Set("updated_at = ?", time.Now().UTC()).
+		Where("id = ?", uid)
 
 	if patch.Decision != "" {
-		b.SetDecision(triageresult.Decision(patch.Decision))
+		q = q.Set("decision = ?", patch.Decision)
 	}
 	if patch.Confidence != 0 {
-		b.SetConfidence(patch.Confidence)
+		q = q.Set("confidence = ?", patch.Confidence)
 	}
 	if patch.SeverityClassified != "" {
-		b.SetSeverityClassified(triageresult.SeverityClassified(patch.SeverityClassified))
+		q = q.Set("severity_classified = ?", patch.SeverityClassified)
 	}
 	if patch.Category != "" {
-		b.SetCategory(triageresult.Category(patch.Category))
+		q = q.Set("category = ?", patch.Category)
 	}
 	if patch.Reasoning != "" {
-		b.SetReasoning(patch.Reasoning)
+		q = q.Set("reasoning = ?", patch.Reasoning)
 	}
 	if patch.Outcome != "" {
-		b.SetOutcome(triageresult.Outcome(patch.Outcome))
+		q = q.Set("outcome = ?", patch.Outcome)
 	}
 	if patch.OverriddenTo != "" {
-		b.SetOverriddenTo(triageresult.OverriddenTo(patch.OverriddenTo))
+		q = q.Set("overridden_to = ?", patch.OverriddenTo)
 	}
 	if patch.OverriddenBy != nil {
-		b.SetNillableOverriddenBy(patch.OverriddenBy)
+		q = q.Set("overridden_by = ?", *patch.OverriddenBy)
 	}
 	if patch.OverriddenAt != nil {
-		b.SetNillableOverriddenAt(patch.OverriddenAt)
+		q = q.Set("overridden_at = ?", *patch.OverriddenAt)
 	}
 	if patch.ModelUsed != "" {
-		b.SetModelUsed(patch.ModelUsed)
+		q = q.Set("model_used = ?", patch.ModelUsed)
 	}
 	if patch.TriageDurationMs != 0 {
-		b.SetTriageDurationMs(patch.TriageDurationMs)
+		q = q.Set("triage_duration_ms = ?", patch.TriageDurationMs)
 	}
 	if patch.TraceID != "" {
-		b.SetTraceID(patch.TraceID)
+		q = q.Set("trace_id = ?", patch.TraceID)
 	}
 	if patch.SuggestedActions != nil {
-		b.SetSuggestedActions(patch.SuggestedActions)
+		q = q.Set("suggested_actions = ?", patch.SuggestedActions)
 	}
 	if patch.Enrichment != nil {
-		b.SetEnrichment(patch.Enrichment)
+		q = q.Set("enrichment = ?", patch.Enrichment)
 	}
 	if patch.ContextUsed != nil {
-		b.SetContextUsed(patch.ContextUsed)
+		q = q.Set("context_used = ?", patch.ContextUsed)
 	}
 
-	saved, err := b.Save(ctx)
+	res, err := q.Exec(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, errors.New("triage result not found")
-		}
 		return nil, fmt.Errorf("failed to update triage result: %w", err)
 	}
-	return pgTriageResultToRecord(saved), nil
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return nil, errors.New("triage result not found")
+	}
+
+	// Re-fetch to return the updated record
+	var updated models.TriageResult
+	if err := s.db.NewSelect().Model(&updated).Where("id = ?", uid).Scan(ctx); err != nil {
+		return nil, fmt.Errorf("failed to re-fetch triage result: %w", err)
+	}
+	return pgTriageResultToRecord(&updated), nil
 }
 
 func (s *pgTriageResultStore) Get(ctx context.Context, id string) (*TriageResultRecord, error) {
@@ -318,60 +337,80 @@ func (s *pgTriageResultStore) Get(ctx context.Context, id string) (*TriageResult
 	if err != nil {
 		return nil, fmt.Errorf("invalid id: %w", err)
 	}
-	tr, err := s.client.TriageResult.Get(ctx, uid)
+	var tr models.TriageResult
+	err = s.db.NewSelect().Model(&tr).Where("id = ?", uid).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*TriageResultRecord](err, "triage result")
 	}
-	return pgTriageResultToRecord(tr), nil
+	return pgTriageResultToRecord(&tr), nil
 }
 
 func (s *pgTriageResultStore) List(ctx context.Context, q TriageResultQuery) ([]TriageResultRecord, int64, error) {
-	query := s.client.TriageResult.Query()
+	countQ := s.db.NewSelect().Model((*models.TriageResult)(nil))
 
 	if decision := strings.TrimSpace(q.Decision); decision != "" {
-		query = query.Where(triageresult.DecisionEQ(triageresult.Decision(decision)))
+		countQ = countQ.Where("decision = ?", decision)
 	}
 	if outcome := strings.TrimSpace(q.Outcome); outcome != "" {
-		query = query.Where(triageresult.OutcomeEQ(triageresult.Outcome(outcome)))
+		countQ = countQ.Where("outcome = ?", outcome)
 	}
 	if category := strings.TrimSpace(q.Category); category != "" {
-		query = query.Where(triageresult.CategoryEQ(triageresult.Category(category)))
+		countQ = countQ.Where("category = ?", category)
 	}
 	if severity := strings.TrimSpace(q.Severity); severity != "" {
-		query = query.Where(triageresult.SeverityInputEQ(triageresult.SeverityInput(severity)))
+		countQ = countQ.Where("severity_input = ?", severity)
 	}
 	if !q.StartDate.IsZero() {
-		query = query.Where(triageresult.CreatedAtGTE(q.StartDate))
+		countQ = countQ.Where("created_at >= ?", q.StartDate)
 	}
 	if !q.EndDate.IsZero() {
-		query = query.Where(triageresult.CreatedAtLTE(q.EndDate))
+		countQ = countQ.Where("created_at <= ?", q.EndDate)
 	}
 
-	total, err := query.Count(ctx)
+	total, err := countQ.Count(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("count triage results: %w", err)
 	}
 
-	query = query.Order(ent.Desc(triageresult.FieldCreatedAt))
-
+	var items []models.TriageResult
+	listQ := s.db.NewSelect().Model(&items).Order("created_at DESC")
+	if decision := strings.TrimSpace(q.Decision); decision != "" {
+		listQ = listQ.Where("decision = ?", decision)
+	}
+	if outcome := strings.TrimSpace(q.Outcome); outcome != "" {
+		listQ = listQ.Where("outcome = ?", outcome)
+	}
+	if category := strings.TrimSpace(q.Category); category != "" {
+		listQ = listQ.Where("category = ?", category)
+	}
+	if severity := strings.TrimSpace(q.Severity); severity != "" {
+		listQ = listQ.Where("severity_input = ?", severity)
+	}
+	if !q.StartDate.IsZero() {
+		listQ = listQ.Where("created_at >= ?", q.StartDate)
+	}
+	if !q.EndDate.IsZero() {
+		listQ = listQ.Where("created_at <= ?", q.EndDate)
+	}
 	if q.Limit > 0 {
-		query = query.Limit(q.Limit)
+		listQ = listQ.Limit(q.Limit)
 	}
 	if q.Skip > 0 {
-		query = query.Offset(q.Skip)
+		listQ = listQ.Offset(q.Skip)
 	}
 
-	items, err := query.All(ctx)
+	err = listQ.Scan(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list triage results: %w", err)
 	}
 
 	out := make([]TriageResultRecord, 0, len(items))
-	for _, tr := range items {
+	for i := range items {
+		tr := &items[i]
 		if q.Search != "" {
 			text := strings.TrimSpace(strings.ToLower(q.Search))
 			if !strings.Contains(strings.ToLower(tr.CorrelationKey), text) &&
-				!strings.Contains(strings.ToLower(string(tr.Decision)), text) &&
+				!strings.Contains(strings.ToLower(tr.Decision), text) &&
 				!strings.Contains(strings.ToLower(tr.Reasoning), text) &&
 				!strings.Contains(strings.ToLower(tr.TraceID), text) {
 				continue
@@ -386,22 +425,23 @@ func (s *pgTriageResultStore) List(ctx context.Context, q TriageResultQuery) ([]
 }
 
 func (s *pgTriageResultStore) GetByCorrelationKey(ctx context.Context, key string, limit int) ([]TriageResultRecord, error) {
-	query := s.client.TriageResult.Query().
-		Where(triageresult.CorrelationKey(key)).
-		Order(ent.Desc(triageresult.FieldCreatedAt))
+	var items []models.TriageResult
+	q := s.db.NewSelect().Model(&items).
+		Where("correlation_key = ?", key).
+		Order("created_at DESC")
 
 	if limit > 0 {
-		query = query.Limit(limit)
+		q = q.Limit(limit)
 	}
 
-	items, err := query.All(ctx)
+	err := q.Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get triage results by correlation key: %w", err)
 	}
 
 	out := make([]TriageResultRecord, 0, len(items))
-	for _, tr := range items {
-		out = append(out, *pgTriageResultToRecord(tr))
+	for i := range items {
+		out = append(out, *pgTriageResultToRecord(&items[i]))
 	}
 	if out == nil {
 		out = []TriageResultRecord{}
@@ -410,17 +450,17 @@ func (s *pgTriageResultStore) GetByCorrelationKey(ctx context.Context, key strin
 }
 
 func (s *pgTriageResultStore) CountByOutcome(ctx context.Context) (confirmed, overridden, pending int64, err error) {
-	c, err := s.client.TriageResult.Query().Where(triageresult.OutcomeEQ(triageresult.OutcomeConfirmed)).Count(ctx)
+	c, err := s.db.NewSelect().Model((*models.TriageResult)(nil)).Where("outcome = ?", "confirmed").Count(ctx)
 	if err != nil {
 		return 0, 0, 0, fmt.Errorf("count confirmed: %w", err)
 	}
 	confirmed = int64(c)
-	c, err = s.client.TriageResult.Query().Where(triageresult.OutcomeEQ(triageresult.OutcomeOverridden)).Count(ctx)
+	c, err = s.db.NewSelect().Model((*models.TriageResult)(nil)).Where("outcome = ?", "overridden").Count(ctx)
 	if err != nil {
 		return 0, 0, 0, fmt.Errorf("count overridden: %w", err)
 	}
 	overridden = int64(c)
-	c, err = s.client.TriageResult.Query().Where(triageresult.OutcomeEQ(triageresult.OutcomePending)).Count(ctx)
+	c, err = s.db.NewSelect().Model((*models.TriageResult)(nil)).Where("outcome = ?", "pending").Count(ctx)
 	if err != nil {
 		return 0, 0, 0, fmt.Errorf("count pending: %w", err)
 	}
@@ -429,33 +469,36 @@ func (s *pgTriageResultStore) CountByOutcome(ctx context.Context) (confirmed, ov
 }
 
 func (s *pgTriageResultStore) CountByDecision(ctx context.Context) (map[string]int64, error) {
-	items, err := s.client.TriageResult.Query().All(ctx)
+	var items []models.TriageResult
+	err := s.db.NewSelect().Model(&items).Column("decision").Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("query triage results for decision counts: %w", err)
 	}
 	m := make(map[string]int64)
-	for _, tr := range items {
-		m[string(tr.Decision)]++
+	for i := range items {
+		m[items[i].Decision]++
 	}
 	return m, nil
 }
 
 func (s *pgTriageResultStore) CountByCategory(ctx context.Context) (map[string]int64, error) {
-	items, err := s.client.TriageResult.Query().All(ctx)
+	var items []models.TriageResult
+	err := s.db.NewSelect().Model(&items).Column("category").Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("query triage results for category counts: %w", err)
 	}
 	m := make(map[string]int64)
-	for _, tr := range items {
-		if tr.Category != nil && *tr.Category != "" {
-			m[string(*tr.Category)]++
+	for i := range items {
+		if items[i].Category != nil && *items[i].Category != "" {
+			m[*items[i].Category]++
 		}
 	}
 	return m, nil
 }
 
 func (s *pgTriageResultStore) AvgConfidence(ctx context.Context) (float64, error) {
-	items, err := s.client.TriageResult.Query().All(ctx)
+	var items []models.TriageResult
+	err := s.db.NewSelect().Model(&items).Column("confidence").Scan(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("query triage results for avg confidence: %w", err)
 	}
@@ -463,14 +506,15 @@ func (s *pgTriageResultStore) AvgConfidence(ctx context.Context) (float64, error
 		return 0, nil
 	}
 	var sum float64
-	for _, tr := range items {
-		sum += tr.Confidence
+	for i := range items {
+		sum += items[i].Confidence
 	}
 	return sum / float64(len(items)), nil
 }
 
 func (s *pgTriageResultStore) AvgDurationMs(ctx context.Context) (float64, error) {
-	items, err := s.client.TriageResult.Query().All(ctx)
+	var items []models.TriageResult
+	err := s.db.NewSelect().Model(&items).Column("triage_duration_ms").Scan(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("query triage results for avg duration: %w", err)
 	}
@@ -478,30 +522,32 @@ func (s *pgTriageResultStore) AvgDurationMs(ctx context.Context) (float64, error
 		return 0, nil
 	}
 	var sum int64
-	for _, tr := range items {
-		sum += tr.TriageDurationMs
+	for i := range items {
+		sum += items[i].TriageDurationMs
 	}
 	return float64(sum) / float64(len(items)), nil
 }
 
 func (s *pgTriageResultStore) VolumeTrend(ctx context.Context, days int) ([]TriageVolumeDay, error) {
 	cutoff := time.Now().UTC().AddDate(0, 0, -days)
-	items, err := s.client.TriageResult.Query().
-		Where(triageresult.CreatedAtGTE(cutoff)).
-		Order(ent.Asc(triageresult.FieldCreatedAt)).
-		All(ctx)
+	var items []models.TriageResult
+	err := s.db.NewSelect().Model(&items).
+		Column("created_at", "decision").
+		Where("created_at >= ?", cutoff).
+		Order("created_at ASC").
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("query triage results for volume trend: %w", err)
 	}
 
 	dayMap := make(map[string]map[string]int64)
-	for _, tr := range items {
-		day := tr.CreatedAt.UTC().Truncate(24 * time.Hour)
+	for i := range items {
+		day := items[i].CreatedAt.UTC().Truncate(24 * time.Hour)
 		key := day.Format(time.RFC3339)
 		if _, ok := dayMap[key]; !ok {
 			dayMap[key] = make(map[string]int64)
 		}
-		dayMap[key][string(tr.Decision)]++
+		dayMap[key][items[i].Decision]++
 	}
 
 	var out []TriageVolumeDay
@@ -518,5 +564,5 @@ func (s *pgTriageResultStore) VolumeTrend(ctx context.Context, days int) ([]Tria
 }
 
 func (s *pgTriageResultStore) nextTriageNumber(ctx context.Context) (int64, error) {
-	return nextPgCounter(ctx, s.client, "triage_results")
+	return nextPgCounter(ctx, s.db, "triage_results")
 }

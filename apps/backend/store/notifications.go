@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"alga/ent"
-	"alga/ent/notification"
-
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
+
+	"alga/db/models"
 )
 
 type NotificationRecord struct {
@@ -37,8 +37,8 @@ type pgNotificationStore struct {
 	pgStoreBase
 }
 
-func newPGNotificationStore(client *ent.Client) NotificationStore {
-	return &pgNotificationStore{pgStoreBase{client: client}}
+func newPGNotificationStore(db *bun.DB) NotificationStore {
+	return &pgNotificationStore{pgStoreBase{db: db}}
 }
 
 func (s *pgNotificationStore) Create(ctx context.Context, n *NotificationRecord) (*NotificationRecord, error) {
@@ -46,23 +46,31 @@ func (s *pgNotificationStore) Create(ctx context.Context, n *NotificationRecord)
 		n.CreatedAt = time.Now().UTC()
 	}
 
-	saved, err := s.client.Notification.Create().
-		SetUserID(n.UserID).
-		SetType(notification.Type(n.Type)).
-		SetTitle(n.Title).
-		SetMessage(n.Message).
-		SetRead(n.Read).
-		SetResourceType(notification.ResourceType(n.ResourceType)).
-		SetResourceID(n.ResourceID).
-		SetTriggeredByUserID(n.TriggeredByUserID).
-		SetTriggeredByDisplayName(n.TriggeredByDisplayName).
-		SetCreatedAt(n.CreatedAt).
-		Save(ctx)
+	var resourceType *string
+	if n.ResourceType != "" {
+		resourceType = &n.ResourceType
+	}
+
+	m := &models.Notification{
+		ID:                     models.NewUUID(),
+		UserID:                 n.UserID,
+		Type:                   n.Type,
+		Title:                  n.Title,
+		Message:                n.Message,
+		Read:                   n.Read,
+		ResourceType:           resourceType,
+		ResourceID:             n.ResourceID,
+		TriggeredByUserID:      n.TriggeredByUserID,
+		TriggeredByDisplayName: n.TriggeredByDisplayName,
+		CreatedAt:              n.CreatedAt,
+	}
+
+	_, err := s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create notification: %w", err)
 	}
 
-	n.ID = saved.ID
+	n.ID = m.ID
 	return n, nil
 }
 
@@ -71,27 +79,28 @@ func (s *pgNotificationStore) ListByUser(ctx context.Context, userID string, lim
 		limit = 20
 	}
 
-	query := s.client.Notification.Query().
-		Where(notification.UserID(userID)).
-		Order(ent.Desc(notification.FieldCreatedAt)).
+	var nfns []models.Notification
+	err := s.db.NewSelect().Model(&nfns).
+		Where("user_id = ?", userID).
+		Order("created_at DESC").
 		Limit(int(limit)).
-		Offset(int(skip))
-
-	nfns, err := query.All(ctx)
+		Offset(int(skip)).
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list notifications: %w", err)
 	}
 
 	var records []NotificationRecord
-	for _, n := range nfns {
+	for i := range nfns {
+		n := &nfns[i]
 		resourceType := ""
 		if n.ResourceType != nil {
-			resourceType = string(*n.ResourceType)
+			resourceType = *n.ResourceType
 		}
 		records = append(records, NotificationRecord{
 			ID:                     n.ID,
 			UserID:                 n.UserID,
-			Type:                   string(n.Type),
+			Type:                   n.Type,
 			Title:                  n.Title,
 			Message:                n.Message,
 			Read:                   n.Read,
@@ -109,8 +118,9 @@ func (s *pgNotificationStore) ListByUser(ctx context.Context, userID string, lim
 }
 
 func (s *pgNotificationStore) GetUnreadCount(ctx context.Context, userID string) (int64, error) {
-	count, err := s.client.Notification.Query().
-		Where(notification.UserID(userID), notification.Read(false)).
+	count, err := s.db.NewSelect().Model((*models.Notification)(nil)).
+		Where("user_id = ?", userID).
+		Where("\"read\" = ?", false).
 		Count(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to count unread notifications: %w", err)
@@ -124,24 +134,30 @@ func (s *pgNotificationStore) MarkRead(ctx context.Context, userID, id string) e
 		return fmt.Errorf("invalid notification id: %s", id)
 	}
 
-	_, err = s.client.Notification.UpdateOneID(uid).
-		Where(notification.UserID(userID)).
-		SetRead(true).
-		Save(ctx)
+	res, err := s.db.NewUpdate().Model((*models.Notification)(nil)).
+		Set("\"read\" = ?", true).
+		Where("id = ?", uid).
+		Where("user_id = ?", userID).
+		Exec(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return fmt.Errorf("notification not found: %w", ErrNotificationNotFound)
-		}
 		return fmt.Errorf("failed to mark notification read: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to mark notification read: %w", err)
+	}
+	if n == 0 {
+		return fmt.Errorf("notification not found: %w", ErrNotificationNotFound)
 	}
 	return nil
 }
 
 func (s *pgNotificationStore) MarkAllRead(ctx context.Context, userID string) error {
-	_, err := s.client.Notification.Update().
-		Where(notification.UserID(userID), notification.Read(false)).
-		SetRead(true).
-		Save(ctx)
+	_, err := s.db.NewUpdate().Model((*models.Notification)(nil)).
+		Set("\"read\" = ?", true).
+		Where("user_id = ?", userID).
+		Where("\"read\" = ?", false).
+		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to mark all notifications read: %w", err)
 	}

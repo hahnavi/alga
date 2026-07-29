@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
 	algacrypto "alga/crypto"
-	"alga/ent"
-	"alga/ent/user"
+	"alga/db/models"
 )
 
 var (
@@ -74,8 +74,8 @@ type pgUserStore struct {
 	pgStoreBase
 }
 
-func newPGUserStore(client *ent.Client) UserStore {
-	return &pgUserStore{pgStoreBase{client: client}}
+func newPGUserStore(db *bun.DB) UserStore {
+	return &pgUserStore{pgStoreBase{db: db}}
 }
 
 func (s *pgUserStore) CreateUser(email, password, role string) (*UserRecord, error) {
@@ -86,25 +86,29 @@ func (s *pgUserStore) CreateUser(email, password, role string) (*UserRecord, err
 
 	now := time.Now().UTC()
 
-	saved, err := s.client.User.Create().
-		SetEmail(email).
-		SetPassword(hash).
-		SetRole(user.Role(role)).
-		SetCreatedAt(now).
-		SetUpdatedAt(now).
-		Save(context.Background())
+	m := &models.User{
+		ID:        models.NewUUID(),
+		Email:     email,
+		Password:  hash,
+		Role:      role,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+
+	_, err = s.db.NewInsert().Model(m).Exec(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
-	return pgUserToRecord(saved), nil
+	return pgUserToRecord(m), nil
 }
 
 func (s *pgUserStore) GetByEmail(email string) (*UserRecord, error) {
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	u, err := s.client.User.Query().Where(user.Email(email)).Only(ctx)
+	u := new(models.User)
+	err := s.db.NewSelect().Model(u).Where("email = ?", email).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*UserRecord](err, "user by email")
 	}
@@ -115,7 +119,8 @@ func (s *pgUserStore) GetByID(id uuid.UUID) (*UserRecord, error) {
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	u, err := s.client.User.Get(ctx, id)
+	u := new(models.User)
+	err := s.db.NewSelect().Model(u).Where("id = ?", id).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*UserRecord](err, "user")
 	}
@@ -126,14 +131,15 @@ func (s *pgUserStore) ListUsers() ([]UserRecord, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	users, err := s.client.User.Query().Limit(500).All(ctx)
+	var users []models.User
+	err := s.db.NewSelect().Model(&users).Limit(500).Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list users: %w", err)
 	}
 
 	records := make([]UserRecord, 0, len(users))
-	for _, u := range users {
-		records = append(records, *pgUserToRecord(u))
+	for i := range users {
+		records = append(records, *pgUserToRecord(&users[i]))
 	}
 	return records, nil
 }
@@ -142,71 +148,94 @@ func (s *pgUserStore) UpdateUser(id uuid.UUID, updates map[string]any) error {
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	b := s.client.User.UpdateOneID(id)
+	q := s.db.NewUpdate().Model((*models.User)(nil)).Where("id = ?", id)
+	hasSet := false
 
 	if v, ok := updates["email"].(string); ok {
-		b.SetEmail(v)
+		q = q.Set("email = ?", v)
+		hasSet = true
 	}
 	if v, ok := updates["password"].(string); ok {
-		b.SetPassword(v)
+		q = q.Set("password = ?", v)
+		hasSet = true
 	}
 	if v, ok := updates["role"].(string); ok {
-		b.SetRole(user.Role(v))
+		q = q.Set("role = ?", v)
+		hasSet = true
 	}
 	if v, ok := updates["full_name"].(string); ok {
-		b.SetFullName(v)
+		q = q.Set("full_name = ?", v)
+		hasSet = true
 	}
 	if v, ok := updates["phone"].(string); ok {
-		b.SetPhone(v)
+		q = q.Set("phone = ?", v)
+		hasSet = true
 	}
 	if v, ok := updates["phone_country"].(string); ok {
-		b.SetPhoneCountry(v)
+		q = q.Set("phone_country = ?", v)
+		hasSet = true
 	}
 	if v, ok := updates["failed_login_attempts"].(int); ok {
-		b.SetFailedLoginAttempts(v)
+		q = q.Set("failed_login_attempts = ?", v)
+		hasSet = true
 	}
 	if v, ok := updates["locked_until"]; ok {
 		if t, ok := v.(*time.Time); ok && t != nil {
-			b.SetLockedUntil(*t)
+			q = q.Set("locked_until = ?", *t)
 		} else {
-			b.ClearLockedUntil()
+			q = q.Set("locked_until = NULL")
 		}
+		hasSet = true
 	}
 	if v, ok := updates["last_failed_login"]; ok {
 		if t, ok := v.(*time.Time); ok && t != nil {
-			b.SetLastFailedLogin(*t)
+			q = q.Set("last_failed_login = ?", *t)
 		} else {
-			b.ClearLastFailedLogin()
+			q = q.Set("last_failed_login = NULL")
 		}
+		hasSet = true
 	}
 	if v, ok := updates["last_login_at"]; ok {
 		if t, ok := v.(*time.Time); ok && t != nil {
-			b.SetLastLoginAt(*t)
+			q = q.Set("last_login_at = ?", *t)
 		} else {
-			b.ClearLastLoginAt()
+			q = q.Set("last_login_at = NULL")
 		}
+		hasSet = true
 	}
 	if v, ok := updates["last_login_ip"].(string); ok {
-		b.SetLastLoginIP(v)
+		q = q.Set("last_login_ip = ?", v)
+		hasSet = true
 	}
 	if v, ok := updates["slack_user_id"].(string); ok {
-		b.SetSlackUserID(v)
+		q = q.Set("slack_user_id = ?", v)
+		hasSet = true
 	}
 	if v, ok := updates["slack_display_name"].(string); ok {
-		b.SetSlackDisplayName(v)
+		q = q.Set("slack_display_name = ?", v)
+		hasSet = true
 	}
 	if v, ok := updates["voice_opt_out"].(bool); ok {
-		b.SetVoiceOptOut(v)
+		q = q.Set("voice_opt_out = ?", v)
+		hasSet = true
 	}
 
-	b.SetUpdatedAt(time.Now().UTC())
+	if !hasSet {
+		return nil
+	}
 
-	_, err := b.Save(ctx)
+	q = q.Set("updated_at = ?", time.Now().UTC())
+
+	res, err := q.Exec(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return fmt.Errorf("user not found: %w", ErrUserNotFound)
-		}
 		return fmt.Errorf("failed to update user: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to update user: %w", err)
+	}
+	if n == 0 {
+		return fmt.Errorf("user not found: %w", ErrUserNotFound)
 	}
 	return nil
 }
@@ -215,12 +244,16 @@ func (s *pgUserStore) DeleteUser(id uuid.UUID) error {
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	err := s.client.User.DeleteOneID(id).Exec(ctx)
+	res, err := s.db.NewDelete().Model((*models.User)(nil)).Where("id = ?", id).Exec(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return fmt.Errorf("user not found: %w", ErrUserNotFound)
-		}
 		return fmt.Errorf("failed to delete user: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to delete user: %w", err)
+	}
+	if n == 0 {
+		return fmt.Errorf("user not found: %w", ErrUserNotFound)
 	}
 	return nil
 }
@@ -229,7 +262,7 @@ func (s *pgUserStore) CountAdmins() (int64, error) {
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	count, err := s.client.User.Query().Where(user.RoleEQ(user.Role("admin"))).Count(ctx)
+	count, err := s.db.NewSelect().Model((*models.User)(nil)).Where("role = ?", "admin").Count(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to count admins: %w", err)
 	}
@@ -261,10 +294,11 @@ func (s *pgUserStore) Authenticate(email, password string) (*UserRecord, error) 
 		if newHash, hashErr := algacrypto.HashPassword(password); hashErr == nil {
 			ctx, cancel := pgctx(context.Background())
 			defer cancel()
-			_, _ = s.client.User.UpdateOneID(u.ID).
-				SetPassword(newHash).
-				SetUpdatedAt(time.Now().UTC()).
-				Save(ctx)
+			_, _ = s.db.NewUpdate().Model((*models.User)(nil)).
+				Set("password = ?", newHash).
+				Set("updated_at = ?", time.Now().UTC()).
+				Where("id = ?", u.ID).
+				Exec(ctx)
 		}
 	}
 
@@ -277,9 +311,10 @@ func (s *pgUserStore) RecordFailedLogin(email string) error {
 
 	now := time.Now().UTC()
 
-	u, err := s.client.User.Query().Where(user.Email(email)).Only(ctx)
+	u := new(models.User)
+	err := s.db.NewSelect().Model(u).Where("email = ?", email).Scan(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
+		if isNotFound(err) {
 			return nil
 		}
 		return fmt.Errorf("failed to record failed login: %w", err)
@@ -287,17 +322,18 @@ func (s *pgUserStore) RecordFailedLogin(email string) error {
 
 	newAttempts := u.FailedLoginAttempts + 1
 
-	b := s.client.User.UpdateOneID(u.ID).
-		SetFailedLoginAttempts(newAttempts).
-		SetLastFailedLogin(now).
-		SetUpdatedAt(now)
+	q := s.db.NewUpdate().Model((*models.User)(nil)).
+		Set("failed_login_attempts = ?", newAttempts).
+		Set("last_failed_login = ?", now).
+		Set("updated_at = ?", now).
+		Where("id = ?", u.ID)
 
 	if newAttempts >= 5 {
 		lockoutEnd := now.Add(30 * time.Minute)
-		b.SetLockedUntil(lockoutEnd)
+		q = q.Set("locked_until = ?", lockoutEnd)
 	}
 
-	_, err = b.Save(ctx)
+	_, err = q.Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to record failed login: %w", err)
 	}
@@ -310,13 +346,14 @@ func (s *pgUserStore) RecordSuccessfulLogin(userID uuid.UUID, ip string) error {
 
 	now := time.Now().UTC()
 
-	_, err := s.client.User.UpdateOneID(userID).
-		SetFailedLoginAttempts(0).
-		ClearLockedUntil().
-		SetLastLoginAt(now).
-		SetLastLoginIP(ip).
-		SetUpdatedAt(now).
-		Save(ctx)
+	_, err := s.db.NewUpdate().Model((*models.User)(nil)).
+		Set("failed_login_attempts = ?", 0).
+		Set("locked_until = NULL").
+		Set("last_login_at = ?", now).
+		Set("last_login_ip = ?", ip).
+		Set("updated_at = ?", now).
+		Where("id = ?", userID).
+		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to record successful login: %w", err)
 	}
@@ -327,16 +364,21 @@ func (s *pgUserStore) UnlockAccount(userID uuid.UUID) error {
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	_, err := s.client.User.UpdateOneID(userID).
-		SetFailedLoginAttempts(0).
-		ClearLockedUntil().
-		SetUpdatedAt(time.Now().UTC()).
-		Save(ctx)
+	res, err := s.db.NewUpdate().Model((*models.User)(nil)).
+		Set("failed_login_attempts = ?", 0).
+		Set("locked_until = NULL").
+		Set("updated_at = ?", time.Now().UTC()).
+		Where("id = ?", userID).
+		Exec(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return fmt.Errorf("user not found: %w", ErrUserNotFound)
-		}
 		return fmt.Errorf("failed to unlock account: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to unlock account: %w", err)
+	}
+	if n == 0 {
+		return fmt.Errorf("user not found: %w", ErrUserNotFound)
 	}
 	return nil
 }
@@ -345,7 +387,7 @@ func (s *pgUserStore) CountUsers() (int64, error) {
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	count, err := s.client.User.Query().Count(ctx)
+	count, err := s.db.NewSelect().Model((*models.User)(nil)).Count(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to count users: %w", err)
 	}
@@ -357,7 +399,8 @@ func (s *pgUserStore) GetNotificationPreferences(ctx context.Context, userID str
 	if err != nil {
 		return nil, err
 	}
-	u, err := s.client.User.Get(ctx, uid)
+	u := new(models.User)
+	err = s.db.NewSelect().Model(u).Where("id = ?", uid).Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get user preferences: %w", err)
 	}
@@ -372,9 +415,10 @@ func (s *pgUserStore) UpdateNotificationPreferences(ctx context.Context, userID 
 	if err != nil {
 		return err
 	}
-	_, err = s.client.User.UpdateOneID(uid).
-		SetNotificationPreferences(prefs).
-		Save(ctx)
+	_, err = s.db.NewUpdate().Model((*models.User)(nil)).
+		Set("notification_preferences = ?", prefs).
+		Where("id = ?", uid).
+		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("update notification preferences: %w", err)
 	}
@@ -385,7 +429,8 @@ func (s *pgUserStore) GetByGoogleID(googleID string) (*UserRecord, error) {
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	u, err := s.client.User.Query().Where(user.GoogleID(googleID)).Only(ctx)
+	u := new(models.User)
+	err := s.db.NewSelect().Model(u).Where("google_id = ?", googleID).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*UserRecord](err, "user by google id")
 	}
@@ -396,7 +441,8 @@ func (s *pgUserStore) GetBySlackUserID(slackUserID string) (*UserRecord, error) 
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	u, err := s.client.User.Query().Where(user.SlackUserIDEQ(slackUserID)).Only(ctx)
+	u := new(models.User)
+	err := s.db.NewSelect().Model(u).Where("slack_user_id = ?", slackUserID).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*UserRecord](err, "user by slack id")
 	}
@@ -407,7 +453,10 @@ func (s *pgUserStore) UpdateGoogleID(userID uuid.UUID, googleID string) error {
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	err := s.client.User.UpdateOneID(userID).SetGoogleID(googleID).Exec(ctx)
+	_, err := s.db.NewUpdate().Model((*models.User)(nil)).
+		Set("google_id = ?", googleID).
+		Where("id = ?", userID).
+		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to update google_id: %w", err)
 	}
@@ -418,10 +467,11 @@ func (s *pgUserStore) ClearGoogleID(userID uuid.UUID) error {
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	_, err := s.client.User.UpdateOneID(userID).
-		ClearGoogleID().
-		SetUpdatedAt(time.Now().UTC()).
-		Save(ctx)
+	_, err := s.db.NewUpdate().Model((*models.User)(nil)).
+		Set("google_id = ?", "").
+		Set("updated_at = ?", time.Now().UTC()).
+		Where("id = ?", userID).
+		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to clear google_id: %w", err)
 	}
@@ -429,11 +479,12 @@ func (s *pgUserStore) ClearGoogleID(userID uuid.UUID) error {
 }
 
 func (s *pgUserStore) SetSlackIdentity(ctx context.Context, userID uuid.UUID, slackUserID, slackDisplayName string) error {
-	_, err := s.client.User.UpdateOneID(userID).
-		SetSlackUserID(slackUserID).
-		SetSlackDisplayName(slackDisplayName).
-		SetUpdatedAt(time.Now().UTC()).
-		Save(ctx)
+	_, err := s.db.NewUpdate().Model((*models.User)(nil)).
+		Set("slack_user_id = ?", slackUserID).
+		Set("slack_display_name = ?", slackDisplayName).
+		Set("updated_at = ?", time.Now().UTC()).
+		Where("id = ?", userID).
+		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to set slack identity: %w", err)
 	}
@@ -441,18 +492,19 @@ func (s *pgUserStore) SetSlackIdentity(ctx context.Context, userID uuid.UUID, sl
 }
 
 func (s *pgUserStore) ClearSlackIdentity(ctx context.Context, userID uuid.UUID) error {
-	_, err := s.client.User.UpdateOneID(userID).
-		SetSlackUserID("").
-		SetSlackDisplayName("").
-		SetUpdatedAt(time.Now().UTC()).
-		Save(ctx)
+	_, err := s.db.NewUpdate().Model((*models.User)(nil)).
+		Set("slack_user_id = ?", "").
+		Set("slack_display_name = ?", "").
+		Set("updated_at = ?", time.Now().UTC()).
+		Where("id = ?", userID).
+		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to clear slack identity: %w", err)
 	}
 	return nil
 }
 
-func pgUserToRecord(u *ent.User) *UserRecord {
+func pgUserToRecord(u *models.User) *UserRecord {
 	return &UserRecord{
 		ID:                  u.ID,
 		FullName:            u.FullName,
@@ -460,7 +512,7 @@ func pgUserToRecord(u *ent.User) *UserRecord {
 		PhoneCountry:        u.PhoneCountry,
 		Email:               u.Email,
 		Password:            u.Password,
-		Role:                string(u.Role),
+		Role:                u.Role,
 		CreatedAt:           u.CreatedAt,
 		UpdatedAt:           u.UpdatedAt,
 		GoogleID:            u.GoogleID,

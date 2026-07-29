@@ -7,10 +7,9 @@ import (
 	"slices"
 	"time"
 
-	"alga/ent"
-	"alga/ent/alert"
-	"alga/ent/alertinvestigation"
-	entincident "alga/ent/incident"
+	"github.com/uptrace/bun"
+
+	"alga/db/models"
 	"alga/logger"
 	"alga/strutil"
 )
@@ -127,8 +126,8 @@ type pgDashboardStore struct {
 	pgStoreBase
 }
 
-func newPGDashboardStore(client *ent.Client) DashboardStore {
-	return &pgDashboardStore{pgStoreBase{client: client}}
+func newPGDashboardStore(db *bun.DB) DashboardStore {
+	return &pgDashboardStore{pgStoreBase{db: db}}
 }
 
 func (s *pgDashboardStore) GetStats(ctx context.Context) (*DashboardStats, error) {
@@ -206,22 +205,22 @@ func (s *pgDashboardStore) GetStats(ctx context.Context) (*DashboardStats, error
 }
 
 func (s *pgDashboardStore) getAlertStats(ctx context.Context) (*DashboardAlertStats, error) {
-	total, err := s.client.Alert.Query().Where(alert.DeletedAtIsNil()).Count(ctx)
+	total, err := s.db.NewSelect().Model((*models.Alert)(nil)).Where("deleted_at IS NULL").Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("count total: %w", err)
 	}
 
-	firing, err := s.client.Alert.Query().Where(alert.StatusEQ(alert.StatusFiring), alert.DeletedAtIsNil()).Count(ctx)
+	firing, err := s.db.NewSelect().Model((*models.Alert)(nil)).Where("status = ?", "firing").Where("deleted_at IS NULL").Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("count firing: %w", err)
 	}
 
-	resolved, err := s.client.Alert.Query().Where(alert.StatusEQ(alert.StatusResolved), alert.DeletedAtIsNil()).Count(ctx)
+	resolved, err := s.db.NewSelect().Model((*models.Alert)(nil)).Where("status = ?", "resolved").Where("deleted_at IS NULL").Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("count resolved: %w", err)
 	}
 
-	unacknowledged, err := s.client.Alert.Query().Where(alert.StatusEQ(alert.StatusFiring), alert.Acknowledged(false), alert.DeletedAtIsNil()).Count(ctx)
+	unacknowledged, err := s.db.NewSelect().Model((*models.Alert)(nil)).Where("status = ?", "firing").Where("acknowledged = ?", false).Where("deleted_at IS NULL").Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("count unacknowledged: %w", err)
 	}
@@ -235,14 +234,15 @@ func (s *pgDashboardStore) getAlertStats(ctx context.Context) (*DashboardAlertSt
 }
 
 func (s *pgDashboardStore) getAlertsBySeverity(ctx context.Context) ([]SeverityBucket, error) {
-	allAlerts, err := s.client.Alert.Query().Where(alert.DeletedAtIsNil()).All(ctx)
+	var allAlerts []models.Alert
+	err := s.db.NewSelect().Model(&allAlerts).Column("labels").Where("deleted_at IS NULL").Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query alerts: %w", err)
 	}
 
 	counts := make(map[string]int64)
-	for _, a := range allAlerts {
-		sev := extractSeverity(a.Labels)
+	for i := range allAlerts {
+		sev := extractSeverity(allAlerts[i].Labels)
 		counts[sev]++
 	}
 
@@ -268,29 +268,36 @@ func extractSeverity(labels map[string]string) string {
 func (s *pgDashboardStore) getAlertTrend(ctx context.Context) ([]DailyAlertCount, error) {
 	cutoff := time.Now().AddDate(0, 0, -30)
 
-	allAlerts, err := s.client.Alert.Query().
-		Where(alert.CreatedAtGTE(cutoff), alert.DeletedAtIsNil()).
-		All(ctx)
+	var allAlerts []models.Alert
+	err := s.db.NewSelect().Model(&allAlerts).
+		Column("created_at").
+		Where("created_at >= ?", cutoff).
+		Where("deleted_at IS NULL").
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query alerts for trend: %w", err)
 	}
 
 	createdMap := make(map[string]int64)
-	for _, a := range allAlerts {
-		day := a.CreatedAt.Format("2006-01-02")
+	for i := range allAlerts {
+		day := allAlerts[i].CreatedAt.Format("2006-01-02")
 		createdMap[day]++
 	}
 
-	resolvedAlerts, err := s.client.Alert.Query().
-		Where(alert.StatusEQ(alert.StatusResolved), alert.UpdatedAtGTE(cutoff), alert.DeletedAtIsNil()).
-		All(ctx)
+	var resolvedAlerts []models.Alert
+	err = s.db.NewSelect().Model(&resolvedAlerts).
+		Column("updated_at").
+		Where("status = ?", "resolved").
+		Where("updated_at >= ?", cutoff).
+		Where("deleted_at IS NULL").
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query resolved alerts for trend: %w", err)
 	}
 
 	resolvedMap := make(map[string]int64)
-	for _, a := range resolvedAlerts {
-		day := a.UpdatedAt.Format("2006-01-02")
+	for i := range resolvedAlerts {
+		day := resolvedAlerts[i].UpdatedAt.Format("2006-01-02")
 		resolvedMap[day]++
 	}
 
@@ -320,35 +327,25 @@ func (s *pgDashboardStore) getAlertTrend(ctx context.Context) ([]DailyAlertCount
 }
 
 func (s *pgDashboardStore) getInvestigationStats(ctx context.Context) (*DashboardInvestigation, error) {
-	total, err := s.client.AlertInvestigation.Query().Count(ctx)
+	total, err := s.db.NewSelect().Model((*models.AlertInvestigation)(nil)).Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("count total: %w", err)
 	}
 
-	pending, err := s.client.AlertInvestigation.Query().Where(alertinvestigation.StatusEQ(alertinvestigation.StatusPending)).Count(ctx)
-	if err != nil {
-		logger.WarnCtx(ctx, "failed to count pending investigations", "component", "store", "error", err)
+	countByStatus := func(status string) int {
+		n, err := s.db.NewSelect().Model((*models.AlertInvestigation)(nil)).Where("status = ?", status).Count(ctx)
+		if err != nil {
+			logger.WarnCtx(ctx, "failed to count investigations", "component", "store", "status", status, "error", err)
+		}
+		return n
 	}
-	investigating, err := s.client.AlertInvestigation.Query().Where(alertinvestigation.StatusEQ(alertinvestigation.StatusInvestigating)).Count(ctx)
-	if err != nil {
-		logger.WarnCtx(ctx, "failed to count investigating investigations", "component", "store", "error", err)
-	}
-	complete, err := s.client.AlertInvestigation.Query().Where(alertinvestigation.StatusEQ(alertinvestigation.StatusComplete)).Count(ctx)
-	if err != nil {
-		logger.WarnCtx(ctx, "failed to count complete investigations", "component", "store", "error", err)
-	}
-	failedCount, err := s.client.AlertInvestigation.Query().Where(alertinvestigation.StatusEQ(alertinvestigation.StatusFailed)).Count(ctx)
-	if err != nil {
-		logger.WarnCtx(ctx, "failed to count failed investigations", "component", "store", "error", err)
-	}
-	cancelled, err := s.client.AlertInvestigation.Query().Where(alertinvestigation.StatusEQ(alertinvestigation.StatusCancelled)).Count(ctx)
-	if err != nil {
-		logger.WarnCtx(ctx, "failed to count cancelled investigations", "component", "store", "error", err)
-	}
-	timedOut, err := s.client.AlertInvestigation.Query().Where(alertinvestigation.StatusEQ(alertinvestigation.StatusTimedOut)).Count(ctx)
-	if err != nil {
-		logger.WarnCtx(ctx, "failed to count timed out investigations", "component", "store", "error", err)
-	}
+
+	pending := countByStatus("pending")
+	investigating := countByStatus("investigating")
+	complete := countByStatus("complete")
+	failedCount := countByStatus("failed")
+	cancelled := countByStatus("cancelled")
+	timedOut := countByStatus("timed_out")
 
 	stats := &DashboardInvestigation{
 		Total:         int64(total),
@@ -369,39 +366,43 @@ func (s *pgDashboardStore) getInvestigationStats(ctx context.Context) (*Dashboar
 }
 
 func (s *pgDashboardStore) getIncidentStats(ctx context.Context) (*DashboardIncidentStats, error) {
-	total, err := s.client.Incident.Query().Where(entincident.DeletedAtIsNil()).Count(ctx)
+	total, err := s.db.NewSelect().Model((*models.Incident)(nil)).Where("deleted_at IS NULL").Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("count total incidents: %w", err)
 	}
 
-	active, err := s.client.Incident.Query().
-		Where(entincident.StatusIn(entincident.StatusDetected, entincident.StatusTriaging, entincident.StatusActive), entincident.DeletedAtIsNil()).
+	active, err := s.db.NewSelect().Model((*models.Incident)(nil)).
+		Where("status IN (?)", bun.In([]string{"detected", "triaging", "active"})).
+		Where("deleted_at IS NULL").
 		Count(ctx)
 	if err != nil {
 		logger.WarnCtx(ctx, "failed to count active incidents", "component", "store", "error", err)
 	}
-	mitigated, err := s.client.Incident.Query().
-		Where(entincident.StatusEQ(entincident.StatusMitigated), entincident.DeletedAtIsNil()).
+	mitigated, err := s.db.NewSelect().Model((*models.Incident)(nil)).
+		Where("status = ?", "mitigated").
+		Where("deleted_at IS NULL").
 		Count(ctx)
 	if err != nil {
 		logger.WarnCtx(ctx, "failed to count mitigated incidents", "component", "store", "error", err)
 	}
-	resolved, err := s.client.Incident.Query().
-		Where(entincident.StatusIn(entincident.StatusResolved, entincident.StatusClosed), entincident.DeletedAtIsNil()).
+	resolved, err := s.db.NewSelect().Model((*models.Incident)(nil)).
+		Where("status IN (?)", bun.In([]string{"resolved", "closed"})).
+		Where("deleted_at IS NULL").
 		Count(ctx)
 	if err != nil {
 		logger.WarnCtx(ctx, "failed to count resolved incidents", "component", "store", "error", err)
 	}
 
-	allIncs, err := s.client.Incident.Query().Where(entincident.DeletedAtIsNil()).All(ctx)
+	var allIncs []models.Incident
+	err = s.db.NewSelect().Model(&allIncs).Column("severity", "priority").Where("deleted_at IS NULL").Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query incidents for severity: %w", err)
 	}
 	bySeverity := make(map[string]int64)
 	byPriority := make(map[string]int64)
-	for _, inc := range allIncs {
-		bySeverity[string(inc.Severity)]++
-		p := string(inc.Priority)
+	for i := range allIncs {
+		bySeverity[allIncs[i].Severity]++
+		p := allIncs[i].Priority
 		if p == "" {
 			p = "P5"
 		}
@@ -419,11 +420,13 @@ func (s *pgDashboardStore) getIncidentStats(ctx context.Context) (*DashboardInci
 }
 
 func (s *pgDashboardStore) getActiveIncidents(ctx context.Context) ([]ActiveIncidentItem, error) {
-	incs, err := s.client.Incident.Query().
-		Where(entincident.StatusIn(entincident.StatusActive, entincident.StatusMitigated), entincident.DeletedAtIsNil()).
-		Order(ent.Desc(entincident.FieldCreatedAt)).
+	var incs []models.Incident
+	err := s.db.NewSelect().Model(&incs).
+		Where("status IN (?)", bun.In([]string{"active", "mitigated"})).
+		Where("deleted_at IS NULL").
+		Order("created_at DESC").
 		Limit(10).
-		All(ctx)
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query active incidents: %w", err)
 	}
@@ -432,12 +435,13 @@ func (s *pgDashboardStore) getActiveIncidents(ctx context.Context) ([]ActiveInci
 	userCache := make(map[string]string)
 
 	items := make([]ActiveIncidentItem, 0, len(incs))
-	for _, inc := range incs {
+	for i := range incs {
+		inc := &incs[i]
 		item := ActiveIncidentItem{
 			IncidentNumber: inc.IncidentNumber,
 			Title:          inc.Title,
-			Severity:       string(inc.Severity),
-			Status:         string(inc.Status),
+			Severity:       inc.Severity,
+			Status:         inc.Status,
 			CreatedAt:      inc.CreatedAt.Format(time.RFC3339),
 		}
 
@@ -446,8 +450,8 @@ func (s *pgDashboardStore) getActiveIncidents(ctx context.Context) ([]ActiveInci
 			if name, ok := serviceCache[sid]; ok {
 				item.ServiceName = name
 			} else {
-				svc, serr := s.client.Service.Get(ctx, *inc.ServiceID)
-				if serr == nil {
+				var svc models.Service
+				if serr := s.db.NewSelect().Model(&svc).Where("id = ?", *inc.ServiceID).Scan(ctx); serr == nil {
 					name := svc.Name
 					if svc.DisplayName != "" {
 						name = svc.DisplayName
@@ -463,8 +467,8 @@ func (s *pgDashboardStore) getActiveIncidents(ctx context.Context) ([]ActiveInci
 			if name, ok := userCache[cid]; ok {
 				item.CommanderName = name
 			} else {
-				u, uerr := s.client.User.Get(ctx, *inc.CommanderID)
-				if uerr == nil {
+				var u models.User
+				if uerr := s.db.NewSelect().Model(&u).Where("id = ?", *inc.CommanderID).Scan(ctx); uerr == nil {
 					name := u.Email
 					if u.FullName != "" {
 						name = u.FullName
@@ -481,14 +485,15 @@ func (s *pgDashboardStore) getActiveIncidents(ctx context.Context) ([]ActiveInci
 }
 
 func (s *pgDashboardStore) getServiceStats(ctx context.Context) (*DashboardServiceStats, error) {
-	services, err := s.client.Service.Query().All(ctx)
+	var services []models.Service
+	err := s.db.NewSelect().Model(&services).Column("status").Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query services: %w", err)
 	}
 
 	byStatus := make(map[string]int64)
-	for _, svc := range services {
-		byStatus[string(svc.Status)]++
+	for i := range services {
+		byStatus[services[i].Status]++
 	}
 
 	return &DashboardServiceStats{
@@ -500,33 +505,27 @@ func (s *pgDashboardStore) getServiceStats(ctx context.Context) (*DashboardServi
 func (s *pgDashboardStore) getSLAStats(ctx context.Context) (*DashboardSLAStats, error) {
 	now := time.Now()
 
-	respBreaches, err := s.client.Incident.Query().
-		Where(
-			entincident.SLATargetRespondAtLT(now),
-			entincident.SLAAcknowledgedAtIsNil(),
-			entincident.DeletedAtIsNil(),
-		).
+	respBreaches, err := s.db.NewSelect().Model((*models.Incident)(nil)).
+		Where("sla_target_respond_at < ?", now).
+		Where("sla_acknowledged_at IS NULL").
+		Where("deleted_at IS NULL").
 		Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("count response breaches: %w", err)
 	}
 
-	resolveBreaches, err := s.client.Incident.Query().
-		Where(
-			entincident.SLATargetResolveAtLT(now),
-			entincident.SLAResolvedAtIsNil(),
-			entincident.DeletedAtIsNil(),
-		).
+	resolveBreaches, err := s.db.NewSelect().Model((*models.Incident)(nil)).
+		Where("sla_target_resolve_at < ?", now).
+		Where("sla_resolved_at IS NULL").
+		Where("deleted_at IS NULL").
 		Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("count resolve breaches: %w", err)
 	}
 
-	totalWithSLA, err := s.client.Incident.Query().
-		Where(
-			entincident.SLATargetRespondAtNotNil(),
-			entincident.DeletedAtIsNil(),
-		).
+	totalWithSLA, err := s.db.NewSelect().Model((*models.Incident)(nil)).
+		Where("sla_target_respond_at IS NOT NULL").
+		Where("deleted_at IS NULL").
 		Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("count incidents with sla: %w", err)
@@ -548,10 +547,13 @@ func (s *pgDashboardStore) getSLAStats(ctx context.Context) (*DashboardSLAStats,
 }
 
 func (s *pgDashboardStore) GetTopAlerts(ctx context.Context, since time.Time, limit int) ([]TopAlertItem, error) {
-	alerts, err := s.client.Alert.Query().
-		Where(alert.CreatedAtGTE(since), alert.DeletedAtIsNil()).
-		Order(ent.Desc(alert.FieldCreatedAt)).
-		All(ctx)
+	var alerts []models.Alert
+	err := s.db.NewSelect().Model(&alerts).
+		Column("fingerprint", "status", "labels").
+		Where("created_at >= ?", since).
+		Where("deleted_at IS NULL").
+		Order("created_at DESC").
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query alerts: %w", err)
 	}
@@ -561,7 +563,8 @@ func (s *pgDashboardStore) GetTopAlerts(ctx context.Context, since time.Time, li
 		sev  string
 	}
 	counts := make(map[key]*TopAlertItem)
-	for _, a := range alerts {
+	for i := range alerts {
+		a := &alerts[i]
 		name := a.Labels["alertname"]
 		if name == "" {
 			name = strutil.Prefix(a.Fingerprint, 8)
@@ -570,15 +573,15 @@ func (s *pgDashboardStore) GetTopAlerts(ctx context.Context, since time.Time, li
 		k := key{name: name, sev: sev}
 		if existing, ok := counts[k]; ok {
 			existing.Count++
-			if a.Status == alert.StatusFiring {
-				existing.Status = string(alert.StatusFiring)
+			if a.Status == "firing" {
+				existing.Status = "firing"
 			}
 		} else {
 			item := &TopAlertItem{
 				AlertName: name,
 				Count:     1,
 				Severity:  sev,
-				Status:    string(a.Status),
+				Status:    a.Status,
 				Labels:    a.Labels,
 			}
 			counts[k] = item
@@ -599,11 +602,12 @@ func (s *pgDashboardStore) GetTopAlerts(ctx context.Context, since time.Time, li
 }
 
 func (s *pgDashboardStore) GetRecentInvestigations(ctx context.Context, since time.Time, limit int) ([]RecentInvestigationItem, error) {
-	invs, err := s.client.AlertInvestigation.Query().
-		Where(alertinvestigation.CreatedAtGTE(since)).
-		Order(ent.Desc(alertinvestigation.FieldCreatedAt)).
+	var invs []models.AlertInvestigation
+	err := s.db.NewSelect().Model(&invs).
+		Where("created_at >= ?", since).
+		Order("created_at DESC").
 		Limit(limit).
-		All(ctx)
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query investigations: %w", err)
 	}
@@ -611,34 +615,41 @@ func (s *pgDashboardStore) GetRecentInvestigations(ctx context.Context, since ti
 }
 
 func (s *pgDashboardStore) GetActiveInvestigations(ctx context.Context, limit int) ([]RecentInvestigationItem, error) {
-	invs, err := s.client.AlertInvestigation.Query().
-		Where(alertinvestigation.StatusIn(alertinvestigation.StatusPending, alertinvestigation.StatusInvestigating, alertinvestigation.StatusAssigned, alertinvestigation.StatusPaused)).
-		Order(ent.Desc(alertinvestigation.FieldUpdatedAt)).
+	var invs []models.AlertInvestigation
+	err := s.db.NewSelect().Model(&invs).
+		Where("status IN (?)", bun.In([]string{"pending", "investigating", "assigned", "paused"})).
+		Order("updated_at DESC").
 		Limit(limit).
-		All(ctx)
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query active investigations: %w", err)
 	}
 	return s.buildRecentInvestigationItems(ctx, invs)
 }
 
-func (s *pgDashboardStore) buildRecentInvestigationItems(ctx context.Context, invs []*ent.AlertInvestigation) ([]RecentInvestigationItem, error) {
+func (s *pgDashboardStore) buildRecentInvestigationItems(ctx context.Context, invs []models.AlertInvestigation) ([]RecentInvestigationItem, error) {
 	items := make([]RecentInvestigationItem, 0, len(invs))
-	for _, inv := range invs {
+	for i := range invs {
+		inv := &invs[i]
 		alertName := inv.CorrelationKey
-		linkedAlerts, err := inv.QueryAlerts().Limit(1).All(ctx)
-		if err == nil && len(linkedAlerts) > 0 {
-			if name := linkedAlerts[0].Labels["alertname"]; name != "" {
-				alertName = name
-			}
+
+		// Try to get alert name from linked alerts
+		var linkedAlert models.AlertInvestigationAlert
+		err := s.db.NewSelect().Model(&linkedAlert).
+			Where("alert_investigation_id = ?", inv.ID).
+			Limit(1).
+			Scan(ctx)
+		if err == nil && linkedAlert.Alertname != "" {
+			alertName = linkedAlert.Alertname
 		}
+
 		summary := ""
 		if inv.Summary != nil {
 			summary = inv.Summary.Summary
 		}
 		items = append(items, RecentInvestigationItem{
 			InvestigationID: inv.AlertInvestigationID,
-			Status:          string(inv.Status),
+			Status:          inv.Status,
 			AlertName:       alertName,
 			AgentName:       inv.AgentName,
 			CorrelationKey:  inv.CorrelationKey,
@@ -650,22 +661,29 @@ func (s *pgDashboardStore) buildRecentInvestigationItems(ctx context.Context, in
 }
 
 func (s *pgDashboardStore) GetAlertDataForSummary(ctx context.Context, since time.Time) (*SummaryData, error) {
-	alerts, err := s.client.Alert.Query().
-		Where(alert.CreatedAtGTE(since), alert.DeletedAtIsNil()).
-		All(ctx)
+	var alerts []models.Alert
+	err := s.db.NewSelect().Model(&alerts).
+		Column("labels").
+		Where("created_at >= ?", since).
+		Where("deleted_at IS NULL").
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query alerts: %w", err)
 	}
 
-	resolved, err := s.client.Alert.Query().
-		Where(alert.StatusEQ(alert.StatusResolved), alert.UpdatedAtGTE(since), alert.DeletedAtIsNil()).
+	resolved, err := s.db.NewSelect().Model((*models.Alert)(nil)).
+		Where("status = ?", "resolved").
+		Where("updated_at >= ?", since).
+		Where("deleted_at IS NULL").
 		Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("count resolved: %w", err)
 	}
 
-	firing, err := s.client.Alert.Query().
-		Where(alert.StatusEQ(alert.StatusFiring), alert.DeletedAtIsNil()).Count(ctx)
+	firing, err := s.db.NewSelect().Model((*models.Alert)(nil)).
+		Where("status = ?", "firing").
+		Where("deleted_at IS NULL").
+		Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("count firing: %w", err)
 	}
@@ -677,8 +695,8 @@ func (s *pgDashboardStore) GetAlertDataForSummary(ctx context.Context, since tim
 		AlertsBySev:    make(map[string]int64),
 	}
 
-	for _, a := range alerts {
-		sev := extractSeverity(a.Labels)
+	for i := range alerts {
+		sev := extractSeverity(alerts[i].Labels)
 		data.AlertsBySev[sev]++
 	}
 

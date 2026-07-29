@@ -36,7 +36,7 @@ Classify every route explicitly:
 
 - Decode request bodies only with `decodeJSON`.
 - Validate required fields, path params, enum values, ownership, and state transitions.
-- Use Ent builders/predicates; no SQL string concatenation.
+- Use Bun query builders and bound parameters; no SQL string concatenation.
 - Return generic internal errors with `writeInternalError`.
 - Do not expose secrets, token hashes, peppers, encryption keys, plaintext credentials, or internal-only lookup values.
 - Keep response models explicit; do not reuse persistence records that contain sensitive fields.

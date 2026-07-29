@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"alga/capability"
-	entschema "alga/ent/schema"
+	"alga/db/models"
 	"alga/ics"
 	"alga/logger"
 	"alga/store"
@@ -83,12 +83,18 @@ func (e *AgentToolExecutor) executeAlertOwnerTool(ctx context.Context, agentRec 
 		}
 		var inv *store.AlertInvestigationRecord
 		if e.alertInvestigationStore != nil {
-			inv, _ = e.alertInvestigationStore.GetCurrentAlertInvestigationByAlertNumber(ctx, alertNumber)
+			var invErr error
+			inv, invErr = e.alertInvestigationStore.GetCurrentAlertInvestigationByAlertNumber(ctx, alertNumber)
+			if invErr != nil {
+				logger.WarnCtx(ctx, "failed to load current alert investigation for outcome patch", "component", "agent", "alert_number", alertNumber, "error", invErr)
+			}
 			if inv != nil {
 				if cmd.RootCause != nil || cmd.Resolution != nil {
-					_ = e.alertInvestigationStore.PatchAlertInvestigationOutcome(ctx, inv.ID.String(), cmd.RootCause, cmd.Resolution)
+					if patchErr := e.alertInvestigationStore.PatchAlertInvestigationOutcome(ctx, inv.ID.String(), cmd.RootCause, cmd.Resolution); patchErr != nil {
+						logger.WarnCtx(ctx, "failed to persist alert investigation outcome", "component", "agent", "investigation_id", inv.ID.String(), "error", patchErr)
+					}
 					if inv.Summary == nil {
-						inv.Summary = &entschema.AlertInvestigationSummary{}
+						inv.Summary = &models.AlertInvestigationSummary{}
 					}
 					if cmd.RootCause != nil {
 						inv.Summary.RootCause = *cmd.RootCause

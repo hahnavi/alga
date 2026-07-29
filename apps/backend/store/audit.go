@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
-	"alga/ent"
-	"alga/ent/auditlog"
+	"alga/db/models"
 	"alga/logger"
 )
 
@@ -180,9 +180,9 @@ type pgAuditStore struct {
 	startOnce sync.Once
 }
 
-func newPGAuditStore(client *ent.Client) AuditStore {
+func newPGAuditStore(db *bun.DB) AuditStore {
 	return &pgAuditStore{
-		pgStoreBase: pgStoreBase{client: client},
+		pgStoreBase: pgStoreBase{db: db},
 		queue:       make(chan AuditRecord, 1024),
 		stop:        make(chan struct{}),
 	}
@@ -219,31 +219,21 @@ func (s *pgAuditStore) persist(rec AuditRecord) {
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	b := s.client.AuditLog.Create().
-		SetTimestamp(rec.Timestamp).
-		SetEvent(string(rec.Event)).
-		SetUsername(rec.Username).
-		SetIP(rec.IP).
-		SetUserAgent(rec.UserAgent).
-		SetSuccess(rec.Success)
-
-	if rec.UserID != nil {
-		b.SetUserID(*rec.UserID)
+	m := &models.AuditLog{
+		IDModel:    models.IDModel{ID: models.NewUUID()},
+		Timestamp:  rec.Timestamp,
+		Event:      string(rec.Event),
+		UserID:     rec.UserID,
+		Username:   rec.Username,
+		IP:         rec.IP,
+		UserAgent:  rec.UserAgent,
+		Success:    rec.Success,
+		Details:    rec.Details,
+		EntityType: rec.EntityType,
+		EntityID:   rec.EntityID,
 	}
 
-	if rec.Details != nil {
-		b.SetDetails(rec.Details)
-	}
-
-	if rec.EntityType != "" {
-		b.SetEntityType(rec.EntityType)
-	}
-
-	if rec.EntityID != nil {
-		b.SetEntityID(*rec.EntityID)
-	}
-
-	if _, err := b.Save(ctx); err != nil {
+	if _, err := s.db.NewInsert().Model(m).Exec(ctx); err != nil {
 		logger.Error("Failed to persist audit event", "event", rec.Event, "error", err)
 	}
 }
@@ -279,9 +269,10 @@ func (s *pgAuditStore) Close() {
 	}
 }
 
-func pgAuditLogsToRecords(logs []*ent.AuditLog) []AuditRecord {
+func pgAuditLogsToRecords(logs []models.AuditLog) []AuditRecord {
 	records := make([]AuditRecord, 0, len(logs))
-	for _, l := range logs {
+	for i := range logs {
+		l := &logs[i]
 		records = append(records, AuditRecord{
 			ID:         l.ID,
 			Timestamp:  l.Timestamp,
@@ -304,26 +295,27 @@ func (s *pgAuditStore) Query(filter map[string]any) ([]AuditRecord, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	query := s.client.AuditLog.Query().Order(ent.Desc(auditlog.FieldTimestamp))
+	q := s.db.NewSelect().Model((*models.AuditLog)(nil)).Order("timestamp DESC")
 
 	if ev, ok := filter["event"].(string); ok {
-		query = query.Where(auditlog.Event(ev))
+		q = q.Where("event = ?", ev)
 	}
 
 	if et, ok := filter["entity_type"].(string); ok && et != "" {
-		query = query.Where(auditlog.EntityType(et))
+		q = q.Where("entity_type = ?", et)
 	}
 
 	if eid, ok := filter["entity_id"].(string); ok && eid != "" {
 		if u, err := uuid.Parse(eid); err == nil {
-			query = query.Where(auditlog.EntityID(u))
+			q = q.Where("entity_id = ?", u)
 		}
 	}
 
 	limit, _ := extractLimitSkip(filter, 500)
-	query = query.Limit(limit)
+	q = q.Limit(limit)
 
-	logs, err := query.All(ctx)
+	var logs []models.AuditLog
+	err := q.Scan(ctx, &logs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query audit logs: %w", err)
 	}
@@ -342,10 +334,11 @@ func (s *pgAuditStore) GetRecentEvents(limit int) ([]AuditRecord, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	logs, err := s.client.AuditLog.Query().
-		Order(ent.Desc(auditlog.FieldTimestamp)).
+	var logs []models.AuditLog
+	err := s.db.NewSelect().Model((*models.AuditLog)(nil)).
+		Order("timestamp DESC").
 		Limit(limit).
-		All(ctx)
+		Scan(ctx, &logs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query recent events: %w", err)
 	}

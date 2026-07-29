@@ -4,7 +4,7 @@ This is the operating guide for Alga agents. Keep it short, current, and biased 
 
 ## Skill Routing
 
-- Load the applicable Alga skill before changing code: API, Ent, worker, backend, frontend, integration SDK, security, or dev environment.
+- Load the applicable Alga skill before changing code: API, database/models, worker, backend, frontend, integration SDK, security, or dev environment.
 - Use `alga-domain-invariants` for alert, incident, investigation, scheduler, escalation, SLA, notification, or lifecycle changes.
 - Use `alga-security-checklist` for any change touching routes, auth, RBAC, sessions, secrets, tokens, user-scoped data, integrations, or mutations.
 - Use `alga-testing-patterns` for test scope and verification commands.
@@ -20,7 +20,7 @@ These rules override convenience. Violating them is a bug.
 
 - Search existing code before adding new helpers, stores, components, composables, routes, or API methods.
 - Use HTTP helpers from `apps/backend/api/helpers.go` (`decodeJSON`, `parseLimitSkip`, `writePaginatedJSON`, `ensureSlice`, `pathID`) and `apps/backend/api/http.go` (`writeJSON`, `writeError`, `writeInternalError`).
-- Use store helpers from `apps/backend/store/pg_helpers.go` (`pgctx`, `rollbackTx`, `handleQueryErr`, `pgStoreBase`, duplicate-key helpers, limit/skip extraction, sort parsing) and `nextPgCounter` from `apps/backend/store/store.go`.
+- Use store helpers from `apps/backend/store/pg_helpers.go` (`pgctx`, `rollbackTx`, `handleQueryErr`, `pgStoreBase`, duplicate-key helpers, limit/skip extraction, sort parsing).
 - Put frontend HTTP calls in `apps/frontend/src/lib/api.ts`; do not call `fetch()` from pages or components.
 - Reuse frontend composables in `apps/frontend/src/composables/` before creating local async, delete, search, SSE, clipboard, filter, or form logic.
 - Reuse UI primitives from `apps/frontend/src/components/ui/`; do not create duplicate Button, Input, Modal, Card, EmptyState, ErrorBanner, or loading components.
@@ -46,7 +46,7 @@ If code starts looking copy-pasted, stop and extract or reuse a shared helper, c
 - Startup must fail closed without required crypto config (`ENCRYPTION_KEYS` or `ENCRYPTION_KEY`, plus `SECRET_PEPPER`) in every environment, not only production. HSTS is emitted on HTTPS regardless of the `SecureCookies` flag.
 - Add audit events for every create, update, delete, command, or state transition. Audit logging is fire-and-forget and must not block request success.
 - Hard-delete only when the domain already uses hard-delete safely.
-- Use Ent builders/predicates; do not concatenate SQL strings.
+- Use Bun query builders and bound parameters; never concatenate values into SQL strings.
 
 ### Modern Code Only
 
@@ -63,7 +63,7 @@ If code starts looking copy-pasted, stop and extract or reuse a shared helper, c
 - Environment variables: root `.env.example`, `apps/backend/.env.example`, and `apps/frontend/.env.example`.
 - Backend API routes: `apps/backend/api/http.go`; handler behavior in `apps/backend/api/`; frontend API methods in `apps/frontend/src/lib/api.ts`.
 - RBAC permissions and roles: `apps/backend/rbac/`; frontend route metadata in `apps/frontend/src/router.ts`.
-- Database schema: Ent schemas in `apps/backend/ent/schema/`; generated Ent code under `apps/backend/ent/`; migration behavior in `apps/backend/migrations/` and `apps/backend/pgclient/`.
+- Database schema: Bun models in `apps/backend/db/models/`; SQL migrations in `apps/backend/db/migrations/` (goose); connection pool and migration wiring in `apps/backend/db/client.go` and `apps/backend/db/migrate.go`.
 - Stores: `apps/backend/store/` and `apps/backend/store/registry.go`.
 - Worker queues and lifecycle: `apps/backend/worker/`, `apps/backend/rabbitmq/`, and app wiring in `apps/backend/app/`.
 - Frontend stack, scripts, and dependencies: `apps/frontend/package.json`; shared UI in `apps/frontend/src/components/ui/`; shared behavior in `apps/frontend/src/composables/`.
@@ -71,9 +71,9 @@ If code starts looking copy-pasted, stop and extract or reuse a shared helper, c
 
 ## Commands
 
-Prefer the smallest relevant verification command, then broaden before commits or when shared behavior changes. See `alga-dev-environment` for the full catalog (dev servers, build/test/format/vet, Ent generation, verification ladder, CLI, migrations). Source-of-truth manifests: `.moon/tasks.yml`, `apps/backend/go.mod`, root and `apps/frontend/package.json`.
+Prefer the smallest relevant verification command, then broaden before commits or when shared behavior changes. See `alga-dev-environment` for the full catalog (dev servers, build/test/format/vet, verification ladder, CLI, migrations). Source-of-truth manifests: `.moon/tasks.yml`, `apps/backend/go.mod`, root and `apps/frontend/package.json`.
 
-When running `go generate ./ent`, always set `GOMEMLIMIT` and `GOMAXPROCS` to bound resource use: `GOMEMLIMIT` = total machine memory minus 1GiB, `GOMAXPROCS` = total machine procs minus 1 (never below 1). Example: `GOMEMLIMIT=$(($(nproc --bytes 2>/dev/null || echo $(free -b | awk '/^Mem:/{print $2}')) - 1073741824)) GOMAXPROCS=$(( $(nproc) > 1 ? $(nproc) - 1 : 1 )) go generate ./ent`.
+Schema changes are hand-written: add or edit the Bun model in `apps/backend/db/models/`, then author a matching goose SQL migration in `apps/backend/db/migrations/`. There is no code-generation step.
 
 ## Critical Domain Invariants
 

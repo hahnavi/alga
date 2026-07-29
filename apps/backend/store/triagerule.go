@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
-	"alga/ent"
-	"alga/ent/triagerule"
+	"alga/db/models"
 )
 
 type TriageRuleRecord struct {
@@ -51,11 +51,11 @@ type pgTriageRuleStore struct {
 	pgStoreBase
 }
 
-func newPGTriageRuleStore(client *ent.Client) TriageRuleStore {
-	return &pgTriageRuleStore{pgStoreBase{client: client}}
+func newPGTriageRuleStore(db *bun.DB) TriageRuleStore {
+	return &pgTriageRuleStore{pgStoreBase{db: db}}
 }
 
-func pgTriageRuleToRecord(r *ent.TriageRule) *TriageRuleRecord {
+func pgTriageRuleToRecord(r *models.TriageRule) *TriageRuleRecord {
 	var conditions []map[string]any
 	if r.Conditions != nil {
 		conditions = r.Conditions
@@ -68,31 +68,27 @@ func pgTriageRuleToRecord(r *ent.TriageRule) *TriageRuleRecord {
 	} else {
 		enrichment = map[string]any{}
 	}
-	var createdBy *uuid.UUID
-	if r.CreatedBy != uuid.Nil {
-		createdBy = &r.CreatedBy
-	}
 	severity := ""
 	if r.Severity != nil {
-		severity = string(*r.Severity)
+		severity = *r.Severity
 	}
 	ruleCategory := ""
 	if r.Category != nil {
-		ruleCategory = string(*r.Category)
+		ruleCategory = *r.Category
 	}
 	return &TriageRuleRecord{
 		ID:          r.ID,
 		Name:        r.Name,
 		Description: r.Description,
 		Conditions:  conditions,
-		MatchMode:   string(r.MatchMode),
-		Decision:    string(r.Decision),
+		MatchMode:   r.MatchMode,
+		Decision:    r.Decision,
 		Severity:    severity,
 		Category:    ruleCategory,
 		Enrichment:  enrichment,
 		Priority:    r.Priority,
 		Enabled:     r.Enabled,
-		CreatedBy:   createdBy,
+		CreatedBy:   r.CreatedBy,
 		CreatedAt:   r.CreatedAt,
 		UpdatedAt:   r.UpdatedAt,
 	}
@@ -121,29 +117,37 @@ func (s *pgTriageRuleStore) Create(ctx context.Context, record *TriageRuleRecord
 		record.Enrichment = map[string]any{}
 	}
 
-	b := s.client.TriageRule.Create().
-		SetName(record.Name).
-		SetDescription(record.Description).
-		SetConditions(record.Conditions).
-		SetMatchMode(triagerule.MatchMode(record.MatchMode)).
-		SetDecision(triagerule.Decision(record.Decision)).
-		SetSeverity(triagerule.Severity(record.Severity)).
-		SetCategory(triagerule.Category(record.Category)).
-		SetEnrichment(record.Enrichment).
-		SetPriority(record.Priority).
-		SetEnabled(record.Enabled).
-		SetCreatedAt(now).
-		SetUpdatedAt(now)
-
-	if record.CreatedBy != nil {
-		b.SetNillableCreatedBy(record.CreatedBy)
+	var severity *string
+	if record.Severity != "" {
+		severity = &record.Severity
+	}
+	var category *string
+	if record.Category != "" {
+		category = &record.Category
 	}
 
-	saved, err := b.Save(ctx)
+	m := &models.TriageRule{
+		ID:          models.NewUUID(),
+		Name:        record.Name,
+		Description: record.Description,
+		Conditions:  record.Conditions,
+		MatchMode:   record.MatchMode,
+		Decision:    record.Decision,
+		Severity:    severity,
+		Category:    category,
+		Enrichment:  record.Enrichment,
+		Priority:    record.Priority,
+		Enabled:     record.Enabled,
+		CreatedBy:   record.CreatedBy,
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}
+
+	_, err := s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("insert triage rule: %w", err)
 	}
-	record.ID = saved.ID
+	record.ID = m.ID
 	return record, nil
 }
 
@@ -156,46 +160,55 @@ func (s *pgTriageRuleStore) Update(ctx context.Context, id string, patch *Triage
 		return nil, fmt.Errorf("invalid id: %w", err)
 	}
 
-	b := s.client.TriageRule.UpdateOneID(uid).SetUpdatedAt(time.Now().UTC())
+	q := s.db.NewUpdate().Model((*models.TriageRule)(nil)).
+		Set("updated_at = ?", time.Now().UTC()).
+		Where("id = ?", uid)
 
 	if patch.Name != "" {
-		b.SetName(patch.Name)
+		q = q.Set("name = ?", patch.Name)
 	}
 	if patch.Description != "" {
-		b.SetDescription(patch.Description)
+		q = q.Set("description = ?", patch.Description)
 	}
 	if patch.Conditions != nil {
-		b.SetConditions(patch.Conditions)
+		q = q.Set("conditions = ?", patch.Conditions)
 	}
 	if patch.MatchMode != "" {
-		b.SetMatchMode(triagerule.MatchMode(patch.MatchMode))
+		q = q.Set("match_mode = ?", patch.MatchMode)
 	}
 	if patch.Decision != "" {
-		b.SetDecision(triagerule.Decision(patch.Decision))
+		q = q.Set("decision = ?", patch.Decision)
 	}
 	if patch.Severity != "" {
-		b.SetSeverity(triagerule.Severity(patch.Severity))
+		q = q.Set("severity = ?", patch.Severity)
 	}
 	if patch.Category != "" {
-		b.SetCategory(triagerule.Category(patch.Category))
+		q = q.Set("category = ?", patch.Category)
 	}
 	if patch.Enrichment != nil {
-		b.SetEnrichment(patch.Enrichment)
+		q = q.Set("enrichment = ?", patch.Enrichment)
 	}
 	if patch.Priority != 0 {
-		b.SetPriority(patch.Priority)
+		q = q.Set("priority = ?", patch.Priority)
 	}
 	// Enabled field: always set since it's a required bool (can't meaningfully detect "not provided")
-	b.SetEnabled(patch.Enabled)
+	q = q.Set("enabled = ?", patch.Enabled)
 
-	saved, err := b.Save(ctx)
+	res, err := q.Exec(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, errors.New("triage rule not found")
-		}
 		return nil, fmt.Errorf("failed to update triage rule: %w", err)
 	}
-	return pgTriageRuleToRecord(saved), nil
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return nil, errors.New("triage rule not found")
+	}
+
+	// Re-fetch to return the updated record
+	var updated models.TriageRule
+	if err := s.db.NewSelect().Model(&updated).Where("id = ?", uid).Scan(ctx); err != nil {
+		return nil, fmt.Errorf("failed to re-fetch triage rule: %w", err)
+	}
+	return pgTriageRuleToRecord(&updated), nil
 }
 
 func (s *pgTriageRuleStore) Delete(ctx context.Context, id string) error {
@@ -203,12 +216,13 @@ func (s *pgTriageRuleStore) Delete(ctx context.Context, id string) error {
 	if err != nil {
 		return fmt.Errorf("invalid id: %w", err)
 	}
-	err = s.client.TriageRule.DeleteOneID(uid).Exec(ctx)
+	res, err := s.db.NewDelete().Model((*models.TriageRule)(nil)).Where("id = ?", uid).Exec(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return errors.New("triage rule not found")
-		}
 		return fmt.Errorf("failed to delete triage rule: %w", err)
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return errors.New("triage rule not found")
 	}
 	return nil
 }
@@ -218,46 +232,50 @@ func (s *pgTriageRuleStore) Get(ctx context.Context, id string) (*TriageRuleReco
 	if err != nil {
 		return nil, fmt.Errorf("invalid id: %w", err)
 	}
-	r, err := s.client.TriageRule.Get(ctx, uid)
+	var r models.TriageRule
+	err = s.db.NewSelect().Model(&r).Where("id = ?", uid).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*TriageRuleRecord](err, "triage rule")
 	}
-	return pgTriageRuleToRecord(r), nil
+	return pgTriageRuleToRecord(&r), nil
 }
 
 func (s *pgTriageRuleStore) List(ctx context.Context, q TriageRuleQuery) ([]TriageRuleRecord, int64, error) {
-	query := s.client.TriageRule.Query()
-
+	countQ := s.db.NewSelect().Model((*models.TriageRule)(nil))
 	if q.Enabled != nil {
-		query = query.Where(triagerule.Enabled(*q.Enabled))
+		countQ = countQ.Where("enabled = ?", *q.Enabled)
 	}
 
-	total, err := query.Count(ctx)
+	total, err := countQ.Count(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("count triage rules: %w", err)
 	}
 
-	query = query.Order(ent.Asc(triagerule.FieldPriority))
-
+	var items []models.TriageRule
+	listQ := s.db.NewSelect().Model(&items).Order("priority ASC")
+	if q.Enabled != nil {
+		listQ = listQ.Where("enabled = ?", *q.Enabled)
+	}
 	if q.Limit > 0 {
-		query = query.Limit(q.Limit)
+		listQ = listQ.Limit(q.Limit)
 	}
 	if q.Skip > 0 {
-		query = query.Offset(q.Skip)
+		listQ = listQ.Offset(q.Skip)
 	}
 
-	items, err := query.All(ctx)
+	err = listQ.Scan(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list triage rules: %w", err)
 	}
 
 	var out []TriageRuleRecord
-	for _, r := range items {
+	for i := range items {
+		r := &items[i]
 		if q.Search != "" {
 			text := strings.TrimSpace(strings.ToLower(q.Search))
 			if !strings.Contains(strings.ToLower(r.Name), text) &&
 				!strings.Contains(strings.ToLower(r.Description), text) &&
-				!strings.Contains(strings.ToLower(string(r.Decision)), text) {
+				!strings.Contains(strings.ToLower(r.Decision), text) {
 				continue
 			}
 		}
@@ -270,16 +288,17 @@ func (s *pgTriageRuleStore) List(ctx context.Context, q TriageRuleQuery) ([]Tria
 }
 
 func (s *pgTriageRuleStore) ListEnabled(ctx context.Context) ([]TriageRuleRecord, error) {
-	items, err := s.client.TriageRule.Query().
-		Where(triagerule.Enabled(true)).
-		Order(ent.Asc(triagerule.FieldPriority)).
-		All(ctx)
+	var items []models.TriageRule
+	err := s.db.NewSelect().Model(&items).
+		Where("enabled = ?", true).
+		Order("priority ASC").
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list enabled triage rules: %w", err)
 	}
 	var out []TriageRuleRecord
-	for _, r := range items {
-		out = append(out, *pgTriageRuleToRecord(r))
+	for i := range items {
+		out = append(out, *pgTriageRuleToRecord(&items[i]))
 	}
 	if out == nil {
 		out = []TriageRuleRecord{}
@@ -293,15 +312,17 @@ func (s *pgTriageRuleStore) Reorder(ctx context.Context, ids []string) error {
 		if err != nil {
 			return fmt.Errorf("invalid id %q: %w", id, err)
 		}
-		_, err = s.client.TriageRule.UpdateOneID(uid).
-			SetPriority(i).
-			SetUpdatedAt(time.Now().UTC()).
-			Save(ctx)
+		res, err := s.db.NewUpdate().Model((*models.TriageRule)(nil)).
+			Set("priority = ?", i).
+			Set("updated_at = ?", time.Now().UTC()).
+			Where("id = ?", uid).
+			Exec(ctx)
 		if err != nil {
-			if ent.IsNotFound(err) {
-				return fmt.Errorf("triage rule %q not found", id)
-			}
 			return fmt.Errorf("failed to reorder triage rule: %w", err)
+		}
+		n, _ := res.RowsAffected()
+		if n == 0 {
+			return fmt.Errorf("triage rule %q not found", id)
 		}
 	}
 	return nil

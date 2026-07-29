@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
-	"alga/ent"
-	"alga/ent/sharedsecret"
+	"alga/db/models"
 )
 
 // SharedSecretRecord is the wire/persistence shape for a shared secret.
@@ -77,8 +77,8 @@ type pgSharedSecretStore struct {
 	pgStoreBase
 }
 
-func newPGSharedSecretStore(client *ent.Client) SharedSecretStore {
-	return &pgSharedSecretStore{pgStoreBase{client: client}}
+func newPGSharedSecretStore(db *bun.DB) SharedSecretStore {
+	return &pgSharedSecretStore{pgStoreBase{db: db}}
 }
 
 func (s *pgSharedSecretStore) CreateSecret(ctx context.Context, record *SharedSecretRecord, value string) (*SharedSecretRecord, error) {
@@ -111,22 +111,25 @@ func (s *pgSharedSecretStore) CreateSecret(ctx context.Context, record *SharedSe
 		allowed = []uuid.UUID{}
 	}
 
-	saved, err := s.client.SharedSecret.Create().
-		SetProviderID(record.ProviderID).
-		SetName(record.Name).
-		SetSecretID(sid).
-		SetDescription(record.Description).
-		SetRemoteRef(record.RemoteRef).
-		SetValueEncrypted(enc).
-		SetValueConfigured(value != "").
-		SetAllowedAgentIds(allowed).
-		SetCreatedAt(now).
-		SetUpdatedAt(now).
-		Save(ctx)
+	m := &models.SharedSecret{
+		ID:              models.NewUUID(),
+		ProviderID:      record.ProviderID,
+		Name:            record.Name,
+		SecretID:        sid,
+		Description:     record.Description,
+		RemoteRef:       record.RemoteRef,
+		ValueEncrypted:  enc,
+		ValueConfigured: value != "",
+		AllowedAgentIDs: allowed,
+		CreatedAt:       now,
+		UpdatedAt:       now,
+	}
+
+	_, err = s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert shared secret: %w", err)
 	}
-	out := pgSharedSecretToRecord(saved)
+	out := pgSharedSecretToRecord(m)
 	return out, nil
 }
 
@@ -134,103 +137,126 @@ func (s *pgSharedSecretStore) UpdateSecret(ctx context.Context, id uuid.UUID, pa
 	if patch == nil {
 		return nil, errors.New("nil patch")
 	}
-	b := s.client.SharedSecret.UpdateOneID(id).SetUpdatedAt(time.Now().UTC())
+	upd := s.db.NewUpdate().Model((*models.SharedSecret)(nil)).
+		Set("updated_at = ?", time.Now().UTC()).
+		Where("id = ?", id)
+
 	if patch.Name != nil && *patch.Name != "" {
-		b.SetName(*patch.Name)
+		upd = upd.Set("name = ?", *patch.Name)
 	}
 	if patch.Description != nil {
-		b.SetDescription(*patch.Description)
+		upd = upd.Set("description = ?", *patch.Description)
 	}
 	if patch.RemoteRef != nil {
-		b.SetRemoteRef(*patch.RemoteRef)
+		upd = upd.Set("remote_ref = ?", *patch.RemoteRef)
 	}
 	if patch.AllowedAgentIDs != nil {
-		b.SetAllowedAgentIds(*patch.AllowedAgentIDs)
+		upd = upd.Set("allowed_agent_ids = ?", *patch.AllowedAgentIDs)
 	}
 	if value != nil {
 		enc, err := encryptSecret(*value)
 		if err != nil {
 			return nil, err
 		}
-		b.SetValueEncrypted(enc)
-		b.SetValueConfigured(*value != "")
+		upd = upd.Set("value_encrypted = ?", enc)
+		upd = upd.Set("value_configured = ?", *value != "")
 	}
 
-	saved, err := b.Save(ctx)
+	res, err := upd.Exec(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, ErrSharedSecretNotFound
-		}
 		return nil, fmt.Errorf("failed to update shared secret: %w", err)
 	}
-	return pgSharedSecretToRecord(saved), nil
+	n, err := res.RowsAffected()
+	if err != nil {
+		return nil, fmt.Errorf("failed to update shared secret: %w", err)
+	}
+	if n == 0 {
+		return nil, ErrSharedSecretNotFound
+	}
+
+	var saved models.SharedSecret
+	err = s.db.NewSelect().Model(&saved).Where("id = ?", id).Scan(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to reload shared secret: %w", err)
+	}
+	return pgSharedSecretToRecord(&saved), nil
 }
 
 func (s *pgSharedSecretStore) DeleteSecret(ctx context.Context, id uuid.UUID) error {
-	err := s.client.SharedSecret.DeleteOneID(id).Exec(ctx)
+	res, err := s.db.NewDelete().Model((*models.SharedSecret)(nil)).Where("id = ?", id).Exec(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return ErrSharedSecretNotFound
-		}
 		return fmt.Errorf("failed to delete shared secret: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to delete shared secret: %w", err)
+	}
+	if n == 0 {
+		return ErrSharedSecretNotFound
 	}
 	return nil
 }
 
 func (s *pgSharedSecretStore) GetSecretByID(ctx context.Context, id uuid.UUID) (*SharedSecretRecord, error) {
-	ss, err := s.client.SharedSecret.Get(ctx, id)
+	var ss models.SharedSecret
+	err := s.db.NewSelect().Model(&ss).Where("id = ?", id).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*SharedSecretRecord](err, "shared secret")
 	}
-	return pgSharedSecretToRecord(ss), nil
+	return pgSharedSecretToRecord(&ss), nil
 }
 
 func (s *pgSharedSecretStore) GetSecretBySecretID(ctx context.Context, secretID string) (*SharedSecretRecord, error) {
 	sid := normalizeLower(secretID)
-	ss, err := s.client.SharedSecret.Query().
-		Where(sharedsecret.SecretIDEQ(sid)).
-		Only(ctx)
+	var ss models.SharedSecret
+	err := s.db.NewSelect().Model(&ss).Where("secret_id = ?", sid).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*SharedSecretRecord](err, "shared secret")
 	}
-	return pgSharedSecretToRecord(ss), nil
+	return pgSharedSecretToRecord(&ss), nil
 }
 
 func (s *pgSharedSecretStore) ListSecrets(ctx context.Context, q SharedSecretQuery) ([]SharedSecretRecord, int64, error) {
-	query := s.client.SharedSecret.Query()
+	countQ := s.db.NewSelect().Model((*models.SharedSecret)(nil))
+	listQ := s.db.NewSelect().Model((*models.SharedSecret)(nil))
+
 	if q.ProviderID != nil {
-		query = query.Where(sharedsecret.ProviderIDEQ(*q.ProviderID))
+		countQ = countQ.Where("provider_id = ?", *q.ProviderID)
+		listQ = listQ.Where("provider_id = ?", *q.ProviderID)
 	}
 	if q.Search != "" {
-		query = query.Where(sharedsecret.Or(
-			sharedsecret.NameContains(q.Search),
-			sharedsecret.SecretIDContains(q.Search),
-		))
+		countQ = countQ.Where("(name LIKE ? OR secret_id LIKE ?)", "%"+q.Search+"%", "%"+q.Search+"%")
+		listQ = listQ.Where("(name LIKE ? OR secret_id LIKE ?)", "%"+q.Search+"%", "%"+q.Search+"%")
 	}
-	total, err := query.Count(ctx)
+
+	total, err := countQ.Count(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("count shared secrets: %w", err)
 	}
-	query = query.Order(ent.Desc(sharedsecret.FieldCreatedAt))
+
+	listQ = listQ.OrderExpr("created_at DESC")
 	if q.Limit > 0 {
-		query = query.Limit(q.Limit)
+		listQ = listQ.Limit(q.Limit)
 	}
 	if q.Skip > 0 {
-		query = query.Offset(q.Skip)
+		listQ = listQ.Offset(q.Skip)
 	}
-	items, err := query.All(ctx)
+
+	var items []models.SharedSecret
+	err = listQ.Scan(ctx, &items)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list shared secrets: %w", err)
 	}
+
 	out := make([]SharedSecretRecord, 0, len(items))
 	for _, ss := range items {
-		out = append(out, *pgSharedSecretToRecord(ss))
+		out = append(out, *pgSharedSecretToRecord(&ss))
 	}
 	return out, int64(total), nil
 }
 
-func pgSharedSecretToRecord(ss *ent.SharedSecret) *SharedSecretRecord {
-	allowed := ss.AllowedAgentIds
+func pgSharedSecretToRecord(ss *models.SharedSecret) *SharedSecretRecord {
+	allowed := ss.AllowedAgentIDs
 	if allowed == nil {
 		allowed = []uuid.UUID{}
 	}

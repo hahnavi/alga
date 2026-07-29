@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"alga/config"
-	"alga/pgclient"
+	"alga/db"
 	"alga/store"
 )
 
@@ -22,7 +22,7 @@ func loadConfig() *config.Config {
 }
 
 func connectWebhookTokenStore(cfg *config.Config) store.WebhookTokenStore {
-	cli, err := pgclient.New(cfg.PostgresDSN)
+	cli, err := db.New(cfg.PostgresDSN)
 	if err != nil {
 		log.Fatalf("Failed to connect to Postgres: %v", err)
 	}
@@ -35,7 +35,7 @@ func connectWebhookTokenStore(cfg *config.Config) store.WebhookTokenStore {
 }
 
 func connectAlertStore(cfg *config.Config) store.Store {
-	cli, err := pgclient.New(cfg.PostgresDSN)
+	cli, err := db.New(cfg.PostgresDSN)
 	if err != nil {
 		log.Fatalf("Failed to connect to Postgres: %v", err)
 	}
@@ -55,7 +55,7 @@ type userStoreWithClose struct {
 func (u userStoreWithClose) Close() { u.close() }
 
 func connectUserStore(cfg *config.Config) userStoreWithClose {
-	cli, err := pgclient.New(cfg.PostgresDSN)
+	cli, err := db.New(cfg.PostgresDSN)
 	if err != nil {
 		log.Fatalf("Failed to connect to Postgres: %v", err)
 	}

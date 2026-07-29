@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -157,26 +156,6 @@ func (s *Server) syncIncidentCoordinationMessageToSlack(r *http.Request, message
 			s.audit(r, store.AuditIncidentCoordinationBridgeFailed, map[string]any{"incident_id": message.IncidentNumber, "message_id": message.ID.String(), "provider": "slack", "error": fmt.Sprintf("save slack ts: %v", err)})
 		}
 	}
-}
-
-func (s *Server) createInvestigationSummaryCoordinationMessage(ctx context.Context, incidentID, investigationID, summary string) (*store.IncidentCoordinationMessageRecord, error) {
-	if s.incidentCoordinationStore == nil {
-		return nil, errors.New("incident coordination store not configured")
-	}
-	body := strings.TrimSpace(summary)
-	if body == "" {
-		return nil, errors.New("summary is required")
-	}
-	return s.incidentCoordinationStore.CreateMessage(ctx, &store.IncidentCoordinationMessageRecord{
-		IncidentNumber:        mustParseIncidentNumber(incidentID),
-		Kind:                  store.IncidentCoordinationKindInvestigationSummary,
-		ActorType:             store.IncidentCoordinationActorSystem,
-		ActorDisplayName:      "System",
-		Body:                  body,
-		Source:                store.IncidentCoordinationSourceSystem,
-		LinkedInvestigationID: investigationID,
-		Metadata:              map[string]any{"summary_source": "investigation"},
-	})
 }
 
 func (s *Server) handleIncidentCoordinationAgentMentions(r *http.Request, message *store.IncidentCoordinationMessageRecord, mentions []string) {

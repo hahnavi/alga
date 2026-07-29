@@ -3,7 +3,7 @@ package store
 import (
 	"time"
 
-	"alga/pgclient"
+	"alga/db"
 )
 
 type Stores struct {
@@ -39,7 +39,6 @@ type Stores struct {
 	MaintenanceWindow     MaintenanceWindowStore
 	TriageResult          TriageResultStore
 	TriageRule            TriageRuleStore
-	Counter               CounterStore
 	ICSRole               ICSRoleStore
 	IncidentDocument      IncidentDocumentStore
 	Handoff               HandoffStore
@@ -53,58 +52,57 @@ type Stores struct {
 	Outbox                OutboxStore
 }
 
-func NewStores(cli *pgclient.Client, sessionExpiry, sessionMaxLifetime time.Duration) (*Stores, error) {
-	client := cli.Ent
+func NewStores(cli *db.Client, sessionExpiry, sessionMaxLifetime time.Duration) (*Stores, error) {
+	bunDB := cli.DB
 
-	actionItemStore := newPGActionItemStore(client)
-	postmortemStore := newPGPostMortemStore(client, actionItemStore)
-	deliveryStore := newPGNotificationDeliveryStore(client)
-	personalAccessTokenStore := newPGPersonalAccessTokenStore(client)
+	actionItemStore := newPGActionItemStore(bunDB)
+	postmortemStore := newPGPostMortemStore(bunDB, actionItemStore)
+	deliveryStore := newPGNotificationDeliveryStore(bunDB)
+	personalAccessTokenStore := newPGPersonalAccessTokenStore(bunDB)
 
 	return &Stores{
-		Alert:                 newPGAlertStore(client),
-		WebhookToken:          newPGWebhookTokenStore(client),
-		User:                  newPGUserStore(client),
-		Session:               newPGSessionStore(client, sessionExpiry, sessionMaxLifetime),
-		Audit:                 newPGAuditStore(client),
-		Integration:           newPGIntegrationStore(client),
-		RouteRules:            newPGRouteRulesStore(client),
-		InvestigationThread:   newPGInvestigationThreadStore(client),
-		AlertInvestigation:    newPGAlertInvestigationStore(client),
-		IncidentInvestigation: newPGIncidentInvestigationStore(client),
-		AgentToken:            newPGAgentTokenStore(client),
-		AgentDM:               newPGAgentDMStore(client),
-		Notification:          newPGNotificationStore(client),
-		Incident:              newPGIncidentStore(client),
-		IncidentCoordination:  newPGIncidentCoordinationStore(client),
-		CoordinationTask:      newPGCoordinationTaskStore(client),
-		Service:               newPGServiceStore(client),
-		Team:                  newPGTeamStore(client),
-		Escalation:            newPGEscalationStore(client),
-		OnCall:                newPGOnCallStore(client),
+		Alert:                 newPGAlertStore(bunDB),
+		WebhookToken:          newPGWebhookTokenStore(bunDB),
+		User:                  newPGUserStore(bunDB),
+		Session:               newPGSessionStore(bunDB, sessionExpiry, sessionMaxLifetime),
+		Audit:                 newPGAuditStore(bunDB),
+		Integration:           newPGIntegrationStore(bunDB),
+		RouteRules:            newPGRouteRulesStore(bunDB),
+		InvestigationThread:   newPGInvestigationThreadStore(bunDB),
+		AlertInvestigation:    newPGAlertInvestigationStore(bunDB),
+		IncidentInvestigation: newPGIncidentInvestigationStore(bunDB),
+		AgentToken:            newPGAgentTokenStore(bunDB),
+		AgentDM:               newPGAgentDMStore(bunDB),
+		Notification:          newPGNotificationStore(bunDB),
+		Incident:              newPGIncidentStore(bunDB),
+		IncidentCoordination:  newPGIncidentCoordinationStore(bunDB),
+		CoordinationTask:      newPGCoordinationTaskStore(bunDB),
+		Service:               newPGServiceStore(bunDB),
+		Team:                  newPGTeamStore(bunDB),
+		Escalation:            newPGEscalationStore(bunDB),
+		OnCall:                newPGOnCallStore(bunDB),
 		PostMortem:            postmortemStore,
 		ActionItem:            actionItemStore,
 		Delivery:              deliveryStore,
 		PersonalToken:         personalAccessTokenStore,
-		Dashboard:             newPGDashboardStore(client),
-		Knowledge:             newPGKnowledgeStore(client, cli.DB),
-		AgentAsk:              newPGAgentAskStore(client),
-		SystemConfig:          newPGSystemConfigStore(client),
-		AgentMemory:           newPGAgentMemoryStore(client, cli.DB),
-		MaintenanceWindow:     newPGMaintenanceWindowStore(client),
-		TriageResult:          newPGTriageResultStore(client),
-		TriageRule:            newPGTriageRuleStore(client),
-		Counter:               newPGCounterStore(client),
-		ICSRole:               newPGICSRoleStore(client),
-		IncidentDocument:      newPGIncidentDocumentStore(client),
-		Handoff:               newPGHandoffStore(client),
-		Playbook:              newPGPlaybookStore(client),
-		Heartbeat:             newPGHeartbeatStore(client),
-		StatusPage:            newPGStatusPageStore(client),
-		OIDCProvider:          newPGOIDCProviderStore(client),
-		OIDCIdentity:          newPGOIDCIdentityStore(client),
-		CredentialProvider:    newPGCredentialProviderStore(client),
-		SharedSecret:          newPGSharedSecretStore(client),
-		Outbox:                newPGOutboxStore(client),
+		Dashboard:             newPGDashboardStore(bunDB),
+		Knowledge:             newPGKnowledgeStore(bunDB),
+		AgentAsk:              newPGAgentAskStore(bunDB),
+		SystemConfig:          newPGSystemConfigStore(bunDB),
+		AgentMemory:           newPGAgentMemoryStore(bunDB),
+		MaintenanceWindow:     newPGMaintenanceWindowStore(bunDB),
+		TriageResult:          newPGTriageResultStore(bunDB),
+		TriageRule:            newPGTriageRuleStore(bunDB),
+		ICSRole:               newPGICSRoleStore(bunDB),
+		IncidentDocument:      newPGIncidentDocumentStore(bunDB),
+		Handoff:               newPGHandoffStore(bunDB),
+		Playbook:              newPGPlaybookStore(bunDB),
+		Heartbeat:             newPGHeartbeatStore(bunDB),
+		StatusPage:            newPGStatusPageStore(bunDB),
+		OIDCProvider:          newPGOIDCProviderStore(bunDB),
+		OIDCIdentity:          newPGOIDCIdentityStore(bunDB),
+		CredentialProvider:    newPGCredentialProviderStore(bunDB),
+		SharedSecret:          newPGSharedSecretStore(bunDB),
+		Outbox:                newPGOutboxStore(bunDB),
 	}, nil
 }

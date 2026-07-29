@@ -7,11 +7,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
-	"alga/ent"
-	entteam "alga/ent/team"
-	entteammember "alga/ent/teammember"
-	entuser "alga/ent/user"
+	"alga/db/models"
 	"alga/logger"
 )
 
@@ -56,27 +54,30 @@ type pgTeamStore struct {
 	pgStoreBase
 }
 
-func newPGTeamStore(client *ent.Client) TeamStore {
-	return &pgTeamStore{pgStoreBase{client: client}}
+func newPGTeamStore(db *bun.DB) TeamStore {
+	return &pgTeamStore{pgStoreBase{db: db}}
 }
 
 func (s *pgTeamStore) CreateTeam(ctx context.Context, record *TeamRecord) (*TeamRecord, error) {
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	b := s.client.Team.Create().
-		SetName(record.Name).
-		SetDescription(record.Description).
-		SetCreatedAt(time.Now().UTC()).
-		SetUpdatedAt(time.Now().UTC())
+	now := time.Now().UTC()
+	m := &models.Team{
+		ID:          models.NewUUID(),
+		Name:        record.Name,
+		Description: record.Description,
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}
 
-	saved, err := b.Save(ctx)
+	_, err := s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create team: %w", err)
 	}
-	record.ID = saved.ID
-	record.CreatedAt = saved.CreatedAt
-	record.UpdatedAt = saved.UpdatedAt
+	record.ID = m.ID
+	record.CreatedAt = m.CreatedAt
+	record.UpdatedAt = m.UpdatedAt
 	return record, nil
 }
 
@@ -84,12 +85,13 @@ func (s *pgTeamStore) GetTeam(ctx context.Context, id uuid.UUID) (*TeamRecord, e
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	t, err := s.client.Team.Get(ctx, id)
+	var t models.Team
+	err := s.db.NewSelect().Model(&t).Where("id = ?", id).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*TeamRecord](err, "team")
 	}
 
-	rec := s.toTeamRecord(t)
+	rec := s.toTeamRecord(&t)
 
 	members, err := s.GetMembers(ctx, id)
 	if err != nil {
@@ -104,18 +106,23 @@ func (s *pgTeamStore) GetTeamByName(ctx context.Context, name string) (*TeamReco
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	t, err := s.client.Team.Query().Where(entteam.NameEQ(name)).Only(ctx)
+	var t models.Team
+	err := s.db.NewSelect().Model(&t).Where("name = ?", name).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*TeamRecord](err, "team")
 	}
-	return s.toTeamRecord(t), nil
+	return s.toTeamRecord(&t), nil
 }
 
 func (s *pgTeamStore) GetTeamName(ctx context.Context, id uuid.UUID) (string, error) {
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	name, err := s.client.Team.Query().Where(entteam.IDEQ(id)).Select(entteam.FieldName).String(ctx)
+	var name string
+	err := s.db.NewSelect().Model((*models.Team)(nil)).
+		Column("name").
+		Where("id = ?", id).
+		Scan(ctx, &name)
 	if err != nil {
 		return "", fmt.Errorf("failed to get team name: %w", err)
 	}
@@ -126,28 +133,39 @@ func (s *pgTeamStore) UpdateTeam(ctx context.Context, id uuid.UUID, record *Team
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	b := s.client.Team.UpdateOneID(id).
-		SetName(record.Name).
-		SetDescription(record.Description).
-		SetUpdatedAt(time.Now().UTC())
-
-	updated, err := b.Save(ctx)
+	now := time.Now().UTC()
+	res, err := s.db.NewUpdate().Model((*models.Team)(nil)).
+		Set("name = ?", record.Name).
+		Set("description = ?", record.Description).
+		Set("updated_at = ?", now).
+		Where("id = ?", id).
+		Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update team: %w", err)
 	}
-	return s.toTeamRecord(updated), nil
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return nil, fmt.Errorf("team not found: %w", ErrNotFound)
+	}
+
+	var updated models.Team
+	if err := s.db.NewSelect().Model(&updated).Where("id = ?", id).Scan(ctx); err != nil {
+		return nil, fmt.Errorf("failed to re-fetch updated team: %w", err)
+	}
+	return s.toTeamRecord(&updated), nil
 }
 
 func (s *pgTeamStore) DeleteTeam(ctx context.Context, id uuid.UUID) error {
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	err := s.client.Team.DeleteOneID(id).Exec(ctx)
+	res, err := s.db.NewDelete().Model((*models.Team)(nil)).Where("id = ?", id).Exec(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return fmt.Errorf("team not found: %w", ErrNotFound)
-		}
 		return fmt.Errorf("failed to delete team: %w", err)
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return fmt.Errorf("team not found: %w", ErrNotFound)
 	}
 	return nil
 }
@@ -161,66 +179,70 @@ func (s *pgTeamStore) ListTeams(ctx context.Context, limit, skip int) ([]TeamRec
 	}
 	limit = min(limit, 100)
 
-	total, err := s.client.Team.Query().Count(ctx)
+	total, err := s.db.NewSelect().Model((*models.Team)(nil)).Count(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count teams: %w", err)
 	}
 
-	teams, err := s.client.Team.Query().
-		Order(ent.Desc(entteam.FieldCreatedAt)).
+	var teams []models.Team
+	err = s.db.NewSelect().Model(&teams).
+		Order("created_at DESC").
 		Limit(limit).
 		Offset(skip).
-		All(ctx)
+		Scan(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list teams: %w", err)
 	}
 
 	teamIDs := make([]uuid.UUID, 0, len(teams))
-	for _, t := range teams {
-		teamIDs = append(teamIDs, t.ID)
+	for i := range teams {
+		teamIDs = append(teamIDs, teams[i].ID)
 	}
 
 	membersByTeam := make(map[uuid.UUID][]TeamMemberRecord)
 	if len(teamIDs) > 0 {
-		allMembers, err := s.client.TeamMember.Query().
-			Where(entteammember.TeamIDIn(teamIDs...)).
-			All(ctx)
+		var allMembers []models.TeamMember
+		err = s.db.NewSelect().Model(&allMembers).
+			Where("team_id IN (?)", bun.List(teamIDs)).
+			Scan(ctx)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to load team members: %w", err)
 		}
 
 		userIDs := make([]uuid.UUID, 0, len(allMembers))
 		seenUsers := make(map[uuid.UUID]struct{})
-		for _, m := range allMembers {
-			if _, ok := seenUsers[m.UserID]; !ok {
-				userIDs = append(userIDs, m.UserID)
-				seenUsers[m.UserID] = struct{}{}
+		for i := range allMembers {
+			if _, ok := seenUsers[allMembers[i].UserID]; !ok {
+				userIDs = append(userIDs, allMembers[i].UserID)
+				seenUsers[allMembers[i].UserID] = struct{}{}
 			}
 		}
 
-		usersByID := make(map[uuid.UUID]*ent.User)
+		usersByID := make(map[uuid.UUID]*models.User)
 		if len(userIDs) > 0 {
-			users, err := s.client.User.Query().
-				Where(entuser.IDIn(userIDs...)).
-				All(ctx)
+			var users []models.User
+			err = s.db.NewSelect().Model(&users).
+				Where("id IN (?)", bun.List(userIDs)).
+				Scan(ctx)
 			if err != nil {
 				logger.WarnCtx(ctx, "failed to batch-load users for team members", "component", "store", "error", err)
 			}
-			for _, u := range users {
-				usersByID[u.ID] = u
+			for i := range users {
+				usersByID[users[i].ID] = &users[i]
 			}
 		}
 
-		for _, m := range allMembers {
+		for i := range allMembers {
+			m := &allMembers[i]
 			u := usersByID[m.UserID]
 			membersByTeam[m.TeamID] = append(membersByTeam[m.TeamID], buildTeamMemberRecord(m, u))
 		}
 	}
 
 	records := make([]TeamRecord, 0, len(teams))
-	for _, t := range teams {
-		rec := s.toTeamRecord(t)
-		rec.Members = membersByTeam[t.ID]
+	for i := range teams {
+		rec := s.toTeamRecord(&teams[i])
+		rec.Members = membersByTeam[teams[i].ID]
 		records = append(records, *rec)
 	}
 	return records, int64(total), nil
@@ -234,21 +256,24 @@ func (s *pgTeamStore) AddMember(ctx context.Context, teamID, userID uuid.UUID, r
 		role = "member"
 	}
 
-	saved, err := s.client.TeamMember.Create().
-		SetTeamID(teamID).
-		SetUserID(userID).
-		SetRole(entteammember.Role(role)).
-		SetCreatedAt(time.Now().UTC()).
-		Save(ctx)
+	m := &models.TeamMember{
+		ID:        models.NewUUID(),
+		TeamID:    teamID,
+		UserID:    userID,
+		Role:      role,
+		CreatedAt: time.Now().UTC(),
+	}
+
+	_, err := s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to add team member: %w", err)
 	}
 
-	u, err := s.client.User.Get(ctx, userID)
-	if err != nil {
+	var u models.User
+	if err := s.db.NewSelect().Model(&u).Where("id = ?", userID).Scan(ctx); err != nil {
 		logger.WarnCtx(ctx, "failed to get user for team member", "component", "store", "user_id", userID, "error", err)
 	}
-	rec := buildTeamMemberRecord(saved, u)
+	rec := buildTeamMemberRecord(m, &u)
 	return &rec, nil
 }
 
@@ -256,16 +281,15 @@ func (s *pgTeamStore) UpdateMemberRole(ctx context.Context, teamID, userID uuid.
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	n, err := s.client.TeamMember.Update().
-		Where(
-			entteammember.TeamIDEQ(teamID),
-			entteammember.UserIDEQ(userID),
-		).
-		SetRole(entteammember.Role(role)).
-		Save(ctx)
+	res, err := s.db.NewUpdate().Model((*models.TeamMember)(nil)).
+		Set("role = ?", role).
+		Where("team_id = ?", teamID).
+		Where("user_id = ?", userID).
+		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to update member role: %w", err)
 	}
+	n, _ := res.RowsAffected()
 	if n == 0 {
 		return errors.New("team member not found")
 	}
@@ -276,15 +300,14 @@ func (s *pgTeamStore) RemoveMember(ctx context.Context, teamID, userID uuid.UUID
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	n, err := s.client.TeamMember.Delete().
-		Where(
-			entteammember.TeamIDEQ(teamID),
-			entteammember.UserIDEQ(userID),
-		).
+	res, err := s.db.NewDelete().Model((*models.TeamMember)(nil)).
+		Where("team_id = ?", teamID).
+		Where("user_id = ?", userID).
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to remove team member: %w", err)
 	}
+	n, _ := res.RowsAffected()
 	if n == 0 {
 		return errors.New("team member not found")
 	}
@@ -295,20 +318,20 @@ func (s *pgTeamStore) GetMembers(ctx context.Context, teamID uuid.UUID) ([]TeamM
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	members, err := s.client.TeamMember.Query().
-		Where(entteammember.TeamIDEQ(teamID)).
-		All(ctx)
+	var members []models.TeamMember
+	err := s.db.NewSelect().Model(&members).Where("team_id = ?", teamID).Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get team members: %w", err)
 	}
 
 	records := make([]TeamMemberRecord, 0, len(members))
-	for _, m := range members {
-		u, err := s.client.User.Get(ctx, m.UserID)
-		if err != nil {
+	for i := range members {
+		m := &members[i]
+		var u models.User
+		if err := s.db.NewSelect().Model(&u).Where("id = ?", m.UserID).Scan(ctx); err != nil {
 			logger.WarnCtx(ctx, "failed to get user for team member", "component", "store", "user_id", m.UserID, "error", err)
 		}
-		records = append(records, buildTeamMemberRecord(m, u))
+		records = append(records, buildTeamMemberRecord(m, &u))
 	}
 	return records, nil
 }
@@ -322,42 +345,48 @@ func (s *pgTeamStore) SeedOpsTeam(ctx context.Context, adminUserID uuid.UUID) er
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	existing, err := s.client.Team.Query().Where(entteam.NameEQ("ops-team")).Only(ctx)
-	if err != nil && !ent.IsNotFound(err) {
+	var existing models.Team
+	err := s.db.NewSelect().Model(&existing).Where("name = ?", "ops-team").Scan(ctx)
+	if err != nil && !isNotFound(err) {
 		return fmt.Errorf("failed to look up ops-team: %w", err)
 	}
-	if ent.IsNotFound(err) {
-		created, cerr := s.client.Team.Create().
-			SetName("ops-team").
-			SetDescription("Operations team for agent escalations and confirmations").
-			SetCreatedAt(time.Now().UTC()).
-			SetUpdatedAt(time.Now().UTC()).
-			Save(ctx)
-		if cerr != nil {
+	if isNotFound(err) {
+		now := time.Now().UTC()
+		existing = models.Team{
+			ID:          models.NewUUID(),
+			Name:        "ops-team",
+			Description: "Operations team for agent escalations and confirmations",
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		}
+		if _, cerr := s.db.NewInsert().Model(&existing).Exec(ctx); cerr != nil {
 			return fmt.Errorf("failed to create ops-team: %w", cerr)
 		}
-		existing = created
 	}
 
-	if existing != nil {
-		n, _ := s.client.TeamMember.Query().
-			Where(entteammember.TeamIDEQ(existing.ID), entteammember.UserIDEQ(adminUserID)).
-			Count(ctx)
-		if n == 0 {
-			if _, merr := s.client.TeamMember.Create().
-				SetTeamID(existing.ID).
-				SetUserID(adminUserID).
-				SetRole("lead").
-				SetCreatedAt(time.Now().UTC()).
-				Save(ctx); merr != nil {
-				return fmt.Errorf("failed to add admin to ops-team: %w", merr)
-			}
+	n, err := s.db.NewSelect().Model((*models.TeamMember)(nil)).
+		Where("team_id = ?", existing.ID).
+		Where("user_id = ?", adminUserID).
+		Count(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to check ops-team membership: %w", err)
+	}
+	if n == 0 {
+		m := &models.TeamMember{
+			ID:        models.NewUUID(),
+			TeamID:    existing.ID,
+			UserID:    adminUserID,
+			Role:      "lead",
+			CreatedAt: time.Now().UTC(),
+		}
+		if _, merr := s.db.NewInsert().Model(m).Exec(ctx); merr != nil {
+			return fmt.Errorf("failed to add admin to ops-team: %w", merr)
 		}
 	}
 	return nil
 }
 
-func (s *pgTeamStore) toTeamRecord(t *ent.Team) *TeamRecord {
+func (s *pgTeamStore) toTeamRecord(t *models.Team) *TeamRecord {
 	return &TeamRecord{
 		ID:          t.ID,
 		Name:        t.Name,
@@ -367,12 +396,12 @@ func (s *pgTeamStore) toTeamRecord(t *ent.Team) *TeamRecord {
 	}
 }
 
-func buildTeamMemberRecord(m *ent.TeamMember, u *ent.User) TeamMemberRecord {
+func buildTeamMemberRecord(m *models.TeamMember, u *models.User) TeamMemberRecord {
 	rec := TeamMemberRecord{
 		ID:        m.ID,
 		TeamID:    m.TeamID,
 		UserID:    m.UserID,
-		Role:      string(m.Role),
+		Role:      m.Role,
 		CreatedAt: m.CreatedAt,
 	}
 	if u != nil {

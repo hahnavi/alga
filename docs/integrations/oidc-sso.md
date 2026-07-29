@@ -51,12 +51,12 @@ Providers are managed from the **SSO Providers** page (`/sso`) (requires the `oi
 
 ## Data Model
 
-OIDC data is stored in two Ent schemas:
+OIDC data is stored in two Bun models:
 
-| Schema         | Description                                                           |
+| Model          | Description                                                           |
 | -------------- | --------------------------------------------------------------------- |
-| `oidcprovider` | Provider configuration (issuer, client ID, scopes, enabled)           |
-| `oidcidentity` | Links an OIDC subject to a local user account (provider_id + subject) |
+| `OIDCProvider` | Provider configuration (issuer, client ID, scopes, enabled)           |
+| `OIDCIdentity` | Links an OIDC subject to a local user account (provider_id + subject) |
 
 ## User Provisioning
 

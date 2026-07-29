@@ -8,29 +8,25 @@ import (
 	"fmt"
 	"time"
 
-	"alga/ent"
-	"alga/ent/alertinvestigation"
-	"alga/ent/alertinvestigationevent"
-	"alga/ent/alertinvestigationupdateentry"
-	"alga/ent/predicate"
+	"github.com/uptrace/bun"
+
+	"alga/db/models"
 )
 
 func (s *pgAlertInvestigationStore) ResetInvestigatingByAgent(ctx context.Context, agentID string) error {
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	_, err := s.client.AlertInvestigation.Update().
-		Where(
-			alertinvestigation.AgentIDEQ(agentID),
-			alertinvestigation.StatusIn(alertinvestigation.Status(AlertInvestigationStatusInvestigating), alertinvestigation.Status(AlertInvestigationStatusPaused)),
-		).
-		SetStatus(alertinvestigation.Status(AlertInvestigationStatusPending)).
-		ClearAgentID().
-		ClearAgentName().
-		ClearAgentType().
-		ClearStartedAt().
-		SetUpdatedAt(time.Now().UTC()).
-		Save(ctx)
+	_, err := s.db.NewUpdate().Model((*models.AlertInvestigation)(nil)).
+		Set("status = ?", AlertInvestigationStatusPending).
+		Set("agent_id = ''").
+		Set("agent_name = ''").
+		Set("agent_type = ''").
+		Set("started_at = NULL").
+		Set("updated_at = ?", time.Now().UTC()).
+		Where("agent_id = ?", agentID).
+		Where("status IN (?)", bun.List([]string{AlertInvestigationStatusInvestigating, AlertInvestigationStatusPaused})).
+		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to reset investigating alert investigations by agent: %w", err)
 	}
@@ -41,18 +37,16 @@ func (s *pgAlertInvestigationStore) ResetAssignedByAgent(ctx context.Context, ag
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	_, err := s.client.AlertInvestigation.Update().
-		Where(
-			alertinvestigation.AgentIDEQ(agentID),
-			alertinvestigation.StatusEQ(alertinvestigation.Status(AlertInvestigationStatusAssigned)),
-		).
-		SetStatus(alertinvestigation.Status(AlertInvestigationStatusPending)).
-		ClearAgentID().
-		ClearAgentName().
-		ClearAgentType().
-		ClearStartedAt().
-		SetUpdatedAt(time.Now().UTC()).
-		Save(ctx)
+	_, err := s.db.NewUpdate().Model((*models.AlertInvestigation)(nil)).
+		Set("status = ?", AlertInvestigationStatusPending).
+		Set("agent_id = ''").
+		Set("agent_name = ''").
+		Set("agent_type = ''").
+		Set("started_at = NULL").
+		Set("updated_at = ?", time.Now().UTC()).
+		Where("agent_id = ?", agentID).
+		Where("status = ?", AlertInvestigationStatusAssigned).
+		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to reset assigned alert investigations by agent: %w", err)
 	}
@@ -63,11 +57,9 @@ func (s *pgAlertInvestigationStore) CountActiveByAgent(ctx context.Context, agen
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	count, err := s.client.AlertInvestigation.Query().
-		Where(
-			alertinvestigation.AgentIDEQ(agentID),
-			alertinvestigation.StatusIn(alertinvestigation.Status(AlertInvestigationStatusAssigned), alertinvestigation.Status(AlertInvestigationStatusInvestigating), alertinvestigation.Status(AlertInvestigationStatusPaused)),
-		).
+	count, err := s.db.NewSelect().Model((*models.AlertInvestigation)(nil)).
+		Where("agent_id = ?", agentID).
+		Where("status IN (?)", bun.List([]string{AlertInvestigationStatusAssigned, AlertInvestigationStatusInvestigating, AlertInvestigationStatusPaused})).
 		Count(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to count active alert investigations by agent: %w", err)
@@ -85,16 +77,15 @@ func (s *pgAlertInvestigationStore) CountActiveByAgents(ctx context.Context, age
 	}
 
 	var groups []struct {
-		AgentID string `json:"agent_id"`
-		Count   int    `json:"count"`
+		AgentID string `bun:"agent_id"`
+		Count   int    `bun:"count"`
 	}
-	err := s.client.AlertInvestigation.Query().
-		Where(
-			alertinvestigation.AgentIDIn(agentIDs...),
-			alertinvestigation.StatusIn(alertinvestigation.Status(AlertInvestigationStatusAssigned), alertinvestigation.Status(AlertInvestigationStatusInvestigating), alertinvestigation.Status(AlertInvestigationStatusPaused)),
-		).
-		GroupBy(alertinvestigation.FieldAgentID).
-		Aggregate(ent.Count()).
+	err := s.db.NewSelect().
+		ColumnExpr("agent_id, count(*) as count").
+		Model((*models.AlertInvestigation)(nil)).
+		Where("agent_id IN (?)", bun.List(agentIDs)).
+		Where("status IN (?)", bun.List([]string{AlertInvestigationStatusAssigned, AlertInvestigationStatusInvestigating, AlertInvestigationStatusPaused})).
+		Group("agent_id").
 		Scan(ctx, &groups)
 	if err != nil {
 		return nil, fmt.Errorf("failed to batch count active investigations: %w", err)
@@ -113,46 +104,35 @@ func (s *pgAlertInvestigationStore) CountActiveByAgents(ctx context.Context, age
 }
 
 func (s *pgAlertInvestigationStore) ListStalledAssignedAlertInvestigations(ctx context.Context, threshold time.Duration) ([]AlertInvestigationRecord, error) {
-	return s.listStalledAlertInvestigationsByStatus(ctx, AlertInvestigationStatusAssigned, threshold, nil)
+	return s.listStalledAlertInvestigationsByStatus(ctx, AlertInvestigationStatusAssigned, threshold, false)
 }
 
 func (s *pgAlertInvestigationStore) ListStalledInvestigatingAlertInvestigations(ctx context.Context, threshold time.Duration) ([]AlertInvestigationRecord, error) {
-	cutoff := time.Now().UTC().Add(-threshold)
-	extra := []predicate.AlertInvestigation{
-		alertinvestigation.Not(
-			alertinvestigation.HasUpdatesWith(
-				alertinvestigationupdateentry.CreatedAtGTE(cutoff),
-			),
-		),
-	}
-	return s.listStalledAlertInvestigationsByStatus(ctx, AlertInvestigationStatusInvestigating, threshold, extra)
+	return s.listStalledAlertInvestigationsByStatus(ctx, AlertInvestigationStatusInvestigating, threshold, true)
 }
 
-func (s *pgAlertInvestigationStore) listStalledAlertInvestigationsByStatus(ctx context.Context, status string, threshold time.Duration, extraPreds []predicate.AlertInvestigation) ([]AlertInvestigationRecord, error) {
+func (s *pgAlertInvestigationStore) listStalledAlertInvestigationsByStatus(ctx context.Context, status string, threshold time.Duration, requireNoRecentUpdates bool) ([]AlertInvestigationRecord, error) {
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
 	cutoff := time.Now().UTC().Add(-threshold)
-	preds := []predicate.AlertInvestigation{
-		alertinvestigation.StatusEQ(alertinvestigation.Status(status)),
-		alertinvestigation.StartedAtLTE(cutoff),
-	}
-	preds = append(preds, extraPreds...)
 
-	invs, err := s.client.AlertInvestigation.Query().Where(preds...).
-		WithAlerts().
-		WithUpdates(func(q *ent.AlertInvestigationUpdateEntryQuery) {
-			q.Order(ent.Asc(alertinvestigationupdateentry.FieldCreatedAt))
-		}).
-		WithEvents(func(q *ent.AlertInvestigationEventQuery) { q.Order(ent.Asc(alertinvestigationevent.FieldCreatedAt)) }).
-		All(ctx)
-	if err != nil {
+	q := s.db.NewSelect().Model((*models.AlertInvestigation)(nil)).
+		Where("status = ?", status).
+		Where("started_at <= ?", cutoff)
+
+	if requireNoRecentUpdates {
+		q = q.Where("NOT EXISTS (SELECT 1 FROM alert_investigation_updates u WHERE u.alert_investigation_id = alert_investigation.id AND u.created_at >= ?)", cutoff)
+	}
+
+	var invs []models.AlertInvestigation
+	if err := q.Scan(ctx, &invs); err != nil {
 		return nil, fmt.Errorf("list stalled alert investigations %s: %w", status, err)
 	}
 
 	records := make([]AlertInvestigationRecord, 0, len(invs))
-	for _, inv := range invs {
-		rec, err := s.toAlertInvestigationRecord(ctx, inv)
+	for i := range invs {
+		rec, err := s.toAlertInvestigationRecord(ctx, &invs[i])
 		if err != nil {
 			return nil, err
 		}
@@ -162,47 +142,43 @@ func (s *pgAlertInvestigationStore) listStalledAlertInvestigationsByStatus(ctx c
 }
 
 func (s *pgAlertInvestigationStore) ResetStalledAssignedAlertInvestigations(timeout time.Duration) ([]string, error) {
-	return s.resetStalledAlertInvestigationsByStatus(AlertInvestigationStatusAssigned, timeout, nil)
+	return s.resetStalledAlertInvestigationsByStatus(AlertInvestigationStatusAssigned, timeout, false)
 }
 
 func (s *pgAlertInvestigationStore) ResetStalledInvestigatingAlertInvestigations(timeout time.Duration) ([]string, error) {
-	cutoff := time.Now().UTC().Add(-timeout)
-	extra := []predicate.AlertInvestigation{
-		alertinvestigation.Not(
-			alertinvestigation.HasUpdatesWith(
-				alertinvestigationupdateentry.CreatedAtGTE(cutoff),
-			),
-		),
-	}
-	return s.resetStalledAlertInvestigationsByStatus(AlertInvestigationStatusInvestigating, timeout, extra)
+	return s.resetStalledAlertInvestigationsByStatus(AlertInvestigationStatusInvestigating, timeout, true)
 }
 
-func (s *pgAlertInvestigationStore) resetStalledAlertInvestigationsByStatus(status string, timeout time.Duration, extraPreds []predicate.AlertInvestigation) ([]string, error) {
+func (s *pgAlertInvestigationStore) resetStalledAlertInvestigationsByStatus(status string, timeout time.Duration, requireNoRecentUpdates bool) ([]string, error) {
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
 	cutoff := time.Now().UTC().Add(-timeout)
-	preds := []predicate.AlertInvestigation{
-		alertinvestigation.StatusEQ(alertinvestigation.Status(status)),
-		alertinvestigation.StartedAtLTE(cutoff),
-	}
-	preds = append(preds, extraPreds...)
 
-	invs, err := s.client.AlertInvestigation.Query().Where(preds...).All(ctx)
-	if err != nil {
+	q := s.db.NewSelect().Model((*models.AlertInvestigation)(nil)).
+		Where("status = ?", status).
+		Where("started_at <= ?", cutoff)
+
+	if requireNoRecentUpdates {
+		q = q.Where("NOT EXISTS (SELECT 1 FROM alert_investigation_updates u WHERE u.alert_investigation_id = alert_investigation.id AND u.created_at >= ?)", cutoff)
+	}
+
+	var invs []models.AlertInvestigation
+	if err := q.Scan(ctx, &invs); err != nil {
 		return nil, fmt.Errorf("reset stalled alert investigations %s: %w", status, err)
 	}
 
 	ids := make([]string, 0, len(invs))
 	for _, inv := range invs {
-		_, err := s.client.AlertInvestigation.UpdateOneID(inv.ID).
-			SetStatus(alertinvestigation.Status(AlertInvestigationStatusPending)).
-			ClearAgentID().
-			ClearAgentName().
-			ClearAgentType().
-			ClearStartedAt().
-			SetUpdatedAt(time.Now().UTC()).
-			Save(ctx)
+		_, err := s.db.NewUpdate().Model((*models.AlertInvestigation)(nil)).
+			Set("status = ?", AlertInvestigationStatusPending).
+			Set("agent_id = ''").
+			Set("agent_name = ''").
+			Set("agent_type = ''").
+			Set("started_at = NULL").
+			Set("updated_at = ?", time.Now().UTC()).
+			Where("id = ?", inv.ID).
+			Exec(ctx)
 		if err != nil {
 			continue
 		}

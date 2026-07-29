@@ -45,8 +45,14 @@ type Config struct {
 	AlgaBaseURL                        string `yaml:"alga_base_url"`
 	PostgresDSN                        string `yaml:"postgres_dsn"`
 	PostgresAutoMigrate                bool   `yaml:"postgres_auto_migrate"`
-	ConfigPath                         string `yaml:"-"`
-	SessionExpiryHrs                   int    `yaml:"session_expiry_hours"`
+	// PostgreSQL connection pool tuning. Zero/negative values fall back to
+	// db.DefaultPoolConfig() at connection time.
+	PostgresMaxOpenConns    int           `yaml:"postgres_max_open_conns"`
+	PostgresMaxIdleConns    int           `yaml:"postgres_max_idle_conns"`
+	PostgresConnMaxIdleTime time.Duration `yaml:"postgres_conn_max_idle_time"`
+	PostgresConnMaxLifetime time.Duration `yaml:"postgres_conn_max_lifetime"`
+	ConfigPath              string        `yaml:"-"`
+	SessionExpiryHrs        int           `yaml:"session_expiry_hours"`
 	// SessionMaxLifetime is the absolute (max) session lifetime regardless of
 	// activity. Enforced in addition to the sliding idle expiry
 	// (SessionExpiryHrs): a session is invalid once now > CreatedAt +
@@ -255,7 +261,12 @@ func Defaults() *Config {
 		LogLevel:            "info",
 		ConfigPath:          "./config/config.yaml",
 		PostgresAutoMigrate: false,
-		SessionExpiryHrs:    24,
+		// PostgreSQL pool defaults mirror db.DefaultPoolConfig().
+		PostgresMaxOpenConns:    25,
+		PostgresMaxIdleConns:    5,
+		PostgresConnMaxIdleTime: 5 * time.Minute,
+		PostgresConnMaxLifetime: 30 * time.Minute,
+		SessionExpiryHrs:        24,
 		// Absolute (max) session lifetime (ASVS V3.2/V3.3). A session is
 		// rejected once it is older than this even if the sliding idle expiry
 		// was just refreshed, bounding a stolen cookie to one max window.
@@ -424,6 +435,26 @@ func Load() (*Config, error) {
 		parsed, err := strconv.ParseBool(v)
 		if err == nil {
 			cfg.PostgresAutoMigrate = parsed
+		}
+	}
+	if v := os.Getenv("POSTGRES_MAX_OPEN_CONNS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			cfg.PostgresMaxOpenConns = n
+		}
+	}
+	if v := os.Getenv("POSTGRES_MAX_IDLE_CONNS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			cfg.PostgresMaxIdleConns = n
+		}
+	}
+	if v := os.Getenv("POSTGRES_CONN_MAX_IDLE_TIME"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d > 0 {
+			cfg.PostgresConnMaxIdleTime = d
+		}
+	}
+	if v := os.Getenv("POSTGRES_CONN_MAX_LIFETIME"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d > 0 {
+			cfg.PostgresConnMaxLifetime = d
 		}
 	}
 	if v := os.Getenv("SLACK_BOT_TOKEN"); v != "" {

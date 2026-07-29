@@ -8,10 +8,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
-	"alga/ent"
-	"alga/ent/agentdmmessage"
-	"alga/ent/agenttoken"
+	"alga/db/models"
 )
 
 const AlgaAgentDMChatIDLiteral = "alga_dm"
@@ -55,8 +54,8 @@ type pgAgentDMStore struct {
 	pgStoreBase
 }
 
-func newPGAgentDMStore(client *ent.Client) AgentDMStore {
-	return &pgAgentDMStore{pgStoreBase{client: client}}
+func newPGAgentDMStore(db *bun.DB) AgentDMStore {
+	return &pgAgentDMStore{pgStoreBase{db: db}}
 }
 
 func (s *pgAgentDMStore) AddMessage(agentTokenHex string, role AgentDMMessageRole, body string, userID, username *string) (*AgentDMMessage, error) {
@@ -71,33 +70,30 @@ func (s *pgAgentDMStore) AddMessage(agentTokenHex string, role AgentDMMessageRol
 		return nil, fmt.Errorf("invalid agent_token_id: %w", err)
 	}
 
-	b := s.client.AgentDMMessage.Create().
-		SetAgentTokenID(agentTokenID).
-		SetChatID(AlgaAgentDMChatID()).
-		SetRole(agentdmmessage.Role(role)).
-		SetBody(body).
-		SetCreatedAt(now).
-		SetUpdatedAt(now)
-
-	if userID != nil {
-		b.SetUserID(*userID)
+	m := &models.AgentDMMessage{
+		AgentTokenID: agentTokenID,
+		ChatID:       AlgaAgentDMChatID(),
+		Role:         string(role),
+		Body:         body,
+		UserID:       userID,
+		Username:     username,
 	}
-	if username != nil {
-		b.SetUsername(*username)
-	}
+	m.ID = models.NewUUID()
+	m.CreatedAt = now
+	m.UpdatedAt = now
 
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	saved, err := b.Save(ctx)
+	_, err = s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert agent dm message: %w", err)
 	}
 
 	return &AgentDMMessage{
-		ID:           saved.ID,
+		ID:           m.ID,
 		AgentTokenID: hex,
-		ChatID:       saved.ChatID,
+		ChatID:       m.ChatID,
 		Role:         role,
 		Body:         body,
 		UserID:       userID,
@@ -126,16 +122,17 @@ func (s *pgAgentDMStore) ListMessages(agentTokenHex string, beforeID *uuid.UUID,
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	query := s.client.AgentDMMessage.Query().
-		Where(agentdmmessage.HasAgentTokenWith(agenttoken.ID(agentTokenID))).
-		Order(ent.Desc(agentdmmessage.FieldCreatedAt)).
+	var msgs []models.AgentDMMessage
+	q := s.db.NewSelect().Model(&msgs).
+		Where("agent_token_id = ?", agentTokenID).
+		OrderExpr("created_at DESC").
 		Limit(limit + 1)
 
 	if beforeID != nil {
-		query = query.Where(agentdmmessage.IDLT(*beforeID))
+		q = q.Where("id < ?", *beforeID)
 	}
 
-	msgs, err := query.All(ctx)
+	err = q.Scan(ctx)
 	if err != nil {
 		return nil, false, fmt.Errorf("find agent dm messages: %w", err)
 	}
@@ -177,15 +174,17 @@ func (s *pgAgentDMStore) UpdateMessageBody(agentTokenHex, messageIDHex, body str
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	n, err := s.client.AgentDMMessage.Update().
-		Where(
-			agentdmmessage.ID(id),
-			agentdmmessage.HasAgentTokenWith(agenttoken.ID(agentTokenID)),
-		).
-		SetBody(body).
-		SetEdited(markEdited).
-		SetUpdatedAt(time.Now().UTC()).
-		Save(ctx)
+	res, err := s.db.NewUpdate().Model((*models.AgentDMMessage)(nil)).
+		Set("body = ?", body).
+		Set("edited = ?", markEdited).
+		Set("updated_at = ?", time.Now().UTC()).
+		Where("id = ?", id).
+		Where("agent_token_id = ?", agentTokenID).
+		Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to update agent dm message: %w", err)
+	}
+	n, err := res.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("failed to update agent dm message: %w", err)
 	}
@@ -208,12 +207,14 @@ func (s *pgAgentDMStore) DeleteMessage(agentTokenHex, messageIDHex string) error
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	n, err := s.client.AgentDMMessage.Delete().
-		Where(
-			agentdmmessage.ID(id),
-			agentdmmessage.HasAgentTokenWith(agenttoken.ID(agentTokenID)),
-		).
+	res, err := s.db.NewDelete().Model((*models.AgentDMMessage)(nil)).
+		Where("id = ?", id).
+		Where("agent_token_id = ?", agentTokenID).
 		Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to delete agent dm message: %w", err)
+	}
+	n, err := res.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("failed to delete agent dm message: %w", err)
 	}

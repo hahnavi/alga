@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
-	"alga/ent"
-	entactionitem "alga/ent/actionitem"
+	"alga/db/models"
 )
 
 type ActionItemRecord struct {
@@ -40,8 +40,8 @@ type pgActionItemStore struct {
 	pgStoreBase
 }
 
-func newPGActionItemStore(client *ent.Client) ActionItemStore {
-	return &pgActionItemStore{pgStoreBase: pgStoreBase{client: client}}
+func newPGActionItemStore(db *bun.DB) ActionItemStore {
+	return &pgActionItemStore{pgStoreBase: pgStoreBase{db: db}}
 }
 
 func (s *pgActionItemStore) Create(ctx context.Context, record *ActionItemRecord) (*ActionItemRecord, error) {
@@ -57,126 +57,136 @@ func (s *pgActionItemStore) Create(ctx context.Context, record *ActionItemRecord
 		record.Type = "investigate"
 	}
 
-	b := s.client.ActionItem.Create().
-		SetPostMortemID(record.PostMortemID).
-		SetDescription(record.Description).
-		SetStatus(entactionitem.Status(record.Status)).
-		SetPriority(entactionitem.Priority(record.Priority)).
-		SetType(entactionitem.Type(record.Type)).
-		SetAssigneeName(record.AssigneeName).
-		SetCreatedAt(now).
-		SetUpdatedAt(now)
-
-	if record.AssigneeID != nil {
-		b.SetAssigneeID(*record.AssigneeID)
+	m := &models.ActionItem{
+		PostMortemID: record.PostMortemID,
+		Description:  record.Description,
+		Status:       record.Status,
+		Priority:     record.Priority,
+		Type:         record.Type,
+		AssigneeName: record.AssigneeName,
+		AssigneeID:   record.AssigneeID,
+		DueDate:      record.DueDate,
 	}
-	if record.DueDate != nil {
-		b.SetDueDate(*record.DueDate)
-	}
+	m.ID = models.NewUUID()
+	m.CreatedAt = now
+	m.UpdatedAt = now
 
-	saved, err := b.Save(ctx)
+	_, err := s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create action item: %w", err)
 	}
 
-	return s.toRecord(saved), nil
+	return s.toRecord(m), nil
 }
 
 func (s *pgActionItemStore) GetByID(ctx context.Context, id uuid.UUID) (*ActionItemRecord, error) {
-	ai, err := s.client.ActionItem.Get(ctx, id)
+	var ai models.ActionItem
+	err := s.db.NewSelect().Model(&ai).Where("id = ?", id).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*ActionItemRecord](err, "action item")
 	}
-	return s.toRecord(ai), nil
+	return s.toRecord(&ai), nil
 }
 
 func (s *pgActionItemStore) ListByPostMortem(ctx context.Context, postMortemID uuid.UUID) ([]ActionItemRecord, error) {
-	items, err := s.client.ActionItem.Query().
-		Where(entactionitem.PostMortemID(postMortemID)).
-		Order(ent.Asc(entactionitem.FieldCreatedAt)).
-		All(ctx)
+	var items []models.ActionItem
+	err := s.db.NewSelect().Model(&items).
+		Where("post_mortem_id = ?", postMortemID).
+		OrderExpr("created_at ASC").
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list action items: %w", err)
 	}
 
 	records := make([]ActionItemRecord, 0, len(items))
 	for _, ai := range items {
-		records = append(records, *s.toRecord(ai))
+		records = append(records, *s.toRecord(&ai))
 	}
 	return records, nil
 }
 
 func (s *pgActionItemStore) ListOpen(ctx context.Context) ([]ActionItemRecord, error) {
-	items, err := s.client.ActionItem.Query().
-		Where(
-			entactionitem.StatusNEQ(entactionitem.StatusCompleted),
-			entactionitem.StatusNEQ(entactionitem.StatusCancelled),
-		).
-		Order(ent.Asc(entactionitem.FieldDueDate)).
-		All(ctx)
+	var items []models.ActionItem
+	err := s.db.NewSelect().Model(&items).
+		Where("status != ?", "completed").
+		Where("status != ?", "cancelled").
+		OrderExpr("due_date ASC").
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list open action items: %w", err)
 	}
 
 	records := make([]ActionItemRecord, 0, len(items))
 	for _, ai := range items {
-		records = append(records, *s.toRecord(ai))
+		records = append(records, *s.toRecord(&ai))
 	}
 	return records, nil
 }
 
 func (s *pgActionItemStore) ListOverdue(ctx context.Context) ([]ActionItemRecord, error) {
 	now := time.Now().UTC()
-	items, err := s.client.ActionItem.Query().
-		Where(
-			entactionitem.StatusNEQ(entactionitem.StatusCompleted),
-			entactionitem.StatusNEQ(entactionitem.StatusCancelled),
-			entactionitem.DueDateLT(now),
-			entactionitem.DueDateNotNil(),
-		).
-		Order(ent.Asc(entactionitem.FieldDueDate)).
-		All(ctx)
+	var items []models.ActionItem
+	err := s.db.NewSelect().Model(&items).
+		Where("status != ?", "completed").
+		Where("status != ?", "cancelled").
+		Where("due_date < ?", now).
+		Where("due_date IS NOT NULL").
+		OrderExpr("due_date ASC").
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list overdue action items: %w", err)
 	}
 
 	records := make([]ActionItemRecord, 0, len(items))
 	for _, ai := range items {
-		records = append(records, *s.toRecord(ai))
+		records = append(records, *s.toRecord(&ai))
 	}
 	return records, nil
 }
 
 func (s *pgActionItemStore) Update(ctx context.Context, id uuid.UUID, record *ActionItemRecord) (*ActionItemRecord, error) {
-	b := s.client.ActionItem.UpdateOneID(id).
-		SetDescription(record.Description).
-		SetStatus(entactionitem.Status(record.Status)).
-		SetPriority(entactionitem.Priority(record.Priority)).
-		SetType(entactionitem.Type(record.Type)).
-		SetAssigneeName(record.AssigneeName).
-		SetUpdatedAt(time.Now().UTC())
+	upd := s.db.NewUpdate().Model((*models.ActionItem)(nil)).
+		Set("description = ?", record.Description).
+		Set("status = ?", record.Status).
+		Set("priority = ?", record.Priority).
+		Set("type = ?", record.Type).
+		Set("assignee_name = ?", record.AssigneeName).
+		Set("updated_at = ?", time.Now().UTC()).
+		Where("id = ?", id)
 
 	if record.AssigneeID != nil {
-		b.SetAssigneeID(*record.AssigneeID)
+		upd = upd.Set("assignee_id = ?", *record.AssigneeID)
 	} else {
-		b.ClearAssigneeID()
+		upd = upd.Set("assignee_id = NULL")
 	}
 	if record.DueDate != nil {
-		b.SetDueDate(*record.DueDate)
+		upd = upd.Set("due_date = ?", *record.DueDate)
 	} else {
-		b.ClearDueDate()
+		upd = upd.Set("due_date = NULL")
 	}
 
-	saved, err := b.Save(ctx)
+	res, err := upd.Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update action item: %w", err)
 	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return nil, fmt.Errorf("failed to update action item: %w", err)
+	}
+	if n == 0 {
+		return nil, fmt.Errorf("action item not found: %w", ErrNotFound)
+	}
 
-	return s.toRecord(saved), nil
+	var ai models.ActionItem
+	err = s.db.NewSelect().Model(&ai).Where("id = ?", id).Scan(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to reload action item: %w", err)
+	}
+	return s.toRecord(&ai), nil
 }
 
 func (s *pgActionItemStore) Delete(ctx context.Context, id uuid.UUID) error {
-	err := s.client.ActionItem.DeleteOneID(id).Exec(ctx)
+	_, err := s.db.NewDelete().Model((*models.ActionItem)(nil)).Where("id = ?", id).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to delete action item: %w", err)
 	}
@@ -184,8 +194,8 @@ func (s *pgActionItemStore) Delete(ctx context.Context, id uuid.UUID) error {
 }
 
 func (s *pgActionItemStore) DeleteByPostMortemID(ctx context.Context, postMortemID uuid.UUID) error {
-	_, err := s.client.ActionItem.Delete().
-		Where(entactionitem.PostMortemID(postMortemID)).
+	_, err := s.db.NewDelete().Model((*models.ActionItem)(nil)).
+		Where("post_mortem_id = ?", postMortemID).
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to delete action items by post-mortem: %w", err)
@@ -193,15 +203,15 @@ func (s *pgActionItemStore) DeleteByPostMortemID(ctx context.Context, postMortem
 	return nil
 }
 
-func (s *pgActionItemStore) toRecord(ai *ent.ActionItem) *ActionItemRecord {
+func (s *pgActionItemStore) toRecord(ai *models.ActionItem) *ActionItemRecord {
 	return &ActionItemRecord{
 		ID:           ai.ID,
 		PostMortemID: ai.PostMortemID,
 		Description:  ai.Description,
 		AssigneeID:   ai.AssigneeID,
-		Status:       string(ai.Status),
-		Priority:     string(ai.Priority),
-		Type:         string(ai.Type),
+		Status:       ai.Status,
+		Priority:     ai.Priority,
+		Type:         ai.Type,
 		AssigneeName: ai.AssigneeName,
 		DueDate:      ai.DueDate,
 		CreatedAt:    ai.CreatedAt,

@@ -257,10 +257,6 @@ type oidcHandler struct {
 	discoveryCache *oidcDiscoveryCache
 	jwksCache      *oidcJWKSCache
 	sessionExpiry  time.Duration
-
-	// testProviderID lets callback tests inject the provider id without going
-	// through URL path parsing. Only set in tests.
-	testProviderID uuid.UUID
 }
 
 func newOIDCHandler(

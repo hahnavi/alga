@@ -6,10 +6,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
-	"alga/ent"
-	"alga/ent/incident"
-	"alga/ent/incidentcoordinationmessage"
+	"alga/db/models"
 )
 
 const (
@@ -76,16 +75,16 @@ type pgIncidentCoordinationStore struct {
 	pgStoreBase
 }
 
-func newPGIncidentCoordinationStore(client *ent.Client) IncidentCoordinationStore {
-	return &pgIncidentCoordinationStore{pgStoreBase{client: client}}
+func newPGIncidentCoordinationStore(db *bun.DB) IncidentCoordinationStore {
+	return &pgIncidentCoordinationStore{pgStoreBase{db: db}}
 }
 
 func (s *pgIncidentCoordinationStore) CreateMessage(ctx context.Context, record *IncidentCoordinationMessageRecord) (*IncidentCoordinationMessageRecord, error) {
-	inc, err := s.client.Incident.Query().
-		Where(incident.IncidentNumber(record.IncidentNumber), incident.DeletedAtIsNil()).
-		Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
+	var inc models.Incident
+	if err := s.db.NewSelect().Model(&inc).
+		Where("incident_number = ? AND deleted_at IS NULL", record.IncidentNumber).
+		Scan(ctx); err != nil {
+		if isNotFound(err) {
 			return nil, fmt.Errorf("incident not found: %w", ErrIncidentNotFound)
 		}
 		return nil, fmt.Errorf("failed to find incident for coordination message: %w", err)
@@ -96,35 +95,39 @@ func (s *pgIncidentCoordinationStore) CreateMessage(ctx context.Context, record 
 		metadata = map[string]any{}
 	}
 
-	b := s.client.IncidentCoordinationMessage.Create().
-		SetIncidentID(inc.ID).
-		SetKind(record.Kind).
-		SetActorType(record.ActorType).
-		SetActorDisplayName(record.ActorDisplayName).
-		SetBody(record.Body).
-		SetInternal(record.Internal).
-		SetSource(record.Source).
-		SetSlackChannelID(record.SlackChannelID).
-		SetSlackMessageTs(record.SlackMessageTS).
-		SetSlackThreadTs(record.SlackThreadTS).
-		SetProviderMessageID(record.ProviderMessageID).
-		SetLinkedInvestigationID(record.LinkedInvestigationID).
-		SetMetadata(metadata)
-	if record.ActorID != nil {
-		b.SetActorID(*record.ActorID)
+	now := time.Now().UTC()
+	m := &models.IncidentCoordinationMessage{
+		IncidentID:            inc.ID,
+		Kind:                  record.Kind,
+		ActorType:             record.ActorType,
+		ActorID:               record.ActorID,
+		ActorDisplayName:      record.ActorDisplayName,
+		Body:                  record.Body,
+		Internal:              record.Internal,
+		Source:                record.Source,
+		SlackChannelID:        record.SlackChannelID,
+		SlackMessageTs:        record.SlackMessageTS,
+		SlackThreadTs:         record.SlackThreadTS,
+		ProviderMessageID:     record.ProviderMessageID,
+		LinkedInvestigationID: record.LinkedInvestigationID,
+		Metadata:              metadata,
 	}
+	m.ID = models.NewUUID()
 	if !record.CreatedAt.IsZero() {
-		b.SetCreatedAt(record.CreatedAt)
+		m.CreatedAt = record.CreatedAt
+	} else {
+		m.CreatedAt = now
 	}
 	if !record.UpdatedAt.IsZero() {
-		b.SetUpdatedAt(record.UpdatedAt)
+		m.UpdatedAt = record.UpdatedAt
+	} else {
+		m.UpdatedAt = now
 	}
 
-	created, err := b.Save(ctx)
-	if err != nil {
+	if _, err := s.db.NewInsert().Model(m).Exec(ctx); err != nil {
 		return nil, fmt.Errorf("failed to create incident coordination message: %w", err)
 	}
-	out := incidentCoordinationFromEnt(created)
+	out := incidentCoordinationFromModel(m)
 	out.IncidentNumber = record.IncidentNumber
 	return out, nil
 }
@@ -134,23 +137,22 @@ func (s *pgIncidentCoordinationStore) ListMessages(ctx context.Context, incident
 		limit = 100
 	}
 
-	items, err := s.client.IncidentCoordinationMessage.Query().
-		Where(
-			incidentcoordinationmessage.HasIncidentWith(incident.IncidentNumber(incidentNumber)),
-			incidentcoordinationmessage.Not(incidentcoordinationmessage.Kind(IncidentCoordinationKindStatusUpdate)),
-		).
-		WithIncident().
-		Order(ent.Asc(incidentcoordinationmessage.FieldCreatedAt)).
+	var items []models.IncidentCoordinationMessage
+	if err := s.db.NewSelect().Model(&items).
+		Where("incident_id IN (SELECT id FROM incidents WHERE incident_number = ? AND deleted_at IS NULL)", incidentNumber).
+		Where("kind != ?", IncidentCoordinationKindStatusUpdate).
+		Order("created_at ASC").
 		Limit(limit).
 		Offset(skip).
-		All(ctx)
-	if err != nil {
+		Scan(ctx); err != nil {
 		return nil, fmt.Errorf("failed to list incident coordination messages: %w", err)
 	}
 
 	records := make([]IncidentCoordinationMessageRecord, 0, len(items))
-	for _, item := range items {
-		records = append(records, *incidentCoordinationFromEnt(item))
+	for i := range items {
+		rec := incidentCoordinationFromModel(&items[i])
+		rec.IncidentNumber = incidentNumber
+		records = append(records, *rec)
 	}
 	return records, nil
 }
@@ -160,22 +162,22 @@ func (s *pgIncidentCoordinationStore) ListMessagesByKind(ctx context.Context, in
 		limit = 100
 	}
 
-	items, err := s.client.IncidentCoordinationMessage.Query().
-		Where(
-			incidentcoordinationmessage.HasIncidentWith(incident.IncidentNumber(incidentNumber)),
-			incidentcoordinationmessage.Kind(kind),
-		).
-		Order(ent.Desc(incidentcoordinationmessage.FieldCreatedAt)).
+	var items []models.IncidentCoordinationMessage
+	if err := s.db.NewSelect().Model(&items).
+		Where("incident_id IN (SELECT id FROM incidents WHERE incident_number = ? AND deleted_at IS NULL)", incidentNumber).
+		Where("kind = ?", kind).
+		Order("created_at DESC").
 		Limit(limit).
 		Offset(skip).
-		All(ctx)
-	if err != nil {
+		Scan(ctx); err != nil {
 		return nil, fmt.Errorf("failed to list incident coordination messages by kind: %w", err)
 	}
 
 	records := make([]IncidentCoordinationMessageRecord, 0, len(items))
-	for _, item := range items {
-		records = append(records, *incidentCoordinationFromEnt(item))
+	for i := range items {
+		rec := incidentCoordinationFromModel(&items[i])
+		rec.IncidentNumber = incidentNumber
+		records = append(records, *rec)
 	}
 	return records, nil
 }
@@ -210,23 +212,30 @@ func (s *pgIncidentCoordinationStore) FindByProviderMessageID(ctx context.Contex
 		return nil, nil
 	}
 
-	msg, err := s.client.IncidentCoordinationMessage.Query().
-		Where(incidentcoordinationmessage.ProviderMessageID(providerMessageID)).
-		WithIncident().
-		Only(ctx)
+	var msg models.IncidentCoordinationMessage
+	err := s.db.NewSelect().Model(&msg).
+		Where("provider_message_id = ?", providerMessageID).
+		Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*IncidentCoordinationMessageRecord](err, "incident coordination message")
 	}
-	return incidentCoordinationFromEnt(msg), nil
+	rec := incidentCoordinationFromModel(&msg)
+	// Resolve incident number.
+	var inc models.Incident
+	if err := s.db.NewSelect().Model(&inc).Column("incident_number").Where("id = ?", msg.IncidentID).Scan(ctx); err == nil {
+		rec.IncidentNumber = inc.IncidentNumber
+	}
+	return rec, nil
 }
 
 func (s *pgIncidentCoordinationStore) SetSlackMessageTS(ctx context.Context, id uuid.UUID, channelID, messageTS, threadTS string) error {
-	_, err := s.client.IncidentCoordinationMessage.UpdateOneID(id).
-		SetSlackChannelID(channelID).
-		SetSlackMessageTs(messageTS).
-		SetSlackThreadTs(threadTS).
-		SetProviderMessageID(SlackProviderMessageID(channelID, messageTS)).
-		Save(ctx)
+	_, err := s.db.NewUpdate().Model((*models.IncidentCoordinationMessage)(nil)).
+		Set("slack_channel_id = ?", channelID).
+		Set("slack_message_ts = ?", messageTS).
+		Set("slack_thread_ts = ?", threadTS).
+		Set("provider_message_id = ?", SlackProviderMessageID(channelID, messageTS)).
+		Where("id = ?", id).
+		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to update incident coordination message slack ts: %w", err)
 	}
@@ -234,94 +243,88 @@ func (s *pgIncidentCoordinationStore) SetSlackMessageTS(ctx context.Context, id 
 }
 
 func (s *pgIncidentCoordinationStore) UpdateMessageBody(ctx context.Context, incidentNumber int64, messageID uuid.UUID, body string) (*IncidentCoordinationMessageRecord, error) {
-	msg, err := s.client.IncidentCoordinationMessage.Query().
-		Where(
-			incidentcoordinationmessage.ID(messageID),
-			incidentcoordinationmessage.HasIncidentWith(incident.IncidentNumber(incidentNumber), incident.DeletedAtIsNil()),
-		).
-		Only(ctx)
+	var msg models.IncidentCoordinationMessage
+	err := s.db.NewSelect().Model(&msg).
+		Where("id = ?", messageID).
+		Where("incident_id IN (SELECT id FROM incidents WHERE incident_number = ? AND deleted_at IS NULL)", incidentNumber).
+		Scan(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
+		if isNotFound(err) {
 			return nil, fmt.Errorf("incident not found: %w", ErrIncidentNotFound)
 		}
 		return handleQueryErr[*IncidentCoordinationMessageRecord](err, "incident coordination message")
 	}
-	updated, err := s.client.IncidentCoordinationMessage.UpdateOneID(msg.ID).
-		SetBody(body).
-		Save(ctx)
-	if err != nil {
+
+	if _, err := s.db.NewUpdate().Model((*models.IncidentCoordinationMessage)(nil)).
+		Set("body = ?", body).
+		Where("id = ?", msg.ID).
+		Exec(ctx); err != nil {
 		return nil, fmt.Errorf("failed to update incident coordination message body: %w", err)
 	}
-	out := incidentCoordinationFromEnt(updated)
+	msg.Body = body
+	out := incidentCoordinationFromModel(&msg)
 	out.IncidentNumber = incidentNumber
 	return out, nil
 }
 
 func (s *pgIncidentCoordinationStore) NewestStatusUpdate(ctx context.Context, incidentNumber int64) (*IncidentCoordinationMessageRecord, error) {
-	items, err := s.client.IncidentCoordinationMessage.Query().
-		Where(
-			incidentcoordinationmessage.HasIncidentWith(incident.IncidentNumber(incidentNumber)),
-			incidentcoordinationmessage.Kind(IncidentCoordinationKindStatusUpdate),
-		).
-		Order(ent.Desc(incidentcoordinationmessage.FieldCreatedAt)).
+	var items []models.IncidentCoordinationMessage
+	if err := s.db.NewSelect().Model(&items).
+		Where("incident_id IN (SELECT id FROM incidents WHERE incident_number = ? AND deleted_at IS NULL)", incidentNumber).
+		Where("kind = ?", IncidentCoordinationKindStatusUpdate).
+		Order("created_at DESC").
 		Limit(1).
-		All(ctx)
-	if err != nil {
+		Scan(ctx); err != nil {
 		return nil, fmt.Errorf("failed to find newest status update: %w", err)
 	}
 	if len(items) == 0 {
 		return nil, nil
 	}
-	rec := incidentCoordinationFromEnt(items[0])
+	rec := incidentCoordinationFromModel(&items[0])
 	rec.IncidentNumber = incidentNumber
 	return rec, nil
 }
 
 func (s *pgIncidentCoordinationStore) NewestAgentCoordinationReply(ctx context.Context, incidentNumber int64) (*IncidentCoordinationMessageRecord, error) {
-	items, err := s.client.IncidentCoordinationMessage.Query().
-		Where(
-			incidentcoordinationmessage.HasIncidentWith(incident.IncidentNumber(incidentNumber)),
-			incidentcoordinationmessage.Kind(IncidentCoordinationKindAgentReply),
-			incidentcoordinationmessage.ActorTypeEQ(IncidentCoordinationActorAgent),
-		).
-		Order(ent.Desc(incidentcoordinationmessage.FieldCreatedAt)).
+	var items []models.IncidentCoordinationMessage
+	if err := s.db.NewSelect().Model(&items).
+		Where("incident_id IN (SELECT id FROM incidents WHERE incident_number = ? AND deleted_at IS NULL)", incidentNumber).
+		Where("kind = ?", IncidentCoordinationKindAgentReply).
+		Where("actor_type = ?", IncidentCoordinationActorAgent).
+		Order("created_at DESC").
 		Limit(1).
-		All(ctx)
-	if err != nil {
+		Scan(ctx); err != nil {
 		return nil, fmt.Errorf("failed to find newest agent coordination reply: %w", err)
 	}
 	if len(items) == 0 {
 		return nil, nil
 	}
-	rec := incidentCoordinationFromEnt(items[0])
+	rec := incidentCoordinationFromModel(&items[0])
 	rec.IncidentNumber = incidentNumber
 	return rec, nil
 }
 
-func incidentCoordinationFromEnt(e *ent.IncidentCoordinationMessage) *IncidentCoordinationMessageRecord {
-	if e == nil {
+func incidentCoordinationFromModel(m *models.IncidentCoordinationMessage) *IncidentCoordinationMessageRecord {
+	if m == nil {
 		return nil
 	}
 	record := &IncidentCoordinationMessageRecord{
-		ID:                    e.ID,
-		Kind:                  e.Kind,
-		ActorType:             e.ActorType,
-		ActorID:               e.ActorID,
-		ActorDisplayName:      e.ActorDisplayName,
-		Body:                  e.Body,
-		Internal:              e.Internal,
-		Source:                e.Source,
-		SlackChannelID:        e.SlackChannelID,
-		SlackMessageTS:        e.SlackMessageTs,
-		SlackThreadTS:         e.SlackThreadTs,
-		ProviderMessageID:     e.ProviderMessageID,
-		LinkedInvestigationID: e.LinkedInvestigationID,
-		Metadata:              e.Metadata,
-		CreatedAt:             e.CreatedAt,
-		UpdatedAt:             e.UpdatedAt,
-	}
-	if e.Edges.Incident != nil {
-		record.IncidentNumber = e.Edges.Incident.IncidentNumber
+		ID:                    m.ID,
+		Kind:                  m.Kind,
+		ActorType:             m.ActorType,
+		ActorID:               m.ActorID,
+		ActorDisplayName:      m.ActorDisplayName,
+		Body:                  m.Body,
+		Internal:              m.Internal,
+		Source:                m.Source,
+		SlackChannelID:        m.SlackChannelID,
+		SlackMessageTS:        m.SlackMessageTs,
+		SlackThreadTS:         m.SlackThreadTs,
+		ProviderMessageID:     m.ProviderMessageID,
+		LinkedInvestigationID: m.LinkedInvestigationID,
+		Metadata:              m.Metadata,
+		CreatedAt:             m.CreatedAt,
+		UpdatedAt:             m.UpdatedAt,
 	}
 	if record.Metadata == nil {
 		record.Metadata = map[string]any{}

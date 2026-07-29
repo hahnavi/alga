@@ -1,0 +1,27 @@
+{
+  // Repo-wide markdownlint config for prose docs (AGENTS.md, .agents/ skills).
+  // The VitePress site under docs/ has its own docs/.markdownlint.jsonc, which
+  // takes precedence for files in that tree (nearest config wins).
+  // https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
+  "default": true,
+
+  // Prose and agent skill docs are written for readability, not a hard column
+  // limit; wrapping them to 80 chars hurts diffs and legibility.
+  "MD013": false,
+
+  // Some docs embed inline HTML (badges, details/summary, etc.).
+  "MD033": false,
+
+  // Frontmatter-titled skill docs may repeat a top-level heading.
+  "MD025": { "front_matter_title": "" },
+
+  // Allow duplicate headings in different sections (common in structured docs).
+  "MD024": { "siblings_only": true },
+
+  // Skill docs use bare fenced blocks for command output / log examples.
+  "MD040": false,
+
+  // Numbered steps with code blocks between items are intentional;
+  // markdownlint misreads them as separate lists with wrong prefixes.
+  "MD029": false,
+}

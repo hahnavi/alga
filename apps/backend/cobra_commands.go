@@ -17,7 +17,7 @@ import (
 
 	"alga/config"
 	"alga/crypto"
-	"alga/pgclient"
+	"alga/db"
 	"alga/store"
 )
 
@@ -129,7 +129,7 @@ var dbMigrateCmd = &cobra.Command{
 		cfg := loadConfig()
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		if err := pgclient.ApplyMigrations(ctx, cfg.PostgresDSN); err != nil {
+		if err := db.ApplyMigrations(ctx, cfg.PostgresDSN); err != nil {
 			log.Fatalf("Failed to run Postgres migrations: %v", err)
 		}
 		fmt.Println("Postgres migrations applied successfully.")
@@ -260,7 +260,7 @@ var seedCmd = &cobra.Command{
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		cli, err := pgclient.New(cfg.PostgresDSN)
+		cli, err := db.New(cfg.PostgresDSN)
 		if err != nil {
 			log.Fatalf("Failed to connect to Postgres: %v", err)
 		}
@@ -438,17 +438,21 @@ var triageStatsCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("load config: %w", err)
 		}
-		pgClient, err := pgclient.New(cfg.PostgresDSN)
+		pgClient, err := db.New(cfg.PostgresDSN)
 		if err != nil {
 			return fmt.Errorf("connect to postgres: %w", err)
 		}
 		defer pgClient.Close()
 		if cfg.PostgresAutoMigrate {
-			if err := pgclient.ApplyMigrations(cmd.Context(), cfg.PostgresDSN); err != nil {
+			if err := db.ApplyMigrations(cmd.Context(), cfg.PostgresDSN); err != nil {
 				return fmt.Errorf("apply migrations: %w", err)
 			}
 		}
-		triageStore := store.NewPostgresTriageResultStore(pgClient)
+		stores, err := store.NewStores(pgClient, 24*time.Hour, 0)
+		if err != nil {
+			return fmt.Errorf("init stores: %w", err)
+		}
+		triageStore := stores.TriageResult
 		confirmed, overridden, pending, err := triageStore.CountByOutcome(cmd.Context())
 		if err != nil {
 			return fmt.Errorf("count by outcome: %w", err)

@@ -23,7 +23,7 @@ Review as a production code reviewer. Findings first, ordered by severity, with 
 - Missing audit events for create, update, delete, command, and state transitions.
 - Store/API/frontend type drift.
 - Duplicated helpers, API calls outside `api.ts`, duplicate UI primitives, or ad-hoc async logic.
-- Ent schema, generated code, migrations, partial indexes, and transaction safety.
+- Bun models, migrations, partial indexes, and transaction safety.
 - Worker ack/nack, retry, dead-letter, idempotency, and lifecycle behavior.
 - Frontend loading, empty, error, disabled, responsive, and accessibility states.
 - Missing tests that would catch the risk.
@@ -31,7 +31,7 @@ Review as a production code reviewer. Findings first, ordered by severity, with 
 ### Frontend consistency red flags
 
 - Untyped `request(...)` calls in `api.ts` (resolve to `Promise<unknown>`).
-- Raw `encodeURIComponent(...)` in path templates or hand-rolled `new URLSearchParams()` + `` ?${q} `` instead of the `e()` and `buildQuery()` helpers.
+- Raw `encodeURIComponent(...)` in path templates or hand-rolled `new URLSearchParams()` + `?${q}` instead of the `e()` and `buildQuery()` helpers.
 - Redundant `: Promise<X>` annotations on non-`async` API methods.
 - Redundant `& { token: string }`-style intersections when the base row type already declares the field.
 - Eager `import X from "@/pages/X.vue"` in `router.ts` (all routes should be lazy `() => import(...)`).
@@ -58,7 +58,7 @@ Review as a production code reviewer. Findings first, ordered by severity, with 
 - Missing 503 guard on an optional (setter-injected) store/service used by a handler.
 - Status code drift: `500` for not-found/duplicate (should be `404`/`409`), or leaking internal error text in messages.
 - Returning persistence records that embed secrets/token hashes instead of explicit response models.
-- Raw SQL string concatenation instead of Ent predicates/builders.
+- Raw SQL string concatenation instead of Bun query builders with bound parameters.
 - Missing audit on a create/update/delete/command/state-transition handler.
 - Duplicated not-found sentinel errors overlapping `store.ErrNotFound`.
 - Legacy Go: `interface{}`, `for i := 0; i < n; i++` where `range` fits, manual min/max, hand-rolled slice contain/sort where `slices.*` fits, `fmt.Println`/`log.Printf` debug output.
@@ -72,7 +72,7 @@ Review as a production code reviewer. Findings first, ordered by severity, with 
 - A synchronous DB write on every auth/request hot path (e.g. updating `last_used_at` on each token validation) instead of the throttled async pattern used by `personal_access_tokens`.
 - `regexp.Compile`/`MustCompile` recompiled per call inside a loop or hot path instead of the cached `matching.GetCompiledRegex`.
 - SSE event framing hand-rolled with `string += fmt.Sprintf(...)` instead of the shared `sse.WriteEvent`.
-- N+1: a store/HTTP call (`GetByID`, `GetByFingerprint`, `.Query()`, `.Exist()`) executed inside a `for range` over results where a batch `IN` query or Ent `.With*()` eager-load fits; unsized slices (`var s []T`) grown inside a known-length loop.
+- N+1: a store/HTTP call (`GetByID`, `GetByFingerprint`, `.Query()`, `.Exist()`) executed inside a `for range` over results where a batch `IN` query or Bun `.Relation()` eager-load fits; unsized slices (`var s []T`) grown inside a known-length loop.
 - `context.Background()`/`context.TODO()` used inside an HTTP handler path where `r.Context()` (with a timeout) should propagate; `go func(){...}()` started without a `recover()` or shutdown WaitGroup.
 - Goroutine fan-out with no concurrency bound (e.g. one goroutine per audit event with no semaphore/channel).
 

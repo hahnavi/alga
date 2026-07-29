@@ -9,13 +9,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
-	"alga/ent"
-	alertent "alga/ent/alert"
-	"alga/ent/alertinvestigation"
-	"alga/ent/alertinvestigationalert"
-	"alga/ent/alertinvestigationupdateentry"
-	"alga/ent/predicate"
+	"alga/db/models"
 	"alga/rabbitmq"
 )
 
@@ -23,55 +19,58 @@ func (s *pgAlertInvestigationStore) AppendAlertsToAlertInvestigation(ctx context
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	tx, err := s.client.Tx(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to begin alert investigation transaction: %w", err)
-	}
-	defer rollbackTx(tx)
-	txClient := tx.Client()
-
-	inv, err := txClient.AlertInvestigation.Query().
-		Where(alertinvestigation.AlertInvestigationID(id)).
-		WithAlerts().
-		Only(ctx)
-	if err != nil {
-		return fmt.Errorf("alert investigation not found: %w", ErrInvestigationNotFound)
-	}
-
-	seen := make(map[string]struct{}, len(inv.Edges.Alerts))
-	for _, alert := range inv.Edges.Alerts {
-		seen[alert.Fingerprint] = struct{}{}
-	}
-	for _, alert := range alerts {
-		if _, ok := seen[alert.Fingerprint]; ok {
-			continue
+	return s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		var inv models.AlertInvestigation
+		if err := tx.NewSelect().Model(&inv).Where("public_id = ?", id).Scan(ctx); err != nil {
+			return fmt.Errorf("alert investigation not found: %w", ErrInvestigationNotFound)
 		}
-		if err := retireCurrentAlertInvestigationLinks(ctx, txClient, []rabbitmq.CorrelatedAlert{alert}); err != nil {
-			return err
-		}
-		if err := createAlertInvestigationAlert(ctx, txClient, inv.ID, alert); err != nil {
-			return err
-		}
-		seen[alert.Fingerprint] = struct{}{}
-	}
 
-	if _, err := txClient.AlertInvestigation.UpdateOneID(inv.ID).SetUpdatedAt(time.Now().UTC()).Save(ctx); err != nil {
-		return fmt.Errorf("failed to update alert investigation timestamp: %w", err)
-	}
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit alert investigation transaction: %w", err)
-	}
-	return nil
+		var existingAlerts []models.AlertInvestigationAlert
+		if err := tx.NewSelect().Model(&existingAlerts).
+			Where("investigation_id = ?", inv.ID).
+			Scan(ctx); err != nil {
+			return fmt.Errorf("failed to query existing alert investigation alerts: %w", err)
+		}
+
+		seen := make(map[string]struct{}, len(existingAlerts))
+		for _, alert := range existingAlerts {
+			seen[alert.Fingerprint] = struct{}{}
+		}
+		for _, alert := range alerts {
+			if _, ok := seen[alert.Fingerprint]; ok {
+				continue
+			}
+			if err := retireCurrentAlertInvestigationLinks(ctx, tx, []rabbitmq.CorrelatedAlert{alert}); err != nil {
+				return err
+			}
+			if err := createAlertInvestigationAlert(ctx, tx, inv.ID, alert); err != nil {
+				return err
+			}
+			seen[alert.Fingerprint] = struct{}{}
+		}
+
+		if _, err := tx.NewUpdate().Model((*models.AlertInvestigation)(nil)).
+			Set("updated_at = ?", time.Now().UTC()).
+			Where("id = ?", inv.ID).
+			Exec(ctx); err != nil {
+			return fmt.Errorf("failed to update alert investigation timestamp: %w", err)
+		}
+		return nil
+	})
 }
 
 func (s *pgAlertInvestigationStore) MarkAlertInvestigationAlertsCurrent(ctx context.Context, investigationID string, current bool) error {
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	n, err := s.client.AlertInvestigationAlert.Update().
-		Where(alertinvestigationalert.HasAlertInvestigationWith(alertinvestigation.AlertInvestigationID(investigationID))).
-		SetCurrent(current).
-		Save(ctx)
+	res, err := s.db.NewUpdate().Model((*models.AlertInvestigationAlert)(nil)).
+		Set("current = ?", current).
+		Where("investigation_id IN (SELECT id FROM alert_investigations WHERE public_id = ?)", investigationID).
+		Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to mark alert investigation alerts current: %w", err)
+	}
+	n, err := res.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("failed to mark alert investigation alerts current: %w", err)
 	}
@@ -81,7 +80,7 @@ func (s *pgAlertInvestigationStore) MarkAlertInvestigationAlertsCurrent(ctx cont
 	return nil
 }
 
-func retireCurrentAlertInvestigationLinks(ctx context.Context, client *ent.Client, alerts []rabbitmq.CorrelatedAlert) error {
+func retireCurrentAlertInvestigationLinks(ctx context.Context, db bun.IDB, alerts []rabbitmq.CorrelatedAlert) error {
 	alertNumberSet := make(map[int64]struct{})
 	for _, alert := range alerts {
 		if alert.AlertNumber > 0 {
@@ -97,26 +96,25 @@ func retireCurrentAlertInvestigationLinks(ctx context.Context, client *ent.Clien
 		alertNumbers = append(alertNumbers, alertNumber)
 	}
 
-	linkPreds := []predicate.AlertInvestigationAlert{
-		alertinvestigationalert.AlertNumberIn(alertNumbers...),
-	}
-	alertIDs, err := client.Alert.Query().
-		Where(alertent.AlertNumberIn(alertNumbers...)).
-		IDs(ctx)
-	if err != nil {
+	// Resolve alert IDs for the given alert numbers.
+	var alertIDs []uuid.UUID
+	if err := db.NewSelect().Model((*models.Alert)(nil)).
+		Column("id").
+		Where("alert_number IN (?)", bun.List(alertNumbers)).
+		Scan(ctx, &alertIDs); err != nil {
 		return fmt.Errorf("failed to resolve alert ids for current alert investigation links: %w", err)
 	}
+
+	// Retire current links: match by alert_number OR alert_id.
+	q := db.NewUpdate().Model((*models.AlertInvestigationAlert)(nil)).
+		Set("current = false").
+		Where("current = true").
+		Where("alert_number IN (?)", bun.List(alertNumbers))
 	if len(alertIDs) > 0 {
-		linkPreds = append(linkPreds, alertinvestigationalert.AlertIDIn(alertIDs...))
+		q = q.WhereOr("alert_id IN (?)", bun.List(alertIDs))
 	}
 
-	if _, err := client.AlertInvestigationAlert.Update().
-		Where(
-			alertinvestigationalert.Current(true),
-			alertinvestigationalert.Or(linkPreds...),
-		).
-		SetCurrent(false).
-		Save(ctx); err != nil {
+	if _, err := q.Exec(ctx); err != nil {
 		return fmt.Errorf("failed to retire current alert investigation links: %w", err)
 	}
 	return nil
@@ -126,17 +124,18 @@ func (s *pgAlertInvestigationStore) AddAlertInvestigationUpdate(ctx context.Cont
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	inv, err := s.client.AlertInvestigation.Query().
-		Where(alertinvestigation.AlertInvestigationID(id)).
-		Only(ctx)
-	if err != nil {
+	var inv models.AlertInvestigation
+	if err := s.db.NewSelect().Model(&inv).Where("public_id = ?", id).Scan(ctx); err != nil {
 		return fmt.Errorf("alert investigation not found: %w", ErrInvestigationNotFound)
 	}
 
-	if err := createAlertInvestigationUpdate(ctx, s.client, inv.ID, update); err != nil {
+	if err := createAlertInvestigationUpdate(ctx, s.db, inv.ID, update); err != nil {
 		return err
 	}
-	if _, err := s.client.AlertInvestigation.UpdateOneID(inv.ID).SetUpdatedAt(time.Now().UTC()).Save(ctx); err != nil {
+	if _, err := s.db.NewUpdate().Model((*models.AlertInvestigation)(nil)).
+		Set("updated_at = ?", time.Now().UTC()).
+		Where("id = ?", inv.ID).
+		Exec(ctx); err != nil {
 		return fmt.Errorf("failed to update alert investigation timestamp: %w", err)
 	}
 	return nil
@@ -146,7 +145,7 @@ func (s *pgAlertInvestigationStore) AppendAlertInvestigationEvent(ctx context.Co
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	return createAlertInvestigationEvent(ctx, s.client, investigationUUID, event)
+	return createAlertInvestigationEvent(ctx, s.db, investigationUUID, event)
 }
 
 func (s *pgAlertInvestigationStore) UpdateAlertInvestigationMessage(ctx context.Context, investigationID string, updateID string, message string) error {
@@ -158,14 +157,16 @@ func (s *pgAlertInvestigationStore) UpdateAlertInvestigationMessage(ctx context.
 		return fmt.Errorf("invalid update ID %q: %w", updateID, err)
 	}
 
-	n, err := s.client.AlertInvestigationUpdateEntry.Update().
-		Where(
-			alertinvestigationupdateentry.HasAlertInvestigationWith(alertinvestigation.AlertInvestigationID(investigationID)),
-			alertinvestigationupdateentry.ID(uid),
-		).
-		SetMessage(message).
-		SetEdited(true).
-		Save(ctx)
+	res, err := s.db.NewUpdate().Model((*models.AlertInvestigationUpdate)(nil)).
+		Set("message = ?", message).
+		Set("edited = true").
+		Where("id = ?", uid).
+		Where("alert_investigation_id IN (SELECT id FROM alert_investigations WHERE public_id = ?)", investigationID).
+		Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to update alert investigation message: %w", err)
+	}
+	n, err := res.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("failed to update alert investigation message: %w", err)
 	}
@@ -184,12 +185,14 @@ func (s *pgAlertInvestigationStore) DeleteAlertInvestigationMessage(ctx context.
 		return fmt.Errorf("invalid update ID %q: %w", updateID, err)
 	}
 
-	n, err := s.client.AlertInvestigationUpdateEntry.Delete().
-		Where(
-			alertinvestigationupdateentry.HasAlertInvestigationWith(alertinvestigation.AlertInvestigationID(investigationID)),
-			alertinvestigationupdateentry.ID(uid),
-		).
+	res, err := s.db.NewDelete().Model((*models.AlertInvestigationUpdate)(nil)).
+		Where("id = ?", uid).
+		Where("alert_investigation_id IN (SELECT id FROM alert_investigations WHERE public_id = ?)", investigationID).
 		Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to delete alert investigation message: %w", err)
+	}
+	n, err := res.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("failed to delete alert investigation message: %w", err)
 	}
@@ -200,22 +203,14 @@ func (s *pgAlertInvestigationStore) DeleteAlertInvestigationMessage(ctx context.
 }
 
 func (s *pgAlertInvestigationStore) SetAlertInvestigationUpdateMMPostID(ctx context.Context, investigationID string, updateID string, mmPostID string) error {
-	return s.setAlertInvestigationUpdateField(ctx, investigationID, updateID, "mm_post_id",
-		func(u *ent.AlertInvestigationUpdateEntryUpdate) {
-			u.SetMmPostID(mmPostID)
-		},
-	)
+	return s.setAlertInvestigationUpdateField(ctx, investigationID, updateID, "mm_post_id", "mm_post_id = ?", mmPostID)
 }
 
 func (s *pgAlertInvestigationStore) SetAlertInvestigationUpdateSlackMessageTS(ctx context.Context, investigationID string, updateID string, slackMessageTS string) error {
-	return s.setAlertInvestigationUpdateField(ctx, investigationID, updateID, "slack_message_ts",
-		func(u *ent.AlertInvestigationUpdateEntryUpdate) {
-			u.SetSlackMessageTs(slackMessageTS)
-		},
-	)
+	return s.setAlertInvestigationUpdateField(ctx, investigationID, updateID, "slack_message_ts", "slack_message_ts = ?", slackMessageTS)
 }
 
-func (s *pgAlertInvestigationStore) setAlertInvestigationUpdateField(ctx context.Context, investigationID string, updateID string, fieldName string, apply func(*ent.AlertInvestigationUpdateEntryUpdate)) error {
+func (s *pgAlertInvestigationStore) setAlertInvestigationUpdateField(ctx context.Context, investigationID string, updateID string, fieldName string, setExpr string, setVal any) error {
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
@@ -224,14 +219,15 @@ func (s *pgAlertInvestigationStore) setAlertInvestigationUpdateField(ctx context
 		return fmt.Errorf("invalid update ID %q: %w", updateID, err)
 	}
 
-	builder := s.client.AlertInvestigationUpdateEntry.Update().
-		Where(
-			alertinvestigationupdateentry.HasAlertInvestigationWith(alertinvestigation.AlertInvestigationID(investigationID)),
-			alertinvestigationupdateentry.ID(uid),
-		)
-	apply(builder)
-
-	n, err := builder.Save(ctx)
+	res, err := s.db.NewUpdate().Model((*models.AlertInvestigationUpdate)(nil)).
+		Set(setExpr, setVal).
+		Where("id = ?", uid).
+		Where("alert_investigation_id IN (SELECT id FROM alert_investigations WHERE public_id = ?)", investigationID).
+		Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to set update %s: %w", fieldName, err)
+	}
+	n, err := res.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("failed to set update %s: %w", fieldName, err)
 	}

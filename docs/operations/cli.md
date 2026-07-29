@@ -146,7 +146,7 @@ alga alerts query --status firing --limit 10 --skip 20
 
 ### `alga db migrate`
 
-Run database migrations manually. This applies any pending Ent schema changes to PostgreSQL.
+Run database migrations manually. This applies any pending goose SQL migrations to PostgreSQL.
 
 ```sh
 alga db migrate

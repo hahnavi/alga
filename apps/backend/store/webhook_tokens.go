@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
 	algacrypto "alga/crypto"
-	"alga/ent"
-	"alga/ent/webhooktoken"
+	"alga/db/models"
 	"alga/logger"
 )
 
@@ -53,8 +53,8 @@ type pgWebhookTokenStore struct {
 	pgStoreBase
 }
 
-func newPGWebhookTokenStore(client *ent.Client) WebhookTokenStore {
-	return &pgWebhookTokenStore{pgStoreBase{client: client}}
+func newPGWebhookTokenStore(db *bun.DB) WebhookTokenStore {
+	return &pgWebhookTokenStore{pgStoreBase{db: db}}
 }
 
 func (s *pgWebhookTokenStore) CreateToken(name string, expiresAt *time.Time) (*WebhookTokenRecord, error) {
@@ -66,7 +66,8 @@ func (s *pgWebhookTokenStore) CreateToken(name string, expiresAt *time.Time) (*W
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	record := WebhookTokenRecord{
+	m := &models.WebhookToken{
+		ID:           models.NewUUID(),
 		Name:         name,
 		TokenHash:    hashToken(tokenStr),
 		LookupPrefix: lookupPrefix(tokenStr),
@@ -75,38 +76,37 @@ func (s *pgWebhookTokenStore) CreateToken(name string, expiresAt *time.Time) (*W
 		ExpiresAt:    expiresAt,
 	}
 
-	b := s.client.WebhookToken.Create().
-		SetName(record.Name).
-		SetTokenHash(record.TokenHash).
-		SetLookupPrefix(record.LookupPrefix).
-		SetCreatedAt(record.CreatedAt).
-		SetRevoked(false)
-
-	if expiresAt != nil {
-		b.SetExpiresAt(*expiresAt)
-	}
-
-	saved, err := b.Save(ctx)
+	_, err = s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create token: %w", err)
 	}
 
-	record.ID = saved.ID
-	record.Token = tokenStr
-	return &record, nil
+	record := &WebhookTokenRecord{
+		ID:           m.ID,
+		Name:         name,
+		TokenHash:    m.TokenHash,
+		LookupPrefix: m.LookupPrefix,
+		Token:        tokenStr,
+		CreatedAt:    m.CreatedAt,
+		Revoked:      false,
+		ExpiresAt:    expiresAt,
+	}
+	return record, nil
 }
 
 func (s *pgWebhookTokenStore) ListTokens() ([]WebhookTokenRecord, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	tokens, err := s.client.WebhookToken.Query().Where(webhooktoken.Revoked(false)).All(ctx)
+	var tokens []models.WebhookToken
+	err := s.db.NewSelect().Model(&tokens).Where("revoked = ?", false).Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list tokens: %w", err)
 	}
 
 	records := make([]WebhookTokenRecord, 0, len(tokens))
-	for _, t := range tokens {
+	for i := range tokens {
+		t := &tokens[i]
 		records = append(records, WebhookTokenRecord{
 			ID:           t.ID,
 			Name:         t.Name,
@@ -126,7 +126,11 @@ func (s *pgWebhookTokenStore) RevokeToken(id uuid.UUID) error {
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	n, err := s.client.WebhookToken.Delete().Where(webhooktoken.ID(id)).Exec(ctx)
+	res, err := s.db.NewDelete().Model((*models.WebhookToken)(nil)).Where("id = ?", id).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to revoke token: %w", err)
+	}
+	n, err := res.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("failed to revoke token: %w", err)
 	}
@@ -146,14 +150,17 @@ func (s *pgWebhookTokenStore) ValidateToken(token string) (bool, error) {
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	tokens, err := s.client.WebhookToken.Query().
-		Where(webhooktoken.LookupPrefix(prefix), webhooktoken.Revoked(false)).
-		All(ctx)
+	var tokens []models.WebhookToken
+	err := s.db.NewSelect().Model(&tokens).
+		Where("lookup_prefix = ?", prefix).
+		Where("revoked = ?", false).
+		Scan(ctx)
 	if err != nil {
 		return false, fmt.Errorf("failed to validate token: %w", err)
 	}
 
-	for _, t := range tokens {
+	for i := range tokens {
+		t := &tokens[i]
 		if !algacrypto.ConstantTimeEqualString(hash, t.TokenHash) {
 			continue
 		}
@@ -177,9 +184,11 @@ func (s *pgWebhookTokenStore) updateLastUsed(id uuid.UUID, lastUsedAt *time.Time
 	}
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
-	if err := s.client.WebhookToken.UpdateOneID(id).
-		SetLastUsedAt(time.Now().UTC()).
-		Exec(ctx); err != nil {
+	_, err := s.db.NewUpdate().Model((*models.WebhookToken)(nil)).
+		Set("last_used_at = ?", time.Now().UTC()).
+		Where("id = ?", id).
+		Exec(ctx)
+	if err != nil {
 		logger.Error("failed to update webhook token last_used_at", "error", err)
 	}
 }

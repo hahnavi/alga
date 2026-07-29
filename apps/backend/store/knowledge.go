@@ -12,15 +12,11 @@ import (
 	"unicode"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
 	"alga/config"
-	"alga/ent"
-	"alga/ent/knowledgenote"
-	"alga/ent/predicate"
+	"alga/db/models"
 	"alga/matching"
-	"alga/pgclient"
-
-	entsql "entgo.io/ent/dialect/sql"
 )
 
 const (
@@ -34,6 +30,11 @@ const (
 	KnowledgeAuthorUser  = "user"
 	KnowledgeAuthorAgent = "agent"
 )
+
+// knowledgeFTSExpression is the immutable, normalized full-text expression
+// indexed on knowledge_notes (title + body + tags). It MUST stay byte-identical
+// between the GIN expression index and the WHERE clause queries.
+const knowledgeFTSExpression = `to_tsvector('english', coalesce(title, '') || ' ' || coalesce(body_markdown, '') || ' ' || coalesce(tags::text, ''))`
 
 type KnowledgeNote struct {
 	ID                    uuid.UUID               `json:"id"`
@@ -146,8 +147,6 @@ func knowledgeConditionMatch(c config.RouteCondition, labels map[string]string) 
 	case "wildcard":
 		return knowledgeWildcardMatch(value, actual)
 	case "regex":
-		// Compile via the shared cache; on error, fail closed (no match) so a
-		// malformed rule does not block every matching note.
 		re, err := matching.GetCompiledRegex(value)
 		if err != nil {
 			return false
@@ -181,11 +180,10 @@ func knowledgeWildcardMatch(pattern, s string) bool {
 
 type pgKnowledgeStore struct {
 	pgStoreBase
-	db *sql.DB
 }
 
-func newPGKnowledgeStore(client *ent.Client, db *sql.DB) KnowledgeStore {
-	return &pgKnowledgeStore{pgStoreBase{client: client}, db}
+func newPGKnowledgeStore(db *bun.DB) KnowledgeStore {
+	return &pgKnowledgeStore{pgStoreBase{db: db}}
 }
 
 func (s *pgKnowledgeStore) Create(ctx context.Context, note *KnowledgeNote) (*KnowledgeNote, error) {
@@ -206,40 +204,32 @@ func (s *pgKnowledgeStore) Create(ctx context.Context, note *KnowledgeNote) (*Kn
 		note.Tags = []string{}
 	}
 
-	b := s.client.KnowledgeNote.Create().
-		SetKind(knowledgenote.Kind(note.Kind)).
-		SetTitle(note.Title).
-		SetBodyMarkdown(note.BodyMarkdown).
-		SetTags(note.Tags).
-		SetAuthorType(knowledgenote.AuthorType(note.AuthorType)).
-		SetCreatedAt(now).
-		SetUpdatedAt(now)
+	m := &models.KnowledgeNote{
+		Kind:                  note.Kind,
+		Title:                 note.Title,
+		BodyMarkdown:          note.BodyMarkdown,
+		Tags:                  note.Tags,
+		AuthorID:              note.AuthorID,
+		AuthorType:            note.AuthorType,
+		AuthorName:            note.AuthorName,
+		SourceInvestigationID: note.SourceInvestigationID,
+		Confidence:            note.Confidence,
+		ExpiresAt:             note.ExpiresAt,
+	}
+	m.ID = models.NewUUID()
+	m.CreatedAt = now
+	m.UpdatedAt = now
 
 	if note.Selectors != nil {
-		b.SetSelectors(routeConditionsToSchema(note.Selectors))
-	}
-	if note.AuthorID != nil {
-		b.SetAuthorID(*note.AuthorID)
-	}
-	if note.AuthorName != "" {
-		b.SetAuthorName(note.AuthorName)
-	}
-	if note.SourceInvestigationID != "" {
-		b.SetSourceInvestigationID(note.SourceInvestigationID)
-	}
-	if note.Confidence != nil {
-		b.SetConfidence(*note.Confidence)
-	}
-	if note.ExpiresAt != nil {
-		b.SetExpiresAt(*note.ExpiresAt)
+		m.Selectors = routeConditionsToModels(note.Selectors)
 	}
 
-	saved, err := b.Save(ctx)
+	_, err := s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert knowledge note: %w", err)
 	}
 
-	note.ID = saved.ID
+	note.ID = m.ID
 	return note, nil
 }
 
@@ -253,41 +243,53 @@ func (s *pgKnowledgeStore) Update(ctx context.Context, id string, patch *Knowled
 		return nil, fmt.Errorf("invalid id: %w", err)
 	}
 
-	b := s.client.KnowledgeNote.UpdateOneID(uid).SetUpdatedAt(time.Now().UTC())
+	upd := s.db.NewUpdate().Model((*models.KnowledgeNote)(nil)).
+		Set("updated_at = ?", time.Now().UTC()).
+		Where("id = ?", uid)
 
 	if strings.TrimSpace(patch.Kind) != "" {
 		if !IsValidKnowledgeKind(patch.Kind) {
 			return nil, fmt.Errorf("invalid kind %q", patch.Kind)
 		}
-		b.SetKind(knowledgenote.Kind(strings.ToLower(strings.TrimSpace(patch.Kind))))
+		upd = upd.Set("kind = ?", strings.ToLower(strings.TrimSpace(patch.Kind)))
 	}
 	if strings.TrimSpace(patch.Title) != "" {
-		b.SetTitle(strings.TrimSpace(patch.Title))
+		upd = upd.Set("title = ?", strings.TrimSpace(patch.Title))
 	}
 	if patch.BodyMarkdown != "" {
-		b.SetBodyMarkdown(patch.BodyMarkdown)
+		upd = upd.Set("body_markdown = ?", patch.BodyMarkdown)
 	}
 	if patch.Tags != nil {
-		b.SetTags(normalizeTags(patch.Tags))
+		upd = upd.Set("tags = ?", normalizeTags(patch.Tags))
 	}
 	if patch.Selectors != nil {
-		b.SetSelectors(routeConditionsToSchema(patch.Selectors))
+		upd = upd.Set("selectors = ?", routeConditionsToModels(patch.Selectors))
 	}
 	if patch.ExpiresAt != nil {
-		b.SetExpiresAt(*patch.ExpiresAt)
+		upd = upd.Set("expires_at = ?", *patch.ExpiresAt)
 	}
 	if patch.Confidence != nil {
-		b.SetConfidence(*patch.Confidence)
+		upd = upd.Set("confidence = ?", *patch.Confidence)
 	}
 
-	saved, err := b.Save(ctx)
+	res, err := upd.Exec(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, errors.New("knowledge note not found")
-		}
 		return nil, fmt.Errorf("failed to update knowledge note: %w", err)
 	}
-	return pgKnowledgeToRecord(saved), nil
+	n, err := res.RowsAffected()
+	if err != nil {
+		return nil, fmt.Errorf("failed to update knowledge note: %w", err)
+	}
+	if n == 0 {
+		return nil, errors.New("knowledge note not found")
+	}
+
+	var m models.KnowledgeNote
+	err = s.db.NewSelect().Model(&m).Where("id = ?", uid).Scan(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to reload knowledge note: %w", err)
+	}
+	return pgKnowledgeToRecord(&m), nil
 }
 
 func (s *pgKnowledgeStore) Delete(ctx context.Context, id string) error {
@@ -296,12 +298,16 @@ func (s *pgKnowledgeStore) Delete(ctx context.Context, id string) error {
 		return fmt.Errorf("invalid id: %w", err)
 	}
 
-	err = s.client.KnowledgeNote.DeleteOneID(uid).Exec(ctx)
+	res, err := s.db.NewDelete().Model((*models.KnowledgeNote)(nil)).Where("id = ?", uid).Exec(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return errors.New("knowledge note not found")
-		}
 		return fmt.Errorf("failed to delete knowledge note: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to delete knowledge note: %w", err)
+	}
+	if n == 0 {
+		return errors.New("knowledge note not found")
 	}
 	return nil
 }
@@ -312,82 +318,79 @@ func (s *pgKnowledgeStore) Get(ctx context.Context, id string) (*KnowledgeNote, 
 		return nil, fmt.Errorf("invalid id: %w", err)
 	}
 
-	n, err := s.client.KnowledgeNote.Get(ctx, uid)
+	var m models.KnowledgeNote
+	err = s.db.NewSelect().Model(&m).Where("id = ?", uid).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*KnowledgeNote](err, "knowledge note")
 	}
-	return pgKnowledgeToRecord(n), nil
+	return pgKnowledgeToRecord(&m), nil
 }
 
 func (s *pgKnowledgeStore) List(ctx context.Context, q KnowledgeQuery) ([]KnowledgeNote, int64, error) {
 	// Free-text search uses a ranked PostgreSQL full-text query (token-AND,
-	// quoted phrases, prefix-on-last-token, stemming) backed by the GIN index
-	// created by pgclient.ApplyKnowledgeFTS. When there is no usable tsquery
-	// (empty input, or a query of only punctuation/stopwords) or no raw DB
-	// handle, fall through to the Ent builder path below, which applies the
-	// legacy case-insensitive substring match.
-	if tsq, ok := buildKnowledgeTSQuery(strings.TrimSpace(q.Text)); ok && s.db != nil {
+	// quoted phrases, prefix-on-last-token, stemming) backed by the GIN index.
+	// When there is no usable tsquery (empty input, or a query of only
+	// punctuation/stopwords), fall through to the Bun builder path below, which
+	// applies the legacy case-insensitive substring match.
+	if tsq, ok := buildKnowledgeTSQuery(strings.TrimSpace(q.Text)); ok {
 		return s.listByTextFTS(ctx, q, tsq)
 	}
 
-	query := s.client.KnowledgeNote.Query()
+	countQ := s.db.NewSelect().Model((*models.KnowledgeNote)(nil))
+	listQ := s.db.NewSelect().Model((*models.KnowledgeNote)(nil))
 
 	if kind := strings.TrimSpace(strings.ToLower(q.Kind)); kind != "" {
-		query = query.Where(knowledgenote.KindEQ(knowledgenote.Kind(kind)))
+		countQ = countQ.Where("kind = ?", kind)
+		listQ = listQ.Where("kind = ?", kind)
 	}
 	if at := strings.TrimSpace(strings.ToLower(q.AuthorType)); at != "" {
-		query = query.Where(knowledgenote.AuthorTypeEQ(knowledgenote.AuthorType(at)))
+		countQ = countQ.Where("author_type = ?", at)
+		listQ = listQ.Where("author_type = ?", at)
 	}
 	if text := strings.TrimSpace(q.Text); text != "" {
-		query = query.Where(knowledgenote.Or(
-			knowledgenote.TitleContainsFold(text),
-			knowledgenote.BodyMarkdownContainsFold(text),
-		))
+		countQ = countQ.Where("(title ILIKE ? OR body_markdown ILIKE ?)", "%"+text+"%", "%"+text+"%")
+		listQ = listQ.Where("(title ILIKE ? OR body_markdown ILIKE ?)", "%"+text+"%", "%"+text+"%")
 	}
 	if tag := strings.TrimSpace(q.Tag); tag != "" {
 		tagJSON, err := json.Marshal(strings.ToLower(tag))
 		if err != nil {
 			return nil, 0, fmt.Errorf("encode tag filter: %w", err)
 		}
-		query = query.Where(predicate.KnowledgeNote(func(sel *entsql.Selector) {
-			sel.Where(entsql.ExprP("tags::jsonb @> ?::jsonb", string(tagJSON)))
-		}))
+		countQ = countQ.Where("tags::jsonb @> ?::jsonb", string(tagJSON))
+		listQ = listQ.Where("tags::jsonb @> ?::jsonb", string(tagJSON))
 	}
 
-	total, err := query.Count(ctx)
+	total, err := countQ.Count(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("count knowledge notes: %w", err)
 	}
 
-	query = query.Order(ent.Desc(knowledgenote.FieldUpdatedAt))
+	listQ = listQ.OrderExpr("updated_at DESC")
 	if q.Limit > 0 {
-		query = query.Limit(q.Limit)
+		listQ = listQ.Limit(q.Limit)
 	}
 	if q.Skip > 0 {
-		query = query.Offset(q.Skip)
+		listQ = listQ.Offset(q.Skip)
 	}
 
-	notes, err := query.All(ctx)
+	var notes []models.KnowledgeNote
+	err = listQ.Scan(ctx, &notes)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list knowledge notes: %w", err)
 	}
 
 	out := make([]KnowledgeNote, 0, len(notes))
 	for _, n := range notes {
-		out = append(out, *pgKnowledgeToRecord(n))
+		out = append(out, *pgKnowledgeToRecord(&n))
 	}
 	return out, int64(total), nil
 }
 
 // knowledgeNonWord matches any run of characters that are not a letter or digit.
-// Splitting on it yields clean barewords that are safe to embed in a to_tsquery
-// value: such a bareword can never contain tsquery syntax characters
-// (& | ! ( ) : < ->) or quotes, so user input cannot alter the query structure.
 var knowledgeNonWord = regexp.MustCompile(`[^\p{L}\p{N}]+`)
 
 // knowledgeQueryWords lowercases s and splits it on any run of non-letter /
-// non-digit characters, returning the surviving sub-words (e.g. "PostgreSQL" ->
-// ["postgresql"], "post-recovery" -> ["post", "recovery"]).
+// non-digit characters, returning the surviving sub-words.
 func knowledgeQueryWords(s string) []string {
 	var out []string
 	for _, w := range strings.Fields(strings.ToLower(knowledgeNonWord.ReplaceAllString(s, " "))) {
@@ -398,18 +401,13 @@ func knowledgeQueryWords(s string) []string {
 	return out
 }
 
-// knowledgeTerm is one parsed piece of a search query. A bare whitespace token
-// is a token term; text inside double quotes is a phrase term whose words must
-// appear adjacently. A single surviving word inside quotes is treated as an
-// ordinary token (no adjacency constraint).
+// knowledgeTerm is one parsed piece of a search query.
 type knowledgeTerm struct {
 	phrase bool
 	words  []string
 }
 
-// parseKnowledgeTerms splits a raw search string into ordered terms. Double
-// quotes group a phrase; single quotes are treated as ordinary characters (they
-// appear inside words like "don't"). Whitespace separates bare tokens.
+// parseKnowledgeTerms splits a raw search string into ordered terms.
 func parseKnowledgeTerms(s string) []knowledgeTerm {
 	var terms []knowledgeTerm
 	inQuote := false
@@ -442,20 +440,7 @@ func parseKnowledgeTerms(s string) []knowledgeTerm {
 }
 
 // buildKnowledgeTSQuery parses a free-text search string into a PostgreSQL
-// to_tsquery value string. Semantics:
-//
-//   - Bare whitespace tokens are AND-ed: "postgres recovery" -> postgres & recovery.
-//   - Double-quoted segments are matched as adjacent phrases:
-//     "cluster recovery" -> cluster <-> recovery.
-//   - The final bare token (the one the user is still typing) is a prefix match:
-//     "postgres rec" -> postgres & rec:*, so "rec" matches recovery/recovering.
-//   - to_tsquery stems and stop-words each lexeme, so "recovering" matches
-//     "recovery", and a query of only stopwords yields no terms.
-//
-// The returned string contains only sanitized barewords joined by the tsquery
-// operators '&', '<->', and the prefix marker ':*'. ok is false when no usable
-// lexemes survive (empty input or only punctuation/stopwords); callers should
-// then fall back to the substring search.
+// to_tsquery value string.
 func buildKnowledgeTSQuery(text string) (string, bool) {
 	terms := parseKnowledgeTerms(text)
 	if len(terms) == 0 {
@@ -481,14 +466,9 @@ func buildKnowledgeTSQuery(text string) (string, bool) {
 	return strings.Join(termParts, " & "), true
 }
 
-// listByTextFTS runs the ranked full-text search path. tsq is a sanitized
-// to_tsquery value string produced by buildKnowledgeTSQuery. The kind,
-// author_type, and tag filters are applied in the same query so the count and
-// the page stay consistent and ranking is computed before pagination. The
-// tsvector expression matches pgclient.KnowledgeFTSExpression exactly so the
-// GIN index is used.
+// listByTextFTS runs the ranked full-text search path.
 func (s *pgKnowledgeStore) listByTextFTS(ctx context.Context, q KnowledgeQuery, tsq string) ([]KnowledgeNote, int64, error) {
-	expr := pgclient.KnowledgeFTSExpression
+	expr := knowledgeFTSExpression
 
 	var (
 		filterClauses []string
@@ -625,25 +605,20 @@ func (s *pgKnowledgeStore) Match(ctx context.Context, labels map[string]string, 
 	}
 
 	now := time.Now().UTC()
-	query := s.client.KnowledgeNote.Query().
-		Where(
-			knowledgenote.SelectorsNotNil(),
-			knowledgenote.Or(
-				knowledgenote.ExpiresAtIsNil(),
-				knowledgenote.ExpiresAtGT(now),
-			),
-		).
-		Order(ent.Desc(knowledgenote.FieldUpdatedAt)).
-		Limit(limit * 5)
-
-	notes, err := query.All(ctx)
+	var notes []models.KnowledgeNote
+	err := s.db.NewSelect().Model(&notes).
+		Where("selectors IS NOT NULL").
+		Where("(expires_at IS NULL OR expires_at > ?)", now).
+		OrderExpr("updated_at DESC").
+		Limit(limit * 5).
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query knowledge notes for match: %w", err)
 	}
 
 	matched := make([]KnowledgeNote, 0, len(notes))
 	for _, n := range notes {
-		rec := pgKnowledgeToRecord(n)
+		rec := pgKnowledgeToRecord(&n)
 		if knowledgeConditionsMatch(rec.Selectors, labels) {
 			matched = append(matched, *rec)
 			if len(matched) >= limit {
@@ -657,10 +632,10 @@ func (s *pgKnowledgeStore) Match(ctx context.Context, labels map[string]string, 
 	return matched, nil
 }
 
-func pgKnowledgeToRecord(n *ent.KnowledgeNote) *KnowledgeNote {
+func pgKnowledgeToRecord(n *models.KnowledgeNote) *KnowledgeNote {
 	var selectors []config.RouteCondition
 	if n.Selectors != nil {
-		selectors = routeConditionsFromSchema(n.Selectors)
+		selectors = routeConditionsFromModels(n.Selectors)
 	}
 	if selectors == nil {
 		selectors = []config.RouteCondition{}
@@ -681,13 +656,13 @@ func pgKnowledgeToRecord(n *ent.KnowledgeNote) *KnowledgeNote {
 
 	return &KnowledgeNote{
 		ID:                    n.ID,
-		Kind:                  string(n.Kind),
+		Kind:                  n.Kind,
 		Title:                 n.Title,
 		BodyMarkdown:          n.BodyMarkdown,
 		Tags:                  tags,
 		Selectors:             selectors,
 		AuthorID:              authorID,
-		AuthorType:            string(n.AuthorType),
+		AuthorType:            n.AuthorType,
 		AuthorName:            n.AuthorName,
 		SourceInvestigationID: n.SourceInvestigationID,
 		Confidence:            n.Confidence,

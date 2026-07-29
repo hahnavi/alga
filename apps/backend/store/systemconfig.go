@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"alga/ent"
+	"github.com/google/uuid"
+	"github.com/uptrace/bun"
+
+	"alga/db/models"
 )
 
 type MapStringAny = map[string]any
@@ -47,15 +50,16 @@ type pgSystemConfigStore struct {
 	pgStoreBase
 }
 
-func newPGSystemConfigStore(client *ent.Client) SystemConfigStore {
-	return &pgSystemConfigStore{pgStoreBase{client: client}}
+func newPGSystemConfigStore(db *bun.DB) SystemConfigStore {
+	return &pgSystemConfigStore{pgStoreBase{db: db}}
 }
 
 func (s *pgSystemConfigStore) Get() (*SystemConfigValues, error) {
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	r, err := s.client.SystemConfig.Get(ctx, singletonUUID())
+	r := new(models.SystemConfig)
+	err := s.db.NewSelect().Model(r).Where("id = ?", singletonUUID()).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*SystemConfigValues](err, "system config")
 	}
@@ -176,25 +180,32 @@ func (s *pgSystemConfigStore) Save(cfg SystemConfigValues) error {
 	sid := singletonUUID()
 	now := time.Now().UTC()
 
-	existing, err := s.client.SystemConfig.Get(ctx, sid)
-	if err != nil && !ent.IsNotFound(err) {
+	existing := new(models.SystemConfig)
+	err := s.db.NewSelect().Model(existing).Where("id = ?", sid).Scan(ctx)
+	if err != nil && !isNotFound(err) {
 		return fmt.Errorf("failed to check existing system config: %w", err)
 	}
 
-	if existing != nil {
-		_, err = s.client.SystemConfig.UpdateOneID(sid).
-			SetConfig(data).
-			SetUpdatedAt(now).
-			Save(ctx)
+	if err == nil {
+		_, err = s.db.NewUpdate().Model((*models.SystemConfig)(nil)).
+			Set("config = ?", data).
+			Set("updated_at = ?", now).
+			Where("id = ?", sid).
+			Exec(ctx)
 	} else {
-		_, err = s.client.SystemConfig.Create().
-			SetID(sid).
-			SetConfig(data).
-			SetUpdatedAt(now).
-			Save(ctx)
+		m := &models.SystemConfig{
+			ID:        sid,
+			Config:    data,
+			UpdatedAt: now,
+		}
+		_, err = s.db.NewInsert().Model(m).Exec(ctx)
 	}
 	if err != nil {
 		return fmt.Errorf("failed to save system config: %w", err)
 	}
 	return nil
+}
+
+func singletonUUID() uuid.UUID {
+	return uuid.MustParse("00000000-0000-0000-0000-000000000001")
 }

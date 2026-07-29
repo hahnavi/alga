@@ -6,10 +6,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
-	"alga/ent"
-	entservice "alga/ent/service"
-	entsd "alga/ent/servicedependency"
+	"alga/db/models"
 )
 
 type ServiceRecord struct {
@@ -65,8 +64,8 @@ type pgServiceStore struct {
 	pgStoreBase
 }
 
-func newPGServiceStore(client *ent.Client) ServiceStore {
-	return &pgServiceStore{pgStoreBase{client: client}}
+func newPGServiceStore(db *bun.DB) ServiceStore {
+	return &pgServiceStore{pgStoreBase{db: db}}
 }
 
 func (s *pgServiceStore) CreateService(ctx context.Context, record *ServiceRecord) (*ServiceRecord, error) {
@@ -78,33 +77,28 @@ func (s *pgServiceStore) CreateService(ctx context.Context, record *ServiceRecor
 		record.Status = "operational"
 	}
 
-	b := s.client.Service.Create().
-		SetName(record.Name).
-		SetDisplayName(record.DisplayName).
-		SetDescription(record.Description).
-		SetSLAResponseMinutes(record.SLAResponseMinutes).
-		SetSLAResolveMinutes(record.SLAResolveMinutes).
-		SetStatus(entservice.Status(record.Status)).
-		SetCreatedAt(now).
-		SetUpdatedAt(now)
-
-	if record.OwnerTeamID != nil {
-		b.SetOwnerTeamID(*record.OwnerTeamID)
-	}
-	if record.EscalationPolicyID != nil {
-		b.SetEscalationPolicyID(*record.EscalationPolicyID)
-	}
-	if record.LabelMatchers != nil {
-		b.SetLabelMatchers(record.LabelMatchers)
+	m := &models.Service{
+		ID:                 models.NewUUID(),
+		Name:               record.Name,
+		DisplayName:        record.DisplayName,
+		Description:        record.Description,
+		OwnerTeamID:        record.OwnerTeamID,
+		EscalationPolicyID: record.EscalationPolicyID,
+		LabelMatchers:      record.LabelMatchers,
+		SLAResponseMinutes: record.SLAResponseMinutes,
+		SLAResolveMinutes:  record.SLAResolveMinutes,
+		Status:             record.Status,
+		CreatedAt:          now,
+		UpdatedAt:          now,
 	}
 
-	saved, err := b.Save(ctx)
+	_, err := s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create service: %w", err)
 	}
-	record.ID = saved.ID
-	record.CreatedAt = saved.CreatedAt
-	record.UpdatedAt = saved.UpdatedAt
+	record.ID = m.ID
+	record.CreatedAt = m.CreatedAt
+	record.UpdatedAt = m.UpdatedAt
 	return record, nil
 }
 
@@ -117,24 +111,24 @@ func (s *pgServiceStore) GetService(ctx context.Context, id string) (*ServiceRec
 		return nil, fmt.Errorf("invalid service ID: %w", err)
 	}
 
-	svc, err := s.client.Service.Get(ctx, sid)
+	var svc models.Service
+	err = s.db.NewSelect().Model(&svc).Where("id = ?", sid).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*ServiceRecord](err, "service")
 	}
-	return s.toServiceRecord(svc), nil
+	return s.toServiceRecord(&svc), nil
 }
 
 func (s *pgServiceStore) GetServiceByName(ctx context.Context, name string) (*ServiceRecord, error) {
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	svc, err := s.client.Service.Query().
-		Where(entservice.NameEQ(name)).
-		Only(ctx)
+	var svc models.Service
+	err := s.db.NewSelect().Model(&svc).Where("name = ?", name).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*ServiceRecord](err, "service by name")
 	}
-	return s.toServiceRecord(svc), nil
+	return s.toServiceRecord(&svc), nil
 }
 
 func (s *pgServiceStore) UpdateService(ctx context.Context, id string, record *ServiceRecord) (*ServiceRecord, error) {
@@ -146,36 +140,48 @@ func (s *pgServiceStore) UpdateService(ctx context.Context, id string, record *S
 		return nil, fmt.Errorf("invalid service ID: %w", err)
 	}
 
-	b := s.client.Service.UpdateOneID(sid).
-		SetName(record.Name).
-		SetDisplayName(record.DisplayName).
-		SetDescription(record.Description).
-		SetSLAResponseMinutes(record.SLAResponseMinutes).
-		SetSLAResolveMinutes(record.SLAResolveMinutes).
-		SetUpdatedAt(time.Now().UTC())
+	now := time.Now().UTC()
+	q := s.db.NewUpdate().Model((*models.Service)(nil)).
+		Set("name = ?", record.Name).
+		Set("display_name = ?", record.DisplayName).
+		Set("description = ?", record.Description).
+		Set("sla_response_minutes = ?", record.SLAResponseMinutes).
+		Set("sla_resolve_minutes = ?", record.SLAResolveMinutes).
+		Set("updated_at = ?", now).
+		Where("id = ?", sid)
 
 	if record.Status != "" {
-		b.SetStatus(entservice.Status(record.Status))
+		q = q.Set("status = ?", record.Status)
 	}
 	if record.OwnerTeamID != nil {
-		b.SetOwnerTeamID(*record.OwnerTeamID)
+		q = q.Set("owner_team_id = ?", *record.OwnerTeamID)
 	} else {
-		b.ClearOwnerTeamID()
+		q = q.Set("owner_team_id = NULL")
 	}
 	if record.EscalationPolicyID != nil {
-		b.SetEscalationPolicyID(*record.EscalationPolicyID)
+		q = q.Set("escalation_policy_id = ?", *record.EscalationPolicyID)
 	} else {
-		b.ClearEscalationPolicyID()
+		q = q.Set("escalation_policy_id = NULL")
 	}
 	if record.LabelMatchers != nil {
-		b.SetLabelMatchers(record.LabelMatchers)
+		q = q.Set("label_matchers = ?", record.LabelMatchers)
 	}
 
-	svc, err := b.Save(ctx)
+	res, err := q.Exec(ctx)
 	if err != nil {
 		return handleQueryErr[*ServiceRecord](err, "service")
 	}
-	return s.toServiceRecord(svc), nil
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return nil, fmt.Errorf("service not found: %w", ErrServiceNotFound)
+	}
+
+	// Re-fetch to return the updated record
+	var svc models.Service
+	if err := s.db.NewSelect().Model(&svc).Where("id = ?", sid).Scan(ctx); err != nil {
+		return handleQueryErr[*ServiceRecord](err, "service")
+	}
+	return s.toServiceRecord(&svc), nil
 }
 
 func (s *pgServiceStore) DeleteService(ctx context.Context, id string) error {
@@ -187,77 +193,69 @@ func (s *pgServiceStore) DeleteService(ctx context.Context, id string) error {
 		return fmt.Errorf("invalid service ID: %w", err)
 	}
 
-	tx, err := s.client.Tx(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer rollbackTx(tx)
+	return s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		_, err := tx.NewDelete().Model((*models.ServiceDependency)(nil)).
+			Where("service_id = ? OR dependent_on_service_id = ?", sid, sid).
+			Exec(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to delete service dependencies: %w", err)
+		}
 
-	_, err = tx.ServiceDependency.Delete().
-		Where(
-			entsd.Or(
-				entsd.ServiceIDEQ(sid),
-				entsd.DependentOnServiceIDEQ(sid),
-			),
-		).
-		Exec(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to delete service dependencies: %w", err)
-	}
-
-	err = tx.Service.DeleteOneID(sid).Exec(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
+		res, err := tx.NewDelete().Model((*models.Service)(nil)).Where("id = ?", sid).Exec(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to delete service: %w", err)
+		}
+		n, _ := res.RowsAffected()
+		if n == 0 {
 			return fmt.Errorf("service not found: %w", ErrServiceNotFound)
 		}
-		return fmt.Errorf("failed to delete service: %w", err)
-	}
-
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit service deletion: %w", err)
-	}
-	return nil
+		return nil
+	})
 }
 
 func (s *pgServiceStore) ListServices(ctx context.Context, filter ListServicesFilter) ([]ServiceRecord, int, error) {
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	query := s.client.Service.Query().Order(ent.Asc(entservice.FieldName))
+	countQ := s.db.NewSelect().Model((*models.Service)(nil))
 
 	if filter.Status != "" {
-		query = query.Where(entservice.StatusEQ(entservice.Status(filter.Status)))
+		countQ = countQ.Where("status = ?", filter.Status)
 	}
 	if filter.Query != "" {
-		query = query.Where(
-			entservice.Or(
-				entservice.NameContains(filter.Query),
-				entservice.DisplayNameContains(filter.Query),
-				entservice.DescriptionContains(filter.Query),
-			),
-		)
+		pattern := "%" + filter.Query + "%"
+		countQ = countQ.Where("(name LIKE ? OR display_name LIKE ? OR description LIKE ?)", pattern, pattern, pattern)
 	}
 
-	total, err := query.Count(ctx)
+	total, err := countQ.Count(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count services: %w", err)
 	}
 
+	var svcs []models.Service
+	listQ := s.db.NewSelect().Model(&svcs).Order("name ASC")
+	if filter.Status != "" {
+		listQ = listQ.Where("status = ?", filter.Status)
+	}
+	if filter.Query != "" {
+		pattern := "%" + filter.Query + "%"
+		listQ = listQ.Where("(name LIKE ? OR display_name LIKE ? OR description LIKE ?)", pattern, pattern, pattern)
+	}
 	if filter.Limit > 0 {
-		query = query.Limit(filter.Limit)
+		listQ = listQ.Limit(filter.Limit)
 	}
 	if filter.Skip > 0 {
-		query = query.Offset(filter.Skip)
+		listQ = listQ.Offset(filter.Skip)
 	}
 
-	svcs, err := query.All(ctx)
+	err = listQ.Scan(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list services: %w", err)
 	}
 
 	records := make([]ServiceRecord, 0, len(svcs))
-	for _, svc := range svcs {
-		records = append(records, *s.toServiceRecord(svc))
+	for i := range svcs {
+		records = append(records, *s.toServiceRecord(&svcs[i]))
 	}
 	return records, total, nil
 }
@@ -271,15 +269,17 @@ func (s *pgServiceStore) UpdateServiceStatus(ctx context.Context, id string, sta
 		return fmt.Errorf("invalid service ID: %w", err)
 	}
 
-	_, err = s.client.Service.UpdateOneID(sid).
-		SetStatus(entservice.Status(status)).
-		SetUpdatedAt(time.Now().UTC()).
-		Save(ctx)
+	res, err := s.db.NewUpdate().Model((*models.Service)(nil)).
+		Set("status = ?", status).
+		Set("updated_at = ?", time.Now().UTC()).
+		Where("id = ?", sid).
+		Exec(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return fmt.Errorf("service not found: %w", ErrServiceNotFound)
-		}
 		return fmt.Errorf("failed to update service status: %w", err)
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return fmt.Errorf("service not found: %w", ErrServiceNotFound)
 	}
 	return nil
 }
@@ -288,12 +288,15 @@ func (s *pgServiceStore) AddDependency(ctx context.Context, serviceID, dependsOn
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	_, err := s.client.ServiceDependency.Create().
-		SetServiceID(serviceID).
-		SetDependentOnServiceID(dependsOnID).
-		SetDependencyType(entsd.DependencyType(depType)).
-		SetCreatedAt(time.Now().UTC()).
-		Save(ctx)
+	m := &models.ServiceDependency{
+		ID:                   models.NewUUID(),
+		ServiceID:            serviceID,
+		DependentOnServiceID: dependsOnID,
+		DependencyType:       depType,
+		CreatedAt:            time.Now().UTC(),
+	}
+
+	_, err := s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to add dependency: %w", err)
 	}
@@ -304,11 +307,9 @@ func (s *pgServiceStore) RemoveDependency(ctx context.Context, serviceID, target
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	_, err := s.client.ServiceDependency.Delete().
-		Where(
-			entsd.ServiceIDEQ(serviceID),
-			entsd.DependentOnServiceIDEQ(targetID),
-		).
+	_, err := s.db.NewDelete().Model((*models.ServiceDependency)(nil)).
+		Where("service_id = ?", serviceID).
+		Where("dependent_on_service_id = ?", targetID).
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to remove dependency: %w", err)
@@ -320,9 +321,8 @@ func (s *pgServiceStore) GetDependencies(ctx context.Context, serviceID uuid.UUI
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	deps, err := s.client.ServiceDependency.Query().
-		Where(entsd.ServiceIDEQ(serviceID)).
-		All(ctx)
+	var deps []models.ServiceDependency
+	err := s.db.NewSelect().Model(&deps).Where("service_id = ?", serviceID).Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get dependencies: %w", err)
 	}
@@ -332,33 +332,32 @@ func (s *pgServiceStore) GetDependencies(ctx context.Context, serviceID uuid.UUI
 	}
 
 	depIDs := make([]uuid.UUID, len(deps))
-	for i, d := range deps {
-		depIDs[i] = d.DependentOnServiceID
+	for i := range deps {
+		depIDs[i] = deps[i].DependentOnServiceID
 	}
 
-	services, err := s.client.Service.Query().
-		Where(entservice.IDIn(depIDs...)).
-		All(ctx)
+	var services []models.Service
+	err = s.db.NewSelect().Model(&services).Where("id IN (?)", bun.List(depIDs)).Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve dependency names: %w", err)
 	}
 
 	nameMap := make(map[uuid.UUID]string, len(services))
-	for _, svc := range services {
-		nameMap[svc.ID] = svc.Name
+	for i := range services {
+		nameMap[services[i].ID] = services[i].Name
 	}
 
 	records := make([]ServiceDependencyRecord, 0, len(deps))
-	for _, d := range deps {
-		rec := ServiceDependencyRecord{
+	for i := range deps {
+		d := &deps[i]
+		records = append(records, ServiceDependencyRecord{
 			ID:                     d.ID,
 			ServiceID:              d.ServiceID,
 			DependentOnServiceID:   d.DependentOnServiceID,
-			DependencyType:         string(d.DependencyType),
+			DependencyType:         d.DependencyType,
 			CreatedAt:              d.CreatedAt,
 			DependentOnServiceName: nameMap[d.DependentOnServiceID],
-		}
-		records = append(records, rec)
+		})
 	}
 	return records, nil
 }
@@ -367,9 +366,8 @@ func (s *pgServiceStore) GetDependents(ctx context.Context, serviceID uuid.UUID)
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	deps, err := s.client.ServiceDependency.Query().
-		Where(entsd.DependentOnServiceIDEQ(serviceID)).
-		All(ctx)
+	var deps []models.ServiceDependency
+	err := s.db.NewSelect().Model(&deps).Where("dependent_on_service_id = ?", serviceID).Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get dependents: %w", err)
 	}
@@ -379,33 +377,32 @@ func (s *pgServiceStore) GetDependents(ctx context.Context, serviceID uuid.UUID)
 	}
 
 	svcIDs := make([]uuid.UUID, len(deps))
-	for i, d := range deps {
-		svcIDs[i] = d.ServiceID
+	for i := range deps {
+		svcIDs[i] = deps[i].ServiceID
 	}
 
-	services, err := s.client.Service.Query().
-		Where(entservice.IDIn(svcIDs...)).
-		All(ctx)
+	var services []models.Service
+	err = s.db.NewSelect().Model(&services).Where("id IN (?)", bun.List(svcIDs)).Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve dependent names: %w", err)
 	}
 
 	nameMap := make(map[uuid.UUID]string, len(services))
-	for _, svc := range services {
-		nameMap[svc.ID] = svc.Name
+	for i := range services {
+		nameMap[services[i].ID] = services[i].Name
 	}
 
 	records := make([]ServiceDependencyRecord, 0, len(deps))
-	for _, d := range deps {
-		rec := ServiceDependencyRecord{
+	for i := range deps {
+		d := &deps[i]
+		records = append(records, ServiceDependencyRecord{
 			ID:                     d.ID,
 			ServiceID:              d.ServiceID,
 			DependentOnServiceID:   d.DependentOnServiceID,
-			DependencyType:         string(d.DependencyType),
+			DependencyType:         d.DependencyType,
 			CreatedAt:              d.CreatedAt,
 			DependentOnServiceName: nameMap[d.ServiceID],
-		}
-		records = append(records, rec)
+		})
 	}
 	return records, nil
 }
@@ -435,7 +432,7 @@ func (s *pgServiceStore) HasCircularDependency(ctx context.Context, serviceID, d
 	return false, nil
 }
 
-func (s *pgServiceStore) toServiceRecord(svc *ent.Service) *ServiceRecord {
+func (s *pgServiceStore) toServiceRecord(svc *models.Service) *ServiceRecord {
 	return &ServiceRecord{
 		ID:                 svc.ID,
 		Name:               svc.Name,
@@ -446,7 +443,7 @@ func (s *pgServiceStore) toServiceRecord(svc *ent.Service) *ServiceRecord {
 		LabelMatchers:      svc.LabelMatchers,
 		SLAResponseMinutes: svc.SLAResponseMinutes,
 		SLAResolveMinutes:  svc.SLAResolveMinutes,
-		Status:             string(svc.Status),
+		Status:             svc.Status,
 		CreatedAt:          svc.CreatedAt,
 		UpdatedAt:          svc.UpdatedAt,
 	}

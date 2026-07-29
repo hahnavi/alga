@@ -28,7 +28,7 @@ Cover the route's classification and behavior:
 - Mutation audit where feasible.
 - Rate-limit behavior for auth-adjacent, callback, token, or agent routes when changed.
 
-## Stores and Ent
+## Stores
 
 Cover the methods and invariants introduced:
 
@@ -39,7 +39,7 @@ Cover the methods and invariants introduced:
 - Transaction rollback for multi-write operations.
 - Soft-delete vs hard-delete behavior matching the domain.
 
-Run Ent generation before testing when schemas changed.
+When the schema changed, apply the goose migration (kept in sync with the Bun model) before testing: `go run . db migrate`.
 
 ## Workers and RabbitMQ
 
@@ -76,8 +76,8 @@ go test ./api ./store
 
 ```bash
 cd apps/backend
-go generate ./ent
-go test ./ent/... ./store
+go run . db migrate
+go test ./store
 ```
 
 ```bash

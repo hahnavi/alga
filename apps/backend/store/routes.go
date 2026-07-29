@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"alga/config"
+	"github.com/uptrace/bun"
 
-	"alga/ent"
-	entschema "alga/ent/schema"
+	"alga/config"
+	"alga/db/models"
 )
 
 type RouteRulesStore interface {
@@ -20,17 +20,18 @@ type pgRouteRulesStore struct {
 	pgStoreBase
 }
 
-func newPGRouteRulesStore(client *ent.Client) RouteRulesStore {
-	return &pgRouteRulesStore{pgStoreBase{client: client}}
+func newPGRouteRulesStore(db *bun.DB) RouteRulesStore {
+	return &pgRouteRulesStore{pgStoreBase{db: db}}
 }
 
 func (s *pgRouteRulesStore) Get() ([]config.RouteConfig, error) {
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	r, err := s.client.RouteRules.Get(ctx, singletonUUID())
+	r := new(models.RouteRules)
+	err := s.db.NewSelect().Model(r).Where("id = ?", singletonUUID()).Scan(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
+		if isNotFound(err) {
 			return []config.RouteConfig{}, nil
 		}
 		return nil, fmt.Errorf("failed to query route rules: %w", err)
@@ -42,7 +43,7 @@ func (s *pgRouteRulesStore) Get() ([]config.RouteConfig, error) {
 
 	var out []config.RouteConfig
 	for _, rc := range r.Routes {
-		out = append(out, routeConfigFromSchema(rc))
+		out = append(out, routeConfigFromModels(rc))
 	}
 	if out == nil {
 		out = []config.RouteConfig{}
@@ -54,28 +55,32 @@ func (s *pgRouteRulesStore) Save(routes []config.RouteConfig) error {
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
 
-	var schemaRoutes []entschema.RouteConfig
+	var modelRoutes []models.RouteConfig
 	for _, r := range routes {
-		schemaRoutes = append(schemaRoutes, routeConfigToSchema(r))
+		modelRoutes = append(modelRoutes, routeConfigToModels(r))
 	}
 
 	sid := singletonUUID()
-	existing, err := s.client.RouteRules.Get(ctx, sid)
-	if err != nil && !ent.IsNotFound(err) {
+	existing := new(models.RouteRules)
+	err := s.db.NewSelect().Model(existing).Where("id = ?", sid).Scan(ctx)
+	if err != nil && !isNotFound(err) {
 		return fmt.Errorf("failed to check existing routes: %w", err)
 	}
 
-	if existing != nil {
-		_, err = s.client.RouteRules.UpdateOneID(sid).
-			SetRoutes(schemaRoutes).
-			SetUpdatedAt(time.Now().UTC()).
-			Save(ctx)
+	now := time.Now().UTC()
+	if err == nil {
+		_, err = s.db.NewUpdate().Model((*models.RouteRules)(nil)).
+			Set("routes = ?", modelRoutes).
+			Set("updated_at = ?", now).
+			Where("id = ?", sid).
+			Exec(ctx)
 	} else {
-		_, err = s.client.RouteRules.Create().
-			SetID(sid).
-			SetRoutes(schemaRoutes).
-			SetUpdatedAt(time.Now().UTC()).
-			Save(ctx)
+		m := &models.RouteRules{
+			ID:        sid,
+			Routes:    modelRoutes,
+			UpdatedAt: now,
+		}
+		_, err = s.db.NewInsert().Model(m).Exec(ctx)
 	}
 	if err != nil {
 		return fmt.Errorf("failed to save route rules: %w", err)
@@ -83,23 +88,23 @@ func (s *pgRouteRulesStore) Save(routes []config.RouteConfig) error {
 	return nil
 }
 
-func routeConfigToSchema(rc config.RouteConfig) entschema.RouteConfig {
-	var targets []entschema.RouteTarget
+func routeConfigToModels(rc config.RouteConfig) models.RouteConfig {
+	var targets []models.RouteTarget
 	for _, t := range rc.Targets {
-		targets = append(targets, entschema.RouteTarget{
+		targets = append(targets, models.RouteTarget{
 			Provider: t.Provider,
 			Channel:  t.Channel,
 		})
 	}
-	return entschema.RouteConfig{
+	return models.RouteConfig{
 		MatchMode:  rc.MatchMode,
-		Conditions: routeConditionsToSchema(rc.Conditions),
+		Conditions: routeConditionsToModels(rc.Conditions),
 		Targets:    targets,
 		Silenced:   rc.Silenced,
 	}
 }
 
-func routeConfigFromSchema(rc entschema.RouteConfig) config.RouteConfig {
+func routeConfigFromModels(rc models.RouteConfig) config.RouteConfig {
 	var targets []config.RouteTarget
 	for _, t := range rc.Targets {
 		targets = append(targets, config.RouteTarget{
@@ -109,7 +114,7 @@ func routeConfigFromSchema(rc entschema.RouteConfig) config.RouteConfig {
 	}
 	return config.RouteConfig{
 		MatchMode:  rc.MatchMode,
-		Conditions: routeConditionsFromSchema(rc.Conditions),
+		Conditions: routeConditionsFromModels(rc.Conditions),
 		Targets:    targets,
 		Silenced:   rc.Silenced,
 	}

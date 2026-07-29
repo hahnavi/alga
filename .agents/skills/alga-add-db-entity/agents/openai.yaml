@@ -1,0 +1,4 @@
+interface:
+  display_name: "Add Alga Database Entity"
+  short_description: "Add PostgreSQL-backed Bun models, goose migrations, stores, and registry entries"
+  default_prompt: "Use Add Alga Database Entity when adding persistent data: a Bun model, a goose SQL migration, store methods, and registry wiring."

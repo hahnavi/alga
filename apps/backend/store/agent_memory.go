@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
-	"alga/ent"
-	"alga/ent/agentmemory"
+	"alga/db/models"
 	"alga/logger"
 )
 
@@ -84,11 +84,10 @@ type AgentMemoryStore interface {
 
 type pgAgentMemoryStore struct {
 	pgStoreBase
-	db *sql.DB
 }
 
-func newPGAgentMemoryStore(client *ent.Client, db *sql.DB) AgentMemoryStore {
-	return &pgAgentMemoryStore{pgStoreBase{client: client}, db}
+func newPGAgentMemoryStore(db *bun.DB) AgentMemoryStore {
+	return &pgAgentMemoryStore{pgStoreBase{db: db}}
 }
 
 func (s *pgAgentMemoryStore) Create(ctx context.Context, mem *AgentMemoryRecord) (*AgentMemoryRecord, error) {
@@ -122,42 +121,34 @@ func (s *pgAgentMemoryStore) Create(ctx context.Context, mem *AgentMemoryRecord)
 	mem.CreatedAt = now
 	mem.UpdatedAt = now
 
-	b := s.client.AgentMemory.Create().
-		SetContent(mem.Content).
-		SetMemoryType(agentmemory.MemoryType(mem.MemoryType)).
-		SetHash(mem.Hash).
-		SetAgentName(mem.AgentName).
-		SetAgentType(mem.AgentType).
-		SetInvestigationID(mem.InvestigationID).
-		SetCorrelationKey(mem.CorrelationKey).
-		SetLabels(mem.Labels).
-		SetEntities(mem.Entities).
-		SetMetadata(mem.Metadata).
-		SetAccessCount(0).
-		SetCreatedAt(now).
-		SetUpdatedAt(now)
+	m := &models.AgentMemory{
+		Content:         mem.Content,
+		MemoryType:      mem.MemoryType,
+		Hash:            mem.Hash,
+		AgentID:         mem.AgentID,
+		AgentName:       mem.AgentName,
+		AgentType:       mem.AgentType,
+		InvestigationID: mem.InvestigationID,
+		CorrelationKey:  mem.CorrelationKey,
+		Labels:          mem.Labels,
+		Entities:        mem.Entities,
+		Metadata:        mem.Metadata,
+		Confidence:      mem.Confidence,
+		AccessCount:     0,
+		ExpiresAt:       mem.ExpiresAt,
+	}
+	m.ID = models.NewUUID()
+	m.CreatedAt = now
+	m.UpdatedAt = now
 
-	if mem.Embedding != nil {
-		b.SetEmbedding(mem.Embedding)
-	}
-	if mem.AgentID != nil {
-		b.SetAgentID(*mem.AgentID)
-	}
-	if mem.Confidence != nil {
-		b.SetConfidence(*mem.Confidence)
-	}
-	if mem.ExpiresAt != nil {
-		b.SetExpiresAt(*mem.ExpiresAt)
-	}
-
-	saved, err := b.Save(ctx)
+	_, err := s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create agent memory: %w", err)
 	}
 
-	mem.ID = saved.ID
+	mem.ID = m.ID
 
-	if len(mem.Embedding) > 0 && s.db != nil {
+	if len(mem.Embedding) > 0 {
 		vecJSON, err := json.Marshal(mem.Embedding)
 		if err != nil {
 			logger.Warn("agent memory: failed to marshal embedding vector", "memory_id", mem.ID, "error", err)
@@ -173,31 +164,39 @@ func (s *pgAgentMemoryStore) Create(ctx context.Context, mem *AgentMemoryRecord)
 }
 
 func (s *pgAgentMemoryStore) Get(ctx context.Context, id uuid.UUID) (*AgentMemoryRecord, error) {
-	m, err := s.client.AgentMemory.Get(ctx, id)
+	var m models.AgentMemory
+	err := s.db.NewSelect().Model(&m).Where("id = ?", id).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*AgentMemoryRecord](err, "agent memory")
 	}
-	return pgMemoryToRecord(m), nil
+	return pgMemoryToRecord(&m), nil
 }
 
 func (s *pgAgentMemoryStore) Update(ctx context.Context, id uuid.UUID, content string, embedding []float32) (*AgentMemoryRecord, error) {
-	b := s.client.AgentMemory.UpdateOneID(id).
-		SetContent(content).
-		SetUpdatedAt(time.Now().UTC())
+	now := time.Now().UTC()
+
+	upd := s.db.NewUpdate().Model((*models.AgentMemory)(nil)).
+		Set("content = ?", content).
+		Set("updated_at = ?", now).
+		Where("id = ?", id)
 
 	if embedding != nil {
-		b.SetEmbedding(embedding)
+		upd = upd.Set("embedding = ?", embedding)
 	}
 
-	saved, err := b.Save(ctx)
+	res, err := upd.Exec(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, errors.New("agent memory not found")
-		}
 		return nil, fmt.Errorf("failed to update agent memory: %w", err)
 	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return nil, fmt.Errorf("failed to update agent memory: %w", err)
+	}
+	if n == 0 {
+		return nil, errors.New("agent memory not found")
+	}
 
-	if len(embedding) > 0 && s.db != nil {
+	if len(embedding) > 0 {
 		vecJSON, err := json.Marshal(embedding)
 		if err != nil {
 			logger.Warn("agent memory: failed to marshal embedding vector", "memory_id", id, "error", err)
@@ -209,51 +208,63 @@ func (s *pgAgentMemoryStore) Update(ctx context.Context, id uuid.UUID, content s
 		}
 	}
 
-	return pgMemoryToRecord(saved), nil
+	var m models.AgentMemory
+	err = s.db.NewSelect().Model(&m).Where("id = ?", id).Scan(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to reload agent memory: %w", err)
+	}
+	return pgMemoryToRecord(&m), nil
 }
 
 func (s *pgAgentMemoryStore) Delete(ctx context.Context, id uuid.UUID) error {
-	err := s.client.AgentMemory.DeleteOneID(id).Exec(ctx)
+	res, err := s.db.NewDelete().Model((*models.AgentMemory)(nil)).Where("id = ?", id).Exec(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return errors.New("agent memory not found")
-		}
 		return fmt.Errorf("failed to delete agent memory: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to delete agent memory: %w", err)
+	}
+	if n == 0 {
+		return errors.New("agent memory not found")
 	}
 	return nil
 }
 
 func (s *pgAgentMemoryStore) List(ctx context.Context, f MemoryFilters) ([]AgentMemoryRecord, int, error) {
-	query := s.client.AgentMemory.Query()
-	query = applyMemoryFilters(query, f)
+	countQ := s.db.NewSelect().Model((*models.AgentMemory)(nil))
+	countQ = applyMemoryFiltersBun(countQ, f)
 
-	total, err := query.Count(ctx)
+	total, err := countQ.Count(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("count agent memories: %w", err)
 	}
 
-	query = query.Order(ent.Desc(agentmemory.FieldCreatedAt))
+	listQ := s.db.NewSelect().Model((*models.AgentMemory)(nil))
+	listQ = applyMemoryFiltersBun(listQ, f)
+	listQ = listQ.OrderExpr("created_at DESC")
 	if f.Limit > 0 {
-		query = query.Limit(f.Limit)
+		listQ = listQ.Limit(f.Limit)
 	}
 	if f.Offset > 0 {
-		query = query.Offset(f.Offset)
+		listQ = listQ.Offset(f.Offset)
 	}
 
-	items, err := query.All(ctx)
+	var items []models.AgentMemory
+	err = listQ.Scan(ctx, &items)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list agent memories: %w", err)
 	}
 
 	out := make([]AgentMemoryRecord, 0, len(items))
 	for _, m := range items {
-		out = append(out, *pgMemoryToRecord(m))
+		out = append(out, *pgMemoryToRecord(&m))
 	}
 	return out, total, nil
 }
 
 func (s *pgAgentMemoryStore) Search(ctx context.Context, embedding []float32, topK int, f MemoryFilters) ([]ScoredMemory, error) {
-	if s.db == nil || len(embedding) == 0 {
+	if len(embedding) == 0 {
 		return nil, nil
 	}
 	if topK <= 0 {
@@ -283,7 +294,7 @@ func (s *pgAgentMemoryStore) Search(ctx context.Context, embedding []float32, to
 }
 
 func (s *pgAgentMemoryStore) SearchByText(ctx context.Context, query string, topK int, f MemoryFilters) ([]ScoredMemory, error) {
-	if s.db == nil || strings.TrimSpace(query) == "" {
+	if strings.TrimSpace(query) == "" {
 		return nil, nil
 	}
 	if topK <= 0 {
@@ -317,10 +328,11 @@ func (s *pgAgentMemoryStore) IncrementAccess(ctx context.Context, ids []uuid.UUI
 	if len(ids) == 0 {
 		return nil
 	}
-	_, err := s.client.AgentMemory.Update().
-		Where(agentmemory.IDIn(ids...)).
-		AddAccessCount(1).
-		Save(ctx)
+	_, err := s.db.NewUpdate().Model((*models.AgentMemory)(nil)).
+		Set("access_count = access_count + 1").
+		Set("updated_at = ?", time.Now().UTC()).
+		Where("id IN (?)", bun.List(ids)).
+		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("increment access count: %w", err)
 	}
@@ -329,22 +341,24 @@ func (s *pgAgentMemoryStore) IncrementAccess(ctx context.Context, ids []uuid.UUI
 
 func (s *pgAgentMemoryStore) DeleteExpired(ctx context.Context) (int, error) {
 	now := time.Now().UTC()
-	n, err := s.client.AgentMemory.Delete().
-		Where(
-			agentmemory.ExpiresAtNotNil(),
-			agentmemory.ExpiresAtLTE(now),
-		).
+	res, err := s.db.NewDelete().Model((*models.AgentMemory)(nil)).
+		Where("expires_at IS NOT NULL").
+		Where("expires_at <= ?", now).
 		Exec(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to delete expired memories: %w", err)
 	}
-	return n, nil
+	n, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("failed to delete expired memories: %w", err)
+	}
+	return int(n), nil
 }
 
 func (s *pgAgentMemoryStore) ExistsByHash(ctx context.Context, hash string) (bool, error) {
-	exists, err := s.client.AgentMemory.Query().
-		Where(agentmemory.Hash(hash)).
-		Exist(ctx)
+	exists, err := s.db.NewSelect().Model((*models.AgentMemory)(nil)).
+		Where("hash = ?", hash).
+		Exists(ctx)
 	if err != nil {
 		return false, fmt.Errorf("check memory hash: %w", err)
 	}
@@ -352,37 +366,38 @@ func (s *pgAgentMemoryStore) ExistsByHash(ctx context.Context, hash string) (boo
 }
 
 func (s *pgAgentMemoryStore) FindByInvestigation(ctx context.Context, investigationID string) ([]AgentMemoryRecord, error) {
-	items, err := s.client.AgentMemory.Query().
-		Where(agentmemory.InvestigationID(investigationID)).
-		Order(ent.Desc(agentmemory.FieldCreatedAt)).
-		All(ctx)
+	var items []models.AgentMemory
+	err := s.db.NewSelect().Model(&items).
+		Where("investigation_id = ?", investigationID).
+		OrderExpr("created_at DESC").
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("find memories by investigation: %w", err)
 	}
 	out := make([]AgentMemoryRecord, 0, len(items))
 	for _, m := range items {
-		out = append(out, *pgMemoryToRecord(m))
+		out = append(out, *pgMemoryToRecord(&m))
 	}
 	return out, nil
 }
 
-func applyMemoryFilters(query *ent.AgentMemoryQuery, f MemoryFilters) *ent.AgentMemoryQuery {
+func applyMemoryFiltersBun(q *bun.SelectQuery, f MemoryFilters) *bun.SelectQuery {
 	if f.MemoryType != nil {
-		query = query.Where(agentmemory.MemoryTypeEQ(agentmemory.MemoryType(*f.MemoryType)))
+		q = q.Where("memory_type = ?", *f.MemoryType)
 	}
 	if f.AgentID != nil {
-		query = query.Where(agentmemory.AgentID(*f.AgentID))
+		q = q.Where("agent_id = ?", *f.AgentID)
 	}
 	if f.InvestigationID != nil {
-		query = query.Where(agentmemory.InvestigationID(*f.InvestigationID))
+		q = q.Where("investigation_id = ?", *f.InvestigationID)
 	}
 	if f.CorrelationKey != nil {
-		query = query.Where(agentmemory.CorrelationKey(*f.CorrelationKey))
+		q = q.Where("correlation_key = ?", *f.CorrelationKey)
 	}
 	if f.MinConfidence != nil {
-		query = query.Where(agentmemory.ConfidenceGTE(*f.MinConfidence))
+		q = q.Where("confidence >= ?", *f.MinConfidence)
 	}
-	return query
+	return q
 }
 
 func buildMemoryWhereClauses(f MemoryFilters, startParamIdx int) (string, []any) {
@@ -496,7 +511,7 @@ func scanScoredMemories(rows *sql.Rows) ([]ScoredMemory, error) {
 	return out, nil
 }
 
-func pgMemoryToRecord(m *ent.AgentMemory) *AgentMemoryRecord {
+func pgMemoryToRecord(m *models.AgentMemory) *AgentMemoryRecord {
 	var labels map[string]string
 	if m.Labels != nil {
 		labels = m.Labels
@@ -518,17 +533,11 @@ func pgMemoryToRecord(m *ent.AgentMemory) *AgentMemoryRecord {
 		metadata = map[string]any{}
 	}
 
-	var embedding []float32
-	if m.Embedding != nil {
-		embedding = m.Embedding
-	}
-
 	return &AgentMemoryRecord{
 		ID:              m.ID,
 		Content:         m.Content,
-		MemoryType:      string(m.MemoryType),
+		MemoryType:      m.MemoryType,
 		Hash:            m.Hash,
-		Embedding:       embedding,
 		AgentID:         m.AgentID,
 		AgentName:       m.AgentName,
 		AgentType:       m.AgentType,

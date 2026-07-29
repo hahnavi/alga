@@ -83,7 +83,9 @@ func (w *OutcomeWorker) evaluateOutcome(ctx context.Context, result *store.Triag
 			if err != nil {
 				continue
 			}
-			if a != nil && a.Status == "firing" {
+			// GetByFingerprint returns soft-deleted tombstones; a deleted alert is
+			// not "still firing" and must not block an auto_resolve decision.
+			if a != nil && a.DeletedAt == nil && a.Status == "firing" {
 				patch.Outcome = store.TriageResultOutcomeOverridden
 				patch.OverriddenTo = "investigate"
 				break

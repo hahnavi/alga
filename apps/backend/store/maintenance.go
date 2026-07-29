@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
-	"alga/ent"
-	"alga/ent/maintenancewindow"
+	"alga/db/models"
 )
 
 type MaintenanceWindowRecord struct {
@@ -44,8 +44,8 @@ type pgMaintenanceWindowStore struct {
 	pgStoreBase
 }
 
-func newPGMaintenanceWindowStore(client *ent.Client) MaintenanceWindowStore {
-	return &pgMaintenanceWindowStore{pgStoreBase{client: client}}
+func newPGMaintenanceWindowStore(db *bun.DB) MaintenanceWindowStore {
+	return &pgMaintenanceWindowStore{pgStoreBase{db: db}}
 }
 
 func (s *pgMaintenanceWindowStore) Create(ctx context.Context, record *MaintenanceWindowRecord) (*MaintenanceWindowRecord, error) {
@@ -59,20 +59,21 @@ func (s *pgMaintenanceWindowStore) Create(ctx context.Context, record *Maintenan
 		record.LabelMatchers = map[string]string{}
 	}
 
-	saved, err := s.client.MaintenanceWindow.Create().
-		SetName(record.Name).
-		SetStartTime(record.StartTime).
-		SetEndTime(record.EndTime).
-		SetLabelMatchers(record.LabelMatchers).
-		SetCreatedBy(record.CreatedBy).
-		SetEnabled(record.Enabled).
-		SetCreatedAt(now).
-		SetUpdatedAt(now).
-		Save(ctx)
+	m := &models.MaintenanceWindow{
+		BaseModel:     models.BaseModel{ID: models.NewUUID(), CreatedAt: now, UpdatedAt: now},
+		Name:          record.Name,
+		StartTime:     record.StartTime,
+		EndTime:       record.EndTime,
+		LabelMatchers: record.LabelMatchers,
+		CreatedBy:     record.CreatedBy,
+		Enabled:       record.Enabled,
+	}
+
+	_, err := s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert maintenance window: %w", err)
 	}
-	record.ID = saved.ID
+	record.ID = m.ID
 	return record, nil
 }
 
@@ -85,35 +86,48 @@ func (s *pgMaintenanceWindowStore) Update(ctx context.Context, id string, patch 
 		return nil, fmt.Errorf("invalid id: %w", err)
 	}
 
-	b := s.client.MaintenanceWindow.UpdateOneID(uid).SetUpdatedAt(time.Now().UTC())
+	now := time.Now().UTC()
+	q := s.db.NewUpdate().Model((*models.MaintenanceWindow)(nil)).
+		Set("updated_at = ?", now).
+		Where("id = ?", uid)
 
 	if patch.Name != "" {
-		b.SetName(patch.Name)
+		q = q.Set("name = ?", patch.Name)
 	}
 	if !patch.StartTime.IsZero() {
-		b.SetStartTime(patch.StartTime)
+		q = q.Set("start_time = ?", patch.StartTime)
 	}
 	if !patch.EndTime.IsZero() {
-		b.SetEndTime(patch.EndTime)
+		q = q.Set("end_time = ?", patch.EndTime)
 	}
 	if patch.LabelMatchers != nil {
-		b.SetLabelMatchers(patch.LabelMatchers)
+		q = q.Set("label_matchers = ?", patch.LabelMatchers)
 	}
 	if patch.CreatedBy != "" {
-		b.SetCreatedBy(patch.CreatedBy)
+		q = q.Set("created_by = ?", patch.CreatedBy)
 	}
 	if patch.EnabledSet {
-		b.SetEnabled(patch.Enabled)
+		q = q.Set("enabled = ?", patch.Enabled)
 	}
 
-	saved, err := b.Save(ctx)
+	res, err := q.Exec(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, errors.New("maintenance window not found")
-		}
 		return nil, fmt.Errorf("failed to update maintenance window: %w", err)
 	}
-	return pgMaintenanceWindowToRecord(saved), nil
+	n, err := res.RowsAffected()
+	if err != nil {
+		return nil, fmt.Errorf("failed to update maintenance window: %w", err)
+	}
+	if n == 0 {
+		return nil, errors.New("maintenance window not found")
+	}
+
+	// Reload the updated record.
+	updated := new(models.MaintenanceWindow)
+	if err := s.db.NewSelect().Model(updated).Where("id = ?", uid).Scan(ctx); err != nil {
+		return nil, fmt.Errorf("failed to reload maintenance window: %w", err)
+	}
+	return pgMaintenanceWindowToRecord(updated), nil
 }
 
 func (s *pgMaintenanceWindowStore) Delete(ctx context.Context, id string) error {
@@ -121,12 +135,16 @@ func (s *pgMaintenanceWindowStore) Delete(ctx context.Context, id string) error 
 	if err != nil {
 		return fmt.Errorf("invalid id: %w", err)
 	}
-	err = s.client.MaintenanceWindow.DeleteOneID(uid).Exec(ctx)
+	res, err := s.db.NewDelete().Model((*models.MaintenanceWindow)(nil)).Where("id = ?", uid).Exec(ctx)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return errors.New("maintenance window not found")
-		}
 		return fmt.Errorf("failed to delete maintenance window: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to delete maintenance window: %w", err)
+	}
+	if n == 0 {
+		return errors.New("maintenance window not found")
 	}
 	return nil
 }
@@ -136,7 +154,8 @@ func (s *pgMaintenanceWindowStore) Get(ctx context.Context, id string) (*Mainten
 	if err != nil {
 		return nil, fmt.Errorf("invalid id: %w", err)
 	}
-	mw, err := s.client.MaintenanceWindow.Get(ctx, uid)
+	mw := new(models.MaintenanceWindow)
+	err = s.db.NewSelect().Model(mw).Where("id = ?", uid).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*MaintenanceWindowRecord](err, "maintenance window")
 	}
@@ -144,58 +163,59 @@ func (s *pgMaintenanceWindowStore) Get(ctx context.Context, id string) (*Mainten
 }
 
 func (s *pgMaintenanceWindowStore) List(ctx context.Context, q MaintenanceWindowQuery) ([]MaintenanceWindowRecord, int64, error) {
-	query := s.client.MaintenanceWindow.Query()
+	countQ := s.db.NewSelect().Model((*models.MaintenanceWindow)(nil))
+	listQ := s.db.NewSelect().Model((*models.MaintenanceWindow)(nil))
 
 	if q.Enabled != nil {
-		query = query.Where(maintenancewindow.EnabledEQ(*q.Enabled))
+		countQ = countQ.Where("enabled = ?", *q.Enabled)
+		listQ = listQ.Where("enabled = ?", *q.Enabled)
 	}
 
-	total, err := query.Count(ctx)
+	total, err := countQ.Count(ctx)
 	if err != nil {
 		return nil, 0, fmt.Errorf("count maintenance windows: %w", err)
 	}
 
-	query = query.Order(ent.Desc(maintenancewindow.FieldCreatedAt))
-
+	listQ = listQ.Order("created_at DESC")
 	if q.Limit > 0 {
-		query = query.Limit(q.Limit)
+		listQ = listQ.Limit(q.Limit)
 	}
 	if q.Skip > 0 {
-		query = query.Offset(q.Skip)
+		listQ = listQ.Offset(q.Skip)
 	}
 
-	items, err := query.All(ctx)
+	var items []models.MaintenanceWindow
+	err = listQ.Scan(ctx, &items)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list maintenance windows: %w", err)
 	}
 
 	out := make([]MaintenanceWindowRecord, 0, len(items))
-	for _, mw := range items {
-		out = append(out, *pgMaintenanceWindowToRecord(mw))
+	for i := range items {
+		out = append(out, *pgMaintenanceWindowToRecord(&items[i]))
 	}
 	return out, int64(total), nil
 }
 
 func (s *pgMaintenanceWindowStore) ListActive(ctx context.Context) ([]MaintenanceWindowRecord, error) {
 	now := time.Now().UTC()
-	items, err := s.client.MaintenanceWindow.Query().
-		Where(
-			maintenancewindow.EnabledEQ(true),
-			maintenancewindow.StartTimeLTE(now),
-			maintenancewindow.EndTimeGTE(now),
-		).
-		All(ctx)
+	var items []models.MaintenanceWindow
+	err := s.db.NewSelect().Model(&items).
+		Where("enabled = ?", true).
+		Where("start_time <= ?", now).
+		Where("end_time >= ?", now).
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list active maintenance windows: %w", err)
 	}
 	out := make([]MaintenanceWindowRecord, 0, len(items))
-	for _, mw := range items {
-		out = append(out, *pgMaintenanceWindowToRecord(mw))
+	for i := range items {
+		out = append(out, *pgMaintenanceWindowToRecord(&items[i]))
 	}
 	return out, nil
 }
 
-func pgMaintenanceWindowToRecord(mw *ent.MaintenanceWindow) *MaintenanceWindowRecord {
+func pgMaintenanceWindowToRecord(mw *models.MaintenanceWindow) *MaintenanceWindowRecord {
 	var labelMatchers map[string]string
 	if mw.LabelMatchers != nil {
 		labelMatchers = mw.LabelMatchers

@@ -7,11 +7,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
-	"alga/ent"
-	entincident "alga/ent/incident"
-	entdoc "alga/ent/incidentdocument"
-
+	"alga/db/models"
 	"alga/ics"
 )
 
@@ -38,27 +36,46 @@ type pgIncidentDocumentStore struct {
 	pgStoreBase
 }
 
-func newPGIncidentDocumentStore(client *ent.Client) IncidentDocumentStore {
-	return &pgIncidentDocumentStore{pgStoreBase{client: client}}
+func newPGIncidentDocumentStore(db *bun.DB) IncidentDocumentStore {
+	return &pgIncidentDocumentStore{pgStoreBase{db: db}}
+}
+
+func (s *pgIncidentDocumentStore) findIncidentByNumber(ctx context.Context, incidentNumber int64) (*models.Incident, error) {
+	var inc models.Incident
+	err := s.db.NewSelect().Model(&inc).
+		Where("incident_number = ?", incidentNumber).
+		Where("deleted_at IS NULL").
+		Scan(ctx)
+	if err != nil {
+		if isNotFound(err) {
+			return nil, fmt.Errorf("incident not found: %w", ErrIncidentNotFound)
+		}
+		return nil, fmt.Errorf("failed to find incident: %w", err)
+	}
+	return &inc, nil
 }
 
 func (s *pgIncidentDocumentStore) GetAllSections(ctx context.Context, incidentNumber int64) ([]IncidentDocumentRecord, error) {
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	docs, err := s.client.IncidentDocument.Query().
-		Where(
-			entdoc.HasIncidentWith(entincident.IncidentNumber(incidentNumber)),
-		).
-		Order(ent.Asc(entdoc.FieldSection)).
-		All(ctx)
+	inc, err := s.findIncidentByNumber(ctx, incidentNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	var docs []models.IncidentDocument
+	err = s.db.NewSelect().Model(&docs).
+		Where("incident_id = ?", inc.ID).
+		OrderExpr("section ASC").
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query document sections: %w", err)
 	}
 
 	records := make([]IncidentDocumentRecord, 0, len(docs))
 	for _, d := range docs {
-		records = append(records, s.toRecord(d, incidentNumber))
+		records = append(records, s.toRecord(&d, incidentNumber))
 	}
 	return records, nil
 }
@@ -67,17 +84,21 @@ func (s *pgIncidentDocumentStore) GetSection(ctx context.Context, incidentNumber
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	d, err := s.client.IncidentDocument.Query().
-		Where(
-			entdoc.HasIncidentWith(entincident.IncidentNumber(incidentNumber)),
-			entdoc.SectionEQ(string(section)),
-		).
-		Only(ctx)
+	inc, err := s.findIncidentByNumber(ctx, incidentNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	var d models.IncidentDocument
+	err = s.db.NewSelect().Model(&d).
+		Where("incident_id = ?", inc.ID).
+		Where("section = ?", string(section)).
+		Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*IncidentDocumentRecord](err, "incident document section")
 	}
 
-	rec := s.toRecord(d, incidentNumber)
+	rec := s.toRecord(&d, incidentNumber)
 	return &rec, nil
 }
 
@@ -85,64 +106,71 @@ func (s *pgIncidentDocumentStore) UpsertSection(ctx context.Context, incidentNum
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	inc, err := s.client.Incident.Query().
-		Where(entincident.IncidentNumber(incidentNumber), entincident.DeletedAtIsNil()).
-		Only(ctx)
+	inc, err := s.findIncidentByNumber(ctx, incidentNumber)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, fmt.Errorf("incident not found: %w", ErrIncidentNotFound)
-		}
-		return nil, fmt.Errorf("failed to find incident: %w", err)
+		return nil, err
 	}
 
-	existing, err := s.client.IncidentDocument.Query().
-		Where(
-			entdoc.HasIncidentWith(entincident.IncidentNumber(incidentNumber)),
-			entdoc.SectionEQ(string(section)),
-		).
-		Only(ctx)
-	if err != nil && !ent.IsNotFound(err) {
+	var existing models.IncidentDocument
+	err = s.db.NewSelect().Model(&existing).
+		Where("incident_id = ?", inc.ID).
+		Where("section = ?", string(section)).
+		Scan(ctx)
+	if err != nil && !isNotFound(err) {
 		return nil, fmt.Errorf("failed to query existing section: %w", err)
 	}
 
-	if existing != nil {
+	now := time.Now().UTC()
+
+	if err == nil {
+		// Existing document found - update it
 		if existing.Version != version {
 			return nil, ErrDocumentVersionConflict
 		}
 
-		update := s.client.IncidentDocument.UpdateOneID(existing.ID).
-			SetContent(content).
-			SetVersion(version + 1).
-			SetUpdatedAt(time.Now().UTC())
+		upd := s.db.NewUpdate().Model((*models.IncidentDocument)(nil)).
+			Set("content = ?", content).
+			Set("version = ?", version+1).
+			Set("updated_at = ?", now).
+			Where("id = ?", existing.ID)
 		if userID != uuid.Nil {
-			update.SetUpdatedByID(userID)
+			upd = upd.Set("updated_by_id = ?", userID)
 		} else {
-			update.ClearUpdatedBy()
+			upd = upd.Set("updated_by_id = NULL")
 		}
-		updated, err := update.Save(ctx)
+		_, err = upd.Exec(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to update document section: %w", err)
 		}
 
-		rec := s.toRecord(updated, incidentNumber)
+		var updated models.IncidentDocument
+		err = s.db.NewSelect().Model(&updated).Where("id = ?", existing.ID).Scan(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to reload document section: %w", err)
+		}
+		rec := s.toRecord(&updated, incidentNumber)
 		return &rec, nil
 	}
 
-	create := s.client.IncidentDocument.Create().
-		SetSection(string(section)).
-		SetContent(content).
-		SetVersion(1).
-		SetIncidentID(inc.ID).
-		SetUpdatedAt(time.Now().UTC())
-	if userID != uuid.Nil {
-		create.SetUpdatedByID(userID)
+	// No existing document - create it
+	m := &models.IncidentDocument{
+		ID:         models.NewUUID(),
+		Section:    string(section),
+		Content:    content,
+		Version:    1,
+		IncidentID: inc.ID,
+		UpdatedAt:  now,
 	}
-	created, err := create.Save(ctx)
+	if userID != uuid.Nil {
+		m.UpdatedByID = &userID
+	}
+
+	_, err = s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create document section: %w", err)
 	}
 
-	rec := s.toRecord(created, incidentNumber)
+	rec := s.toRecord(m, incidentNumber)
 	return &rec, nil
 }
 
@@ -150,35 +178,34 @@ func (s *pgIncidentDocumentStore) InitializeDocument(ctx context.Context, incide
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	inc, err := s.client.Incident.Query().
-		Where(entincident.IncidentNumber(incidentNumber), entincident.DeletedAtIsNil()).
-		Only(ctx)
+	inc, err := s.findIncidentByNumber(ctx, incidentNumber)
 	if err != nil {
-		if ent.IsNotFound(err) {
-			return fmt.Errorf("incident not found: %w", ErrIncidentNotFound)
-		}
-		return fmt.Errorf("failed to find incident: %w", err)
+		return err
 	}
 
-	builders := make([]*ent.IncidentDocumentCreate, 0, len(sections))
+	now := time.Now().UTC()
+	docs := make([]models.IncidentDocument, 0, len(sections))
 	for sec, content := range sections {
-		b := s.client.IncidentDocument.Create().
-			SetSection(string(sec)).
-			SetContent(content).
-			SetVersion(1).
-			SetIncidentID(inc.ID).
-			SetUpdatedAt(time.Now().UTC())
-		builders = append(builders, b)
+		docs = append(docs, models.IncidentDocument{
+			ID:         models.NewUUID(),
+			Section:    string(sec),
+			Content:    content,
+			Version:    1,
+			IncidentID: inc.ID,
+			UpdatedAt:  now,
+		})
 	}
 
-	_, err = s.client.IncidentDocument.CreateBulk(builders...).Save(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to initialize document sections: %w", err)
+	if len(docs) > 0 {
+		_, err = s.db.NewInsert().Model(&docs).Exec(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to initialize document sections: %w", err)
+		}
 	}
 	return nil
 }
 
-func (s *pgIncidentDocumentStore) toRecord(d *ent.IncidentDocument, incidentNumber int64) IncidentDocumentRecord {
+func (s *pgIncidentDocumentStore) toRecord(d *models.IncidentDocument, incidentNumber int64) IncidentDocumentRecord {
 	rec := IncidentDocumentRecord{
 		ID:             d.ID,
 		IncidentNumber: incidentNumber,
@@ -188,8 +215,8 @@ func (s *pgIncidentDocumentStore) toRecord(d *ent.IncidentDocument, incidentNumb
 		UpdatedAt:      d.UpdatedAt.Format(time.RFC3339),
 	}
 
-	if u := d.Edges.UpdatedBy; u != nil {
-		rec.UpdatedBy = &u.ID
+	if d.UpdatedByID != nil {
+		rec.UpdatedBy = d.UpdatedByID
 	}
 
 	return rec

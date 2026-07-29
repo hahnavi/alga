@@ -1,8 +1,8 @@
 ---
 name: alga-backend-patterns
-description: Use when writing or modifying Go backend code, stores, Ent schemas, API handlers, app wiring, workers, or backend tests in Alga.
+description: Use when writing or modifying Go backend code, stores, Bun models, API handlers, app wiring, workers, or backend tests in Alga.
 priority: P0
-tags: [backend, go, api, store, ent, reference]
+tags: [backend, go, api, store, bun, reference]
 ---
 
 # Alga Backend Patterns
@@ -16,7 +16,7 @@ For alert, investigation, incident, scheduler, RabbitMQ, Valkey, or lifecycle ch
 - Backend version and dependencies: `apps/backend/go.mod`.
 - API routes and server wiring: `apps/backend/api/http.go`.
 - Stores and helpers: `apps/backend/store/` and `apps/backend/store/pg_helpers.go`.
-- Ent schemas: `apps/backend/ent/schema/`.
+- Bun models and migrations: `apps/backend/db/models/` and `apps/backend/db/migrations/`.
 - App wiring: `apps/backend/app/wire.go`.
 - Worker lifecycle: `apps/backend/worker/` and `apps/backend/rabbitmq/`.
 
@@ -41,15 +41,15 @@ For alert, investigation, incident, scheduler, RabbitMQ, Valkey, or lifecycle ch
 - Never do a synchronous DB write on a per-request hot path (token `last_used_at`, counters). Use the throttled async pattern from `personal_access_tokens.go` (`updateLastUsed` with a 24h guard).
 - Compile regex once via the cached `matching.GetCompiledRegex`; never `regexp.Compile` inside a loop or per-call path.
 - Write SSE events through the shared `sse.WriteEvent` helper; do not rebuild the frame with `string +=` per event.
-- Avoid N+1: batch `IN` queries or Ent `.With*()` eager-load instead of a store/HTTP call per loop iteration. Pre-size slices with `make([]T, 0, n)` when the bound is known.
+- Avoid N+1: batch `IN` queries or Bun `.Relation()` eager-load instead of a store/HTTP call per loop iteration. Pre-size slices with `make([]T, 0, n)` when the bound is known.
 - Fire-and-forget goroutines (`audit.Log`, side-effects) must `recover()` and stay bounded; prefer a semaphore or single consumer over unbounded fan-out.
 
 ## Stores
 
 - Store interfaces and records live in `apps/backend/store`.
 - PostgreSQL stores embed `pgStoreBase` and are registered in `store/registry.go`.
-- Use `pgctx`, `rollbackTx`, `handleQueryErr`, duplicate-key helpers, limit/skip extraction, and sort parsing from `pg_helpers.go`, and `nextPgCounter` from `store.go`.
-- Use Ent predicates/builders; do not concatenate SQL strings.
+- Use `pgctx`, `rollbackTx`, `handleQueryErr`, duplicate-key helpers, limit/skip extraction, sort parsing, and the `nextSeq` sequence helper from `pg_helpers.go`.
+- Use Bun query builders and bound parameters; never concatenate values into SQL strings.
 - Use transactions only when multiple writes must be atomic.
 
 ## API
@@ -67,16 +67,16 @@ For alert, investigation, incident, scheduler, RabbitMQ, Valkey, or lifecycle ch
 
 Baseline route classification, middleware, CSRF, and rate-limit rules live in AGENTS.md "Secure By Default" (always in context) and are expanded by `alga-security-checklist`; don't re-derive them here. Backend specifics: classify each route before implementing, call `s.checkPermission` inside every multi-method dispatcher branch, and guard every public/callback route with existing rate-limit middleware.
 
-## Ent
+## Schema and Migrations
 
-- Schemas live in `apps/backend/ent/schema`.
-- Use project helpers such as UUID IDs and `timeNow` timestamps.
-- Run Ent generation after schema edits and keep generated files in sync.
+- Bun models live in `apps/backend/db/models`; shared base structs (`BaseModel`, `IDModel`, `SoftDeleteModel`, `NewUUID`) are in `db/models/base.go`.
+- SQL migrations live in `apps/backend/db/migrations` (goose, embedded via `//go:embed migrations/*.sql`). There is no code generation: edit the model and hand-author a matching migration in the same change, keeping columns, types, defaults, and indexes in sync.
+- Use UUIDv7 IDs (`models.NewUUID`) and `created_at`/`updated_at` backed by the shared `set_updated_at()` trigger. For a brand-new entity, use `alga-add-db-entity`.
 
 ```bash
 cd apps/backend
-go generate ./ent
-go test ./ent/... ./store
+go run . db migrate
+go test ./store
 ```
 
 ## Workers

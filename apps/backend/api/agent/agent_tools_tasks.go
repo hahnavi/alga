@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 
 	"alga/capability"
-	entschema "alga/ent/schema"
+	"alga/db/models"
 	"alga/ics"
 	"alga/logger"
 	"alga/sse"
@@ -387,7 +387,7 @@ func (e *AgentToolExecutor) performSynthesizeFindings(ctx context.Context, agent
 		return fmt.Errorf("list completed coordination tasks: %w", err)
 	}
 
-	synthesized := &entschema.InvestigationSummary{
+	synthesized := &models.InvestigationSummary{
 		Status:  "synthesized",
 		Summary: strings.TrimSpace(cmd.Summary),
 	}

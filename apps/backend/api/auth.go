@@ -91,12 +91,6 @@ func (s *Server) validateCSRFToken(r *http.Request) bool {
 	return platform.ValidateCSRFToken(r)
 }
 
-// isStateChangingMethod returns true for methods that modify state.
-// Delegates to platform.IsStateChangingMethod.
-func isStateChangingMethod(method string) bool {
-	return platform.IsStateChangingMethod(method)
-}
-
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")

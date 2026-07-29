@@ -7,7 +7,7 @@ description: Database migration behavior, version upgrades, breaking changes, co
 
 ## Database Migrations
 
-Alga uses Ent ORM for schema management. Schema definitions live in `apps/backend/ent/schema/`.
+Alga manages its schema with hand-written [goose](https://github.com/pressly/goose) SQL migrations in `apps/backend/db/migrations/`, paired with the Bun models in `apps/backend/db/models/`. Migrations are embedded into the binary at build time.
 
 ### Auto-Migration
 
@@ -31,14 +31,14 @@ go run . db migrate
 
 ### Migration Process
 
-Ent auto-migration:
+Migrations are versioned SQL files applied by [goose](https://github.com/pressly/goose):
 
-1. Compares current schema with database state
-2. Creates missing tables and columns
-3. Creates missing indexes
-4. Does NOT drop columns or tables (safe by default)
+1. goose tracks applied versions in its `goose_db_version` table
+2. On `up`, pending migrations run in version order, each within a transaction
+3. Only the `-- +goose Up` blocks run on startup; the paired `-- +goose Down` blocks exist for manual rollback
+4. Schema changes are explicit — there is no auto-diffing; author a new migration file and the matching Bun model change together
 
-For destructive changes, you need to handle them manually.
+For destructive changes, author them explicitly in a migration.
 
 ## Version Upgrades
 

@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 
-	"alga/ent"
-	entndlog "alga/ent/notificationdeliverylog"
+	"alga/db/models"
 )
 
 type NotificationDeliveryRecord struct {
@@ -33,8 +33,8 @@ type pgNotificationDeliveryStore struct {
 	pgStoreBase
 }
 
-func newPGNotificationDeliveryStore(client *ent.Client) NotificationDeliveryStore {
-	return &pgNotificationDeliveryStore{pgStoreBase: pgStoreBase{client: client}}
+func newPGNotificationDeliveryStore(db *bun.DB) NotificationDeliveryStore {
+	return &pgNotificationDeliveryStore{pgStoreBase: pgStoreBase{db: db}}
 }
 
 func (s *pgNotificationDeliveryStore) Create(ctx context.Context, record *NotificationDeliveryRecord) (*NotificationDeliveryRecord, error) {
@@ -42,24 +42,23 @@ func (s *pgNotificationDeliveryStore) Create(ctx context.Context, record *Notifi
 		record.CreatedAt = time.Now().UTC()
 	}
 
-	b := s.client.NotificationDeliveryLog.Create().
-		SetUserID(record.UserID).
-		SetNotificationType(entndlog.NotificationType(record.NotificationType)).
-		SetChannel(entndlog.Channel(record.Channel)).
-		SetStatus(entndlog.Status(record.Status)).
-		SetErrorMessage(record.ErrorMessage).
-		SetCreatedAt(record.CreatedAt)
-
-	if record.IncidentID != nil {
-		b.SetIncidentID(*record.IncidentID)
+	m := &models.NotificationDeliveryLog{
+		ID:               models.NewUUID(),
+		UserID:           record.UserID,
+		IncidentID:       record.IncidentID,
+		NotificationType: record.NotificationType,
+		Channel:          record.Channel,
+		Status:           record.Status,
+		ErrorMessage:     record.ErrorMessage,
+		CreatedAt:        record.CreatedAt,
 	}
 
-	saved, err := b.Save(ctx)
+	_, err := s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create notification delivery log: %w", err)
 	}
 
-	record.ID = saved.ID
+	record.ID = m.ID
 	return record, nil
 }
 
@@ -68,59 +67,61 @@ func (s *pgNotificationDeliveryStore) ListByUser(ctx context.Context, userID uui
 		limit = 20
 	}
 
-	logs, err := s.client.NotificationDeliveryLog.Query().
-		Where(entndlog.UserID(userID)).
-		Order(ent.Desc(entndlog.FieldCreatedAt)).
+	var logs []models.NotificationDeliveryLog
+	err := s.db.NewSelect().Model(&logs).
+		Where("user_id = ?", userID).
+		Order("created_at DESC").
 		Limit(int(limit)).
 		Offset(int(skip)).
-		All(ctx)
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list notification delivery logs: %w", err)
 	}
 
 	records := make([]NotificationDeliveryRecord, 0, len(logs))
-	for _, l := range logs {
-		records = append(records, *s.toRecord(l))
+	for i := range logs {
+		records = append(records, *s.toRecord(&logs[i]))
 	}
 	return records, nil
 }
 
 func (s *pgNotificationDeliveryStore) ListByIncident(ctx context.Context, incidentID uuid.UUID) ([]NotificationDeliveryRecord, error) {
-	logs, err := s.client.NotificationDeliveryLog.Query().
-		Where(entndlog.IncidentID(incidentID)).
-		Order(ent.Desc(entndlog.FieldCreatedAt)).
-		All(ctx)
+	var logs []models.NotificationDeliveryLog
+	err := s.db.NewSelect().Model(&logs).
+		Where("incident_id = ?", incidentID).
+		Order("created_at DESC").
+		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list notification delivery logs by incident: %w", err)
 	}
 
 	records := make([]NotificationDeliveryRecord, 0, len(logs))
-	for _, l := range logs {
-		records = append(records, *s.toRecord(l))
+	for i := range logs {
+		records = append(records, *s.toRecord(&logs[i]))
 	}
 	return records, nil
 }
 
 func (s *pgNotificationDeliveryStore) UpdateStatus(ctx context.Context, id uuid.UUID, status, errMsg string) error {
-	b := s.client.NotificationDeliveryLog.UpdateOneID(id).
-		SetStatus(entndlog.Status(status)).
-		SetErrorMessage(errMsg)
-
-	_, err := b.Save(ctx)
+	_, err := s.db.NewUpdate().Model((*models.NotificationDeliveryLog)(nil)).
+		Set("status = ?", status).
+		Set("error_message = ?", errMsg).
+		Where("id = ?", id).
+		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to update notification delivery status: %w", err)
 	}
 	return nil
 }
 
-func (s *pgNotificationDeliveryStore) toRecord(l *ent.NotificationDeliveryLog) *NotificationDeliveryRecord {
+func (s *pgNotificationDeliveryStore) toRecord(l *models.NotificationDeliveryLog) *NotificationDeliveryRecord {
 	return &NotificationDeliveryRecord{
 		ID:               l.ID,
 		UserID:           l.UserID,
 		IncidentID:       l.IncidentID,
-		NotificationType: string(l.NotificationType),
-		Channel:          string(l.Channel),
-		Status:           string(l.Status),
+		NotificationType: l.NotificationType,
+		Channel:          l.Channel,
+		Status:           l.Status,
 		ErrorMessage:     l.ErrorMessage,
 		CreatedAt:        l.CreatedAt,
 	}

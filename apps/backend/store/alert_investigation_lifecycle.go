@@ -249,9 +249,16 @@ func (s *pgAlertInvestigationStore) TransitionAlertInvestigationStatus(ctx conte
 		q = q.Set("completed_at = ?", now)
 	}
 
-	_, err = q.Exec(ctx)
+	res, err := q.Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to transition alert investigation status: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to transition alert investigation status: %w", err)
+	}
+	if n == 0 {
+		return fmt.Errorf("alert investigation %s not in expected status %v for transition to %s", id, fromStatuses, toStatus)
 	}
 	return nil
 }

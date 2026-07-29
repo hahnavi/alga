@@ -218,7 +218,8 @@ func (s *pgIncidentStore) GetIncident(ctx context.Context, incidentNumber int64)
 	defer cancel()
 
 	var inc models.Incident
-	err := s.db.NewSelect().Model(&inc).Where("incident_number = ?", incidentNumber).Scan(ctx)
+	// Tombstone read: soft-deleted incidents stay resolvable by number.
+	err := s.db.NewSelect().Model(&inc).WhereAllWithDeleted().Where("incident_number = ?", incidentNumber).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*IncidentRecord](err, "incident")
 	}
@@ -255,7 +256,8 @@ func (s *pgIncidentStore) GetIncidentByID(ctx context.Context, id uuid.UUID) (*I
 	defer cancel()
 
 	var inc models.Incident
-	err := s.db.NewSelect().Model(&inc).Where("id = ?", id).Scan(ctx)
+	// Tombstone read: soft-deleted incidents stay resolvable by id.
+	err := s.db.NewSelect().Model(&inc).WhereAllWithDeleted().Where("id = ?", id).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*IncidentRecord](err, "incident")
 	}

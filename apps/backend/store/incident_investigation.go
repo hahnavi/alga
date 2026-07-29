@@ -81,7 +81,7 @@ func (s *pgIncidentInvestigationStore) CreateIncidentInvestigation(ctx context.C
 		if record.IncidentNumber != 0 {
 			exists, err := tx.NewSelect().Model((*models.IncidentInvestigation)(nil)).
 				Where("incident_id IN (SELECT id FROM incidents WHERE incident_number = ? AND deleted_at IS NULL)", record.IncidentNumber).
-				Where("status IN (?)", bun.In(activeIncidentInvestigationStatuses)).
+				Where("status IN (?)", bun.List(activeIncidentInvestigationStatuses)).
 				Exists(ctx)
 			if err != nil {
 				return fmt.Errorf("failed to check for active incident investigation: %w", err)
@@ -166,7 +166,7 @@ func (s *pgIncidentInvestigationStore) GetActiveIncidentInvestigationByIncident(
 	var inv models.IncidentInvestigation
 	err := s.db.NewSelect().Model(&inv).
 		Where("incident_id IN (SELECT id FROM incidents WHERE incident_number = ? AND deleted_at IS NULL)", incidentNumber).
-		Where("status IN (?)", bun.In(activeIncidentInvestigationStatuses)).
+		Where("status IN (?)", bun.List(activeIncidentInvestigationStatuses)).
 		Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*IncidentInvestigationRecord](err, "incident investigation")

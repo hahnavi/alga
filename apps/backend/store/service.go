@@ -337,7 +337,7 @@ func (s *pgServiceStore) GetDependencies(ctx context.Context, serviceID uuid.UUI
 	}
 
 	var services []models.Service
-	err = s.db.NewSelect().Model(&services).Where("id IN (?)", bun.In(depIDs)).Scan(ctx)
+	err = s.db.NewSelect().Model(&services).Where("id IN (?)", bun.List(depIDs)).Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve dependency names: %w", err)
 	}
@@ -382,7 +382,7 @@ func (s *pgServiceStore) GetDependents(ctx context.Context, serviceID uuid.UUID)
 	}
 
 	var services []models.Service
-	err = s.db.NewSelect().Model(&services).Where("id IN (?)", bun.In(svcIDs)).Scan(ctx)
+	err = s.db.NewSelect().Model(&services).Where("id IN (?)", bun.List(svcIDs)).Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve dependent names: %w", err)
 	}

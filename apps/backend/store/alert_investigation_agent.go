@@ -25,7 +25,7 @@ func (s *pgAlertInvestigationStore) ResetInvestigatingByAgent(ctx context.Contex
 		Set("started_at = NULL").
 		Set("updated_at = ?", time.Now().UTC()).
 		Where("agent_id = ?", agentID).
-		Where("status IN (?)", bun.In([]string{AlertInvestigationStatusInvestigating, AlertInvestigationStatusPaused})).
+		Where("status IN (?)", bun.List([]string{AlertInvestigationStatusInvestigating, AlertInvestigationStatusPaused})).
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to reset investigating alert investigations by agent: %w", err)
@@ -59,7 +59,7 @@ func (s *pgAlertInvestigationStore) CountActiveByAgent(ctx context.Context, agen
 
 	count, err := s.db.NewSelect().Model((*models.AlertInvestigation)(nil)).
 		Where("agent_id = ?", agentID).
-		Where("status IN (?)", bun.In([]string{AlertInvestigationStatusAssigned, AlertInvestigationStatusInvestigating, AlertInvestigationStatusPaused})).
+		Where("status IN (?)", bun.List([]string{AlertInvestigationStatusAssigned, AlertInvestigationStatusInvestigating, AlertInvestigationStatusPaused})).
 		Count(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to count active alert investigations by agent: %w", err)
@@ -83,8 +83,8 @@ func (s *pgAlertInvestigationStore) CountActiveByAgents(ctx context.Context, age
 	err := s.db.NewSelect().
 		ColumnExpr("agent_id, count(*) as count").
 		Model((*models.AlertInvestigation)(nil)).
-		Where("agent_id IN (?)", bun.In(agentIDs)).
-		Where("status IN (?)", bun.In([]string{AlertInvestigationStatusAssigned, AlertInvestigationStatusInvestigating, AlertInvestigationStatusPaused})).
+		Where("agent_id IN (?)", bun.List(agentIDs)).
+		Where("status IN (?)", bun.List([]string{AlertInvestigationStatusAssigned, AlertInvestigationStatusInvestigating, AlertInvestigationStatusPaused})).
 		Group("agent_id").
 		Scan(ctx, &groups)
 	if err != nil {

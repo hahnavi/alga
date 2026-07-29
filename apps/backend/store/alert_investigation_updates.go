@@ -100,7 +100,7 @@ func retireCurrentAlertInvestigationLinks(ctx context.Context, db bun.IDB, alert
 	var alertIDs []uuid.UUID
 	if err := db.NewSelect().Model((*models.Alert)(nil)).
 		Column("id").
-		Where("alert_number IN (?)", bun.In(alertNumbers)).
+		Where("alert_number IN (?)", bun.List(alertNumbers)).
 		Scan(ctx, &alertIDs); err != nil {
 		return fmt.Errorf("failed to resolve alert ids for current alert investigation links: %w", err)
 	}
@@ -109,9 +109,9 @@ func retireCurrentAlertInvestigationLinks(ctx context.Context, db bun.IDB, alert
 	q := db.NewUpdate().Model((*models.AlertInvestigationAlert)(nil)).
 		Set("current = false").
 		Where("current = true").
-		Where("alert_number IN (?)", bun.In(alertNumbers))
+		Where("alert_number IN (?)", bun.List(alertNumbers))
 	if len(alertIDs) > 0 {
-		q = q.WhereOr("alert_id IN (?)", bun.In(alertIDs))
+		q = q.WhereOr("alert_id IN (?)", bun.List(alertIDs))
 	}
 
 	if _, err := q.Exec(ctx); err != nil {

@@ -20,10 +20,10 @@ func init() {
 	goose.SetLogger(goose.NopLogger())
 
 	if os.Getenv("SECRET_PEPPER") == "" {
-		os.Setenv("SECRET_PEPPER", base64.StdEncoding.EncodeToString(make([]byte, 32)))
+		_ = os.Setenv("SECRET_PEPPER", base64.StdEncoding.EncodeToString(make([]byte, 32)))
 	}
 	if os.Getenv("ENCRYPTION_KEYS") == "" {
-		os.Setenv("ENCRYPTION_KEYS", "1:"+base64.StdEncoding.EncodeToString(make([]byte, 32)))
+		_ = os.Setenv("ENCRYPTION_KEYS", "1:"+base64.StdEncoding.EncodeToString(make([]byte, 32)))
 	}
 }
 
@@ -68,7 +68,7 @@ func newTestDB(t *testing.T) *bun.DB {
 	if err := goose.UpContext(ctx, sqlDB, "migrations"); err != nil {
 		t.Fatalf("goose up: %v", err)
 	}
-	sqlDB.Close()
+	_ = sqlDB.Close()
 
 	cli, err := db.New(dsn)
 	if err != nil {

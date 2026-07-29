@@ -497,7 +497,7 @@ func (s *pgAlertInvestigationStore) ListAlertInvestigations(ctx context.Context,
 		q = q.Where("status = ?", v)
 	}
 	if v, ok := filter["status_in"].([]string); ok && len(v) > 0 {
-		q = q.Where("status IN (?)", bun.In(v))
+		q = q.Where("status IN (?)", bun.List(v))
 	}
 	if v, ok := filter["correlation_key"].(string); ok && v != "" {
 		q = q.Where("correlation_key = ?", v)
@@ -617,7 +617,7 @@ func (s *pgAlertInvestigationStore) GetCurrentAlertInvestigationSummariesByAlert
 
 	var links []models.AlertInvestigationAlert
 	if err := s.db.NewSelect().Model(&links).
-		Where("alert_number IN (?) AND current = true", bun.In(alertNumbers)).
+		Where("alert_number IN (?) AND current = true", bun.List(alertNumbers)).
 		Scan(ctx); err != nil {
 		return nil, fmt.Errorf("failed to query current alert investigations: %w", err)
 	}
@@ -661,7 +661,7 @@ func (s *pgAlertInvestigationStore) GetActiveAlertInvestigationByCorrelationKey(
 	var inv models.AlertInvestigation
 	err := s.db.NewSelect().Model(&inv).
 		Where("correlation_key = ?", correlationKey).
-		Where("status IN (?)", bun.In([]string{
+		Where("status IN (?)", bun.List([]string{
 			AlertInvestigationStatusPending,
 			AlertInvestigationStatusAssigned,
 			AlertInvestigationStatusInvestigating,

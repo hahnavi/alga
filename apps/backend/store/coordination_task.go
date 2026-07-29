@@ -354,7 +354,7 @@ func (s *pgCoordinationTaskStore) ListInProgressByAgent(ctx context.Context, age
 	var items []models.CoordinationTask
 	if err := s.db.NewSelect().Model(&items).
 		Where("assignee_agent_id = ?", agentIDHex).
-		Where("status IN (?)", bun.In([]string{CoordinationTaskStatusAssigned, CoordinationTaskStatusInProgress})).
+		Where("status IN (?)", bun.List([]string{CoordinationTaskStatusAssigned, CoordinationTaskStatusInProgress})).
 		Order("created_at ASC").
 		Scan(ctx); err != nil {
 		return nil, fmt.Errorf("failed to list in-progress coordination tasks by agent: %w", err)
@@ -444,7 +444,7 @@ func (s *pgCoordinationTaskStore) RevertByAgent(ctx context.Context, agentIDHex 
 		Set("dispatch_attempts = dispatch_attempts + 1").
 		Set("updated_at = ?", now).
 		Where("assignee_agent_id = ?", agentIDHex).
-		Where("status IN (?)", bun.In([]string{CoordinationTaskStatusAssigned, CoordinationTaskStatusInProgress})).
+		Where("status IN (?)", bun.List([]string{CoordinationTaskStatusAssigned, CoordinationTaskStatusInProgress})).
 		Exec(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to revert coordination tasks by agent: %w", err)
@@ -556,7 +556,7 @@ func (s *pgCoordinationTaskStore) cancelChildTasks(ctx context.Context, parentTa
 	var children []models.CoordinationTask
 	if err := s.db.NewSelect().Model(&children).
 		Where("parent_task_id = ?", parentTaskID).
-		Where("status NOT IN (?)", bun.In([]string{CoordinationTaskStatusComplete, CoordinationTaskStatusFailed, CoordinationTaskStatusCancelled})).
+		Where("status NOT IN (?)", bun.List([]string{CoordinationTaskStatusComplete, CoordinationTaskStatusFailed, CoordinationTaskStatusCancelled})).
 		Scan(ctx); err != nil {
 		return fmt.Errorf("failed to query child coordination tasks: %w", err)
 	}
@@ -587,7 +587,7 @@ func (s *pgCoordinationTaskStore) UpdateTaskStatus(ctx context.Context, taskID u
 		Set("updated_at = ?", now).
 		Where("id = ?", taskID)
 	if len(fromStatuses) > 0 {
-		q = q.Where("status IN (?)", bun.In(fromStatuses))
+		q = q.Where("status IN (?)", bun.List(fromStatuses))
 	}
 	res, err := q.Exec(ctx)
 	if err != nil {
@@ -619,7 +619,7 @@ func (s *pgCoordinationTaskStore) BumpDispatchAttempts(ctx context.Context, task
 		Set("dispatch_attempts = dispatch_attempts + 1").
 		Set("updated_at = ?", now).
 		Where("id = ?", taskID).
-		Where("status IN (?)", bun.In([]string{CoordinationTaskStatusPending, CoordinationTaskStatusAssigned, CoordinationTaskStatusInProgress})).
+		Where("status IN (?)", bun.List([]string{CoordinationTaskStatusPending, CoordinationTaskStatusAssigned, CoordinationTaskStatusInProgress})).
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to bump coordination task dispatch attempts: %w", err)

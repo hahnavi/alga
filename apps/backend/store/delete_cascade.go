@@ -47,29 +47,29 @@ func hardDeleteAlertCascade(ctx context.Context, tx bun.Tx, alertID uuid.UUID, a
 	}
 
 	if _, err := tx.NewDelete().Model((*models.AlertInvestigationAlert)(nil)).
-		Where("alert_investigation_id IN (?)", bun.In(invUUIDs)).
+		Where("alert_investigation_id IN (?)", bun.List(invUUIDs)).
 		Exec(ctx); err != nil {
 		return fmt.Errorf("delete alert investigation alerts: %w", err)
 	}
 	if _, err := tx.NewDelete().Model((*models.AlertInvestigationUpdate)(nil)).
-		Where("alert_investigation_id IN (?)", bun.In(invUUIDs)).
+		Where("alert_investigation_id IN (?)", bun.List(invUUIDs)).
 		Exec(ctx); err != nil {
 		return fmt.Errorf("delete alert investigation updates: %w", err)
 	}
 	if _, err := tx.NewDelete().Model((*models.AlertInvestigationEvent)(nil)).
-		Where("alert_investigation_id IN (?)", bun.In(invUUIDs)).
+		Where("alert_investigation_id IN (?)", bun.List(invUUIDs)).
 		Exec(ctx); err != nil {
 		return fmt.Errorf("delete alert investigation events: %w", err)
 	}
 	if _, err := tx.NewDelete().Model((*models.AlertInvestigation)(nil)).
-		Where("id IN (?)", bun.In(invUUIDs)).
+		Where("id IN (?)", bun.List(invUUIDs)).
 		Exec(ctx); err != nil {
 		return fmt.Errorf("delete alert investigations: %w", err)
 	}
 
 	// Agent memories are scoped by the investigation's string business id.
 	if _, err := tx.NewDelete().Model((*models.AgentMemory)(nil)).
-		Where("investigation_id IN (?)", bun.In(invStrIDs)).
+		Where("investigation_id IN (?)", bun.List(invStrIDs)).
 		Exec(ctx); err != nil {
 		return fmt.Errorf("delete agent memories: %w", err)
 	}
@@ -105,17 +105,17 @@ func hardDeleteIncidentCascade(ctx context.Context, tx bun.Tx, incidentID uuid.U
 			invStrIDs = append(invStrIDs, inv.IncidentInvestigationID)
 		}
 		if _, err := tx.NewDelete().Model((*models.IncidentInvestigationUpdate)(nil)).
-			Where("incident_investigation_id IN (?)", bun.In(invUUIDs)).
+			Where("incident_investigation_id IN (?)", bun.List(invUUIDs)).
 			Exec(ctx); err != nil {
 			return fmt.Errorf("delete incident investigation updates: %w", err)
 		}
 		if _, err := tx.NewDelete().Model((*models.IncidentInvestigation)(nil)).
-			Where("id IN (?)", bun.In(invUUIDs)).
+			Where("id IN (?)", bun.List(invUUIDs)).
 			Exec(ctx); err != nil {
 			return fmt.Errorf("delete incident investigations: %w", err)
 		}
 		if _, err := tx.NewDelete().Model((*models.AgentMemory)(nil)).
-			Where("investigation_id IN (?)", bun.In(invStrIDs)).
+			Where("investigation_id IN (?)", bun.List(invStrIDs)).
 			Exec(ctx); err != nil {
 			return fmt.Errorf("delete agent memories: %w", err)
 		}
@@ -140,12 +140,12 @@ func deleteOwnerThreadInTx(ctx context.Context, tx bun.Tx, ownerType, ownerID st
 		return nil
 	}
 	if _, err := tx.NewDelete().Model((*models.InvestigationThreadMessage)(nil)).
-		Where("thread_id IN (?)", bun.In(threadIDs)).
+		Where("thread_id IN (?)", bun.List(threadIDs)).
 		Exec(ctx); err != nil {
 		return fmt.Errorf("delete thread messages: %w", err)
 	}
 	if _, err := tx.NewDelete().Model((*models.InvestigationThread)(nil)).
-		Where("id IN (?)", bun.In(threadIDs)).
+		Where("id IN (?)", bun.List(threadIDs)).
 		Exec(ctx); err != nil {
 		return fmt.Errorf("delete owner thread: %w", err)
 	}

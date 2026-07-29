@@ -332,7 +332,7 @@ func (s *pgAgentMemoryStore) IncrementAccess(ctx context.Context, ids []uuid.UUI
 	_, err := s.db.NewUpdate().Model((*models.AgentMemory)(nil)).
 		Set("access_count = access_count + 1").
 		Set("updated_at = ?", time.Now().UTC()).
-		Where("id IN (?)", bun.In(ids)).
+		Where("id IN (?)", bun.List(ids)).
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("increment access count: %w", err)

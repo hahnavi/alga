@@ -372,7 +372,7 @@ func (s *pgDashboardStore) getIncidentStats(ctx context.Context) (*DashboardInci
 	}
 
 	active, err := s.db.NewSelect().Model((*models.Incident)(nil)).
-		Where("status IN (?)", bun.In([]string{"detected", "triaging", "active"})).
+		Where("status IN (?)", bun.List([]string{"detected", "triaging", "active"})).
 		Where("deleted_at IS NULL").
 		Count(ctx)
 	if err != nil {
@@ -386,7 +386,7 @@ func (s *pgDashboardStore) getIncidentStats(ctx context.Context) (*DashboardInci
 		logger.WarnCtx(ctx, "failed to count mitigated incidents", "component", "store", "error", err)
 	}
 	resolved, err := s.db.NewSelect().Model((*models.Incident)(nil)).
-		Where("status IN (?)", bun.In([]string{"resolved", "closed"})).
+		Where("status IN (?)", bun.List([]string{"resolved", "closed"})).
 		Where("deleted_at IS NULL").
 		Count(ctx)
 	if err != nil {
@@ -422,7 +422,7 @@ func (s *pgDashboardStore) getIncidentStats(ctx context.Context) (*DashboardInci
 func (s *pgDashboardStore) getActiveIncidents(ctx context.Context) ([]ActiveIncidentItem, error) {
 	var incs []models.Incident
 	err := s.db.NewSelect().Model(&incs).
-		Where("status IN (?)", bun.In([]string{"active", "mitigated"})).
+		Where("status IN (?)", bun.List([]string{"active", "mitigated"})).
 		Where("deleted_at IS NULL").
 		Order("created_at DESC").
 		Limit(10).
@@ -617,7 +617,7 @@ func (s *pgDashboardStore) GetRecentInvestigations(ctx context.Context, since ti
 func (s *pgDashboardStore) GetActiveInvestigations(ctx context.Context, limit int) ([]RecentInvestigationItem, error) {
 	var invs []models.AlertInvestigation
 	err := s.db.NewSelect().Model(&invs).
-		Where("status IN (?)", bun.In([]string{"pending", "investigating", "assigned", "paused"})).
+		Where("status IN (?)", bun.List([]string{"pending", "investigating", "assigned", "paused"})).
 		Order("updated_at DESC").
 		Limit(limit).
 		Scan(ctx)

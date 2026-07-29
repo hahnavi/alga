@@ -50,7 +50,7 @@ func (s *pgAlertInvestigationStore) FindSimilarAlertInvestigations(ctx context.C
 	}
 
 	query := s.db.NewSelect().Model((*models.AlertInvestigation)(nil)).
-		Where("status IN (?)", bun.In([]string{AlertInvestigationStatusComplete, AlertInvestigationStatusTimedOut})).
+		Where("status IN (?)", bun.List([]string{AlertInvestigationStatusComplete, AlertInvestigationStatusTimedOut})).
 		Order("completed_at DESC").
 		Limit(limit)
 

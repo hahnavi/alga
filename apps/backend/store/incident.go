@@ -668,7 +668,7 @@ func (s *pgIncidentStore) TransitionIncidentStatus(ctx context.Context, incident
 		Set("status = ?", toStatus).
 		Set("updated_at = ?", now).
 		Where("incident_number = ?", incidentNumber).
-		Where("status IN (?)", bun.In(fromStatuses)).
+		Where("status IN (?)", bun.List(fromStatuses)).
 		Where("deleted_at IS NULL")
 
 	q = applyStatusTimestampsBun(q, toStatus, now)
@@ -794,7 +794,7 @@ func (s *pgIncidentStore) ListSLAEligibleIncidents(ctx context.Context) ([]Incid
 
 	var incs []models.Incident
 	err := s.db.NewSelect().Model(&incs).
-		Where("status IN (?)", bun.In([]string{"detected", "triaging", "active", "mitigated"})).
+		Where("status IN (?)", bun.List([]string{"detected", "triaging", "active", "mitigated"})).
 		Where("(sla_target_respond_at IS NOT NULL OR sla_target_resolve_at IS NOT NULL)").
 		Where("deleted_at IS NULL").
 		Scan(ctx)
@@ -813,7 +813,7 @@ func (s *pgIncidentStore) CountActiveByService(ctx context.Context) (map[string]
 	var incs []models.Incident
 	err := s.db.NewSelect().Model(&incs).
 		Column("service_id").
-		Where("status NOT IN (?)", bun.In(IncidentTerminalStatuses)).
+		Where("status NOT IN (?)", bun.List(IncidentTerminalStatuses)).
 		Where("service_id IS NOT NULL").
 		Where("deleted_at IS NULL").
 		Scan(ctx)
@@ -836,7 +836,7 @@ func (s *pgIncidentStore) CountActiveByServiceID(ctx context.Context, serviceID 
 		return 0, fmt.Errorf("invalid service ID: %w", err)
 	}
 	return s.db.NewSelect().Model((*models.Incident)(nil)).
-		Where("status NOT IN (?)", bun.In(IncidentTerminalStatuses)).
+		Where("status NOT IN (?)", bun.List(IncidentTerminalStatuses)).
 		Where("service_id = ?", svcUUID).
 		Where("deleted_at IS NULL").
 		Count(ctx)
@@ -860,7 +860,7 @@ func (s *pgIncidentStore) CountActiveByPriority(ctx context.Context, serviceID s
 	err = s.db.NewSelect().
 		TableExpr("incidents").
 		ColumnExpr("priority, COUNT(*) as count").
-		Where("status NOT IN (?)", bun.In([]string{"resolved", "closed", "cancelled"})).
+		Where("status NOT IN (?)", bun.List([]string{"resolved", "closed", "cancelled"})).
 		Where("service_id = ?", svcUUID).
 		Where("deleted_at IS NULL").
 		Group("priority").
@@ -886,7 +886,7 @@ func (s *pgIncidentStore) ListActiveSummarizableIncidents(ctx context.Context) (
 
 	var rows []models.Incident
 	err := s.db.NewSelect().Model(&rows).
-		Where("status IN (?)", bun.In([]string{"detected", "triaging", "active", "mitigated"})).
+		Where("status IN (?)", bun.List([]string{"detected", "triaging", "active", "mitigated"})).
 		Where("slack_channel_id != ''").
 		Where("deleted_at IS NULL").
 		Order("created_at ASC").
@@ -907,7 +907,7 @@ func (s *pgIncidentStore) ListActiveIncidents(ctx context.Context) ([]IncidentRe
 
 	var rows []models.Incident
 	err := s.db.NewSelect().Model(&rows).
-		Where("status NOT IN (?)", bun.In([]string{"resolved", "closed", "cancelled"})).
+		Where("status NOT IN (?)", bun.List([]string{"resolved", "closed", "cancelled"})).
 		Where("deleted_at IS NULL").
 		Order("created_at ASC").
 		Scan(ctx)

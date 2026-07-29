@@ -813,9 +813,9 @@ func (s *pgAlertStore) ListUninvestigatedAlerts(ctx context.Context, threshold t
 		Where("created_at <= ?", cutoff).
 		Where("deleted_at IS NULL").
 		// Not investigated: no non-terminal investigation linked via fingerprint
-		Where("NOT EXISTS (SELECT 1 FROM alert_investigation_alerts aia JOIN alert_investigations ai ON aia.alert_investigation_id = ai.id WHERE aia.fingerprint = alert.fingerprint AND ai.status NOT IN (?))", bun.In(invTerminal)).
+		Where("NOT EXISTS (SELECT 1 FROM alert_investigation_alerts aia JOIN alert_investigations ai ON aia.alert_investigation_id = ai.id WHERE aia.fingerprint = alert.fingerprint AND ai.status NOT IN (?))", bun.List(invTerminal)).
 		// Not handled by active incident
-		Where("NOT EXISTS (SELECT 1 FROM incident_alerts ia JOIN incidents inc ON ia.incident_id = inc.id WHERE ia.alert_id = alert.id AND inc.status NOT IN (?))", bun.In(incTerminal)).
+		Where("NOT EXISTS (SELECT 1 FROM incident_alerts ia JOIN incidents inc ON ia.incident_id = inc.id WHERE ia.alert_id = alert.id AND inc.status NOT IN (?))", bun.List(incTerminal)).
 		Order("created_at DESC").
 		Limit(500).
 		Scan(ctx)

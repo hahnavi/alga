@@ -203,7 +203,7 @@ func (s *pgTeamStore) ListTeams(ctx context.Context, limit, skip int) ([]TeamRec
 	if len(teamIDs) > 0 {
 		var allMembers []models.TeamMember
 		err = s.db.NewSelect().Model(&allMembers).
-			Where("team_id IN (?)", bun.In(teamIDs)).
+			Where("team_id IN (?)", bun.List(teamIDs)).
 			Scan(ctx)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to load team members: %w", err)
@@ -222,7 +222,7 @@ func (s *pgTeamStore) ListTeams(ctx context.Context, limit, skip int) ([]TeamRec
 		if len(userIDs) > 0 {
 			var users []models.User
 			err = s.db.NewSelect().Model(&users).
-				Where("id IN (?)", bun.In(userIDs)).
+				Where("id IN (?)", bun.List(userIDs)).
 				Scan(ctx)
 			if err != nil {
 				logger.WarnCtx(ctx, "failed to batch-load users for team members", "component", "store", "error", err)

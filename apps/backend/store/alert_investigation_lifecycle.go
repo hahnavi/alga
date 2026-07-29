@@ -35,7 +35,7 @@ func (s *pgAlertInvestigationStore) CompleteAlertInvestigation(ctx context.Conte
 			Set("completed_by_name = ?", completion.ActorName).
 			Set("updated_at = ?", now).
 			Where("id = ?", invUUID).
-			Where("status IN (?)", bun.In([]string{
+			Where("status IN (?)", bun.List([]string{
 				AlertInvestigationStatusPending,
 				AlertInvestigationStatusAssigned,
 				AlertInvestigationStatusInvestigating,
@@ -103,7 +103,7 @@ func (s *pgAlertInvestigationStore) RequeueAlertInvestigation(ctx context.Contex
 			Set("started_at = NULL").
 			Set("updated_at = ?", now).
 			Where("id = ?", invUUID).
-			Where("status IN (?)", bun.In([]string{
+			Where("status IN (?)", bun.List([]string{
 				AlertInvestigationStatusAssigned,
 				AlertInvestigationStatusInvestigating,
 				AlertInvestigationStatusPaused,
@@ -239,7 +239,7 @@ func (s *pgAlertInvestigationStore) TransitionAlertInvestigationStatus(ctx conte
 		Where("id = ?", invUUID)
 
 	if len(fromStatuses) > 0 {
-		q = q.Where("status IN (?)", bun.In(fromStatuses))
+		q = q.Where("status IN (?)", bun.List(fromStatuses))
 	}
 
 	switch toStatus {

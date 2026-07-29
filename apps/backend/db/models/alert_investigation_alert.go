@@ -12,7 +12,7 @@ type AlertInvestigationAlert struct {
 	AlertInvestigationID uuid.UUID         `bun:"investigation_id,notnull"`
 	AlertID              *uuid.UUID        `bun:"alert_id"`
 	Fingerprint          string            `bun:"fingerprint,notnull"`
-	AlertNumber          int64             `bun:"alert_number"`
+	AlertNumber          int64             `bun:"alert_number,notnull,default:0"`
 	Status               string            `bun:"status"`
 	Alertname            string            `bun:"alertname"`
 	Namespace            string            `bun:"namespace"`

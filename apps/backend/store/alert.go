@@ -80,8 +80,8 @@ func (s *pgAlertStore) attachInvestigationSummaries(ctx context.Context, records
 	}
 }
 
-func (s *pgAlertStore) insertAlertEvent(ctx context.Context, alertID uuid.UUID, ev AlertEvent) error {
-	m := &models.AlertEvent{
+func newAlertEventModel(alertID uuid.UUID, ev AlertEvent) *models.AlertEvent {
+	return &models.AlertEvent{
 		IDModel:          models.IDModel{ID: models.NewUUID()},
 		AlertID:          alertID,
 		Type:             ev.Type,
@@ -91,7 +91,10 @@ func (s *pgAlertStore) insertAlertEvent(ctx context.Context, alertID uuid.UUID, 
 		ActorUserID:      ev.ActorUserID,
 		Source:           ev.Source,
 	}
-	_, err := s.db.NewInsert().Model(m).Exec(ctx)
+}
+
+func (s *pgAlertStore) insertAlertEvent(ctx context.Context, alertID uuid.UUID, ev AlertEvent) error {
+	_, err := s.db.NewInsert().Model(newAlertEventModel(alertID, ev)).Exec(ctx)
 	return err
 }
 
@@ -124,15 +127,6 @@ func (s *pgAlertStore) Create(record AlertRecord) (int64, error) {
 		GeneratorURL: record.GeneratorURL,
 	}
 
-	if _, err := s.db.NewInsert().Model(m).
-		ExcludeColumn("alert_number").
-		Returning("alert_number").
-		Exec(ctx); err != nil {
-		return 0, fmt.Errorf("failed to insert alert: %w", err)
-	}
-	record.ID = m.ID
-	record.AlertNumber = m.AlertNumber
-
 	ev := AlertEvent{Type: "fired", Timestamp: record.StartsAt, Source: "grafana"}
 	if record.InitialEvent != nil {
 		ev = *record.InitialEvent
@@ -147,8 +141,21 @@ func (s *pgAlertStore) Create(record AlertRecord) (int64, error) {
 		}
 	}
 
-	if err := s.insertAlertEvent(ctx, m.ID, ev); err != nil {
-		return 0, fmt.Errorf("failed to insert fired event: %w", err)
+	// Insert the alert and its initial event atomically so a partial failure
+	// can't leave an alert without its "fired" event.
+	if err := s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		if _, err := tx.NewInsert().Model(m).
+			ExcludeColumn("alert_number").
+			Returning("alert_number").
+			Exec(ctx); err != nil {
+			return fmt.Errorf("failed to insert alert: %w", err)
+		}
+		if _, err := tx.NewInsert().Model(newAlertEventModel(m.ID, ev)).Exec(ctx); err != nil {
+			return fmt.Errorf("failed to insert fired event: %w", err)
+		}
+		return nil
+	}); err != nil {
+		return 0, err
 	}
 
 	return m.AlertNumber, nil
@@ -159,9 +166,11 @@ func (s *pgAlertStore) GetByFingerprint(fingerprint string) (*AlertRecord, error
 	defer cancel()
 
 	var a models.Alert
+	// Tombstone-inclusive lookup: WhereAllWithDeleted disables Bun's automatic
+	// deleted_at IS NULL filter so callers can observe soft-deleted alerts.
 	err := s.db.NewSelect().Model(&a).
 		Where("fingerprint = ?", fingerprint).
-		Where("deleted_at IS NULL").
+		WhereAllWithDeleted().
 		Order("updated_at DESC").
 		Limit(1).
 		Scan(ctx)
@@ -661,7 +670,7 @@ func (s *pgAlertStore) ExpungeSoftDeletedAlertsChildren(ctx context.Context) (in
 	defer cancel()
 
 	var rows []models.Alert
-	err := s.db.NewSelect().Model(&rows).Where("deleted_at IS NOT NULL").Scan(ctx)
+	err := s.db.NewSelect().Model(&rows).WhereDeleted().Scan(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("query soft-deleted alerts: %w", err)
 	}
@@ -759,19 +768,41 @@ func (s *pgAlertStore) QueryAlerts(filter map[string]any) ([]AlertRecord, error)
 }
 
 func (s *pgAlertStore) DeleteOlderThan(ctx context.Context, olderThan time.Time) (int64, error) {
-	res, err := s.db.NewDelete().Model((*models.Alert)(nil)).
+	// Physically purge old resolved alerts. Bun's soft_delete filter restricts
+	// this SELECT to live rows (deleted_at IS NULL), so existing tombstones are
+	// left for a separate purge job. Each row is removed inside a tx:
+	// hardDeleteAlertCascade clears investigation artifacts, then ForceDelete
+	// removes the alert (FK cascades events, delivery_targets, incident_alerts).
+	var rows []models.Alert
+	err := s.db.NewSelect().Model(&rows).
+		Column("id", "alert_number").
 		Where("created_at < ?", olderThan).
 		Where("status = ?", "resolved").
-		Where("deleted_at IS NULL").
-		Exec(ctx)
+		Scan(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("failed to delete old alerts: %w", err)
+		return 0, fmt.Errorf("failed to query old alerts: %w", err)
 	}
-	n, err := res.RowsAffected()
-	if err != nil {
-		return 0, fmt.Errorf("failed to delete old alerts: %w", err)
+
+	var purged int64
+	for i := range rows {
+		a := &rows[i]
+		if err := s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+			if err := hardDeleteAlertCascade(ctx, tx, a.ID, a.AlertNumber); err != nil {
+				return err
+			}
+			if _, err := tx.NewDelete().Model((*models.Alert)(nil)).
+				Where("id = ?", a.ID).
+				ForceDelete().
+				Exec(ctx); err != nil {
+				return fmt.Errorf("purge alert row: %w", err)
+			}
+			return nil
+		}); err != nil {
+			return purged, fmt.Errorf("purge old alert %d: %w", a.AlertNumber, err)
+		}
+		purged++
 	}
-	return n, nil
+	return purged, nil
 }
 
 func (s *pgAlertStore) CountOlderThan(ctx context.Context, olderThan time.Time) (int64, error) {
@@ -1003,10 +1034,13 @@ func (s *pgAlertStore) GetAlertsByIncident(ctx context.Context, incidentNumber i
 	}
 
 	var alerts []models.Alert
+	// Include soft-deleted alerts so linked tombstones stay visible to the
+	// incident's Linked Alerts card; live-only consumers filter on DeletedAt.
 	err = s.db.NewSelect().Model(&alerts).
 		Column("fingerprint").
 		Join("JOIN incident_alerts ia ON ia.alert_id = alert.id").
 		Where("ia.incident_id = ?", inc.ID).
+		WhereAllWithDeleted().
 		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get alerts by incident: %w", err)

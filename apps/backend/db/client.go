@@ -90,7 +90,7 @@ func NewWithPool(dsn string, pool PoolConfig) (*Client, error) {
 	sqldb.SetConnMaxLifetime(pool.ConnMaxLifetime)
 
 	if err := sqldb.PingContext(ctx); err != nil {
-		sqldb.Close()
+		_ = sqldb.Close()
 		return nil, fmt.Errorf("ping postgres: %w", err)
 	}
 

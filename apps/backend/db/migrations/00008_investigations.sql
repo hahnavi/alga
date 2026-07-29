@@ -59,7 +59,7 @@ CREATE TABLE alert_investigation_alerts (
     investigation_id UUID NOT NULL REFERENCES alert_investigations (id) ON DELETE CASCADE,
     alert_id UUID REFERENCES alerts (id) ON DELETE SET NULL,
     fingerprint TEXT NOT NULL,
-    alert_number BIGINT CHECK (alert_number >= 0),
+    alert_number BIGINT NOT NULL DEFAULT 0 CHECK (alert_number >= 0),
     status TEXT DEFAULT '',
     alertname TEXT DEFAULT '',
     namespace TEXT DEFAULT '',

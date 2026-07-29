@@ -92,13 +92,7 @@ go vet ./...
 go mod tidy
 ```
 
-**Ent code generation:** If you modify Ent schemas, regenerate the Ent client. The project exposes this via moon:
-
-```bash
-moon run backend:gen   # runs `go generate ./ent`
-```
-
-When running `go generate ./ent` directly, set `GOMEMLIMIT` and `GOMAXPROCS` to bound resource use during code generation (per the repo's AGENTS.md).
+**Schema changes:** There is no code-generation step. To change the database schema, edit (or add) the hand-written Bun model in `apps/backend/db/models/`, then author a matching [goose](https://github.com/pressly/goose) SQL migration in `apps/backend/db/migrations/`. Keep the model struct tags and the migration DDL in sync.
 
 ### Frontend Setup
 
@@ -139,7 +133,7 @@ pnpm format  # Check only
 
 - Group imports in three blocks separated by blank lines:
   1. Standard library
-  2. Third-party (`gopkg.in/yaml.v3`, `entgo.io/ent`, `github.com/...`)
+  2. Third-party (`gopkg.in/yaml.v3`, `github.com/uptrace/bun`, `github.com/...`)
   3. Internal packages (`alga/...`)
 
 **Naming:**
@@ -390,7 +384,7 @@ Fixes #123
 
 ```
 api/          # HTTP handlers, auth, SSE
-store/        # Database persistence (Ent)
+store/        # Database persistence (Bun)
 worker/       # Background consumers
 routing/      # Alert routing logic
 correlator/   # Alert correlation
@@ -417,7 +411,7 @@ notification/ # Notification dispatcher
 
 **Database:**
 
-- Use Ent ORM for type-safe queries
+- Use Bun query builders with bound parameters (never concatenate values into SQL)
 - Use transactions for multi-step operations
 - Index frequently queried fields
 - Use connection pooling

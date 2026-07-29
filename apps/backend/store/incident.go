@@ -104,7 +104,6 @@ type IncidentStore interface {
 	DeleteIncident(ctx context.Context, incidentNumber int64) error
 	ListIncidents(ctx context.Context, filter IncidentListFilter) ([]IncidentRecord, int64, error)
 	ListSLAEligibleIncidents(ctx context.Context) ([]IncidentRecord, error)
-	UpdateIncidentStatus(ctx context.Context, incidentNumber int64, status string) error
 	TransitionIncidentStatus(ctx context.Context, incidentNumber int64, fromStatuses []string, toStatus string) error
 	AddTimelineEntry(ctx context.Context, record *IncidentTimelineEntryRecord) error
 	GetTimeline(ctx context.Context, incidentNumber int64) ([]IncidentTimelineEntryRecord, error)
@@ -447,7 +446,7 @@ func (s *pgIncidentStore) ExpungeSoftDeletedIncidentsChildren(ctx context.Contex
 	defer cancel()
 
 	var rows []models.Incident
-	err := s.db.NewSelect().Model(&rows).Where("deleted_at IS NOT NULL").Scan(ctx)
+	err := s.db.NewSelect().Model(&rows).WhereDeleted().Scan(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("query soft-deleted incidents: %w", err)
 	}
@@ -592,30 +591,6 @@ func (s *pgIncidentStore) ListIncidents(ctx context.Context, filter IncidentList
 	}
 
 	return records, int64(total), nil
-}
-
-func (s *pgIncidentStore) UpdateIncidentStatus(ctx context.Context, incidentNumber int64, status string) error {
-	ctx, cancel := pgctx(ctx)
-	defer cancel()
-
-	now := time.Now().UTC()
-	q := s.db.NewUpdate().Model((*models.Incident)(nil)).
-		Set("status = ?", status).
-		Set("updated_at = ?", now).
-		Where("incident_number = ?", incidentNumber).
-		Where("deleted_at IS NULL")
-
-	q = applyStatusTimestampsBun(q, status, now)
-
-	res, err := q.Exec(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to update incident status: %w", err)
-	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
-		return ErrIncidentNotFound
-	}
-	return nil
 }
 
 func applyStatusTimestampsBun(q *bun.UpdateQuery, toStatus string, now time.Time) *bun.UpdateQuery {

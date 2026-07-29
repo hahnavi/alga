@@ -7,7 +7,7 @@ description: Alga's full-stack monorepo architecture — components, data flow, 
 
 ## Overview
 
-Alga is a full-stack monorepo architecture designed for high availability, scalability, and production-grade security. The system ingests alerts from Grafana and other monitoring systems, routes notifications to Mattermost or Slack, persists alert state in PostgreSQL (via Ent ORM), and orchestrates an SRE agent investigation pipeline backed by RabbitMQ and Valkey.
+Alga is a full-stack monorepo architecture designed for high availability, scalability, and production-grade security. The system ingests alerts from Grafana and other monitoring systems, routes notifications to Mattermost or Slack, persists alert state in PostgreSQL (via Bun ORM), and orchestrates an SRE agent investigation pipeline backed by RabbitMQ and Valkey.
 
 ## Components
 
@@ -45,7 +45,7 @@ The frontend provides:
 #### PostgreSQL
 
 - **Purpose:** Primary persistence layer
-- **Access:** Via Ent ORM and pgx driver
+- **Access:** Via Bun ORM over the pgx/v5 driver
 - **Features:**
   - Alert state and history
   - User sessions and auth data

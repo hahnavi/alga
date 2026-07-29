@@ -408,7 +408,7 @@ curl -X POST http://localhost:8080/api/v1/agent/messages \
 **PostgreSQL 18** is required.
 
 - Used for all persistent data (alerts, incidents, users, etc.)
-- Schema managed via Ent ORM migrations
+- Schema managed via goose SQL migrations
 - Supports pgvector for agent memory system
 
 ### Can I use managed database services?
@@ -508,7 +508,7 @@ UPDATE users SET failed_login_attempts = 0 WHERE email = 'user@example.com';
 
 **Common causes:**
 
-1. **Migration conflict:** Manually resolve in `apps/backend/ent/schema/`
+1. **Migration conflict:** Manually resolve the goose SQL migrations in `apps/backend/db/migrations/` (and keep the Bun models in `apps/backend/db/models/` in sync)
 2. **Connection error:** Check database is accessible
 3. **Schema mismatch:** Dump and restore fresh database
 

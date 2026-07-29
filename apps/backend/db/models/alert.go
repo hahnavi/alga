@@ -20,7 +20,7 @@ type Alert struct {
 	StartsAt           time.Time         `bun:"starts_at,notnull,default:current_timestamp"`
 	EndsAt             *time.Time        `bun:"ends_at"`
 	GeneratorURL       string            `bun:"generator_url"`
-	AlertNumber        int64             `bun:"alert_number,unique"`
+	AlertNumber        int64             `bun:"alert_number,notnull,unique"`
 	TriageResultID     *uuid.UUID        `bun:"triage_result_id"`
 	Enrichment         map[string]any    `bun:"enrichment,type:jsonb"`
 	TriageCategory     string            `bun:"triage_category"`

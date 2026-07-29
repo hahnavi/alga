@@ -16,14 +16,14 @@ Alga follows the Opsgenie deduplication model:
 Key concepts:
 
 - **Fingerprint** is a dedup key, not a unique identifier. Multiple resolved alerts can share the same fingerprint.
-- **Alert Number** is the true unique identifier for each alert, assigned sequentially via the counters table.
+- **Alert Number** is the true unique identifier for each alert, assigned sequentially by a Postgres sequence.
 - Resolved alerts are never reopened _automatically_ by the system, but they **can** be manually reopened via the API (`POST /api/v1/alerts/{alert_number}/reopen`) or the UI. Reopening resets the alert from `resolved` back to `firing` and can revive a terminal investigation (except `promoted` — a promoted investigation is irreversible). A new firing alert with the same fingerprint creates a fresh alert record.
 
 ### Alert Fields
 
 | Field                 | Description                                                |
 | --------------------- | ---------------------------------------------------------- |
-| `alert_number`        | Sequential unique identifier (from counters table)         |
+| `alert_number`        | Sequential unique identifier (from a Postgres sequence)    |
 | `fingerprint`         | Dedup key for correlating related alerts                   |
 | `status`              | `firing` or `resolved`                                     |
 | `acknowledged`        | Whether the alert has been acknowledged                    |

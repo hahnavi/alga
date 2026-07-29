@@ -20,7 +20,7 @@ These rules override convenience. Violating them is a bug.
 
 - Search existing code before adding new helpers, stores, components, composables, routes, or API methods.
 - Use HTTP helpers from `apps/backend/api/helpers.go` (`decodeJSON`, `parseLimitSkip`, `writePaginatedJSON`, `ensureSlice`, `pathID`) and `apps/backend/api/http.go` (`writeJSON`, `writeError`, `writeInternalError`).
-- Use store helpers from `apps/backend/store/pg_helpers.go` (`pgctx`, `rollbackTx`, `handleQueryErr`, `pgStoreBase`, duplicate-key helpers, limit/skip extraction, sort parsing) and `nextPgCounter` from `apps/backend/store/store.go`.
+- Use store helpers from `apps/backend/store/pg_helpers.go` (`pgctx`, `rollbackTx`, `handleQueryErr`, `pgStoreBase`, duplicate-key helpers, limit/skip extraction, sort parsing).
 - Put frontend HTTP calls in `apps/frontend/src/lib/api.ts`; do not call `fetch()` from pages or components.
 - Reuse frontend composables in `apps/frontend/src/composables/` before creating local async, delete, search, SSE, clipboard, filter, or form logic.
 - Reuse UI primitives from `apps/frontend/src/components/ui/`; do not create duplicate Button, Input, Modal, Card, EmptyState, ErrorBanner, or loading components.

@@ -15,23 +15,23 @@ import (
 
 type IntegrationConfig struct {
 	MattermostURL            string    `json:"mattermost_url"`
-	MattermostWebhookSecret  string    `json:"mattermost_webhook_secret"`
+	MattermostWebhookSecret  string    `json:"-"`
 	MattermostTeam           string    `json:"mattermost_team"`
 	MattermostDefaultChannel string    `json:"mattermost_default_channel"`
 	MattermostDisabled       bool      `json:"mattermost_disabled"`
-	SlackBotToken            string    `json:"slack_bot_token"`
-	SlackSigningSecret       string    `json:"slack_signing_secret"`
+	SlackBotToken            string    `json:"-"`
+	SlackSigningSecret       string    `json:"-"`
 	SlackDefaultChannel      string    `json:"slack_default_channel"`
 	SlackDisabled            bool      `json:"slack_disabled"`
 	SlackClientID            string    `json:"slack_client_id"`
-	SlackClientSecret        string    `json:"slack_client_secret"`
+	SlackClientSecret        string    `json:"-"`
 	SlackWorkspaceName       string    `json:"slack_workspace_name"`
 	SlackWorkspaceID         string    `json:"slack_workspace_id"`
 	TwilioAccountSID         string    `json:"twilio_account_sid"`
-	TwilioAuthToken          string    `json:"twilio_auth_token"`
+	TwilioAuthToken          string    `json:"-"`
 	TwilioFromNumber         string    `json:"twilio_from_number"`
 	TwilioDisabled           bool      `json:"twilio_disabled"`
-	TelnyxAPIKey             string    `json:"telnyx_api_key"`
+	TelnyxAPIKey             string    `json:"-"`
 	TelnyxConnectionID       string    `json:"telnyx_connection_id"`
 	TelnyxFromNumber         string    `json:"telnyx_from_number"`
 	TelnyxPublicKey          string    `json:"telnyx_public_key"`
@@ -41,7 +41,7 @@ type IntegrationConfig struct {
 	TelnyxTTSAPIKeyRef       string    `json:"telnyx_tts_api_key_ref"`
 	VoiceProvider            string    `json:"voice_provider"`
 	HermesPlatformURL        string    `json:"hermes_platform_url"`
-	HermesPlatformToken      string    `json:"hermes_platform_token"`
+	HermesPlatformToken      string    `json:"-"`
 	UpdatedAt                time.Time `json:"updated_at"`
 }
 

@@ -132,35 +132,19 @@ jobs:
           args: ./...
 
   # ─────────────────────────────── Backend: tests ────────────────────────
-  # Only Postgres is required: store tests provision an isolated schema per
-  # test (search_path isolation, CREATE privilege only) and apply the ent
-  # schema themselves. Valkey/RabbitMQ tests use mocks, not live brokers.
+  # Runs unit tests plus the `integration`-tagged store suite. The store
+  # integration tests spin up ephemeral pgvector containers via testcontainers
+  # (Docker is preinstalled on ubuntu-latest) and apply the goose migrations
+  # themselves, so no Postgres service is required here. Valkey/RabbitMQ tests
+  # use mocks, not live brokers.
   backend-test:
     name: Backend · Unit & Integration
     runs-on: ubuntu-latest
     needs: [changes, backend-lint]
     if: needs.changes.outputs.backend == 'true'
-    services:
-      postgres:
-        image: postgres:18-alpine
-        env:
-          POSTGRES_USER: alga
-          POSTGRES_PASSWORD: alga_dev_only
-          POSTGRES_DB: alga
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U alga"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     defaults:
       run:
         working-directory: apps/backend
-    env:
-      # store/pgtest_test.go resolves ALGA_TEST_POSTGRES_DSN first, then
-      # POSTGRES_DSN. Without these the tests skip (CI without Postgres).
-      ALGA_TEST_POSTGRES_DSN: postgres://alga:alga_dev_only@localhost:5432/alga?sslmode=disable
-      POSTGRES_DSN: postgres://alga:alga_dev_only@localhost:5432/alga?sslmode=disable
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -179,8 +163,8 @@ jobs:
       # below. Per testing-strategy.md §7 the gate is REPORTING-ONLY until the
       # codebase meets the coverage targets (domain >=90%, app >=80%); a failing
       # threshold is intentionally NOT set so existing CI cannot red-break.
-      - name: Go test (race + coverage)
-        run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+      - name: Go test (race + coverage, incl. integration)
+        run: go test -tags integration -race -coverprofile=coverage.out -covermode=atomic ./...
       - name: Coverage report (non-gating)
         if: always()
         run: |
@@ -433,11 +417,11 @@ jobs:
           cache-dependency-path: apps/backend/go.sum
 
       # ── gosec: Go static analysis security scanner ──
-      # Ent-generated code is excluded. Fail on High/Critical; surface
-      # findings as annotations. Installed natively (not via the securego/gosec
-      # Docker action) so it builds against this job's GO_VERSION toolchain —
-      # the action's pinned image bundles an older Go that cannot load the
-      # `go 1.26.5` floor in go.work under GOTOOLCHAIN=local.
+      # Fail on High/Critical; surface findings as annotations. Installed
+      # natively (not via the securego/gosec Docker action) so it builds
+      # against this job's GO_VERSION toolchain — the action's pinned image
+      # bundles an older Go that cannot load the `go 1.26.5` floor in go.work
+      # under GOTOOLCHAIN=local.
       - name: gosec
         if: needs.changes.outputs.backend == 'true'
         working-directory: apps/backend
@@ -445,7 +429,7 @@ jobs:
           GOTOOLCHAIN: local
         run: |
           go install github.com/securego/gosec/v2/cmd/gosec@${GOSEC_VERSION}
-          gosec -severity high -confidence medium -exclude-dir ent ./...
+          gosec -severity high -confidence medium ./...
 
       # ── gitleaks: detect secrets committed to the repo ──
       # Always runs (secrets can land in any file type).

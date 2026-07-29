@@ -80,7 +80,7 @@ export const errorEnvelope = z.object({
 // ---------------------------------------------------------------------------
 
 // Alert event `type` and `source` are free-form, non-empty strings at the DB
-// layer (apps/backend/ent/schema/alertevent.go); the backend emits values
+// layer (apps/backend/db/models/alert_event.go); the backend emits values
 // beyond any fixed enum (e.g. "acknowledged" alongside "acked", and sources
 // like "triage_auto_resolve"). Accept any string here so the boundary check
 // validates the wire shape rather than an incomplete enum catalog.
@@ -99,7 +99,7 @@ const alertInvestigationSummarySchema = z.object({
   agent_id: z.string().optional(),
   agent_name: z.string().optional(),
   // `agent_type` and `assignee_type` are free-form strings at the DB layer
-  // (apps/backend/ent/schema/alertinvestigation.go) with no enum constraint;
+  // (apps/backend/db/models/alert_investigation.go) with no enum constraint;
   // new agent/assignee types must not break the boundary check. Accept any
   // string here, mirroring the alert-event `type`/`source` policy below.
   agent_type: z.string().optional(),

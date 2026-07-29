@@ -34,7 +34,8 @@ CREATE TABLE alert_investigations (
     triage_enrichment JSONB,
     assignee_type TEXT NOT NULL DEFAULT 'agent' CHECK (assignee_type IN ('agent', 'user', 'system', 'grafana')),
     assignee_id UUID,
-    CONSTRAINT fk_alert_investigations_promoted_incident FOREIGN KEY (promoted_incident_id) REFERENCES incidents(id) ON DELETE SET NULL
+    CONSTRAINT fk_alert_investigations_promoted_incident FOREIGN KEY (promoted_incident_id) REFERENCES incidents(id) ON DELETE SET NULL,
+    CONSTRAINT fk_alert_investigations_triage_result FOREIGN KEY (triage_result_id) REFERENCES triage_results(id) ON DELETE SET NULL
 );
 
 CREATE INDEX idx_alert_investigations_status_created_at ON alert_investigations (status, created_at);

@@ -14,6 +14,7 @@ CREATE TABLE agent_asks (
     status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'answered', 'expired', 'cancelled')),
     expires_at TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     answered_at TIMESTAMPTZ,
     CONSTRAINT fk_agent_asks_from_agent FOREIGN KEY (from_agent_id) REFERENCES agent_tokens(id) ON DELETE RESTRICT,
     CONSTRAINT fk_agent_asks_to_agent FOREIGN KEY (to_agent_id) REFERENCES agent_tokens(id) ON DELETE SET NULL,

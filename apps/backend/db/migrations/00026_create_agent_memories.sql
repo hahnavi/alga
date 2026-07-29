@@ -18,7 +18,8 @@ CREATE TABLE agent_memories (
     access_count INT NOT NULL DEFAULT 0 CHECK (access_count >= 0),
     expires_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT fk_agent_memories_agent_id FOREIGN KEY (agent_id) REFERENCES agent_tokens(id) ON DELETE SET NULL
 );
 
 CREATE INDEX idx_agent_memories_agent_id_created_at ON agent_memories (agent_id, created_at);

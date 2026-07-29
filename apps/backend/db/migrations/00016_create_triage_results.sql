@@ -33,8 +33,5 @@ CREATE INDEX triage_results_outcome ON triage_results (outcome);
 CREATE INDEX triage_results_created_at ON triage_results (created_at);
 CREATE INDEX triage_results_overridden_by ON triage_results (overridden_by);
 
-ALTER TABLE alert_investigations ADD CONSTRAINT fk_alert_investigations_triage_result FOREIGN KEY (triage_result_id) REFERENCES triage_results(id) ON DELETE SET NULL;
-
 -- +goose Down
-ALTER TABLE IF EXISTS alert_investigations DROP CONSTRAINT IF EXISTS fk_alert_investigations_triage_result;
 DROP TABLE IF EXISTS triage_results;

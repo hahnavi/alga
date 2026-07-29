@@ -12,6 +12,7 @@ CREATE TABLE alert_investigation_events (
     agent_type TEXT DEFAULT '',
     metadata JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT fk_alert_investigation_events_investigation FOREIGN KEY (alert_investigation_id) REFERENCES alert_investigations(id) ON DELETE CASCADE
 );
 

@@ -46,7 +46,11 @@ func TestModelColumnsMatchDB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
-	defer sqldb.Close()
+	defer func() {
+		if cerr := sqldb.Close(); cerr != nil {
+			t.Errorf("close db: %v", cerr)
+		}
+	}()
 	tables := schema.NewTables(pgdialect.New())
 
 	for _, m := range allModels() {
@@ -59,10 +63,14 @@ func TestModelColumnsMatchDB(t *testing.T) {
 		}
 		for rows.Next() {
 			var c string
-			_ = rows.Scan(&c)
+			if err := rows.Scan(&c); err != nil {
+				t.Fatalf("%s: scan col: %v", tbl.Name, err)
+			}
 			dbCols[c] = true
 		}
-		rows.Close()
+		if err := rows.Close(); err != nil {
+			t.Fatalf("%s: close rows: %v", tbl.Name, err)
+		}
 		if len(dbCols) == 0 {
 			t.Errorf("%-30s TABLE MISSING (model %s)", tbl.Name, tbl.TypeName)
 			continue

@@ -80,17 +80,9 @@ func (s *pgAlertStore) attachInvestigationSummaries(ctx context.Context, records
 	}
 }
 
-func (s *pgAlertStore) nextAlertNumber(ctx context.Context) (int64, error) {
-	return nextPgCounter(ctx, s.db, "alerts")
-}
-
 func (s *pgAlertStore) insertAlertEvent(ctx context.Context, alertID uuid.UUID, ev AlertEvent) error {
 	m := &models.AlertEvent{
-		BaseModel: models.BaseModel{
-			ID:        models.NewUUID(),
-			CreatedAt: ev.Timestamp,
-			UpdatedAt: ev.Timestamp,
-		},
+		IDModel:          models.IDModel{ID: models.NewUUID()},
 		AlertID:          alertID,
 		Type:             ev.Type,
 		Timestamp:        ev.Timestamp,
@@ -114,12 +106,6 @@ func (s *pgAlertStore) Create(record AlertRecord) (int64, error) {
 		record.StartsAt = now
 	}
 
-	n, err := s.nextAlertNumber(ctx)
-	if err != nil {
-		return 0, fmt.Errorf("failed to allocate alert number: %w", err)
-	}
-	record.AlertNumber = n
-
 	m := &models.Alert{
 		BaseModel: models.BaseModel{
 			ID:        models.NewUUID(),
@@ -136,14 +122,16 @@ func (s *pgAlertStore) Create(record AlertRecord) (int64, error) {
 		StartsAt:     record.StartsAt,
 		EndsAt:       record.EndsAt,
 		GeneratorURL: record.GeneratorURL,
-		AlertNumber:  n,
 	}
 
-	_, err = s.db.NewInsert().Model(m).Exec(ctx)
-	if err != nil {
+	if _, err := s.db.NewInsert().Model(m).
+		ExcludeColumn("alert_number").
+		Returning("alert_number").
+		Exec(ctx); err != nil {
 		return 0, fmt.Errorf("failed to insert alert: %w", err)
 	}
 	record.ID = m.ID
+	record.AlertNumber = m.AlertNumber
 
 	ev := AlertEvent{Type: "fired", Timestamp: record.StartsAt, Source: "grafana"}
 	if record.InitialEvent != nil {
@@ -163,7 +151,7 @@ func (s *pgAlertStore) Create(record AlertRecord) (int64, error) {
 		return 0, fmt.Errorf("failed to insert fired event: %w", err)
 	}
 
-	return n, nil
+	return m.AlertNumber, nil
 }
 
 func (s *pgAlertStore) GetByFingerprint(fingerprint string) (*AlertRecord, error) {
@@ -813,7 +801,7 @@ func (s *pgAlertStore) ListUninvestigatedAlerts(ctx context.Context, threshold t
 		Where("created_at <= ?", cutoff).
 		Where("deleted_at IS NULL").
 		// Not investigated: no non-terminal investigation linked via fingerprint
-		Where("NOT EXISTS (SELECT 1 FROM alert_investigation_alerts aia JOIN alert_investigations ai ON aia.alert_investigation_id = ai.id WHERE aia.fingerprint = alert.fingerprint AND ai.status NOT IN (?))", bun.List(invTerminal)).
+		Where("NOT EXISTS (SELECT 1 FROM alert_investigation_alerts aia JOIN alert_investigations ai ON aia.investigation_id = ai.id WHERE aia.fingerprint = alert.fingerprint AND ai.status NOT IN (?))", bun.List(invTerminal)).
 		// Not handled by active incident
 		Where("NOT EXISTS (SELECT 1 FROM incident_alerts ia JOIN incidents inc ON ia.incident_id = inc.id WHERE ia.alert_id = alert.id AND inc.deleted_at IS NULL AND inc.status NOT IN (?))", bun.List(incTerminal)).
 		Order("created_at DESC").

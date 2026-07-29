@@ -18,5 +18,3 @@ type AlertInvestigationEvent struct {
 	AgentType            string         `bun:"agent_type"`
 	Metadata             map[string]any `bun:"metadata,type:jsonb"`
 }
-
-func (*AlertInvestigationEvent) TableName() string { return "alert_investigation_events" }

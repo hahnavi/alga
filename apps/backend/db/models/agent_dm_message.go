@@ -15,5 +15,3 @@ type AgentDMMessage struct {
 	Edited       bool      `bun:"edited,notnull,default:false"`
 	AgentTokenID uuid.UUID `bun:"agent_token_id,notnull"`
 }
-
-func (*AgentDMMessage) TableName() string { return "agent_dm_messages" }

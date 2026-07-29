@@ -8,5 +8,3 @@ type EscalationPolicy struct {
 	RepeatCount int                     `bun:"repeat_count,notnull,default:3"`
 	Levels      []EscalationLevelRecord `bun:"levels,type:jsonb,notnull,default:'[]'"`
 }
-
-func (*EscalationPolicy) TableName() string { return "escalation_policies" }

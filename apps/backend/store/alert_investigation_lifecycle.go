@@ -166,7 +166,7 @@ func (s *pgAlertInvestigationStore) MarkAlertInvestigationPromoted(ctx context.C
 
 	err = s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
 		var inv models.AlertInvestigation
-		if err := tx.NewSelect().Model(&inv).Where("alert_investigation_id = ?", id).Scan(ctx); err != nil {
+		if err := tx.NewSelect().Model(&inv).Where("public_id = ?", id).Scan(ctx); err != nil {
 			return fmt.Errorf("alert investigation not found: %w", ErrInvestigationNotFound)
 		}
 
@@ -208,7 +208,7 @@ func (s *pgAlertInvestigationStore) UpdateAlertInvestigationStatus(ctx context.C
 	res, err := s.db.NewUpdate().Model((*models.AlertInvestigation)(nil)).
 		Set("status = ?", status).
 		Set("updated_at = ?", time.Now().UTC()).
-		Where("alert_investigation_id = ?", id).
+		Where("public_id = ?", id).
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to update alert investigation status: %w", err)
@@ -385,7 +385,7 @@ func (s *pgAlertInvestigationStore) DeleteAlertInvestigation(ctx context.Context
 
 	return s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
 		var inv models.AlertInvestigation
-		if err := tx.NewSelect().Model(&inv).Where("alert_investigation_id = ?", id).Scan(ctx); err != nil {
+		if err := tx.NewSelect().Model(&inv).Where("public_id = ?", id).Scan(ctx); err != nil {
 			if isNotFound(err) {
 				return ErrAlertInvestigationNotFound
 			}
@@ -393,7 +393,7 @@ func (s *pgAlertInvestigationStore) DeleteAlertInvestigation(ctx context.Context
 		}
 
 		if _, err := tx.NewDelete().Model((*models.AlertInvestigationAlert)(nil)).
-			Where("alert_investigation_id = ?", inv.ID).
+			Where("investigation_id = ?", inv.ID).
 			Exec(ctx); err != nil {
 			return fmt.Errorf("failed to delete alert investigation alerts: %w", err)
 		}

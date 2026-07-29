@@ -14,5 +14,3 @@ type MaintenanceWindow struct {
 	CreatedBy     string            `bun:"created_by"`
 	Enabled       bool              `bun:"enabled,notnull,default:true"`
 }
-
-func (*MaintenanceWindow) TableName() string { return "maintenance_windows" }

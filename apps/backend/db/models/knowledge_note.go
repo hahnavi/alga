@@ -21,5 +21,3 @@ type KnowledgeNote struct {
 	Confidence            *float64         `bun:"confidence"`
 	ExpiresAt             *time.Time       `bun:"expires_at"`
 }
-
-func (*KnowledgeNote) TableName() string { return "knowledge_notes" }

@@ -16,5 +16,3 @@ type ServiceDependency struct {
 	DependencyType       string    `bun:"dependency_type,notnull,default:'depends_on'"`
 	CreatedAt            time.Time `bun:"created_at,notnull,default:current_timestamp"`
 }
-
-func (*ServiceDependency) TableName() string { return "service_dependencies" }

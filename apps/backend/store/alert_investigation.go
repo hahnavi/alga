@@ -266,7 +266,7 @@ func (s *pgAlertInvestigationStore) GetAlertInvestigation(ctx context.Context, i
 	defer cancel()
 
 	var inv models.AlertInvestigation
-	err := s.db.NewSelect().Model(&inv).Where("alert_investigation_id = ?", id).Scan(ctx)
+	err := s.db.NewSelect().Model(&inv).Where("public_id = ?", id).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*AlertInvestigationRecord](err, "alert investigation")
 	}
@@ -276,7 +276,7 @@ func (s *pgAlertInvestigationStore) GetAlertInvestigation(ctx context.Context, i
 func (s *pgAlertInvestigationStore) toAlertInvestigationRecord(ctx context.Context, inv *models.AlertInvestigation) (*AlertInvestigationRecord, error) {
 	var alerts []models.AlertInvestigationAlert
 	if err := s.db.NewSelect().Model(&alerts).
-		Where("alert_investigation_id = ?", inv.ID).
+		Where("investigation_id = ?", inv.ID).
 		Order("id ASC").
 		Scan(ctx); err != nil {
 		return nil, fmt.Errorf("failed to query alert investigation alerts: %w", err)

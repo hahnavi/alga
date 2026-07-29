@@ -19,5 +19,3 @@ type HandoffRecord struct {
 	IncomingAcknowledgedAt *time.Time `bun:"incoming_acknowledged_at"`
 	IncidentSummary        string     `bun:"incident_summary"`
 }
-
-func (*HandoffRecord) TableName() string { return "handoff_records" }

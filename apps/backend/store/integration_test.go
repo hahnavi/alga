@@ -1,3 +1,5 @@
+//go:build integration
+
 package store
 
 import (
@@ -45,22 +47,6 @@ func TestAlertCRUD(t *testing.T) {
 	}
 }
 
-func TestCounterSequential(t *testing.T) {
-	stores := newTestStores(t)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	for i := int64(1); i <= 5; i++ {
-		n, err := stores.Counter.Next(ctx, "test_counter")
-		if err != nil {
-			t.Fatalf("counter next (iteration %d): %v", i, err)
-		}
-		if n != i {
-			t.Fatalf("expected %d, got %d", i, n)
-		}
-	}
-}
-
 func TestUserCRUD(t *testing.T) {
 	stores := newTestStores(t)
 
@@ -93,7 +79,7 @@ func TestMigrationsCreateTables(t *testing.T) {
 	if err != nil {
 		t.Fatalf("count tables: %v", err)
 	}
-	if count < 40 {
-		t.Fatalf("expected at least 40 tables, got %d", count)
+	if count < 58 {
+		t.Fatalf("expected at least 58 tables, got %d", count)
 	}
 }

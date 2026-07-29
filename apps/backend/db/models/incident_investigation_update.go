@@ -22,5 +22,3 @@ type IncidentInvestigationUpdate struct {
 	Mentions                []string  `bun:"mentions,type:jsonb"`
 	CreatedAt               time.Time `bun:"created_at,notnull,default:current_timestamp"`
 }
-
-func (*IncidentInvestigationUpdate) TableName() string { return "incident_investigation_updates" }

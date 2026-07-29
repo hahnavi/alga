@@ -13,7 +13,6 @@ type SystemConfig struct {
 
 	ID        uuid.UUID      `bun:"id,pk"`
 	Config    map[string]any `bun:"config,type:jsonb"`
+	CreatedAt time.Time      `bun:"created_at,notnull,default:current_timestamp"`
 	UpdatedAt time.Time      `bun:"updated_at,notnull,default:current_timestamp"`
 }
-
-func (*SystemConfig) TableName() string { return "system_config" }

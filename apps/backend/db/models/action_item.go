@@ -18,5 +18,3 @@ type ActionItem struct {
 	Priority     string     `bun:"priority,notnull,default:'medium'"`
 	DueDate      *time.Time `bun:"due_date"`
 }
-
-func (*ActionItem) TableName() string { return "action_items" }

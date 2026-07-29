@@ -7,7 +7,7 @@ tags: [backend, frontend, api, rbac]
 
 # Add a REST API Endpoint
 
-Use this for HTTP surface changes. If the endpoint needs a new persisted entity, use `alga-add-ent-entity` first. If it touches auth, RBAC, sessions, secrets, user-scoped data, or mutations, also use `alga-security-checklist`.
+Use this for HTTP surface changes. If the endpoint needs a new persisted entity, use `alga-add-db-entity` first. If it touches auth, RBAC, sessions, secrets, user-scoped data, or mutations, also use `alga-security-checklist`.
 
 Before editing, state the route classification, middleware, RBAC permission, mutation audit event, and tests you expect to add. If any item does not apply, say why.
 
@@ -25,7 +25,7 @@ Before editing, state the route classification, middleware, RBAC permission, mut
 - Classify route before coding: public/callback, authenticated self-scoped, RBAC-protected, or agent bearer.
 - Keep handlers thin: validate input, call store/service, audit mutations, return JSON.
 - Use `decodeJSON`, `parseLimitSkip`, `writePaginatedJSON`, `writeError`, `writeInternalError`, `writeJSON`, `ensureSlice`, and `pathID`; do not reimplement them.
-- Use stores/services instead of raw Ent in handlers.
+- Use stores/services instead of raw database access in handlers.
 - Constructor-required dependencies do not need nil guards. Setter/optional dependencies must return 503 in every handler that uses them.
 - Mutations audit with `s.audit`; SSE broadcasts never replace persistence or audit.
 - Use route middleware for auth, CSRF, RBAC, and rate limiting; do not inline replacement logic.

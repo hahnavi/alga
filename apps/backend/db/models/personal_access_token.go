@@ -18,5 +18,3 @@ type PersonalAccessToken struct {
 	CreatedAt    time.Time  `bun:"created_at,notnull,default:current_timestamp"`
 	Revoked      bool       `bun:"revoked,notnull,default:false"`
 }
-
-func (*PersonalAccessToken) TableName() string { return "personal_access_tokens" }

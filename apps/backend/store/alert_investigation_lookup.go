@@ -58,7 +58,7 @@ func (s *pgAlertInvestigationStore) FindSimilarAlertInvestigations(ctx context.C
 		query = query.Where("correlation_key = ?", q.CorrelationKey)
 	}
 	if q.ExcludeInvestigationID != "" {
-		query = query.Where("alert_investigation_id != ?", q.ExcludeInvestigationID)
+		query = query.Where("public_id != ?", q.ExcludeInvestigationID)
 	}
 
 	var invs []models.AlertInvestigation
@@ -78,7 +78,7 @@ func (s *pgAlertInvestigationStore) FindSimilarAlertInvestigations(ctx context.C
 		inv := &invs[i]
 		var primaryAlert models.AlertInvestigationAlert
 		err := s.db.NewSelect().Model(&primaryAlert).
-			Where("alert_investigation_id = ?", inv.ID).
+			Where("investigation_id = ?", inv.ID).
 			Order("id ASC").
 			Limit(1).
 			Scan(ctx)

@@ -30,5 +30,3 @@ type CoordinationTask struct {
 	FailureReason         string         `bun:"failure_reason"`
 	DispatchAttempts      int            `bun:"dispatch_attempts,notnull,default:0"`
 }
-
-func (*CoordinationTask) TableName() string { return "coordination_tasks" }

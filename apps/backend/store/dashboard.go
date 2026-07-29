@@ -636,7 +636,7 @@ func (s *pgDashboardStore) buildRecentInvestigationItems(ctx context.Context, in
 		// Try to get alert name from linked alerts
 		var linkedAlert models.AlertInvestigationAlert
 		err := s.db.NewSelect().Model(&linkedAlert).
-			Where("alert_investigation_id = ?", inv.ID).
+			Where("investigation_id = ?", inv.ID).
 			Limit(1).
 			Scan(ctx)
 		if err == nil && linkedAlert.Alertname != "" {

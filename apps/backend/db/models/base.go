@@ -14,6 +14,14 @@ type BaseModel struct {
 	UpdatedAt time.Time `bun:"updated_at,notnull,default:current_timestamp"`
 }
 
+// IDModel is a leaner base for append-only tables that carry their own
+// authoritative timestamp column and therefore need neither created_at nor
+// updated_at (and no updated_at trigger).
+type IDModel struct {
+	bun.BaseModel
+	ID uuid.UUID `bun:"id,pk"`
+}
+
 type SoftDeleteModel struct {
 	DeletedAt *time.Time `bun:"deleted_at,soft_delete"`
 }

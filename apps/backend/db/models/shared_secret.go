@@ -22,5 +22,3 @@ type SharedSecret struct {
 	CreatedAt       time.Time   `bun:"created_at,notnull,default:current_timestamp"`
 	UpdatedAt       time.Time   `bun:"updated_at,notnull,default:current_timestamp"`
 }
-
-func (*SharedSecret) TableName() string { return "shared_secrets" }

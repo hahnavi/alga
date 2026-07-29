@@ -23,5 +23,3 @@ type AgentAsk struct {
 	ExpiresAt          time.Time  `bun:"expires_at,notnull"`
 	AnsweredAt         *time.Time `bun:"answered_at"`
 }
-
-func (*AgentAsk) TableName() string { return "agent_asks" }

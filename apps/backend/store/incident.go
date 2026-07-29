@@ -127,7 +127,7 @@ func newPGIncidentStore(db *bun.DB) IncidentStore {
 }
 
 func (s *pgIncidentStore) ReserveIncidentNumber(ctx context.Context) (int64, error) {
-	return nextPgCounter(ctx, s.db, "incident_number")
+	return nextSeq(ctx, s.db, "incident_number_seq")
 }
 
 func (s *pgIncidentStore) CreateIncident(ctx context.Context, record *IncidentRecord) (*IncidentRecord, error) {
@@ -155,7 +155,7 @@ func (s *pgIncidentStore) CreateIncident(ctx context.Context, record *IncidentRe
 	}
 
 	if record.IncidentNumber == 0 {
-		n, err := nextPgCounter(ctx, s.db, "incident_number")
+		n, err := nextSeq(ctx, s.db, "incident_number_seq")
 		if err != nil {
 			return nil, fmt.Errorf("failed to allocate incident number: %w", err)
 		}

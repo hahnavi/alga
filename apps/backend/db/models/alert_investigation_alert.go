@@ -9,7 +9,7 @@ import (
 type AlertInvestigationAlert struct {
 	BaseModel
 
-	AlertInvestigationID uuid.UUID         `bun:"alert_investigation_id,notnull"`
+	AlertInvestigationID uuid.UUID         `bun:"investigation_id,notnull"`
 	AlertID              *uuid.UUID        `bun:"alert_id"`
 	Fingerprint          string            `bun:"fingerprint,notnull"`
 	AlertNumber          int64             `bun:"alert_number"`
@@ -24,5 +24,3 @@ type AlertInvestigationAlert struct {
 	Summary              string            `bun:"summary"`
 	Current              bool              `bun:"current,notnull,default:true"`
 }
-
-func (*AlertInvestigationAlert) TableName() string { return "alert_investigation_alerts" }

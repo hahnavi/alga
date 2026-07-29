@@ -9,7 +9,7 @@ import (
 type IncidentInvestigation struct {
 	BaseModel
 
-	IncidentInvestigationID    string                 `bun:"incident_investigation_id,notnull,unique"`
+	IncidentInvestigationID    string                 `bun:"public_id,notnull,unique"`
 	IncidentID                 *uuid.UUID             `bun:"incident_id"`
 	Status                     string                 `bun:"status,notnull,default:'pending'"`
 	AgentID                    string                 `bun:"agent_id,default:''"`
@@ -31,5 +31,3 @@ type IncidentInvestigation struct {
 	AssigneeType               string                 `bun:"assignee_type,notnull,default:'agent'"`
 	AssigneeID                 *uuid.UUID             `bun:"assignee_id"`
 }
-
-func (*IncidentInvestigation) TableName() string { return "incident_investigations" }

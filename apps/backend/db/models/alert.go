@@ -26,5 +26,3 @@ type Alert struct {
 	TriageCategory     string            `bun:"triage_category"`
 	SeverityClassified string            `bun:"severity_classified"`
 }
-
-func (*Alert) TableName() string { return "alerts" }

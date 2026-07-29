@@ -13,7 +13,6 @@ type AgentMemory struct {
 	Content         string            `bun:"content,notnull"`
 	MemoryType      string            `bun:"memory_type,notnull,default:'fact'"`
 	Hash            string            `bun:"hash,notnull,unique"`
-	Embedding       []float32         `bun:"embedding,type:jsonb"`
 	Vec             pgvector.Vector   `bun:"vec,type:vector(1536)"`
 	AgentID         *uuid.UUID        `bun:"agent_id"`
 	AgentName       string            `bun:"agent_name"`
@@ -27,5 +26,3 @@ type AgentMemory struct {
 	AccessCount     int               `bun:"access_count,notnull,default:0"`
 	ExpiresAt       *time.Time        `bun:"expires_at"`
 }
-
-func (*AgentMemory) TableName() string { return "agent_memories" }

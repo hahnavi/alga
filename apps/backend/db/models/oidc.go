@@ -11,11 +11,9 @@ type OIDCProvider struct {
 	Issuer                string   `bun:"issuer,notnull,unique"`
 	ClientID              string   `bun:"client_id,notnull"`
 	ClientSecretEncrypted string   `bun:"client_secret_encrypted,notnull,default:''"`
-	Scopes                []string `bun:"scopes,type:jsonb,notnull,default:'[\"openid\",\"email\",\"profile\"]'"`
+	Scopes                []string `bun:"scopes,type:jsonb,notnull"`
 	Enabled               bool     `bun:"enabled,notnull,default:true"`
 }
-
-func (*OIDCProvider) TableName() string { return "oidc_providers" }
 
 type OIDCIdentity struct {
 	BaseModel
@@ -26,5 +24,3 @@ type OIDCIdentity struct {
 	Issuer     string    `bun:"issuer,notnull,default:''"`
 	Email      string    `bun:"email,notnull,default:''"`
 }
-
-func (*OIDCIdentity) TableName() string { return "oidc_identities" }

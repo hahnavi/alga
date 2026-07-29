@@ -48,5 +48,3 @@ type Incident struct {
 	Tags                     []string       `bun:"tags,type:jsonb,notnull,default:'[]'"`
 	CustomFields             map[string]any `bun:"custom_fields,type:jsonb,notnull,default:'{}'"`
 }
-
-func (*Incident) TableName() string { return "incidents" }

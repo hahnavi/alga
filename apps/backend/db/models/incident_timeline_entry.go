@@ -17,5 +17,3 @@ type IncidentTimelineEntry struct {
 	CreatedAt    time.Time      `bun:"created_at,notnull,default:current_timestamp"`
 	IncidentID   uuid.UUID      `bun:"incident_id,notnull"`
 }
-
-func (*IncidentTimelineEntry) TableName() string { return "incident_timeline_entries" }

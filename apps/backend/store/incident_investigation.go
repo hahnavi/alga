@@ -152,7 +152,7 @@ func (s *pgIncidentInvestigationStore) GetIncidentInvestigation(ctx context.Cont
 	defer cancel()
 
 	var inv models.IncidentInvestigation
-	err := s.db.NewSelect().Model(&inv).Where("incident_investigation_id = ?", id).Scan(ctx)
+	err := s.db.NewSelect().Model(&inv).Where("public_id = ?", id).Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*IncidentInvestigationRecord](err, "incident investigation")
 	}
@@ -205,7 +205,7 @@ func (s *pgIncidentInvestigationStore) AddIncidentInvestigationUpdate(ctx contex
 	defer cancel()
 
 	var inv models.IncidentInvestigation
-	if err := s.db.NewSelect().Model(&inv).Where("incident_investigation_id = ?", id).Scan(ctx); err != nil {
+	if err := s.db.NewSelect().Model(&inv).Where("public_id = ?", id).Scan(ctx); err != nil {
 		return fmt.Errorf("incident investigation not found: %w", ErrInvestigationNotFound)
 	}
 
@@ -228,7 +228,7 @@ func (s *pgIncidentInvestigationStore) UpdateIncidentInvestigationStatus(ctx con
 	res, err := s.db.NewUpdate().Model((*models.IncidentInvestigation)(nil)).
 		Set("status = ?", status).
 		Set("updated_at = ?", time.Now().UTC()).
-		Where("incident_investigation_id = ?", id).
+		Where("public_id = ?", id).
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to update incident investigation status: %w", err)
@@ -256,7 +256,7 @@ func (s *pgIncidentInvestigationStore) SetIncidentInvestigationSummary(ctx conte
 	res, err := s.db.NewUpdate().Model((*models.IncidentInvestigation)(nil)).
 		Set("summary = ?", summary).
 		Set("updated_at = ?", time.Now().UTC()).
-		Where("incident_investigation_id = ?", incidentInvestigationID).
+		Where("public_id = ?", incidentInvestigationID).
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to update incident investigation summary: %w", err)
@@ -276,7 +276,7 @@ func (s *pgIncidentInvestigationStore) ClaimPendingIncidentInvestigation(ctx con
 	defer cancel()
 
 	var inv models.IncidentInvestigation
-	if err := s.db.NewSelect().Model(&inv).Where("incident_investigation_id = ?", id).Scan(ctx); err != nil {
+	if err := s.db.NewSelect().Model(&inv).Where("public_id = ?", id).Scan(ctx); err != nil {
 		return handleQueryErr[*IncidentInvestigationRecord](err, "incident investigation")
 	}
 
@@ -428,7 +428,7 @@ func (s *pgIncidentInvestigationStore) SetIncidentInvestigationAssignee(ctx cont
 	q := s.db.NewUpdate().Model((*models.IncidentInvestigation)(nil)).
 		Set("assignee_type = ?", assigneeType).
 		Set("updated_at = ?", time.Now().UTC()).
-		Where("incident_investigation_id = ?", id)
+		Where("public_id = ?", id)
 
 	if assigneeID != nil {
 		q = q.Set("assignee_id = ?", *assigneeID)

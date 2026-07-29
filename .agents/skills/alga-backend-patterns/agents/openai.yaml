@@ -1,4 +1,4 @@
 interface:
   display_name: "Alga Backend Patterns"
-  short_description: "Follow Alga Go backend, API, store, Ent, worker, and app wiring conventions"
-  default_prompt: "Use Alga Backend Patterns when writing or modifying Go backend code, stores, Ent schemas, API handlers, app wiring, workers, or backend tests."
+  short_description: "Follow Alga Go backend, API, store, Bun, worker, and app wiring conventions"
+  default_prompt: "Use Alga Backend Patterns when writing or modifying Go backend code, stores, Bun models, API handlers, app wiring, workers, or backend tests."

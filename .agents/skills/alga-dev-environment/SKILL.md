@@ -54,7 +54,7 @@ go test ./...
 go vet ./...
 gofmt -w .
 go mod tidy
-go generate ./ent
+go run . db migrate
 ```
 
 Use targeted tests while iterating, for example `go test ./api ./store` or `go test ./worker ./rabbitmq`.
@@ -74,7 +74,7 @@ pnpm --filter frontend build
 ## Verification Ladder
 
 - API only: `cd apps/backend && go test ./api ./store`.
-- Ent schema: `cd apps/backend && go generate ./ent && go test ./ent/... ./store`.
+- Schema or migration change: `cd apps/backend && go run . db migrate && go test ./store`.
 - Worker or RabbitMQ: `cd apps/backend && go test ./worker ./rabbitmq`.
 - Frontend only: `pnpm --filter frontend typecheck && pnpm --filter frontend lint`.
 - Shared backend: `cd apps/backend && go test ./... && go vet ./...`.
@@ -112,6 +112,6 @@ Docker Compose provides PostgreSQL, Valkey, RabbitMQ, backend, and frontend. Sou
 ## Troubleshooting
 
 - Check manifests for exact versions: `apps/backend/go.mod`, root `package.json`, and `apps/frontend/package.json`.
-- If generated Ent code is stale, run `go generate ./ent` from `apps/backend` and then backend tests.
+- If a Bun model and its migration drift, reconcile them by hand (there is no code generation) and re-apply migrations from `apps/backend` with `go run . db migrate`.
 - If frontend types fail after API changes, update `apps/frontend/src/lib/api.ts` before pages/components.
 - If services fail to connect, verify Docker Compose is running and env files were created without overwriting local values.

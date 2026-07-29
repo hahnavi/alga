@@ -13,7 +13,6 @@ type RouteRules struct {
 
 	ID        uuid.UUID     `bun:"id,pk"`
 	Routes    []RouteConfig `bun:"routes,type:jsonb"`
+	CreatedAt time.Time     `bun:"created_at,notnull,default:current_timestamp"`
 	UpdatedAt time.Time     `bun:"updated_at,notnull,default:current_timestamp"`
 }
-
-func (*RouteRules) TableName() string { return "route_rules" }

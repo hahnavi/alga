@@ -21,5 +21,3 @@ type InvestigationThreadMessage struct {
 	ReplyToMessageID string    `bun:"reply_to_message_id,default:''"`
 	Mentions         []string  `bun:"mentions,type:jsonb"`
 }
-
-func (*InvestigationThreadMessage) TableName() string { return "investigation_thread_messages" }

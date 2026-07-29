@@ -174,23 +174,23 @@ func (s *pgIntegrationStore) Save(cfg IntegrationConfig) error {
 	if err == nil {
 		_, err = s.db.NewUpdate().Model((*models.Integration)(nil)).
 			Set("mattermost_url = ?", encrypted.MattermostURL).
-			Set("mattermost_webhook_secret = ?", encrypted.MattermostWebhookSecret).
+			Set("mattermost_webhook_secret_encrypted = ?", encrypted.MattermostWebhookSecret).
 			Set("mattermost_team = ?", encrypted.MattermostTeam).
 			Set("mattermost_default_channel = ?", encrypted.MattermostDefaultChannel).
 			Set("mattermost_disabled = ?", encrypted.MattermostDisabled).
-			Set("slack_bot_token = ?", encrypted.SlackBotToken).
-			Set("slack_signing_secret = ?", encrypted.SlackSigningSecret).
+			Set("slack_bot_token_encrypted = ?", encrypted.SlackBotToken).
+			Set("slack_signing_secret_encrypted = ?", encrypted.SlackSigningSecret).
 			Set("slack_default_channel = ?", encrypted.SlackDefaultChannel).
 			Set("slack_disabled = ?", encrypted.SlackDisabled).
 			Set("slack_client_id = ?", encrypted.SlackClientID).
-			Set("slack_client_secret = ?", encrypted.SlackClientSecret).
+			Set("slack_client_secret_encrypted = ?", encrypted.SlackClientSecret).
 			Set("slack_workspace_name = ?", encrypted.SlackWorkspaceName).
 			Set("slack_workspace_id = ?", encrypted.SlackWorkspaceID).
 			Set("twilio_account_sid = ?", encrypted.TwilioAccountSID).
-			Set("twilio_auth_token = ?", encrypted.TwilioAuthToken).
+			Set("twilio_auth_token_encrypted = ?", encrypted.TwilioAuthToken).
 			Set("twilio_from_number = ?", encrypted.TwilioFromNumber).
 			Set("twilio_disabled = ?", encrypted.TwilioDisabled).
-			Set("telnyx_api_key = ?", encrypted.TelnyxAPIKey).
+			Set("telnyx_api_key_encrypted = ?", encrypted.TelnyxAPIKey).
 			Set("telnyx_connection_id = ?", encrypted.TelnyxConnectionID).
 			Set("telnyx_from_number = ?", encrypted.TelnyxFromNumber).
 			Set("telnyx_public_key = ?", encrypted.TelnyxPublicKey).
@@ -200,7 +200,7 @@ func (s *pgIntegrationStore) Save(cfg IntegrationConfig) error {
 			Set("telnyx_tts_api_key_ref = ?", encrypted.TelnyxTTSAPIKeyRef).
 			Set("voice_provider = ?", voiceProvider).
 			Set("hermes_platform_url = ?", encrypted.HermesPlatformURL).
-			Set("hermes_platform_token = ?", encrypted.HermesPlatformToken).
+			Set("hermes_platform_token_encrypted = ?", encrypted.HermesPlatformToken).
 			Set("updated_at = ?", encrypted.UpdatedAt).
 			Where("id = ?", sid).
 			Exec(ctx)

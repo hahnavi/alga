@@ -20,5 +20,3 @@ type AlertInvestigationUpdate struct {
 	QuotedUpdateID       *string   `bun:"quoted_update_id"`
 	Mentions             []string  `bun:"mentions,type:jsonb"`
 }
-
-func (*AlertInvestigationUpdate) TableName() string { return "alert_investigation_updates" }

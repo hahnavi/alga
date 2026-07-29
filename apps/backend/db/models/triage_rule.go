@@ -25,5 +25,3 @@ type TriageRule struct {
 	CreatedAt   time.Time        `bun:"created_at,notnull,default:current_timestamp"`
 	UpdatedAt   time.Time        `bun:"updated_at,notnull,default:current_timestamp"`
 }
-
-func (*TriageRule) TableName() string { return "triage_rules" }

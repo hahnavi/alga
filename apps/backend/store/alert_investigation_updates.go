@@ -21,13 +21,13 @@ func (s *pgAlertInvestigationStore) AppendAlertsToAlertInvestigation(ctx context
 
 	return s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
 		var inv models.AlertInvestigation
-		if err := tx.NewSelect().Model(&inv).Where("alert_investigation_id = ?", id).Scan(ctx); err != nil {
+		if err := tx.NewSelect().Model(&inv).Where("public_id = ?", id).Scan(ctx); err != nil {
 			return fmt.Errorf("alert investigation not found: %w", ErrInvestigationNotFound)
 		}
 
 		var existingAlerts []models.AlertInvestigationAlert
 		if err := tx.NewSelect().Model(&existingAlerts).
-			Where("alert_investigation_id = ?", inv.ID).
+			Where("investigation_id = ?", inv.ID).
 			Scan(ctx); err != nil {
 			return fmt.Errorf("failed to query existing alert investigation alerts: %w", err)
 		}
@@ -65,7 +65,7 @@ func (s *pgAlertInvestigationStore) MarkAlertInvestigationAlertsCurrent(ctx cont
 
 	res, err := s.db.NewUpdate().Model((*models.AlertInvestigationAlert)(nil)).
 		Set("current = ?", current).
-		Where("alert_investigation_id IN (SELECT id FROM alert_investigations WHERE alert_investigation_id = ?)", investigationID).
+		Where("investigation_id IN (SELECT id FROM alert_investigations WHERE public_id = ?)", investigationID).
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to mark alert investigation alerts current: %w", err)
@@ -125,7 +125,7 @@ func (s *pgAlertInvestigationStore) AddAlertInvestigationUpdate(ctx context.Cont
 	defer cancel()
 
 	var inv models.AlertInvestigation
-	if err := s.db.NewSelect().Model(&inv).Where("alert_investigation_id = ?", id).Scan(ctx); err != nil {
+	if err := s.db.NewSelect().Model(&inv).Where("public_id = ?", id).Scan(ctx); err != nil {
 		return fmt.Errorf("alert investigation not found: %w", ErrInvestigationNotFound)
 	}
 
@@ -161,7 +161,7 @@ func (s *pgAlertInvestigationStore) UpdateAlertInvestigationMessage(ctx context.
 		Set("message = ?", message).
 		Set("edited = true").
 		Where("id = ?", uid).
-		Where("alert_investigation_id IN (SELECT id FROM alert_investigations WHERE alert_investigation_id = ?)", investigationID).
+		Where("alert_investigation_id IN (SELECT id FROM alert_investigations WHERE public_id = ?)", investigationID).
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to update alert investigation message: %w", err)
@@ -187,7 +187,7 @@ func (s *pgAlertInvestigationStore) DeleteAlertInvestigationMessage(ctx context.
 
 	res, err := s.db.NewDelete().Model((*models.AlertInvestigationUpdate)(nil)).
 		Where("id = ?", uid).
-		Where("alert_investigation_id IN (SELECT id FROM alert_investigations WHERE alert_investigation_id = ?)", investigationID).
+		Where("alert_investigation_id IN (SELECT id FROM alert_investigations WHERE public_id = ?)", investigationID).
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to delete alert investigation message: %w", err)
@@ -222,7 +222,7 @@ func (s *pgAlertInvestigationStore) setAlertInvestigationUpdateField(ctx context
 	res, err := s.db.NewUpdate().Model((*models.AlertInvestigationUpdate)(nil)).
 		Set(setExpr, setVal).
 		Where("id = ?", uid).
-		Where("alert_investigation_id IN (SELECT id FROM alert_investigations WHERE alert_investigation_id = ?)", investigationID).
+		Where("alert_investigation_id IN (SELECT id FROM alert_investigations WHERE public_id = ?)", investigationID).
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to set update %s: %w", fieldName, err)

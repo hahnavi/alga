@@ -13,5 +13,3 @@ type DeliveryTarget struct {
 	PostID      string    `bun:"post_id"`
 	AlertID     uuid.UUID `bun:"alert_id,notnull"`
 }
-
-func (*DeliveryTarget) TableName() string { return "delivery_targets" }

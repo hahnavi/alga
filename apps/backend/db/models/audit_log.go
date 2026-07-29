@@ -7,7 +7,7 @@ import (
 )
 
 type AuditLog struct {
-	BaseModel
+	IDModel
 
 	Timestamp  time.Time      `bun:"timestamp,notnull,default:current_timestamp"`
 	Event      string         `bun:"event,notnull"`
@@ -21,5 +21,3 @@ type AuditLog struct {
 	EntityType string         `bun:"entity_type"`
 	EntityID   *uuid.UUID     `bun:"entity_id"`
 }
-
-func (*AuditLog) TableName() string { return "audit_logs" }

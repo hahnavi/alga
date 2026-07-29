@@ -51,21 +51,35 @@ func (s *pgNotificationStore) Create(ctx context.Context, n *NotificationRecord)
 		resourceType = &n.ResourceType
 	}
 
+	uid, err := uuid.Parse(n.UserID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid user id: %s", n.UserID)
+	}
+
+	var triggeredBy *uuid.UUID
+	if n.TriggeredByUserID != "" {
+		tid, err := uuid.Parse(n.TriggeredByUserID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid triggered_by user id: %s", n.TriggeredByUserID)
+		}
+		triggeredBy = &tid
+	}
+
 	m := &models.Notification{
 		ID:                     models.NewUUID(),
-		UserID:                 n.UserID,
+		UserID:                 uid,
 		Type:                   n.Type,
 		Title:                  n.Title,
 		Message:                n.Message,
 		Read:                   n.Read,
 		ResourceType:           resourceType,
 		ResourceID:             n.ResourceID,
-		TriggeredByUserID:      n.TriggeredByUserID,
+		TriggeredByUserID:      triggeredBy,
 		TriggeredByDisplayName: n.TriggeredByDisplayName,
 		CreatedAt:              n.CreatedAt,
 	}
 
-	_, err := s.db.NewInsert().Model(m).Exec(ctx)
+	_, err = s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create notification: %w", err)
 	}
@@ -79,9 +93,14 @@ func (s *pgNotificationStore) ListByUser(ctx context.Context, userID string, lim
 		limit = 20
 	}
 
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid user id: %s", userID)
+	}
+
 	var nfns []models.Notification
-	err := s.db.NewSelect().Model(&nfns).
-		Where("user_id = ?", userID).
+	err = s.db.NewSelect().Model(&nfns).
+		Where("user_id = ?", uid).
 		Order("created_at DESC").
 		Limit(int(limit)).
 		Offset(int(skip)).
@@ -97,16 +116,20 @@ func (s *pgNotificationStore) ListByUser(ctx context.Context, userID string, lim
 		if n.ResourceType != nil {
 			resourceType = *n.ResourceType
 		}
+		triggeredBy := ""
+		if n.TriggeredByUserID != nil {
+			triggeredBy = n.TriggeredByUserID.String()
+		}
 		records = append(records, NotificationRecord{
 			ID:                     n.ID,
-			UserID:                 n.UserID,
+			UserID:                 n.UserID.String(),
 			Type:                   n.Type,
 			Title:                  n.Title,
 			Message:                n.Message,
 			Read:                   n.Read,
 			ResourceType:           resourceType,
 			ResourceID:             n.ResourceID,
-			TriggeredByUserID:      n.TriggeredByUserID,
+			TriggeredByUserID:      triggeredBy,
 			TriggeredByDisplayName: n.TriggeredByDisplayName,
 			CreatedAt:              n.CreatedAt,
 		})
@@ -118,8 +141,13 @@ func (s *pgNotificationStore) ListByUser(ctx context.Context, userID string, lim
 }
 
 func (s *pgNotificationStore) GetUnreadCount(ctx context.Context, userID string) (int64, error) {
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return 0, fmt.Errorf("invalid user id: %s", userID)
+	}
+
 	count, err := s.db.NewSelect().Model((*models.Notification)(nil)).
-		Where("user_id = ?", userID).
+		Where("user_id = ?", uid).
 		Where("\"read\" = ?", false).
 		Count(ctx)
 	if err != nil {
@@ -134,10 +162,15 @@ func (s *pgNotificationStore) MarkRead(ctx context.Context, userID, id string) e
 		return fmt.Errorf("invalid notification id: %s", id)
 	}
 
+	userUID, err := uuid.Parse(userID)
+	if err != nil {
+		return fmt.Errorf("invalid user id: %s", userID)
+	}
+
 	res, err := s.db.NewUpdate().Model((*models.Notification)(nil)).
 		Set("\"read\" = ?", true).
 		Where("id = ?", uid).
-		Where("user_id = ?", userID).
+		Where("user_id = ?", userUID).
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to mark notification read: %w", err)
@@ -153,9 +186,14 @@ func (s *pgNotificationStore) MarkRead(ctx context.Context, userID, id string) e
 }
 
 func (s *pgNotificationStore) MarkAllRead(ctx context.Context, userID string) error {
-	_, err := s.db.NewUpdate().Model((*models.Notification)(nil)).
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return fmt.Errorf("invalid user id: %s", userID)
+	}
+
+	_, err = s.db.NewUpdate().Model((*models.Notification)(nil)).
 		Set("\"read\" = ?", true).
-		Where("user_id = ?", userID).
+		Where("user_id = ?", uid).
 		Where("\"read\" = ?", false).
 		Exec(ctx)
 	if err != nil {

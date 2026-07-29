@@ -9,5 +9,3 @@ type OnCallSchedule struct {
 
 	TeamID *uuid.UUID `bun:"team_id"`
 }
-
-func (*OnCallSchedule) TableName() string { return "on_call_schedules" }

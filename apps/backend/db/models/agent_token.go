@@ -18,5 +18,3 @@ type AgentToken struct {
 	DefaultForInvestigation bool             `bun:"default_for_investigation,default:false"`
 	Capabilities            []string         `bun:"capabilities,type:jsonb"`
 }
-
-func (*AgentToken) TableName() string { return "agent_tokens" }

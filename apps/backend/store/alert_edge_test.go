@@ -91,7 +91,7 @@ func TestInvestigationStateMachine_InvalidTransition(t *testing.T) {
 		t.Fatalf("UpdateAlertInvestigationStatus complete: %v", err)
 	}
 
-	// TransitionAlertInvestigationStatus wraps the underlying ent update
+	// TransitionAlertInvestigationStatus wraps the underlying database update
 	// failure in a generic error (no status-conflict sentinel exists for
 	// alert investigations after the investigation-domain split), so we
 	// assert a non-nil error plus the meaningful conflict contract: the

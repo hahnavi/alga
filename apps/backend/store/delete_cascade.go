@@ -23,13 +23,13 @@ func hardDeleteAlertCascade(ctx context.Context, tx bun.Tx, alertID uuid.UUID, a
 	// Find linked investigations via the alert_investigation_alerts join table
 	type invRef struct {
 		ID                   uuid.UUID `bun:"id"`
-		AlertInvestigationID string    `bun:"alert_investigation_id"`
+		AlertInvestigationID string    `bun:"public_id"`
 	}
 	var invs []invRef
 	err := tx.NewSelect().
 		TableExpr("alert_investigations AS ai").
-		ColumnExpr("ai.id, ai.alert_investigation_id").
-		Join("JOIN alert_investigation_alerts AS aia ON aia.alert_investigation_id = ai.id").
+		ColumnExpr("ai.id, ai.public_id").
+		Join("JOIN alert_investigation_alerts AS aia ON aia.investigation_id = ai.id").
 		Where("(aia.alert_id = ? OR aia.alert_number = ?)", alertID, alertNumber).
 		Scan(ctx, &invs)
 	if err != nil {
@@ -47,7 +47,7 @@ func hardDeleteAlertCascade(ctx context.Context, tx bun.Tx, alertID uuid.UUID, a
 	}
 
 	if _, err := tx.NewDelete().Model((*models.AlertInvestigationAlert)(nil)).
-		Where("alert_investigation_id IN (?)", bun.List(invUUIDs)).
+		Where("investigation_id IN (?)", bun.List(invUUIDs)).
 		Exec(ctx); err != nil {
 		return fmt.Errorf("delete alert investigation alerts: %w", err)
 	}
@@ -86,12 +86,12 @@ func hardDeleteAlertCascade(ctx context.Context, tx bun.Tx, alertID uuid.UUID, a
 func hardDeleteIncidentCascade(ctx context.Context, tx bun.Tx, incidentID uuid.UUID, incidentNumber int64) error {
 	type invRef struct {
 		ID                      uuid.UUID `bun:"id"`
-		IncidentInvestigationID string    `bun:"incident_investigation_id"`
+		IncidentInvestigationID string    `bun:"public_id"`
 	}
 	var invs []invRef
 	err := tx.NewSelect().
 		TableExpr("incident_investigations").
-		ColumnExpr("id, incident_investigation_id").
+		ColumnExpr("id, public_id").
 		Where("incident_id = ?", incidentID).
 		Scan(ctx, &invs)
 	if err != nil {

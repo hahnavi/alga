@@ -39,7 +39,6 @@ type Stores struct {
 	MaintenanceWindow     MaintenanceWindowStore
 	TriageResult          TriageResultStore
 	TriageRule            TriageRuleStore
-	Counter               CounterStore
 	ICSRole               ICSRoleStore
 	IncidentDocument      IncidentDocumentStore
 	Handoff               HandoffStore
@@ -94,7 +93,6 @@ func NewStores(cli *db.Client, sessionExpiry, sessionMaxLifetime time.Duration) 
 		MaintenanceWindow:     newPGMaintenanceWindowStore(bunDB),
 		TriageResult:          newPGTriageResultStore(bunDB),
 		TriageRule:            newPGTriageRuleStore(bunDB),
-		Counter:               newPGCounterStore(bunDB),
 		ICSRole:               newPGICSRoleStore(bunDB),
 		IncidentDocument:      newPGIncidentDocumentStore(bunDB),
 		Handoff:               newPGHandoffStore(bunDB),

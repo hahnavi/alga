@@ -16,5 +16,3 @@ type NotificationDeliveryLog struct {
 	ErrorMessage     string     `bun:"error_message,default:''"`
 	CreatedAt        time.Time  `bun:"created_at,notnull,default:current_timestamp"`
 }
-
-func (*NotificationDeliveryLog) TableName() string { return "notification_delivery_logs" }

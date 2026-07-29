@@ -161,41 +161,15 @@ func routeConditionsFromModels(in []models.RouteCondition) []config.RouteConditi
 	return out
 }
 
-func nextPgCounter(ctx context.Context, db *bun.DB, name string) (int64, error) {
-	const maxCounterRetries = 10
-	for range maxCounterRetries {
-		c := new(models.Counter)
-		err := db.NewSelect().Model(c).Where("id = ?", name).Scan(ctx)
-		if err != nil && !isNotFound(err) {
-			return 0, fmt.Errorf("counter get: %w", err)
-		}
-		if isNotFound(err) {
-			newCounter := &models.Counter{ID: name, Seq: 1}
-			_, err := db.NewInsert().Model(newCounter).Exec(ctx)
-			if err != nil {
-				if pgIsDuplicateKey(err) {
-					continue
-				}
-				return 0, fmt.Errorf("counter create: %w", err)
-			}
-			return newCounter.Seq, nil
-		}
-		var newSeq int64
-		res, err := db.NewUpdate().Model((*models.Counter)(nil)).
-			Set("seq = seq + 1").
-			Where("id = ? AND seq = ?", name, c.Seq).
-			Returning("seq").
-			Exec(ctx, &newSeq)
-		if err != nil {
-			return 0, fmt.Errorf("counter increment: %w", err)
-		}
-		n, err := res.RowsAffected()
-		if err != nil {
-			return 0, fmt.Errorf("counter rows affected: %w", err)
-		}
-		if n == 1 {
-			return newSeq, nil
-		}
+// nextSeq draws the next value from a native Postgres sequence. Sequences are
+// gap-tolerant (a rolled-back transaction still consumes its value) which is
+// acceptable: alert/incident/triage numbers must be unique and monotonic, not
+// gapless. This also supports reserve-then-create flows where a number is
+// allocated before the owning row is inserted.
+func nextSeq(ctx context.Context, db bun.IDB, seq string) (int64, error) {
+	var n int64
+	if err := db.NewRaw("SELECT nextval(?::regclass)", seq).Scan(ctx, &n); err != nil {
+		return 0, fmt.Errorf("nextval %s: %w", seq, err)
 	}
-	return 0, fmt.Errorf("counter increment: CAS failed after %d retries", maxCounterRetries)
+	return n, nil
 }

@@ -145,7 +145,12 @@ func (a *App) wire() error {
 
 	var memorySvc memory.Service
 
-	a.dbCli, err = db.New(a.cfg.PostgresDSN)
+	a.dbCli, err = db.NewWithPool(a.cfg.PostgresDSN, db.PoolConfig{
+		MaxOpenConns:    a.cfg.PostgresMaxOpenConns,
+		MaxIdleConns:    a.cfg.PostgresMaxIdleConns,
+		ConnMaxIdleTime: a.cfg.PostgresConnMaxIdleTime,
+		ConnMaxLifetime: a.cfg.PostgresConnMaxLifetime,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to connect to Postgres: %w", err)
 	}

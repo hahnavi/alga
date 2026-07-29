@@ -18,5 +18,3 @@ type ScheduleOverride struct {
 	CreatedBy  *uuid.UUID `bun:"created_by"`
 	CreatedAt  time.Time  `bun:"created_at,notnull,default:current_timestamp"`
 }
-
-func (*ScheduleOverride) TableName() string { return "schedule_overrides" }

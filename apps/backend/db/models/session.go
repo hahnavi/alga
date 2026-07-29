@@ -22,5 +22,3 @@ type Session struct {
 	IP                     string    `bun:"ip,default:''"`
 	UserAgent              string    `bun:"user_agent,default:''"`
 }
-
-func (*Session) TableName() string { return "sessions" }

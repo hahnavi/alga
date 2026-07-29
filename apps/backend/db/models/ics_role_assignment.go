@@ -20,5 +20,3 @@ type ICSRoleAssignment struct {
 	StartedAt        time.Time  `bun:"started_at,notnull,default:current_timestamp"`
 	EndedAt          *time.Time `bun:"ended_at"`
 }
-
-func (*ICSRoleAssignment) TableName() string { return "ics_role_assignments" }

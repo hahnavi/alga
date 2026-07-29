@@ -7,7 +7,7 @@ import (
 )
 
 type AlertEvent struct {
-	BaseModel
+	IDModel
 
 	Type             string    `bun:"type,notnull"`
 	Timestamp        time.Time `bun:"timestamp,notnull,default:current_timestamp"`
@@ -17,5 +17,3 @@ type AlertEvent struct {
 	Source           string    `bun:"source"`
 	AlertID          uuid.UUID `bun:"alert_id,notnull"`
 }
-
-func (*AlertEvent) TableName() string { return "alert_events" }

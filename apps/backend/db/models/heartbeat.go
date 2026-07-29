@@ -25,5 +25,3 @@ type Heartbeat struct {
 	LastBreachAt    *time.Time        `bun:"last_breach_at"`
 	CreatedBy       string            `bun:"created_by"`
 }
-
-func (*Heartbeat) TableName() string { return "heartbeats" }

@@ -9,5 +9,3 @@ type CredentialProvider struct {
 	Enabled         bool   `bun:"enabled,notnull,default:true"`
 	System          bool   `bun:"system,notnull,default:false"`
 }
-
-func (*CredentialProvider) TableName() string { return "credential_providers" }

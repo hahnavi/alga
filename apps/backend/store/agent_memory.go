@@ -136,7 +136,6 @@ func (s *pgAgentMemoryStore) Create(ctx context.Context, mem *AgentMemoryRecord)
 		Confidence:      mem.Confidence,
 		AccessCount:     0,
 		ExpiresAt:       mem.ExpiresAt,
-		Embedding:       mem.Embedding,
 	}
 	m.ID = models.NewUUID()
 	m.CreatedAt = now
@@ -534,17 +533,11 @@ func pgMemoryToRecord(m *models.AgentMemory) *AgentMemoryRecord {
 		metadata = map[string]any{}
 	}
 
-	var embedding []float32
-	if m.Embedding != nil {
-		embedding = m.Embedding
-	}
-
 	return &AgentMemoryRecord{
 		ID:              m.ID,
 		Content:         m.Content,
 		MemoryType:      m.MemoryType,
 		Hash:            m.Hash,
-		Embedding:       embedding,
 		AgentID:         m.AgentID,
 		AgentName:       m.AgentName,
 		AgentType:       m.AgentType,

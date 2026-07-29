@@ -19,5 +19,3 @@ type WebhookToken struct {
 	ExpiresAt    *time.Time `bun:"expires_at"`
 	Revoked      bool       `bun:"revoked,notnull,default:false"`
 }
-
-func (*WebhookToken) TableName() string { return "webhook_tokens" }

@@ -24,5 +24,3 @@ type IncidentCoordinationMessage struct {
 	Metadata                 map[string]any `bun:"metadata,type:jsonb,notnull,default:'{}'"`
 	IncidentID               uuid.UUID      `bun:"incident_id,notnull"`
 }
-
-func (*IncidentCoordinationMessage) TableName() string { return "incident_coordination_messages" }

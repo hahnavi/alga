@@ -564,5 +564,5 @@ func (s *pgTriageResultStore) VolumeTrend(ctx context.Context, days int) ([]Tria
 }
 
 func (s *pgTriageResultStore) nextTriageNumber(ctx context.Context) (int64, error) {
-	return nextPgCounter(ctx, s.db, "triage_results")
+	return nextSeq(ctx, s.db, "triage_number_seq")
 }

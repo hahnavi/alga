@@ -220,7 +220,7 @@ func (s *pgAuditStore) persist(rec AuditRecord) {
 	defer cancel()
 
 	m := &models.AuditLog{
-		BaseModel:  models.BaseModel{ID: models.NewUUID()},
+		IDModel:    models.IDModel{ID: models.NewUUID()},
 		Timestamp:  rec.Timestamp,
 		Event:      string(rec.Event),
 		UserID:     rec.UserID,

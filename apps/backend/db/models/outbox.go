@@ -20,5 +20,3 @@ type Outbox struct {
 	PublishedAt   *time.Time `bun:"published_at"`
 	NextAttemptAt *time.Time `bun:"next_attempt_at"`
 }
-
-func (*Outbox) TableName() string { return "outboxes" }

@@ -14,5 +14,3 @@ type PasswordResetToken struct {
 	Used      bool      `bun:"used,notnull,default:false"`
 	CreatedAt time.Time `bun:"created_at,notnull,default:current_timestamp"`
 }
-
-func (*PasswordResetToken) TableName() string { return "password_reset_tokens" }

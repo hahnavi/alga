@@ -16,5 +16,3 @@ type TeamMember struct {
 	Role      string    `bun:"role,notnull,default:'member'"`
 	CreatedAt time.Time `bun:"created_at,notnull,default:current_timestamp"`
 }
-
-func (*TeamMember) TableName() string { return "team_members" }

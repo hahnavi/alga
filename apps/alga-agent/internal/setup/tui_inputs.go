@@ -3,8 +3,8 @@ package setup
 import (
 	"strings"
 
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
 )
 
 type listModel struct {
@@ -44,7 +44,7 @@ func (m *listModel) ensureVisible() {
 
 func (m listModel) Update(msg tea.Msg) (listModel, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "up", "k":
 			if m.cursor > 0 {
@@ -107,7 +107,7 @@ func newToggle(label string, def bool) toggleModel {
 }
 
 func (m toggleModel) Update(msg tea.Msg) (toggleModel, tea.Cmd) {
-	if msg, ok := msg.(tea.KeyMsg); ok {
+	if msg, ok := msg.(tea.KeyPressMsg); ok {
 		switch msg.String() {
 		case "left", "h", "y":
 			m.value = true
@@ -141,7 +141,7 @@ func newText(def string, secret bool, width int) textModel {
 
 func newTextLimit(def string, secret bool, width, charLimit int) textModel {
 	ti := textinput.New()
-	ti.Width = width
+	ti.SetWidth(width)
 	ti.CharLimit = charLimit
 	ti.SetValue(def)
 	ti.Prompt = styleInputPrompt.Render("▸ ")

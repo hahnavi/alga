@@ -1,6 +1,9 @@
 package setup
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"charm.land/lipgloss/v2"
+	"charm.land/lipgloss/v2/compat"
+)
 
 var (
 	tuiAccent  = lipgloss.Color("#A78BFA")
@@ -8,9 +11,9 @@ var (
 	tuiGreen   = lipgloss.Color("#34D399")
 	tuiAmber   = lipgloss.Color("#FBBF24")
 	tuiRed     = lipgloss.Color("#F87171")
-	tuiFaint   = lipgloss.AdaptiveColor{Light: "#6B7280", Dark: "#4B5563"}
+	tuiFaint   = compat.AdaptiveColor{Light: lipgloss.Color("#6B7280"), Dark: lipgloss.Color("#4B5563")}
 	tuiMuted   = lipgloss.Color("#9CA3AF")
-	tuiText    = lipgloss.AdaptiveColor{Light: "#111827", Dark: "#F3F4F6"}
+	tuiText    = compat.AdaptiveColor{Light: lipgloss.Color("#111827"), Dark: lipgloss.Color("#F3F4F6")}
 	tuiBg      = lipgloss.Color("#1F2937")
 	tuiBgLight = lipgloss.Color("#374151")
 )

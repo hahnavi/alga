@@ -261,7 +261,7 @@ func (s *pgAlertStore) AcknowledgeAlertByNumber(alertNumber int64, actor *EventA
 		return fmt.Errorf("failed to acknowledge alert: %w", err)
 	}
 
-	ev := AlertEventWithActor("acknowledged", now, actor)
+	ev := AlertEventWithActor("acked", now, actor)
 	if err := s.insertAlertEvent(ctx, a.ID, ev); err != nil {
 		logger.ErrorCtx(ctx, "Failed to insert acknowledged event for alert", "component", "store", "alert_id", a.ID, "error", err)
 	}

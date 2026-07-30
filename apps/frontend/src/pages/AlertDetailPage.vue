@@ -86,6 +86,7 @@ import { useTypingIndicator } from "@/composables/useTypingIndicator";
 import { useFormSubmit } from "@/composables/useFormSubmit";
 import { useClipboard } from "@/composables/useClipboard";
 import { getAgentAvatarSrc } from "@/lib/agentAvatar";
+import { resolveDisplayName } from "@/lib/userDisplay";
 import { formatTimeFull, formatDateSeparator, dateSeparatorKey } from "@/lib/time";
 import { messagePermalink as chatMessagePermalink } from "@/lib/chatMessage";
 
@@ -112,15 +113,22 @@ const {
   silentReload,
 } = useAlertDetailData(alertNumber);
 
+const { users, loadUsers } = useUsers();
+
 const investigationOutcome = computed(() => alertInvestigation.value?.summary);
 const sidebarAssignee = computed<{ name: string; isAgent: boolean; agentType?: string } | null>(
   () => {
     const inv = alertInvestigation.value;
     if (!inv) return null;
+    if (inv.assignee_type === "user") {
+      const name = inv.assignee_id
+        ? resolveDisplayName({ userId: inv.assignee_id, users: users.value, fallback: "" })
+        : "";
+      return name ? { name, isAgent: false } : null;
+    }
     const name = inv.agent_name?.trim();
     if (!name) return null;
-    const isAgent = inv.assignee_type !== "user";
-    return { name, isAgent, agentType: inv.agent_type };
+    return { name, isAgent: true, agentType: inv.agent_type };
   },
 );
 const hasInvestigationDetails = computed(() => {
@@ -204,7 +212,6 @@ const chatDraft = ref("");
 const chatReplyingTo = ref<OwnerThreadMessage | null>(null);
 const chatSending = ref(false);
 
-const { users, loadUsers } = useUsers();
 const agents = ref<AgentTokenRow[]>([]);
 const editorRef = ref<InstanceType<typeof MarkdownEditor> | null>(null);
 const { copyToClipboard } = useClipboard();
@@ -873,7 +880,8 @@ const timeline = computed<TimelineEntry[]>(() => {
   const a = alert.value;
   const events = a.events ?? [];
 
-  for (const ev of events) {
+  for (const raw of events) {
+    const ev = raw.type === "acknowledged" ? { ...raw, type: "acked" } : raw;
     const { dot, line, icon } = eventColors(ev.type);
     entries.push({
       type: ev.type,
@@ -1609,7 +1617,7 @@ onMounted(async () => {
               :timeline="timeline"
               :assignee="sidebarAssignee"
               :users="users"
-              :can-assign="canWriteAlert && !isDeleted"
+              :can-assign="canWriteAlert && !isDeleted && !!alertInvestigation"
               :assignee-id="alertInvestigation?.assignee_id"
               @open-delivery-thread="openDeliveryThreadFromResolved"
               @assign="handleAssignInvestigation"
@@ -1752,7 +1760,7 @@ onMounted(async () => {
           :timeline="timeline"
           :assignee="sidebarAssignee"
           :users="users"
-          :can-assign="canWriteAlert && !isDeleted"
+          :can-assign="canWriteAlert && !isDeleted && !!alertInvestigation"
           :assignee-id="alertInvestigation?.assignee_id"
           @open-delivery-thread="openDeliveryThreadFromResolved"
           @assign="handleAssignInvestigation"

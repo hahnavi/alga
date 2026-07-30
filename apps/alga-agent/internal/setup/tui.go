@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"alga-agent/internal/config"
 )
@@ -53,10 +53,10 @@ func (m wizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		inputWidth := min(60, max(30, m.width-12))
-		m.text.input.Width = inputWidth
+		m.text.input.SetWidth(inputWidth)
 		m.list.width = inputWidth
 		return m, nil
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		if msg.String() == "ctrl+c" {
 			m.state = stateQuit
 			return m, tea.Quit
@@ -75,7 +75,7 @@ func (m wizardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m wizardModel) updateMenu(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if msg, ok := msg.(tea.KeyMsg); ok {
+	if msg, ok := msg.(tea.KeyPressMsg); ok {
 		switch msg.String() {
 		case "up", "k":
 			if m.menuCursor > 0 {
@@ -167,7 +167,7 @@ func (m wizardModel) updateSection(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 	s := m.steps[m.stepIdx]
 
-	if msg, ok := msg.(tea.KeyMsg); ok {
+	if msg, ok := msg.(tea.KeyPressMsg); ok {
 		switch msg.String() {
 		case "esc":
 			m.state = stateMenu
@@ -290,7 +290,7 @@ func (m wizardModel) handleChannelMenu() (tea.Model, tea.Cmd) {
 }
 
 func (m wizardModel) updateReview(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if msg, ok := msg.(tea.KeyMsg); ok {
+	if msg, ok := msg.(tea.KeyPressMsg); ok {
 		switch msg.String() {
 		case "y", "enter":
 			if verr := m.cfg.Validate(); verr != nil {
@@ -307,18 +307,18 @@ func (m wizardModel) updateReview(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m wizardModel) View() string {
+func (m wizardModel) View() tea.View {
 	switch m.state {
 	case stateMenu:
-		return m.viewMenu()
+		return tea.NewView(m.viewMenu())
 	case stateSection:
-		return m.viewSection()
+		return tea.NewView(m.viewSection())
 	case stateReview:
-		return m.viewReview()
+		return tea.NewView(m.viewReview())
 	case stateDone:
-		return "\n  " + styleSuccess.Render("✓ Saving configuration…") + "\n\n"
+		return tea.NewView("\n  " + styleSuccess.Render("✓ Saving configuration…") + "\n\n")
 	}
-	return ""
+	return tea.NewView("")
 }
 
 const logo = `

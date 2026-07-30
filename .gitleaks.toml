@@ -4,9 +4,10 @@ title = "Alga gitleaks configuration"
 useDefault = true
 
 [allowlist]
-description = "Placeholder/example values in test fixtures, the .env template, and docs trip generic-api-key and curl-auth-header; no real secrets reside in these paths."
+description = "Placeholder/example values in test fixtures, the .env template, the ephemeral e2e stack, and docs trip generic-api-key and curl-auth-header; no real secrets reside in these paths."
 paths = [
   '''docs/.*\.md''',
   '''apps/backend/.*_test\.go''',
   '''apps/backend/\.env\.example''',
+  '''docker-compose\.e2e\.yml''',
 ]

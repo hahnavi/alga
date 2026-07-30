@@ -13,7 +13,8 @@
     "format:write": "oxfmt .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:integration": "playwright test --config playwright.integration.config.ts"
   },
   "dependencies": {
     "@lucide/vue": "^1.21.0",

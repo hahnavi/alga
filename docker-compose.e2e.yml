@@ -1,0 +1,104 @@
+# Integration test stack. Builds from source, uses ephemeral storage.
+#
+#   docker compose -f docker-compose.e2e.yml up --build -d --wait
+#   pnpm --filter frontend test:integration
+#   docker compose -f docker-compose.e2e.yml down -v
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg18
+    environment:
+      POSTGRES_USER: alga
+      POSTGRES_PASSWORD: alga_e2e_only
+      POSTGRES_DB: alga_e2e
+    tmpfs:
+      - /var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U alga"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - e2e
+
+  valkey:
+    image: valkey/valkey:9.1-alpine
+    command: valkey-server --save "" --loglevel warning --requirepass valkey_e2e
+    tmpfs:
+      - /data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "-a", "valkey_e2e", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - e2e
+
+  rabbitmq:
+    image: rabbitmq:4.3.4-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: alga
+      RABBITMQ_DEFAULT_PASS: alga_e2e_only
+    tmpfs:
+      - /var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - e2e
+
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    environment:
+      PORT: "8080"
+      LOG_LEVEL: warn
+      ENVIRONMENT: test
+      POSTGRES_DSN: postgres://alga:alga_e2e_only@postgres:5432/alga_e2e?sslmode=disable
+      POSTGRES_AUTO_MIGRATE: "true"
+      VALKEY_ADDR: valkey:6379
+      VALKEY_PASSWORD: valkey_e2e
+      RABBITMQ_URI: amqp://alga:alga_e2e_only@rabbitmq:5672/
+      ENCRYPTION_KEYS: "1:oG9kbdR6jvvPttVC38iwXsgsWD1brjqF+YPLi8NTy1Q="
+      SECRET_PEPPER: dGVzdC1zZWNyZXQtcGVwcGVyLWZvci1lMmUtdGVzdHM=
+      SECURE_COOKIES: "false"
+      SESSION_EXPIRY_HOURS: "24"
+      SESSION_MAX_LIFETIME: 24h
+      SLACK_DISABLED: "true"
+      TWILIO_DISABLED: "true"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - e2e
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+    ports:
+      - "3100:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - e2e
+
+networks:
+  e2e:
+    driver: bridge

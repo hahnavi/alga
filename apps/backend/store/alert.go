@@ -252,16 +252,26 @@ func (s *pgAlertStore) AcknowledgeAlertByNumber(alertNumber int64, actor *EventA
 	}
 
 	now := time.Now().UTC()
-	_, err = s.db.NewUpdate().Model((*models.Alert)(nil)).
+	res, err := s.db.NewUpdate().Model((*models.Alert)(nil)).
 		Set("acknowledged = ?", true).
 		Set("updated_at = ?", now).
 		Where("id = ?", a.ID).
+		Where("acknowledged = ?", false).
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to acknowledge alert: %w", err)
 	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to acknowledge alert: %w", err)
+	}
+	if rows == 0 {
+		// Already acknowledged (retry or concurrent request); keep idempotent
+		// and skip the duplicate event.
+		return nil
+	}
 
-	ev := AlertEventWithActor("acknowledged", now, actor)
+	ev := AlertEventWithActor("acked", now, actor)
 	if err := s.insertAlertEvent(ctx, a.ID, ev); err != nil {
 		logger.ErrorCtx(ctx, "Failed to insert acknowledged event for alert", "component", "store", "alert_id", a.ID, "error", err)
 	}

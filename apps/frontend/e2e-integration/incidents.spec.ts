@@ -1,12 +1,8 @@
 import { expect, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { getCsrfToken } from "./helpers";
 
-async function getCsrfToken(page: any): Promise<string> {
-  const cookies = await page.context().cookies();
-  const csrf = cookies.find((c: { name: string }) => c.name === "alga_csrf");
-  return csrf?.value ?? "";
-}
-
-async function createIncident(page: any, overrides: Record<string, unknown> = {}) {
+async function createIncident(page: Page, overrides: Record<string, unknown> = {}) {
   const csrf = await getCsrfToken(page);
   const res = await page.request.post("/api/v1/incidents", {
     data: {

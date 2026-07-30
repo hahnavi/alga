@@ -1,7 +1,5 @@
 import { expect, test } from "@playwright/test";
-
-const ADMIN_EMAIL = "admin@alga-e2e.test";
-const ADMIN_PASSWORD = "E2e!Str0ngPass1";
+import { ADMIN_EMAIL, ADMIN_PASSWORD } from "./helpers";
 
 test.describe("auth: login flow", () => {
   test("setup wizard is no longer accessible after admin creation", async ({ page }) => {

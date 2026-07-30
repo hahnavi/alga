@@ -1,11 +1,13 @@
 import { expect, test as setup } from "@playwright/test";
-
-const ADMIN_EMAIL = "admin@alga-e2e.test";
-const ADMIN_PASSWORD = "E2e!Str0ngPass1";
-const ADMIN_NAME = "E2E Admin";
-
-const VIEWER_EMAIL = "viewer@alga-e2e.test";
-const VIEWER_PASSWORD = "Vi3wer!Pass123";
+import {
+  ADMIN_EMAIL,
+  ADMIN_NAME,
+  ADMIN_PASSWORD,
+  getCsrfToken,
+  VIEWER_EMAIL,
+  VIEWER_NAME,
+  VIEWER_PASSWORD,
+} from "./helpers";
 
 setup("complete setup wizard and authenticate", async ({ page }) => {
   const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3100";
@@ -26,35 +28,48 @@ setup("complete setup wizard and authenticate", async ({ page }) => {
 
   const statusRes = await page.request.get(`${baseURL}/api/v1/setup/status`);
   const status = await statusRes.json();
-  expect(status.needs_setup).toBe(true);
 
-  const setupRes = await page.request.post(`${baseURL}/api/v1/setup`, {
-    data: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD, full_name: ADMIN_NAME },
-  });
-  expect(setupRes.status()).toBe(200);
-  const setupBody = await setupRes.json();
-  expect(setupBody.email).toBe(ADMIN_EMAIL);
-  expect(setupBody.role).toBe("admin");
+  if (status.needs_setup) {
+    const setupRes = await page.request.post(`${baseURL}/api/v1/setup`, {
+      data: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD, full_name: ADMIN_NAME },
+    });
+    expect(setupRes.status()).toBe(200);
+    const setupBody = await setupRes.json();
+    expect(setupBody.email).toBe(ADMIN_EMAIL);
+    expect(setupBody.role).toBe("admin");
+  } else {
+    // Retry or reused stack: setup already ran, log in instead.
+    const loginRes = await page.request.post(`${baseURL}/api/v1/auth/login`, {
+      data: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD },
+    });
+    expect(loginRes.status()).toBe(200);
+  }
 
-  const cookies = await page.context().cookies();
-  const csrf = cookies.find((c) => c.name === "alga_csrf");
-  expect(csrf).toBeDefined();
+  const csrf = await getCsrfToken(page);
+  expect(csrf).toBeTruthy();
 
   const onboardingRes = await page.request.post(`${baseURL}/api/v1/onboarding/complete`, {
-    headers: { "X-CSRF-Token": csrf!.value },
+    headers: { "X-CSRF-Token": csrf },
   });
   expect(onboardingRes.status()).toBe(200);
 
-  const viewerRes = await page.request.post(`${baseURL}/api/v1/users`, {
-    data: {
-      email: VIEWER_EMAIL,
-      password: VIEWER_PASSWORD,
-      full_name: "E2E Viewer",
-      role: "viewer",
-    },
-    headers: { "X-CSRF-Token": csrf!.value },
-  });
-  expect(viewerRes.status()).toBe(201);
+  const usersRes = await page.request.get(`${baseURL}/api/v1/users`);
+  expect(usersRes.status()).toBe(200);
+  const usersBody = await usersRes.json();
+  const viewerExists = usersBody.data.some((u: { email: string }) => u.email === VIEWER_EMAIL);
+
+  if (!viewerExists) {
+    const viewerRes = await page.request.post(`${baseURL}/api/v1/users`, {
+      data: {
+        email: VIEWER_EMAIL,
+        password: VIEWER_PASSWORD,
+        full_name: VIEWER_NAME,
+        role: "viewer",
+      },
+      headers: { "X-CSRF-Token": csrf },
+    });
+    expect(viewerRes.status()).toBe(201);
+  }
 
   await page.goto("/");
   await expect(page).not.toHaveURL(/\/(login|setup|onboarding)/);

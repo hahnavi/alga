@@ -1,15 +1,8 @@
 import { expect, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { ADMIN_NAME, getCsrfToken, VIEWER_NAME } from "./helpers";
 
-const ADMIN_NAME = "E2E Admin";
-const VIEWER_NAME = "E2E Viewer";
-
-async function getCsrfToken(page: any): Promise<string> {
-  const cookies = await page.context().cookies();
-  const csrf = cookies.find((c: { name: string }) => c.name === "alga_csrf");
-  return csrf?.value ?? "";
-}
-
-async function createManualAlert(page: any, alertname: string): Promise<number> {
+async function createManualAlert(page: Page, alertname: string): Promise<number> {
   const csrf = await getCsrfToken(page);
   const res = await page.request.post("/api/v1/alerts", {
     data: { alertname, severity: "critical", message: `E2E manual alert: ${alertname}` },
@@ -20,7 +13,7 @@ async function createManualAlert(page: any, alertname: string): Promise<number> 
   return body.data.alert_number;
 }
 
-async function ensureInvestigation(page: any, alertNumber: number): Promise<void> {
+async function ensureInvestigation(page: Page, alertNumber: number): Promise<void> {
   const csrf = await getCsrfToken(page);
   const invRes = await page.request.post(`/api/v1/alerts/${alertNumber}/investigate`, {
     headers: { "X-CSRF-Token": csrf },

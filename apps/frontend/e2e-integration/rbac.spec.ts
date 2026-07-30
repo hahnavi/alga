@@ -1,10 +1,5 @@
 import { expect, test } from "@playwright/test";
-
-async function getCsrfToken(page: any): Promise<string> {
-  const cookies = await page.context().cookies();
-  const csrf = cookies.find((c: { name: string }) => c.name === "alga_csrf");
-  return csrf?.value ?? "";
-}
+import { getCsrfToken } from "./helpers";
 
 test.describe("rbac: viewer restrictions", () => {
   test.use({ storageState: "e2e-integration/.auth/viewer.json" });

@@ -1,12 +1,8 @@
 import { expect, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { getCsrfToken } from "./helpers";
 
-async function getCsrfToken(page: any): Promise<string> {
-  const cookies = await page.context().cookies();
-  const csrf = cookies.find((c: { name: string }) => c.name === "alga_csrf");
-  return csrf?.value ?? "";
-}
-
-async function createWebhookToken(page: any): Promise<string> {
+async function createWebhookToken(page: Page): Promise<string> {
   const csrf = await getCsrfToken(page);
   const res = await page.request.post("/api/v1/webhook-tokens", {
     data: { name: `e2e-${Date.now()}` },

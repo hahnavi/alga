@@ -211,6 +211,161 @@ export function makeOnCallEntry(overrides: Record<string, unknown> = {}) {
   };
 }
 
+export type MockInvestigation = {
+  id: string;
+  alert_investigation_id: string;
+  alert_investigation_number: number;
+  alerts: unknown[];
+  correlation_key: string;
+  status: string;
+  agent_id: string;
+  agent_name: string;
+  agent_type: string;
+  assignee_type: string;
+  assignee_id: string;
+  created_at: string;
+  updated_at: string;
+  investigating_duration_ms: number;
+};
+
+export function makeInvestigation(overrides: Partial<MockInvestigation> = {}): MockInvestigation {
+  return {
+    id: "inv-001",
+    alert_investigation_id: "ainv-001",
+    alert_investigation_number: 1,
+    alerts: [],
+    correlation_key: "corr-001",
+    status: "investigating",
+    agent_id: "agent-001",
+    agent_name: "Hermes",
+    agent_type: "hermes",
+    assignee_type: "agent",
+    assignee_id: "agent-001",
+    created_at: "2025-06-01T10:00:00Z",
+    updated_at: "2025-06-01T10:00:00Z",
+    investigating_duration_ms: 0,
+    ...overrides,
+  };
+}
+
+export async function mockAlertDetailApis(
+  page: Page,
+  alertNumber: number,
+  options: {
+    alert?: MockAlert;
+    investigation?: MockInvestigation | null;
+    relatedAlerts?: unknown[];
+    incident?: unknown;
+    users?: unknown[];
+  } = {},
+) {
+  const alert = options.alert ?? makeAlert({ alert_number: alertNumber });
+  const investigation = options.investigation === undefined ? null : options.investigation;
+  await page.route(`**/api/v1/alerts/${alertNumber}/related`, (route: Route) =>
+    route.fulfill(
+      dataEnvelope({
+        related_alerts: options.relatedAlerts ?? [],
+        incident: options.incident ?? null,
+      }),
+    ),
+  );
+  await page.route(`**/api/v1/alerts/${alertNumber}/thread**`, (route: Route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    return route.fulfill(dataEnvelope({ messages: [] }));
+  });
+  await page.route(`**/api/v1/alerts/${alertNumber}`, (route: Route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    return route.fulfill(
+      dataEnvelope({
+        alert,
+        ...(investigation ? { alert_investigation: investigation } : {}),
+      }),
+    );
+  });
+  await page.route("**/api/v1/users**", (route: Route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    return route.fulfill(dataEnvelope(options.users ?? [makeUser()]));
+  });
+  await page.route("**/api/v1/agent-tokens**", (route: Route) => route.fulfill(dataEnvelope([])));
+  await page.route("**/api/v1/integrations**", (route: Route) => route.fulfill(dataEnvelope([])));
+  await page.route("**/api/v1/notifications**", (route: Route) => route.fulfill(dataEnvelope([])));
+  await page.route("**/api/v1/events**", (route: Route) => route.abort());
+}
+
+export async function mockIncidentDetailApis(
+  page: Page,
+  incidentNumber: number,
+  options: {
+    incident?: MockIncident;
+    alerts?: unknown[];
+    icsRoles?: unknown[];
+    coordinationMessages?: unknown[];
+    coordinationTasks?: unknown[];
+    statusUpdates?: unknown[];
+    thread?: unknown;
+    document?: unknown[];
+    users?: unknown[];
+  } = {},
+) {
+  const incident = options.incident ?? makeIncident({ incident_number: incidentNumber });
+  await page.route(`**/api/v1/incidents/${incidentNumber}/alerts**`, (route: Route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    return route.fulfill(dataEnvelope(options.alerts ?? []));
+  });
+  await page.route(`**/api/v1/incidents/${incidentNumber}/ics/roles**`, (route: Route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    return route.fulfill(dataEnvelope(options.icsRoles ?? []));
+  });
+  await page.route(`**/api/v1/incidents/${incidentNumber}/ics/document**`, (route: Route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    return route.fulfill(dataEnvelope(options.document ?? []));
+  });
+  await page.route(
+    `**/api/v1/incidents/${incidentNumber}/coordination/messages**`,
+    (route: Route) => {
+      if (route.request().method() !== "GET") return route.fallback();
+      return route.fulfill(dataEnvelope(options.coordinationMessages ?? []));
+    },
+  );
+  await page.route(`**/api/v1/incidents/${incidentNumber}/coordination/tasks**`, (route: Route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    return route.fulfill(dataEnvelope(options.coordinationTasks ?? []));
+  });
+  await page.route(`**/api/v1/incidents/${incidentNumber}/status-updates**`, (route: Route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    return route.fulfill(dataEnvelope(options.statusUpdates ?? []));
+  });
+  await page.route(`**/api/v1/incidents/${incidentNumber}/thread**`, (route: Route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    return route.fulfill(
+      dataEnvelope(options.thread ?? { messages: [], thread_id: "t-1", provider: "internal" }),
+    );
+  });
+  await page.route(`**/api/v1/incidents/${incidentNumber}/timeline**`, (route: Route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    return route.fulfill(dataEnvelope([]));
+  });
+  await page.route(`**/api/v1/incidents/${incidentNumber}/post-mortem**`, (route: Route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    return route.fulfill({ status: 404, ...json({ error: "Not found" }) });
+  });
+  await page.route(`**/api/v1/incidents/${incidentNumber}`, (route: Route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    return route.fulfill(dataEnvelope({ incident }));
+  });
+  await page.route("**/api/v1/users**", (route: Route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    return route.fulfill(dataEnvelope(options.users ?? [makeUser()]));
+  });
+  await page.route("**/api/v1/agent-tokens**", (route: Route) => route.fulfill(dataEnvelope([])));
+  await page.route("**/api/v1/integrations**", (route: Route) => route.fulfill(dataEnvelope([])));
+  await page.route("**/api/v1/notifications**", (route: Route) => route.fulfill(dataEnvelope([])));
+  await page.route("**/api/v1/playbooks**", (route: Route) =>
+    route.fulfill(dataEnvelope({ items: [], total: 0 })),
+  );
+  await page.route("**/api/v1/events**", (route: Route) => route.abort());
+}
+
 export function makeDashboardStats(overrides: Record<string, unknown> = {}) {
   return {
     alerts: { total: 120, firing: 5, resolved: 115, unacknowledged: 3 },

@@ -9,6 +9,7 @@ import { useDropdownLifecycle } from "@/composables/useDropdownLifecycle";
 import { useRoutePrefetch } from "@/composables/useRoutePrefetch";
 import { CARD_ICON_BTN_CLASS } from "@/lib/uiClasses";
 import UserMenuBar from "@/components/UserMenuBar.vue";
+import LogoMark from "@/components/ui/LogoMark.vue";
 
 defineOptions({ inheritAttrs: false });
 
@@ -130,7 +131,17 @@ const popupStyle = computed(() => {
         <PanelLeftOpen v-if="collapsed" class="h-4 w-4" />
         <PanelLeftClose v-else class="h-4 w-4" />
       </button>
-      <span v-if="!collapsed" class="ml-2 text-lg font-semibold">Alga</span>
+      <div v-if="!collapsed" class="ml-2 flex min-w-0 items-center gap-2">
+        <LogoMark class="h-7 w-7 shrink-0" />
+        <span class="flex min-w-0 flex-col">
+          <span class="text-[15px] font-semibold leading-tight tracking-tight">Alga</span>
+          <span
+            class="font-mono text-[9px] font-medium leading-none tracking-[0.24em] text-[var(--accent)]"
+          >
+            OPS CONSOLE
+          </span>
+        </span>
+      </div>
     </div>
 
     <nav class="flex-1 overflow-y-auto px-2 py-2">
@@ -142,7 +153,7 @@ const popupStyle = computed(() => {
         />
         <div
           v-if="!collapsed"
-          class="px-3 pb-1 text-[10px] font-semibold tracking-wider uppercase text-[var(--text-muted)]"
+          class="eyebrow px-3 pb-1 text-[10px]"
           :class="si === 0 ? 'pt-1' : 'pt-3'"
         >
           {{ section.label }}
@@ -155,11 +166,7 @@ const popupStyle = computed(() => {
               class="flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors cursor-pointer"
               @mouseenter="prefetch(entry.to)"
               @focus="prefetch(entry.to)"
-              :class="
-                isActive(entry.to)
-                  ? 'bg-[var(--sidebar-active,rgb(255_255_255/0.12))] text-[var(--text-primary)] font-medium'
-                  : 'text-[var(--text-muted)] hover:bg-[var(--sidebar-hover,rgb(148_163_184/0.1))] hover:text-[var(--text-primary)]'
-              "
+              :class="isActive(entry.to) ? 'nav-link-active' : 'nav-link-inactive'"
               :title="collapsed ? entry.label : undefined"
             >
               <component :is="entry.icon" class="h-4 w-4 shrink-0" />
@@ -207,11 +214,7 @@ const popupStyle = computed(() => {
                   class="flex items-center gap-3 rounded-md px-3 py-1.5 text-sm transition-colors cursor-pointer"
                   @mouseenter="prefetch(child.to)"
                   @focus="prefetch(child.to)"
-                  :class="
-                    isActive(child.to)
-                      ? 'bg-[var(--sidebar-active,rgb(255_255_255/0.12))] text-[var(--text-primary)] font-medium'
-                      : 'text-[var(--text-muted)] hover:bg-[var(--sidebar-hover,rgb(148_163_184/0.1))] hover:text-[var(--text-primary)]'
-                  "
+                  :class="isActive(child.to) ? 'nav-link-active' : 'nav-link-inactive'"
                 >
                   <component :is="child.icon" class="h-3.5 w-3.5 shrink-0" />
                   <span>{{ child.label }}</span>
@@ -235,11 +238,7 @@ const popupStyle = computed(() => {
                     class="flex items-center gap-3 px-3 py-1.5 text-sm transition-colors cursor-pointer"
                     @mouseenter="prefetch(child.to)"
                     @focus="prefetch(child.to)"
-                    :class="
-                      isActive(child.to)
-                        ? 'bg-[var(--sidebar-active,rgb(255_255_255/0.12))] text-[var(--text-primary)] font-medium'
-                        : 'text-[var(--text-muted)] hover:bg-[var(--sidebar-hover,rgb(148_163_184/0.1))] hover:text-[var(--text-primary)]'
-                    "
+                    :class="isActive(child.to) ? 'nav-link-active' : 'nav-link-inactive'"
                     @click="closePopup"
                   >
                     <component :is="child.icon" class="h-3.5 w-3.5 shrink-0" />

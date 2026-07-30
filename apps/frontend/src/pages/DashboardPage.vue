@@ -443,7 +443,7 @@ const recentActivity = computed(() => {
         <div
           v-for="i in 5"
           :key="i"
-          class="min-h-20 animate-pulse rounded-lg border border-[var(--border-primary)] bg-[var(--bg-card)] p-4"
+          class="min-h-20 animate-pulse rounded border border-[var(--border-primary)] bg-[var(--bg-card)] p-4"
         >
           <div class="flex items-center gap-3">
             <div class="h-9 w-9 shrink-0 rounded-lg bg-[var(--skeleton-bg)]"></div>
@@ -458,7 +458,7 @@ const recentActivity = computed(() => {
         <div
           v-for="i in 4"
           :key="i"
-          class="h-56 animate-pulse rounded-lg border border-[var(--border-primary)] bg-[var(--bg-card)]"
+          class="h-56 animate-pulse rounded border border-[var(--border-primary)] bg-[var(--bg-card)]"
         ></div>
       </div>
     </template>
@@ -467,10 +467,10 @@ const recentActivity = computed(() => {
 
     <template v-else-if="stats">
       <div
-        class="grid grid-cols-2 gap-3 [&>:last-child]:col-span-2 sm:grid-cols-6 sm:[&>*]:col-span-2 sm:[&>:last-child]:col-span-3 sm:[&>:nth-last-child(2)]:col-span-3 lg:grid-cols-5 lg:[&>*]:col-span-1 lg:[&>:last-child]:col-span-1 lg:[&>:nth-last-child(2)]:col-span-1"
+        class="rise grid grid-cols-2 gap-3 [&>:last-child]:col-span-2 sm:grid-cols-6 sm:[&>*]:col-span-2 sm:[&>:last-child]:col-span-3 sm:[&>:nth-last-child(2)]:col-span-3 lg:grid-cols-5 lg:[&>*]:col-span-1 lg:[&>:last-child]:col-span-1 lg:[&>:nth-last-child(2)]:col-span-1"
       >
         <Card
-          class="min-h-20 cursor-pointer transition-all duration-150 hover:border-[var(--border-secondary)] hover:shadow-md"
+          class="min-h-20 cursor-pointer transition-all duration-150 hover:border-[var(--border-secondary)] hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
           role="button"
           tabindex="0"
           @click="navigateToIncidents({})"
@@ -483,16 +483,18 @@ const recentActivity = computed(() => {
               <Timer class="h-4 w-4 text-[var(--chart-amber)]" />
             </div>
             <div class="min-w-0">
-              <div class="truncate text-lg font-bold text-[var(--text-primary)]">
+              <div
+                class="truncate text-lg font-bold tracking-tight tabular-nums text-[var(--text-primary)]"
+              >
                 {{ metrics ? formatMinutes(metrics.mtta_minutes) : "\u2014" }}
               </div>
-              <div class="text-[11px] text-[var(--text-muted)]">MTTA</div>
+              <div class="eyebrow text-[10px]">MTTA</div>
             </div>
           </div>
         </Card>
 
         <Card
-          class="min-h-20 cursor-pointer transition-all duration-150 hover:border-[var(--border-secondary)] hover:shadow-md"
+          class="min-h-20 cursor-pointer transition-all duration-150 hover:border-[var(--border-secondary)] hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
           role="button"
           tabindex="0"
           @click="navigateToIncidents({})"
@@ -505,16 +507,18 @@ const recentActivity = computed(() => {
               <Clock class="h-4 w-4 text-[var(--chart-red)]" />
             </div>
             <div class="min-w-0">
-              <div class="truncate text-lg font-bold text-[var(--text-primary)]">
+              <div
+                class="truncate text-lg font-bold tracking-tight tabular-nums text-[var(--text-primary)]"
+              >
                 {{ metrics ? formatMinutes(metrics.mttr_minutes) : "\u2014" }}
               </div>
-              <div class="text-[11px] text-[var(--text-muted)]">MTTR</div>
+              <div class="eyebrow text-[10px]">MTTR</div>
             </div>
           </div>
         </Card>
 
         <Card
-          class="min-h-20 cursor-pointer transition-all duration-150 hover:border-[var(--border-secondary)] hover:shadow-md"
+          class="min-h-20 cursor-pointer transition-all duration-150 hover:border-[var(--border-secondary)] hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
           role="button"
           tabindex="0"
           @click="navigateToAlerts({ status: 'open' })"
@@ -527,16 +531,18 @@ const recentActivity = computed(() => {
               <Flame class="h-4 w-4 text-[var(--text-badge-firing)]" />
             </div>
             <div class="min-w-0">
-              <div class="truncate text-lg font-bold text-[var(--text-badge-firing)]">
+              <div
+                class="truncate text-lg font-bold tracking-tight tabular-nums text-[var(--text-badge-firing)]"
+              >
                 {{ stats.alerts.firing }}
               </div>
-              <div class="text-[11px] text-[var(--text-muted)]">Firing</div>
+              <div class="eyebrow text-[10px]">Firing</div>
             </div>
           </div>
         </Card>
 
         <Card
-          class="min-h-20 cursor-pointer transition-all duration-150 hover:border-[var(--border-secondary)] hover:shadow-md"
+          class="min-h-20 cursor-pointer transition-all duration-150 hover:border-[var(--border-secondary)] hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
           role="button"
           tabindex="0"
           @click="navigateToIncidents({ status: 'active' })"
@@ -549,16 +555,18 @@ const recentActivity = computed(() => {
               <AlertOctagon class="h-4 w-4 text-[var(--text-badge-warning)]" />
             </div>
             <div class="min-w-0">
-              <div class="truncate text-lg font-bold text-[var(--text-primary)]">
+              <div
+                class="truncate text-lg font-bold tracking-tight tabular-nums text-[var(--text-primary)]"
+              >
                 {{ stats.incidents.active }}
               </div>
-              <div class="truncate text-[11px] text-[var(--text-muted)]">Active Incidents</div>
+              <div class="eyebrow truncate text-[10px]">Active Incidents</div>
             </div>
           </div>
         </Card>
 
         <Card
-          class="min-h-20 cursor-pointer transition-all duration-150 hover:border-[var(--border-secondary)] hover:shadow-md"
+          class="min-h-20 cursor-pointer transition-all duration-150 hover:border-[var(--border-secondary)] hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
           role="button"
           tabindex="0"
           @click="navigateToIncidents({})"
@@ -572,24 +580,25 @@ const recentActivity = computed(() => {
               <ShieldCheck class="h-4 w-4" :style="{ color: slaColor }" />
             </div>
             <div class="min-w-0">
-              <div class="truncate text-lg font-bold" :style="{ color: slaColor }">
+              <div
+                class="truncate text-lg font-bold tracking-tight tabular-nums"
+                :style="{ color: slaColor }"
+              >
                 {{
                   metrics
                     ? metrics.sla_compliance.resolve_sla_compliance_pct.toFixed(1) + "%"
                     : "\u2014"
                 }}
               </div>
-              <div class="text-[11px] text-[var(--text-muted)]">SLA</div>
+              <div class="eyebrow text-[10px]">SLA</div>
             </div>
           </div>
         </Card>
       </div>
 
-      <div :class="chartGridClass">
+      <div class="rise [animation-delay:60ms]" :class="chartGridClass">
         <Card>
-          <h2
-            class="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]"
-          >
+          <h2 class="eyebrow mb-3 flex items-center gap-2">
             <Activity class="h-4 w-4" />
             Incident Trend
           </h2>
@@ -609,9 +618,7 @@ const recentActivity = computed(() => {
         </Card>
 
         <Card>
-          <h2
-            class="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]"
-          >
+          <h2 class="eyebrow mb-3 flex items-center gap-2">
             <ShieldAlert class="h-4 w-4" />
             Severity Distribution
           </h2>
@@ -631,9 +638,7 @@ const recentActivity = computed(() => {
         </Card>
 
         <Card v-if="stats.incidents.by_priority">
-          <h2
-            class="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]"
-          >
+          <h2 class="eyebrow mb-3 flex items-center gap-2">
             <ShieldAlert class="h-4 w-4" />
             Incident Priority
           </h2>
@@ -653,9 +658,7 @@ const recentActivity = computed(() => {
         </Card>
 
         <Card>
-          <h2
-            class="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]"
-          >
+          <h2 class="eyebrow mb-3 flex items-center gap-2">
             <BarChart3 class="h-4 w-4" />
             Top Services by Incidents
           </h2>
@@ -671,9 +674,7 @@ const recentActivity = computed(() => {
         </Card>
 
         <Card>
-          <h2
-            class="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]"
-          >
+          <h2 class="eyebrow mb-3 flex items-center gap-2">
             <TrendingUp class="h-4 w-4" />
             MTTA / MTTR Trend
           </h2>
@@ -689,12 +690,10 @@ const recentActivity = computed(() => {
         </Card>
       </div>
 
-      <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div class="rise grid grid-cols-1 gap-4 md:grid-cols-3 [animation-delay:120ms]">
         <Card class="sm:col-span-1 lg:col-span-1">
           <div class="mb-3 flex items-center justify-between">
-            <h2
-              class="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]"
-            >
+            <h2 class="eyebrow flex items-center gap-2">
               <AlertTriangle class="h-4 w-4" />
               Active
             </h2>
@@ -786,9 +785,7 @@ const recentActivity = computed(() => {
 
         <Card class="sm:col-span-1 lg:col-span-1">
           <div class="mb-3 flex items-center justify-between">
-            <h2
-              class="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]"
-            >
+            <h2 class="eyebrow flex items-center gap-2">
               <Server class="h-4 w-4" />
               Service Health
             </h2>
@@ -862,9 +859,7 @@ const recentActivity = computed(() => {
 
         <Card class="sm:col-span-1 lg:col-span-1">
           <div class="mb-3 flex items-center justify-between">
-            <h2
-              class="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]"
-            >
+            <h2 class="eyebrow flex items-center gap-2">
               <Radio class="h-4 w-4" />
               On-Call Now
             </h2>
@@ -911,7 +906,7 @@ const recentActivity = computed(() => {
         </Card>
       </div>
 
-      <Card>
+      <Card class="rise [animation-delay:160ms]">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
           <div class="text-sm font-medium text-[var(--text-secondary)]">
             Investigations
@@ -943,14 +938,12 @@ const recentActivity = computed(() => {
         </div>
       </Card>
 
-      <Card>
+      <Card class="rise [animation-delay:200ms]">
         <button
           class="flex w-full cursor-pointer items-center justify-between"
           @click="summaryExpanded = !summaryExpanded"
         >
-          <h2
-            class="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]"
-          >
+          <h2 class="eyebrow flex items-center gap-2">
             <Sparkles class="h-4 w-4" />
             Daily Write-Up
           </h2>
@@ -1017,12 +1010,10 @@ const recentActivity = computed(() => {
         </div>
       </Card>
 
-      <div v-if="recentActivity.length > 0">
+      <div v-if="recentActivity.length > 0" class="rise [animation-delay:240ms]">
         <Card>
           <div class="mb-3 flex items-center justify-between">
-            <h2 class="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-              Recent Activity
-            </h2>
+            <h2 class="eyebrow">Recent Activity</h2>
           </div>
           <div class="divide-y divide-[var(--border-primary)]">
             <div

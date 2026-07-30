@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { getErrorMessage } from "@/lib/error";
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { api } from "@/lib/api";
 import { validatePassword } from "@/lib/validators";
 import Button from "@/components/ui/Button.vue";
 import Input from "@/components/ui/Input.vue";
-import AuthLayout from "@/components/ui/AuthLayout.vue";
 import ErrorBanner from "@/components/ui/ErrorBanner.vue";
 import FormLabel from "@/components/ui/FormLabel.vue";
 
@@ -48,6 +47,10 @@ function handleBlur(field: "password" | "confirm") {
   touched.value[field] = true;
 }
 
+onMounted(() => {
+  document.getElementById("reset-password")?.focus();
+});
+
 async function handleSubmit() {
   touched.value = { password: true, confirm: true };
   if (!formValid.value || !token.value) return;
@@ -66,7 +69,7 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <AuthLayout>
+  <div>
     <h1 class="mb-6 text-center text-xl font-semibold">Set New Password</h1>
 
     <ErrorBanner v-if="!hasToken" message="Invalid or missing reset token." class="mb-4" />
@@ -76,7 +79,13 @@ async function handleSubmit() {
       <p class="text-center text-sm text-[var(--text-secondary)]">
         Your password has been reset successfully.
       </p>
-      <Button class="w-full" @click="router.push('/login')">Sign in</Button>
+      <Button
+        variant="primary"
+        class="h-11 w-full text-sm font-semibold"
+        @click="router.push('/login')"
+      >
+        Sign in
+      </Button>
     </div>
 
     <form v-else-if="hasToken" class="space-y-4" @submit.prevent="handleSubmit">
@@ -89,6 +98,7 @@ async function handleSubmit() {
           autocomplete="new-password"
           required
           :error="passwordError"
+          class="h-11"
           @blur="handleBlur('password')"
         />
       </div>
@@ -101,13 +111,20 @@ async function handleSubmit() {
           autocomplete="new-password"
           required
           :error="confirmError"
+          class="h-11"
           @blur="handleBlur('confirm')"
         />
       </div>
       <p class="text-xs text-[var(--text-secondary)]">
         Must be at least 8 characters with uppercase, lowercase, digit, and special character.
       </p>
-      <Button type="submit" class="w-full" :loading="loading" :disabled="!formValid">
+      <Button
+        type="submit"
+        variant="primary"
+        class="h-11 w-full text-sm font-semibold"
+        :loading="loading"
+        :disabled="!formValid"
+      >
         Reset password
       </Button>
     </form>
@@ -117,5 +134,5 @@ async function handleSubmit() {
         Back to sign in
       </router-link>
     </p>
-  </AuthLayout>
+  </div>
 </template>

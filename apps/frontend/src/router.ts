@@ -67,7 +67,23 @@ const router = createRouter({
       path: "/onboarding",
       component: () => import("@/pages/OnboardingPage.vue"),
     },
-    { path: "/login", component: LoginPage, meta: { public: true, guestOnly: true } },
+    {
+      path: "/login",
+      component: () => import("@/pages/AuthShell.vue"),
+      children: [
+        { path: "", component: LoginPage, meta: { public: true, guestOnly: true } },
+        {
+          path: "/forgot-password",
+          component: () => import("@/pages/ForgotPasswordPage.vue"),
+          meta: { public: true },
+        },
+        {
+          path: "/reset-password",
+          component: () => import("@/pages/ResetPasswordPage.vue"),
+          meta: { public: true },
+        },
+      ],
+    },
     {
       path: "/settings",
       redirect: (to) => {
@@ -159,16 +175,6 @@ const router = createRouter({
     { path: "/credential-providers", redirect: { path: "/settings/credential-providers" } },
     { path: "/sso", redirect: { path: "/settings/sso" } },
     { path: "/users", redirect: { path: "/settings/users" } },
-    {
-      path: "/forgot-password",
-      component: () => import("@/pages/ForgotPasswordPage.vue"),
-      meta: { public: true },
-    },
-    {
-      path: "/reset-password",
-      component: () => import("@/pages/ResetPasswordPage.vue"),
-      meta: { public: true },
-    },
     { path: "/", component: DashboardPage },
     { path: "/alerts", component: AlertsPage },
     { path: "/alerts/:alertNumber", component: AlertDetailPage },

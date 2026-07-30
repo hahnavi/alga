@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { getErrorMessage } from "@/lib/error";
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { api } from "@/lib/api";
+import { Mail } from "@lucide/vue";
 import Button from "@/components/ui/Button.vue";
 import Input from "@/components/ui/Input.vue";
-import AuthLayout from "@/components/ui/AuthLayout.vue";
 import ErrorBanner from "@/components/ui/ErrorBanner.vue";
 import FormLabel from "@/components/ui/FormLabel.vue";
 
@@ -29,6 +29,10 @@ const formValid = computed(() => {
   return email.value.trim();
 });
 
+onMounted(() => {
+  document.getElementById("forgot-email")?.focus();
+});
+
 async function handleSubmit() {
   touched.value = true;
   if (!formValid.value) return;
@@ -47,7 +51,7 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <AuthLayout>
+  <div>
     <h1 class="mb-6 text-center text-xl font-semibold">Reset Password</h1>
 
     <ErrorBanner :message="error" class="mb-4" />
@@ -56,23 +60,42 @@ async function handleSubmit() {
       <p class="text-center text-sm text-[var(--text-secondary)]">
         If an account exists with that email, a reset link has been sent.
       </p>
-      <Button class="w-full" @click="router.push('/login')">Back to sign in</Button>
+      <Button
+        variant="primary"
+        class="h-11 w-full text-sm font-semibold"
+        @click="router.push('/login')"
+      >
+        Back to sign in
+      </Button>
     </div>
 
     <form v-else class="space-y-4" @submit.prevent="handleSubmit">
       <div>
         <FormLabel for="forgot-email" required>Email</FormLabel>
-        <Input
-          id="forgot-email"
-          v-model="email"
-          type="email"
-          autocomplete="email"
-          required
-          :error="emailError"
-          @blur="touched = true"
-        />
+        <div class="group relative">
+          <Mail
+            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)] transition-colors group-focus-within:text-[var(--accent)]"
+          />
+          <Input
+            id="forgot-email"
+            v-model="email"
+            type="email"
+            autocomplete="email"
+            required
+            placeholder="you@company.com"
+            :error="emailError"
+            class="h-11 pl-9"
+            @blur="touched = true"
+          />
+        </div>
       </div>
-      <Button type="submit" class="w-full" :loading="loading" :disabled="!formValid">
+      <Button
+        type="submit"
+        variant="primary"
+        class="h-11 w-full text-sm font-semibold"
+        :loading="loading"
+        :disabled="!formValid"
+      >
         Send reset link
       </Button>
       <p class="text-center text-sm">
@@ -81,5 +104,5 @@ async function handleSubmit() {
         </router-link>
       </p>
     </form>
-  </AuthLayout>
+  </div>
 </template>

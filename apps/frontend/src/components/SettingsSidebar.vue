@@ -8,6 +8,7 @@ import { useNavSections } from "@/lib/nav";
 import { useRoutePrefetch } from "@/composables/useRoutePrefetch";
 import { CARD_ICON_BTN_CLASS } from "@/lib/uiClasses";
 import UserMenuBar from "@/components/UserMenuBar.vue";
+import LogoMark from "@/components/ui/LogoMark.vue";
 
 defineOptions({ inheritAttrs: false });
 
@@ -47,7 +48,17 @@ function isActive(to: string) {
         <PanelLeftOpen v-if="collapsed" class="h-4 w-4" />
         <PanelLeftClose v-else class="h-4 w-4" />
       </button>
-      <span v-if="!collapsed" class="ml-2 text-lg font-semibold">Alga</span>
+      <div v-if="!collapsed" class="ml-2 flex min-w-0 items-center gap-2">
+        <LogoMark class="h-7 w-7 shrink-0" />
+        <span class="flex min-w-0 flex-col">
+          <span class="text-[15px] font-semibold leading-tight tracking-tight">Alga</span>
+          <span
+            class="font-mono text-[9px] font-medium leading-none tracking-[0.24em] text-[var(--accent)]"
+          >
+            OPS CONSOLE
+          </span>
+        </span>
+      </div>
     </div>
 
     <div class="shrink-0 px-2 pt-2" :class="collapsed ? 'flex justify-center' : ''">
@@ -72,7 +83,7 @@ function isActive(to: string) {
         />
         <div
           v-if="!collapsed"
-          class="px-3 pb-1 text-[10px] font-semibold tracking-wider uppercase text-[var(--text-muted)]"
+          class="eyebrow px-3 pb-1 text-[10px]"
           :class="si === 0 ? 'pt-1' : 'pt-3'"
         >
           {{ section.label }}
@@ -86,11 +97,7 @@ function isActive(to: string) {
             :title="collapsed ? item.label : undefined"
             @mouseenter="prefetch(item.to)"
             @focus="prefetch(item.to)"
-            :class="
-              isActive(item.to)
-                ? 'bg-[var(--sidebar-active,rgb(255_255_255/0.12))] text-[var(--text-primary)] font-medium'
-                : 'text-[var(--text-muted)] hover:bg-[var(--sidebar-hover,rgb(148_163_184/0.1))] hover:text-[var(--text-primary)]'
-            "
+            :class="isActive(item.to) ? 'nav-link-active' : 'nav-link-inactive'"
           >
             <component :is="item.icon" class="h-4 w-4 shrink-0" />
             <span v-if="!collapsed">{{ item.label }}</span>

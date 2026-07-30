@@ -84,7 +84,7 @@ body {
   --btn-outline-border: #52525b;
   --btn-outline-text: #a3a3a3;
   --btn-outline-hover: #171717;
-  --sidebar-active: rgb(255 255 255 / 0.12);
+  --sidebar-active: rgb(59 139 255 / 0.14);
   --sidebar-hover: rgb(255 255 255 / 0.07);
   --bg-internal-note: rgb(30 27 10 / 0.6);
   --border-internal-note: #854d0e;
@@ -490,7 +490,7 @@ body {
   animation: alert-card-sse-appended 2.4s ease-in-out forwards;
 }
 
-@keyframes auth-rise {
+@keyframes rise {
   from {
     opacity: 0;
     transform: translateY(12px);
@@ -501,8 +501,31 @@ body {
   }
 }
 
-.auth-rise {
-  animation: auth-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+.auth-rise,
+.rise {
+  animation: rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.auth-swap-enter-active {
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.auth-swap-leave-active {
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
+}
+
+.auth-swap-enter-from {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.auth-swap-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
 }
 
 @keyframes auth-radar {
@@ -530,9 +553,15 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .auth-rise,
+  .rise,
   .auth-radar,
   .animate-ping {
     animation: none !important;
+  }
+
+  .auth-swap-enter-active,
+  .auth-swap-leave-active {
+    transition: none !important;
   }
 }
 
@@ -554,9 +583,12 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-.mobile-bottom-nav-item:hover,
-.mobile-bottom-nav-item.active {
+.mobile-bottom-nav-item:hover {
   color: var(--text-primary);
+}
+
+.mobile-bottom-nav-item.active {
+  color: var(--accent);
 }
 
 .mobile-bottom-nav-item .active-indicator {
@@ -663,6 +695,10 @@ body {
     font-weight: 500;
   }
 
+  .nav-link-active svg {
+    color: var(--accent);
+  }
+
   .nav-link-inactive {
     color: var(--text-muted);
   }
@@ -670,6 +706,15 @@ body {
   .nav-link-inactive:hover {
     background: var(--sidebar-hover, rgb(100 116 139 / 0.1));
     color: var(--text-primary);
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--text-muted);
   }
 
   .field-label {

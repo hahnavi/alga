@@ -25,16 +25,30 @@ export type PageHeaderSpec = {
  * This eliminates the stale-header bug class: pages no longer need to
  * manually call `clearPageHeader` in `onDeactivated`/`onBeforeUnmount`.
  */
+// Tracks which usePageHeader instance last wrote the header. Under
+// KeepAlive + Suspense the outgoing page's deactivate/unmount hooks can fire
+// AFTER the incoming page's onActivated, so an unguarded clear would wipe the
+// header the new page just set. Only the current owner may clear it.
+let headerOwner: symbol | null = null;
+
 export function usePageHeader(getSpec: () => PageHeaderSpec | null): void {
+  const owner = Symbol("pageHeaderOwner");
   let active = true;
+
+  function clearIfOwner() {
+    if (headerOwner !== owner) return;
+    headerOwner = null;
+    clearPageHeader();
+  }
 
   function sync() {
     if (!active) return;
     const spec = getSpec();
     if (spec) {
+      headerOwner = owner;
       setPageHeader(spec.title, spec.badges, spec.options);
     } else {
-      clearPageHeader();
+      clearIfOwner();
     }
   }
 
@@ -47,11 +61,11 @@ export function usePageHeader(getSpec: () => PageHeaderSpec | null): void {
 
   onDeactivated(() => {
     active = false;
-    clearPageHeader();
+    clearIfOwner();
   });
 
   onBeforeUnmount(() => {
     active = false;
-    clearPageHeader();
+    clearIfOwner();
   });
 }

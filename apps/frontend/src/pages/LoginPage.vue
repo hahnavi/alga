@@ -10,7 +10,6 @@ import { Eye, EyeOff, Mail, Lock, ArrowRight } from "@lucide/vue";
 import Button from "@/components/ui/Button.vue";
 import FormLabel from "@/components/ui/FormLabel.vue";
 import Input from "@/components/ui/Input.vue";
-import AuthLayout from "@/components/ui/AuthLayout.vue";
 import ErrorBanner from "@/components/ui/ErrorBanner.vue";
 
 defineOptions({ name: "LoginPage" });
@@ -82,6 +81,8 @@ function handleOIDCSignIn(providerId: string) {
 }
 
 onMounted(async () => {
+  document.getElementById("login-email")?.focus();
+
   const googleParam = route.query.google as string;
   const slackParam = route.query.slack as string;
   const errorParam = route.query.error;
@@ -133,7 +134,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <AuthLayout>
+  <div>
     <div class="auth-rise mb-8">
       <p class="font-mono text-[11px] font-medium uppercase tracking-[0.22em] text-[var(--accent)]">
         Sign in
@@ -161,7 +162,7 @@ onMounted(async () => {
             required
             placeholder="you@company.com"
             :error="emailError"
-            class="pl-9"
+            class="h-11 pl-9"
             @blur="handleBlur('email')"
           />
         </div>
@@ -190,7 +191,7 @@ onMounted(async () => {
             autocomplete="current-password"
             required
             :error="passwordError"
-            class="pl-9 pr-10"
+            class="h-11 pl-9 pr-10"
             @blur="handleBlur('password')"
           />
           <button
@@ -310,5 +311,5 @@ onMounted(async () => {
         </Button>
       </div>
     </div>
-  </AuthLayout>
+  </div>
 </template>

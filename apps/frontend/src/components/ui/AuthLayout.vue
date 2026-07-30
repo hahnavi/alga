@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
-import { Moon, Sun, ShieldCheck, Zap, RadioTower } from "@lucide/vue";
+import { Moon, Sun } from "@lucide/vue";
 import { useTheme } from "@/lib/theme";
 import LogoMark from "@/components/ui/LogoMark.vue";
 
@@ -9,33 +8,6 @@ defineProps<{
 }>();
 
 const { isDark, toggle } = useTheme();
-
-const STATUS_ROWS = [
-  { name: "alert-intake", value: "operational", tone: "emerald" },
-  { name: "agent-fleet", value: "12 online", tone: "emerald" },
-  { name: "escalation-engine", value: "armed", tone: "blue" },
-] as const;
-
-const LOG_LINES = [
-  "ack alert #4821 — hermes-01 investigating",
-  "runbook matched: redis-memory-pressure",
-  "sev2 mitigated in 14m 32s",
-  "page rotated — on-call: platform-core",
-  "draft postmortem generated for INC-317",
-];
-
-const logIndex = ref(0);
-let logTimer: number | undefined;
-
-onMounted(() => {
-  logTimer = window.setInterval(() => {
-    logIndex.value = (logIndex.value + 1) % LOG_LINES.length;
-  }, 3200);
-});
-
-onUnmounted(() => {
-  if (logTimer !== undefined) window.clearInterval(logTimer);
-});
 </script>
 
 <template>
@@ -84,95 +56,6 @@ onUnmounted(() => {
             Alga pairs your on-call engineers with AI agents that triage, investigate, and
             coordinate response — around the clock.
           </p>
-
-          <div
-            class="mt-10 max-w-md rounded-xl border border-white/10 bg-white/[0.04] p-4 font-mono text-xs backdrop-blur-sm"
-          >
-            <div class="flex items-center justify-between">
-              <span class="flex items-center gap-2 font-medium tracking-wide text-emerald-400">
-                <span class="relative flex h-2 w-2">
-                  <span
-                    class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60 [animation-duration:2.2s]"
-                  ></span>
-                  <span class="relative inline-flex h-2 w-2 rounded-full bg-emerald-400"></span>
-                </span>
-                ALL SYSTEMS OPERATIONAL
-              </span>
-              <span class="flex items-center gap-1.5 text-[10px] tracking-widest text-slate-500">
-                LIVE
-                <span class="inline-block h-3 w-[5px] animate-pulse bg-[#3b8bff]"></span>
-              </span>
-            </div>
-            <div class="my-3 border-t border-white/5"></div>
-            <ul class="space-y-2">
-              <li
-                v-for="row in STATUS_ROWS"
-                :key="row.name"
-                class="flex items-center justify-between"
-              >
-                <span class="text-slate-400">{{ row.name }}</span>
-                <span
-                  class="flex items-center gap-1.5"
-                  :class="row.tone === 'emerald' ? 'text-emerald-400' : 'text-[#6cabff]'"
-                >
-                  <span
-                    class="h-1.5 w-1.5 rounded-full"
-                    :class="row.tone === 'emerald' ? 'bg-emerald-400' : 'bg-[#3b8bff]'"
-                  ></span>
-                  {{ row.value }}
-                </span>
-              </li>
-            </ul>
-            <div class="mt-3 border-t border-white/5 pt-3">
-              <Transition name="auth-log" mode="out-in">
-                <p :key="logIndex" class="truncate text-slate-500">
-                  <span class="text-[#3b8bff]">›</span> {{ LOG_LINES[logIndex] }}
-                </p>
-              </Transition>
-            </div>
-          </div>
-
-          <ul class="mt-10 space-y-4">
-            <li class="flex items-center gap-3.5">
-              <span
-                class="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-[#6cabff]"
-              >
-                <ShieldCheck class="h-4 w-4" />
-              </span>
-              <span>
-                <span class="block text-sm font-medium text-slate-200"
-                  >SSO, RBAC & audit trail</span
-                >
-                <span class="block text-xs text-slate-500">Enterprise-grade access control</span>
-              </span>
-            </li>
-            <li class="flex items-center gap-3.5">
-              <span
-                class="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-[#6cabff]"
-              >
-                <Zap class="h-4 w-4" />
-              </span>
-              <span>
-                <span class="block text-sm font-medium text-slate-200">AI triage in seconds</span>
-                <span class="block text-xs text-slate-500"
-                  >Agents investigate before you're paged</span
-                >
-              </span>
-            </li>
-            <li class="flex items-center gap-3.5">
-              <span
-                class="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-[#6cabff]"
-              >
-                <RadioTower class="h-4 w-4" />
-              </span>
-              <span>
-                <span class="block text-sm font-medium text-slate-200">24/7 agent coverage</span>
-                <span class="block text-xs text-slate-500"
-                  >Escalations never sleep, neither do we</span
-                >
-              </span>
-            </li>
-          </ul>
         </div>
 
         <p class="font-mono text-[11px] text-slate-600">
@@ -214,20 +97,3 @@ onUnmounted(() => {
     </main>
   </div>
 </template>
-
-<style scoped>
-.auth-log-enter-active,
-.auth-log-leave-active {
-  transition:
-    opacity 0.3s ease,
-    transform 0.3s ease;
-}
-.auth-log-enter-from {
-  opacity: 0;
-  transform: translateY(5px);
-}
-.auth-log-leave-to {
-  opacity: 0;
-  transform: translateY(-5px);
-}
-</style>

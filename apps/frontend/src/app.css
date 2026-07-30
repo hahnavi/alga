@@ -2,7 +2,7 @@
 @import "tw-animate-css";
 
 @theme {
-  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
+  --font-sans: "Inter", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
@@ -13,6 +13,10 @@
 body {
   margin: 0;
   background-color: var(--bg-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-optical-sizing: auto;
 }
 
 :root {
@@ -51,10 +55,12 @@ body {
   --text-link-hover: #ffffff;
   --text-input: #f5f5f5;
   --text-code: #f5f5f5;
-  --focus-ring: #3b82f6;
-  --accent: #3b82f6;
-  --accent-primary: #3b82f6;
-  --color-primary: #3b82f6;
+  --focus-ring: #3b8bff;
+  --accent: #3b8bff;
+  --accent-primary: #3b8bff;
+  --color-primary: #3b8bff;
+  --accent-strong: #2470e6;
+  --accent-soft: rgb(59 139 255 / 0.12);
   --bg-badge-info: #1e3a5f;
   --text-badge-info: #93c5fd;
   --bg-badge-muted: #262626;
@@ -70,10 +76,10 @@ body {
   --btn-default-border: #3f3f46;
   --btn-default-text: #f5f5f5;
   --btn-default-hover: #27272a;
-  --btn-destructive-bg: #4c0519;
-  --btn-destructive-border: #991b1b;
-  --btn-destructive-text: #fee2e2;
-  --btn-destructive-hover: #7f1d1d;
+  --btn-destructive-bg: #ef4444;
+  --btn-destructive-border: transparent;
+  --btn-destructive-text: #ffffff;
+  --btn-destructive-hover: #dc2626;
   --btn-outline-bg: transparent;
   --btn-outline-border: #52525b;
   --btn-outline-text: #a3a3a3;
@@ -87,7 +93,7 @@ body {
   --mention-group-color: rgb(168 85 247);
   --send-btn-divider: rgb(255 255 255 / 0.2);
   --hover-neutral: rgb(255 255 255 / 0.08);
-  --focus-ring-shadow: 0 0 0 3px rgb(59 130 246 / 0.15);
+  --focus-ring-shadow: 0 0 0 3px rgb(59 139 255 / 0.22);
   --chart-blue: #3b82f6;
   --chart-green: #22c55e;
   --chart-red: #ef4444;
@@ -137,10 +143,12 @@ body {
   --text-link-hover: #1e40af;
   --text-input: #0f172a;
   --text-code: #0f172a;
-  --focus-ring: #3b82f6;
-  --accent: #3b82f6;
-  --accent-primary: #3b82f6;
-  --color-primary: #3b82f6;
+  --focus-ring: #2563eb;
+  --accent: #2563eb;
+  --accent-primary: #2563eb;
+  --color-primary: #2563eb;
+  --accent-strong: #1d4ed8;
+  --accent-soft: rgb(37 99 235 / 0.08);
   --bg-badge-orange: #fff7ed;
   --text-badge-orange: #c2410c;
   --bg-badge-info: #dbeafe;
@@ -156,15 +164,15 @@ body {
   --btn-default-border: #cbd5e1;
   --btn-default-text: #0f172a;
   --btn-default-hover: #e2e8f0;
-  --btn-destructive-bg: #fef2f2;
-  --btn-destructive-border: #fecaca;
-  --btn-destructive-text: #991b1b;
-  --btn-destructive-hover: #fee2e2;
+  --btn-destructive-bg: #dc2626;
+  --btn-destructive-border: transparent;
+  --btn-destructive-text: #ffffff;
+  --btn-destructive-hover: #b91c1c;
   --btn-outline-bg: transparent;
   --btn-outline-border: #cbd5e1;
   --btn-outline-text: #334155;
   --btn-outline-hover: #f1f5f9;
-  --sidebar-active: rgb(59 130 246 / 0.1);
+  --sidebar-active: rgb(37 99 235 / 0.1);
   --sidebar-hover: rgb(100 116 139 / 0.1);
   --bg-internal-note: rgb(255 251 235 / 0.8);
   --border-internal-note: #d97706;
@@ -173,7 +181,7 @@ body {
   --mention-group-color: rgb(168 85 247);
   --send-btn-divider: rgb(0 0 0 / 0.15);
   --hover-neutral: rgb(0 0 0 / 0.06);
-  --focus-ring-shadow: 0 0 0 3px rgb(59 130 246 / 0.15);
+  --focus-ring-shadow: 0 0 0 3px rgb(37 99 235 / 0.16);
   --chart-blue: #3b82f6;
   --chart-green: #22c55e;
   --chart-red: #ef4444;
@@ -480,6 +488,52 @@ body {
 
 .alert-card-sse-appended {
   animation: alert-card-sse-appended 2.4s ease-in-out forwards;
+}
+
+@keyframes auth-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.auth-rise {
+  animation: auth-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes auth-radar {
+  from {
+    transform: scale(0.55);
+    opacity: 0.7;
+  }
+  to {
+    transform: scale(1.2);
+    opacity: 0;
+  }
+}
+
+.auth-radar {
+  animation: auth-radar 4.5s ease-out infinite;
+}
+
+.auth-grid {
+  background-image:
+    linear-gradient(rgb(255 255 255 / 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.035) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: radial-gradient(ellipse 90% 80% at 30% 20%, black 30%, transparent 78%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-rise,
+  .auth-radar,
+  .animate-ping {
+    animation: none !important;
+  }
 }
 
 .mobile-bottom-nav-item {

@@ -284,9 +284,7 @@ async function submit() {
 
     <template #footer>
       <Button variant="outline" :disabled="submitting" @click="close">Cancel</Button>
-      <Button :disabled="submitting" @click="submit">
-        {{ submitting ? "Creating…" : "Create alert" }}
-      </Button>
+      <Button variant="primary" :loading="submitting" @click="submit">Create alert</Button>
     </template>
   </Modal>
 </template>

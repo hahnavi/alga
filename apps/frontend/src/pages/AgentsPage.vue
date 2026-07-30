@@ -722,11 +722,15 @@ onMounted(() => {
 
       <template #footer>
         <template v-if="!agentCreatedSecret">
-          <Button variant="outline" @click="closeAgentDialog">Cancel</Button>
-          <Button :loading="agentSubmitting" @click="submitAgentToken">Create</Button>
+          <Button variant="outline" :disabled="agentSubmitting" @click="closeAgentDialog">
+            Cancel
+          </Button>
+          <Button variant="primary" :loading="agentSubmitting" @click="submitAgentToken">
+            Create
+          </Button>
         </template>
         <template v-else>
-          <Button id="agent-token-done" @click="closeAgentDialog">Done</Button>
+          <Button id="agent-token-done" variant="primary" @click="closeAgentDialog">Done</Button>
         </template>
       </template>
     </Modal>

@@ -747,11 +747,13 @@ onMounted(() => {
 
       <template #footer>
         <template v-if="!createdSecret">
-          <Button variant="outline" @click="closeCreateDialog">Cancel</Button>
-          <Button :loading="creating" @click="createToken">Generate token</Button>
+          <Button variant="outline" :disabled="creating" @click="closeCreateDialog">Cancel</Button>
+          <Button variant="primary" :loading="creating" @click="createToken">
+            Generate token
+          </Button>
         </template>
         <template v-else>
-          <Button id="pat-done-btn" @click="closeCreateDialog">Done</Button>
+          <Button id="pat-done-btn" variant="primary" @click="closeCreateDialog">Done</Button>
         </template>
       </template>
     </Modal>

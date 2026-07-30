@@ -211,9 +211,16 @@ function capitalize(s: string): string {
         />
       </div>
       <div class="flex justify-end gap-2">
-        <Button variant="outline" @click="showCompose = false">Cancel</Button>
-        <Button :disabled="submitting || !composeBody.trim()" @click="submitUpdate">
-          {{ submitting ? "Posting..." : "Post Update" }}
+        <Button variant="outline" :disabled="submitting" @click="showCompose = false">
+          Cancel
+        </Button>
+        <Button
+          variant="primary"
+          :loading="submitting"
+          :disabled="!composeBody.trim()"
+          @click="submitUpdate"
+        >
+          Post Update
         </Button>
       </div>
     </div>

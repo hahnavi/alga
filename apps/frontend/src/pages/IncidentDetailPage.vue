@@ -1720,9 +1720,9 @@ onBeforeUnmount(() => {
             @click="editor.showEditDialog = false"
             >Cancel</Button
           >
-          <Button :disabled="editor.editSubmitting" @click="editor.submitEdit">{{
-            editor.editSubmitting ? "Saving\u2026" : "Save"
-          }}</Button>
+          <Button variant="primary" :loading="editor.editSubmitting" @click="editor.submitEdit">
+            Save
+          </Button>
         </template>
       </Modal>
 
@@ -1758,9 +1758,13 @@ onBeforeUnmount(() => {
             @click="editor.showLinkAlertDialog = false"
             >Cancel</Button
           >
-          <Button :disabled="editor.linkAlertSubmitting" @click="editor.submitLinkAlert">{{
-            editor.linkAlertSubmitting ? "Linking\u2026" : "Link"
-          }}</Button>
+          <Button
+            variant="primary"
+            :loading="editor.linkAlertSubmitting"
+            @click="editor.submitLinkAlert"
+          >
+            Link
+          </Button>
         </template>
       </Modal>
 
@@ -1816,9 +1820,13 @@ onBeforeUnmount(() => {
             @click="editor.showAddTimelineDialog = false"
             >Cancel</Button
           >
-          <Button :disabled="editor.timelineSubmitting" @click="editor.submitTimelineEntry">{{
-            editor.timelineSubmitting ? "Adding\u2026" : "Add"
-          }}</Button>
+          <Button
+            variant="primary"
+            :loading="editor.timelineSubmitting"
+            @click="editor.submitTimelineEntry"
+          >
+            Add
+          </Button>
         </template>
       </Modal>
 

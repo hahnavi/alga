@@ -609,8 +609,8 @@ watch(sortBy, () => {
         <Button variant="outline" :disabled="createSubmitting" @click="closeCreateDialog"
           >Cancel</Button
         >
-        <Button :disabled="createSubmitting" @click="submitCreateIncident">
-          {{ createSubmitting ? "Creating…" : "Create incident" }}
+        <Button variant="primary" :loading="createSubmitting" @click="submitCreateIncident">
+          Create incident
         </Button>
       </template>
     </Modal>

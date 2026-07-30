@@ -169,11 +169,11 @@ useEscapeKey(handleEscape, () => props.open);
           class="flex shrink-0 justify-end gap-2 border-t border-[var(--border-primary)] bg-[var(--bg-secondary)]/40 px-4 py-3"
         >
           <slot name="footer">
-            <Button ref="cancelButtonRef" variant="outline" @click="onCancel">
+            <Button ref="cancelButtonRef" variant="outline" :disabled="loading" @click="onCancel">
               {{ cancelLabel }}
             </Button>
             <Button
-              :variant="destructive ? 'destructive' : 'default'"
+              :variant="destructive ? 'destructive' : 'primary'"
               :loading="loading"
               @click="onConfirm"
             >

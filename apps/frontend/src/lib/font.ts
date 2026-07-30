@@ -16,7 +16,7 @@ export const fontOptions: FontOption[] = [
 ];
 
 const FONT_KEY = "font";
-const current = ref<FontFamily>("ibm-plex-sans");
+const current = ref<FontFamily>("inter");
 let initialized = false;
 
 const fontMap: Record<FontFamily, string> = Object.fromEntries(
@@ -63,7 +63,7 @@ function initFont() {
   initialized = true;
 
   const stored = safeGetItem(FONT_KEY) as FontFamily | null;
-  current.value = stored && stored in fontMap ? stored : "ibm-plex-sans";
+  current.value = stored && stored in fontMap ? stored : "inter";
 
   loadFont(current.value).then(applyFont);
 }

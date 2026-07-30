@@ -6,7 +6,7 @@ import { useAuthStore } from "@/stores/auth";
 import { api, type OIDCProviderPublic } from "@/lib/api";
 import { safeRedirectTarget } from "@/lib/redirect";
 import { resolveOAuthErrorMessage, unknownOAuthErrorMessage } from "@/lib/oauthErrors";
-import { Eye, EyeOff } from "@lucide/vue";
+import { Eye, EyeOff, Mail, Lock, ArrowRight } from "@lucide/vue";
 import Button from "@/components/ui/Button.vue";
 import FormLabel from "@/components/ui/FormLabel.vue";
 import Input from "@/components/ui/Input.vue";
@@ -134,46 +134,55 @@ onMounted(async () => {
 
 <template>
   <AuthLayout>
-    <div class="mb-6 text-center">
-      <div
-        class="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--accent)]"
-      >
-        <svg
-          class="h-6 w-6 text-white"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
-          <path d="m9 12 2 2 4-4" />
-        </svg>
-      </div>
-      <h1 class="text-xl font-semibold">Welcome back</h1>
-      <p class="mt-1 text-sm text-[var(--text-secondary)]">Sign in to Alga Ops Console</p>
+    <div class="auth-rise mb-8">
+      <p class="font-mono text-[11px] font-medium uppercase tracking-[0.22em] text-[var(--accent)]">
+        Sign in
+      </p>
+      <h1 class="mt-2 text-[28px] font-semibold leading-tight tracking-tight">Welcome back</h1>
+      <p class="mt-1.5 text-sm text-[var(--text-secondary)]">Access the Alga Ops Console</p>
     </div>
 
-    <ErrorBanner :message="error" class="mb-4" />
+    <div class="auth-rise [animation-delay:60ms]">
+      <ErrorBanner :message="error" class="mb-4" />
+    </div>
 
-    <form class="space-y-4" @submit.prevent="handleLogin">
+    <form class="auth-rise space-y-5 [animation-delay:120ms]" @submit.prevent="handleLogin">
       <div>
         <FormLabel for="login-email" required>Email</FormLabel>
-        <Input
-          id="login-email"
-          v-model="email"
-          type="email"
-          autocomplete="email"
-          required
-          placeholder="you@company.com"
-          :error="emailError"
-          @blur="handleBlur('email')"
-        />
+        <div class="group relative">
+          <Mail
+            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)] transition-colors group-focus-within:text-[var(--accent)]"
+          />
+          <Input
+            id="login-email"
+            v-model="email"
+            type="email"
+            autocomplete="email"
+            required
+            placeholder="you@company.com"
+            :error="emailError"
+            class="pl-9"
+            @blur="handleBlur('email')"
+          />
+        </div>
+        <p v-if="emailError" class="mt-1 text-xs text-[var(--text-error)]">
+          {{ emailError }}
+        </p>
       </div>
       <div>
-        <FormLabel for="login-password" required>Password</FormLabel>
-        <div class="relative">
+        <div class="flex items-baseline justify-between">
+          <FormLabel for="login-password" required>Password</FormLabel>
+          <router-link
+            to="/forgot-password"
+            class="text-xs font-medium text-[var(--color-primary)] transition-colors hover:text-[var(--accent-strong)] hover:underline"
+          >
+            Forgot password?
+          </router-link>
+        </div>
+        <div class="group relative">
+          <Lock
+            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)] transition-colors group-focus-within:text-[var(--accent)]"
+          />
           <Input
             id="login-password"
             v-model="password"
@@ -181,7 +190,7 @@ onMounted(async () => {
             autocomplete="current-password"
             required
             :error="passwordError"
-            class="pr-10"
+            class="pl-9 pr-10"
             @blur="handleBlur('password')"
           />
           <button
@@ -198,23 +207,37 @@ onMounted(async () => {
           {{ passwordError }}
         </p>
       </div>
-      <Button type="submit" class="w-full" :loading="loading" :disabled="!formValid">
+      <Button
+        type="submit"
+        variant="primary"
+        class="group h-11 w-full text-sm font-semibold"
+        :loading="loading"
+        :disabled="!formValid"
+      >
         Sign in
+        <ArrowRight class="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
       </Button>
     </form>
 
-    <div v-if="showOAuthSection" class="mt-5">
-      <div class="relative my-4">
+    <div v-if="showOAuthSection" class="auth-rise [animation-delay:180ms]">
+      <div class="relative my-6">
         <div class="absolute inset-0 flex items-center">
           <div class="w-full border-t border-[var(--border-primary)]"></div>
         </div>
         <div class="relative flex justify-center text-xs">
-          <span class="bg-[var(--bg-card)] px-2 text-[var(--text-muted)]"> or continue with </span>
+          <span class="bg-[var(--bg-primary)] px-2 text-[var(--text-muted)]">
+            or continue with
+          </span>
         </div>
       </div>
 
-      <div class="space-y-3">
-        <Button v-if="googleEnabled" variant="outline" class="w-full" @click="handleGoogleSignIn">
+      <div class="space-y-2.5">
+        <Button
+          v-if="googleEnabled"
+          variant="outline"
+          class="h-10 w-full"
+          @click="handleGoogleSignIn"
+        >
           <svg class="mr-2 h-4 w-4" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
@@ -236,18 +259,23 @@ onMounted(async () => {
           Sign in with Google
         </Button>
 
-        <Button v-if="slackEnabled" variant="outline" class="w-full" @click="handleSlackSignIn">
+        <Button
+          v-if="slackEnabled"
+          variant="outline"
+          class="h-10 w-full"
+          @click="handleSlackSignIn"
+        >
           <svg class="mr-2 h-4 w-4" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313z"
               fill="#E01E5A"
             />
             <path
-              d="M8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zm0 1.271a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312z"
+              d="M8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zm0 1.271a2.527 2.527 0 0 1 2.521 2.521 2.527 2.527 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.527 2.527 0 0 1 2.522-2.521h6.312z"
               fill="#36C5F0"
             />
             <path
-              d="M18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zm-1.27 0a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.163 0a2.528 2.528 0 0 1 2.522 2.522v6.312z"
+              d="M18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zm-1.27 0a2.527 2.527 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.163 0a2.528 2.528 0 0 1 2.522 2.522v6.312z"
               fill="#2EB67D"
             />
             <path
@@ -262,7 +290,7 @@ onMounted(async () => {
           v-for="provider in oidcProviders"
           :key="provider.id"
           variant="outline"
-          class="w-full"
+          class="h-10 w-full"
           @click="handleOIDCSignIn(provider.id)"
         >
           <svg
@@ -282,14 +310,5 @@ onMounted(async () => {
         </Button>
       </div>
     </div>
-
-    <p class="mt-5 text-center text-sm">
-      <router-link
-        to="/forgot-password"
-        class="font-medium text-[var(--color-primary)] hover:underline"
-      >
-        Forgot password?
-      </router-link>
-    </p>
   </AuthLayout>
 </template>

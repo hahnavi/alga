@@ -19,7 +19,7 @@ export type EntityPageHeaderExtra = {
   titleIcon?: VNode;
   titlePrefix?: string;
   leadingBadges?: HeaderBadge[];
-  headerAgentBrand?: "hermes" | "openclaw" | "other";
+  headerAgentBrand?: "alga" | "hermes" | "openclaw" | "other";
 };
 
 export type UseEntityPageHeaderOptions<TRow> = {

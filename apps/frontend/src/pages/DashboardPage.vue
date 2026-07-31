@@ -939,35 +939,37 @@ const recentActivity = computed(() => {
       </Card>
 
       <Card class="rise [animation-delay:200ms]">
-        <button
-          class="flex w-full cursor-pointer items-center justify-between"
-          @click="summaryExpanded = !summaryExpanded"
-        >
-          <h2 class="eyebrow flex items-center gap-2">
-            <Sparkles class="h-4 w-4" />
-            Daily Write-Up
-          </h2>
-          <div class="flex items-center gap-2">
-            <button
-              v-if="summary && summary.failed && summaryExpanded"
-              class="inline-flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors"
-              :class="
-                summaryLoading
-                  ? 'cursor-wait bg-[var(--bg-secondary)] text-[var(--text-muted)]'
-                  : 'bg-[var(--focus-ring)] text-white hover:opacity-90'
-              "
-              :disabled="summaryLoading"
-              @click.stop="generateSummary"
-            >
-              <Loader2 v-if="summaryLoading" class="h-3 w-3 animate-spin" />
-              {{ summaryLoading ? "Generating..." : "Retry" }}
-            </button>
+        <div class="flex w-full items-center gap-2">
+          <button
+            type="button"
+            class="flex min-w-0 flex-1 cursor-pointer items-center justify-between"
+            :aria-expanded="summaryExpanded"
+            @click="summaryExpanded = !summaryExpanded"
+          >
+            <h2 class="eyebrow flex items-center gap-2">
+              <Sparkles class="h-4 w-4" />
+              Daily Write-Up
+            </h2>
             <ChevronDown
               class="h-4 w-4 text-[var(--text-muted)] transition-transform duration-200"
               :class="summaryExpanded ? 'rotate-180' : ''"
             />
-          </div>
-        </button>
+          </button>
+          <button
+            v-if="summary && summary.failed && summaryExpanded"
+            class="inline-flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors"
+            :class="
+              summaryLoading
+                ? 'cursor-wait bg-[var(--bg-secondary)] text-[var(--text-muted)]'
+                : 'bg-[var(--focus-ring)] text-white hover:opacity-90'
+            "
+            :disabled="summaryLoading"
+            @click="generateSummary"
+          >
+            <Loader2 v-if="summaryLoading" class="h-3 w-3 animate-spin" />
+            {{ summaryLoading ? "Generating..." : "Retry" }}
+          </button>
+        </div>
 
         <div v-if="summaryExpanded" class="mt-4">
           <div v-if="summaryError" class="mb-3">

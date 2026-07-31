@@ -94,7 +94,6 @@ async function handleSubmit() {
         variant="primary"
         class="h-11 w-full text-sm font-semibold"
         :loading="loading"
-        :disabled="!formValid"
       >
         Send reset link
       </Button>

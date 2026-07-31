@@ -8,6 +8,7 @@ defineProps<{
 }>();
 
 const { isDark, toggle } = useTheme();
+const year = new Date().getFullYear();
 </script>
 
 <template>
@@ -59,7 +60,7 @@ const { isDark, toggle } = useTheme();
         </div>
 
         <p class="font-mono text-[11px] text-slate-600">
-          © 2026 Alga — on-call & incident management
+          © {{ year }} Alga — on-call & incident management
         </p>
       </div>
     </aside>
@@ -71,7 +72,9 @@ const { isDark, toggle } = useTheme();
       ></div>
 
       <button
+        type="button"
         class="absolute right-4 top-4 z-20 cursor-pointer rounded border border-[var(--btn-default-border)] bg-[var(--btn-default-bg)] p-2 text-[var(--btn-default-text)] transition-colors hover:bg-[var(--btn-default-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
+        :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
         :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
         @click="toggle"
       >

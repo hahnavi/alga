@@ -4,7 +4,7 @@ defineOptions({ name: "LogoMark" });
 
 <template>
   <span
-    class="inline-flex shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#4f97ff] to-[#1d4ed8] shadow-[0_4px_14px_rgb(37_99_235_/_0.35)]"
+    class="inline-flex shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-[#4f97ff] to-[#1d4ed8] shadow-[0_4px_14px_rgb(37_99_235_/_0.35)]"
   >
     <svg
       viewBox="0 0 48 46"

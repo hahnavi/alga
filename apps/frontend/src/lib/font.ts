@@ -58,7 +58,7 @@ function applyFont() {
   safeSetItem(FONT_KEY, current.value);
 }
 
-function initFont() {
+export function initFont() {
   if (initialized || typeof window === "undefined") return;
   initialized = true;
 

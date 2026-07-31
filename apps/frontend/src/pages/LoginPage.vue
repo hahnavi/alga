@@ -162,11 +162,12 @@ onMounted(async () => {
             required
             placeholder="you@company.com"
             :error="emailError"
+            :aria-describedby="emailError ? 'login-email-error' : undefined"
             class="h-11 pl-9"
             @blur="handleBlur('email')"
           />
         </div>
-        <p v-if="emailError" class="mt-1 text-xs text-[var(--text-error)]">
+        <p v-if="emailError" id="login-email-error" class="mt-1 text-xs text-[var(--text-error)]">
           {{ emailError }}
         </p>
       </div>
@@ -191,6 +192,7 @@ onMounted(async () => {
             autocomplete="current-password"
             required
             :error="passwordError"
+            :aria-describedby="passwordError ? 'login-password-error' : undefined"
             class="h-11 pl-9 pr-10"
             @blur="handleBlur('password')"
           />
@@ -204,7 +206,11 @@ onMounted(async () => {
             <Eye v-else class="h-4 w-4" />
           </button>
         </div>
-        <p v-if="passwordError" class="mt-1 text-xs text-[var(--text-error)]">
+        <p
+          v-if="passwordError"
+          id="login-password-error"
+          class="mt-1 text-xs text-[var(--text-error)]"
+        >
           {{ passwordError }}
         </p>
       </div>
@@ -213,7 +219,6 @@ onMounted(async () => {
         variant="primary"
         class="group h-11 w-full text-sm font-semibold"
         :loading="loading"
-        :disabled="!formValid"
       >
         Sign in
         <ArrowRight class="h-4 w-4 transition-transform group-hover:translate-x-0.5" />

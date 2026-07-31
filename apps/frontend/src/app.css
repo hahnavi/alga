@@ -15,7 +15,7 @@ body {
   background-color: var(--bg-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
+  text-rendering: optimizelegibility;
   font-optical-sizing: auto;
 }
 
@@ -57,8 +57,8 @@ body {
   --text-code: #f5f5f5;
   --focus-ring: #3b8bff;
   --accent: #3b8bff;
-  --accent-primary: #3b8bff;
-  --color-primary: #3b8bff;
+  --accent-primary: var(--accent);
+  --color-primary: var(--accent);
   --accent-strong: #2470e6;
   --accent-soft: rgb(59 139 255 / 0.12);
   --bg-badge-info: #1e3a5f;
@@ -145,8 +145,8 @@ body {
   --text-code: #0f172a;
   --focus-ring: #2563eb;
   --accent: #2563eb;
-  --accent-primary: #2563eb;
-  --color-primary: #2563eb;
+  --accent-primary: var(--accent);
+  --color-primary: var(--accent);
   --accent-strong: #1d4ed8;
   --accent-soft: rgb(37 99 235 / 0.08);
   --bg-badge-orange: #fff7ed;

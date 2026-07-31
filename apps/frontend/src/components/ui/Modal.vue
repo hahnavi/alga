@@ -88,7 +88,7 @@ const maxWidthClass = computed(() => {
 });
 
 function onBackdropClick(e: MouseEvent) {
-  if (props.preventClose) return;
+  if (props.preventClose || props.loading) return;
   if (e.target === e.currentTarget) close();
 }
 
@@ -103,13 +103,13 @@ function onConfirm() {
 }
 
 function onCancel() {
+  if (props.loading) return;
   emit("cancel");
-  if (isConfirm.value) close();
-  else close();
+  close();
 }
 
 function handleEscape() {
-  if (props.preventClose) return;
+  if (props.preventClose || props.loading) return;
   close();
 }
 
@@ -146,7 +146,7 @@ useEscapeKey(handleEscape, () => props.open);
             >
               {{ title }}
             </h3>
-            <DialogCloseButton :on-click="close" :disabled="preventClose" />
+            <DialogCloseButton :on-click="close" :disabled="preventClose || loading" />
           </slot>
         </div>
 

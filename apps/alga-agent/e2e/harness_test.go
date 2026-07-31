@@ -25,6 +25,14 @@ import (
 )
 
 const defaultServerURL = "http://localhost:3100"
+const defaultE2EAdminPassword = "E2eAdmin!12345"
+
+func e2eAdminPassword() string {
+	if p := os.Getenv("ALGA_E2E_ADMIN_PASSWORD"); p != "" {
+		return p
+	}
+	return defaultE2EAdminPassword
+}
 
 // requireE2E gates the test on ALGA_AGENT_E2E=1 and a reachable backend,
 // skipping with actionable instructions otherwise. Returns the server URL.

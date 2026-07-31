@@ -24,7 +24,7 @@ func TestAlgaAgentE2E(t *testing.T) {
 	if err != nil {
 		t.Fatalf("backend client: %v", err)
 	}
-	if err := bc.setupOrLogin("e2e-admin@alga.local", "E2eAdmin!12345", "E2E Admin"); err != nil {
+	if err := bc.setupOrLogin("e2e-admin@alga.local", e2eAdminPassword(), "E2E Admin"); err != nil {
 		t.Fatalf("setup/login: %v", err)
 	}
 

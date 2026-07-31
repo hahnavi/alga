@@ -72,10 +72,12 @@ func (w *testLogWriter) close() {
 	w.mu.Unlock()
 }
 
-// startAgent assembles and starts the real agent stack in-process, mirroring
-// main.go run(): Alga tools only, real LLM client from env-derived config,
-// AlgaChannel over SSE. Cleanup stops the channel and drains the router.
-func startAgent(t *testing.T, serverURL, agentToken string) {
+// loadAgentConfig builds the agent config from defaults + env overrides and
+// skips the test when the LLM is not configured. It runs before any backend
+// mutation (token minting) so misconfigured runs skip without side effects.
+// The Alga agent token is validated with a placeholder; startAgent sets the
+// real one.
+func loadAgentConfig(t *testing.T, serverURL string) *config.Config {
 	t.Helper()
 
 	// Point config resolution at a nonexistent file so a developer's real
@@ -87,13 +89,24 @@ func startAgent(t *testing.T, serverURL, agentToken string) {
 		t.Fatalf("config parse: %v", err)
 	}
 	cfg.Telegram.Enabled = false
-	cfg.Alga = config.AlgaConfig{Enabled: true, ServerURL: serverURL, AgentToken: agentToken}
+	cfg.Alga = config.AlgaConfig{Enabled: true, ServerURL: serverURL, AgentToken: "placeholder"}
 	cfg.Tools.Shell.Enabled = false
 	cfg.Tools.WebSearch.Enabled = false
 	cfg.Sessions.Persist = false
 	if err := cfg.Validate(); err != nil {
 		t.Skipf("skipping: LLM not configured (%v); set OPENAI_API_KEY or OPENROUTER_API_KEY (and optionally OPENAI_BASE_URL, OPENAI_MODEL)", err)
 	}
+	return cfg
+}
+
+// startAgent assembles and starts the real agent stack in-process, mirroring
+// main.go run(): Alga tools only, real LLM client from env-derived config,
+// AlgaChannel over SSE. Cleanup stops the channel and drains the router.
+func startAgent(t *testing.T, cfg *config.Config, agentToken string) {
+	t.Helper()
+
+	cfg.Alga.AgentToken = agentToken
+	serverURL := cfg.Alga.ServerURL
 
 	lw := &testLogWriter{t: t}
 	logger := slog.New(slog.NewTextHandler(lw, &slog.HandlerOptions{Level: slog.LevelDebug}))

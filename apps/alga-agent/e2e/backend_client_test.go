@@ -204,12 +204,17 @@ func (c *backendClient) getThread(alertNumber int64) ([]threadMessage, error) {
 func (c *backendClient) getAlertStatus(alertNumber int64) (string, error) {
 	var resp struct {
 		Data struct {
-			Status string `json:"status"`
+			Alert struct {
+				Status string `json:"status"`
+			} `json:"alert"`
 		} `json:"data"`
 	}
 	path := fmt.Sprintf("/api/v1/alerts/%d", alertNumber)
 	if _, err := c.do(http.MethodGet, path, nil, &resp); err != nil {
 		return "", err
 	}
-	return resp.Data.Status, nil
+	if resp.Data.Alert.Status == "" {
+		return "", fmt.Errorf("alert %d response missing status", alertNumber)
+	}
+	return resp.Data.Alert.Status, nil
 }

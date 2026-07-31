@@ -117,7 +117,7 @@ watch(open, (is) => {
         v-if="open"
         role="dialog"
         aria-label="Select time"
-        class="absolute left-0 z-50 mt-1 w-44 overflow-hidden rounded-lg border border-[var(--border-primary)] bg-[var(--bg-card)] p-3 shadow-xl"
+        class="absolute left-0 z-50 mt-1 w-44 overflow-hidden rounded border border-[var(--border-primary)] bg-[var(--bg-dialog)] p-3 shadow-xl"
         @click.stop
       >
         <TimeSpinner

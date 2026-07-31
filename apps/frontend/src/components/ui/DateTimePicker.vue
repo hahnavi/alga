@@ -144,7 +144,7 @@ watch(open, (is) => {
         v-if="open"
         role="dialog"
         aria-label="Select date and time"
-        class="absolute left-0 z-50 mt-1 flex w-[20rem] flex-col gap-3 overflow-hidden rounded-lg border border-[var(--border-primary)] bg-[var(--bg-card)] p-3 shadow-xl sm:flex-row"
+        class="absolute left-0 z-50 mt-1 flex w-[20rem] flex-col gap-3 overflow-hidden rounded border border-[var(--border-primary)] bg-[var(--bg-dialog)] p-3 shadow-xl sm:flex-row"
         @click.stop
       >
         <div class="flex-1">

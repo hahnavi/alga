@@ -130,7 +130,7 @@ useEscapeKey(handleEscape, () => props.open);
         aria-modal="true"
         :aria-labelledby="title ? 'modal-title' : undefined"
         :aria-describedby="isConfirm && message ? 'modal-message' : undefined"
-        class="relative flex max-h-[calc(100vh-2rem)] w-full flex-col rounded-lg border border-[var(--border-primary)] bg-[var(--bg-card)] text-[var(--text-primary)] shadow-xl"
+        class="relative flex max-h-[calc(100vh-2rem)] w-full flex-col rounded border border-[var(--border-primary)] bg-[var(--bg-dialog)] text-[var(--text-primary)] shadow-xl"
         :class="maxWidthClass"
         @mousedown.stop
       >

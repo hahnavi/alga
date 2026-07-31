@@ -220,7 +220,7 @@ function utcOffset(value: string): string {
     >
       <div
         v-if="open"
-        class="absolute z-50 mt-1 w-full overflow-hidden rounded-lg border border-[var(--border-primary)] bg-[var(--bg-card)] shadow-xl"
+        class="absolute z-50 mt-1 w-full overflow-hidden rounded border border-[var(--border-primary)] bg-[var(--bg-dialog)] shadow-xl"
       >
         <div class="border-b border-[var(--border-primary)] p-2">
           <input

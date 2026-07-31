@@ -119,7 +119,7 @@ watch(open, (isOpen) => {
         v-if="open"
         role="dialog"
         aria-label="Select month and year"
-        class="absolute right-0 z-50 mt-1 w-64 overflow-hidden rounded-lg border border-[var(--border-primary)] bg-[var(--bg-card)] p-2 shadow-xl"
+        class="absolute right-0 z-50 mt-1 w-64 overflow-hidden rounded border border-[var(--border-primary)] bg-[var(--bg-dialog)] p-2 shadow-xl"
       >
         <div class="mb-1 flex items-center justify-between gap-1 px-1">
           <IconBtn

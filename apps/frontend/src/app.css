@@ -23,6 +23,7 @@ body {
   --bg-primary: #000000;
   --bg-secondary: #0a0a0a;
   --bg-card: rgb(15 15 15 / 0.85);
+  --bg-dialog: #0f0f0f;
   --bg-input: #0f0f0f;
   --bg-error: #4c0519;
   --bg-badge-firing: #7f1d1d;
@@ -111,6 +112,7 @@ body {
   --bg-primary: #ffffff;
   --bg-secondary: #f8fafc;
   --bg-card: rgb(241 245 249 / 0.8);
+  --bg-dialog: #f1f5f9;
   --bg-input: #ffffff;
   --bg-error: #fef2f2;
   --bg-badge-firing: #fef2f2;

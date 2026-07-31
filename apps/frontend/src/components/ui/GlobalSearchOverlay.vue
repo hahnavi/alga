@@ -47,7 +47,7 @@ useEscapeKey(
         @click.self="closeGlobalSearch"
       >
         <div
-          class="search-dialog relative flex max-h-[75vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-[var(--border-primary)] shadow-2xl sm:rounded-2xl"
+          class="search-dialog relative flex max-h-[75vh] w-full max-w-2xl flex-col overflow-hidden rounded border border-[var(--border-primary)] shadow-2xl"
         >
           <div class="flex items-center gap-3 border-b border-[var(--border-primary)] px-4 py-3">
             <Search class="h-5 w-5 shrink-0 text-[var(--text-muted)]" />

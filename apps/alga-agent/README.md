@@ -99,20 +99,20 @@ config.yaml`, or `$HOME/.alga/config.yaml`. `${VAR}` environment variable
 expansion is supported. **Environment variables always override YAML values**
 — keep secrets in env vars, structure in YAML.
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `OPENROUTER_API_KEY` | Yes* | LLM API key (default OpenRouter provider) |
-| `OPENAI_API_KEY` | Yes* | LLM API key alias (OPENROUTER_API_KEY wins when both set) |
-| Provider keys | No | Per-provider keys used when `model.provider` matches: `OPENCODE_ZEN_API_KEY`, `OPENCODE_GO_API_KEY`, `ZAI_API_KEY`/`GLM_API_KEY`/`Z_AI_API_KEY`, `DASHSCOPE_API_KEY`, `ALIBABA_CODING_PLAN_API_KEY` |
-| `TELEGRAM_BOT_TOKEN` | If Telegram enabled | Telegram bot token from @BotFather |
-| `ALGA_SERVER_URL` | If Alga enabled | Alga server URL |
-| `ALGA_AGENT_TOKEN` | If Alga enabled | Alga agent authentication token |
-| `SEARCH_API_KEY` | If Brave/Tavily | Web search API key |
-| `ALGA_AGENT_CONFIG` | No | Path to config.yaml |
-| `ALGA_AGENT_HOME` | No | Data dir (default `~/.alga`); config lives at `<dir>/config.yaml` |
-| `ALGA_AGENT_NONINTERACTIVE` | No | Set to `1` to make `setup` refuse to run (non-TTY guard) |
-| `ALGA_TELEGRAM_ENABLED` | No | Enable Telegram channel (`true`/`false`) |
-| `ALGA_ALGA_ENABLED` | No | Enable Alga channel (`true`/`false`) |
+| Variable                    | Required            | Description                                                                                                                                                                                         |
+| --------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OPENROUTER_API_KEY`        | Yes*                | LLM API key (default OpenRouter provider)                                                                                                                                                           |
+| `OPENAI_API_KEY`            | Yes*                | LLM API key alias (OPENROUTER_API_KEY wins when both set)                                                                                                                                           |
+| Provider keys               | No                  | Per-provider keys used when `model.provider` matches: `OPENCODE_ZEN_API_KEY`, `OPENCODE_GO_API_KEY`, `ZAI_API_KEY`/`GLM_API_KEY`/`Z_AI_API_KEY`, `DASHSCOPE_API_KEY`, `ALIBABA_CODING_PLAN_API_KEY` |
+| `TELEGRAM_BOT_TOKEN`        | If Telegram enabled | Telegram bot token from @BotFather                                                                                                                                                                  |
+| `ALGA_SERVER_URL`           | If Alga enabled     | Alga server URL                                                                                                                                                                                     |
+| `ALGA_AGENT_TOKEN`          | If Alga enabled     | Alga agent authentication token                                                                                                                                                                     |
+| `SEARCH_API_KEY`            | If Brave/Tavily     | Web search API key                                                                                                                                                                                  |
+| `ALGA_AGENT_CONFIG`         | No                  | Path to config.yaml                                                                                                                                                                                 |
+| `ALGA_AGENT_HOME`           | No                  | Data dir (default `~/.alga`); config lives at `<dir>/config.yaml`                                                                                                                                   |
+| `ALGA_AGENT_NONINTERACTIVE` | No                  | Set to `1` to make `setup` refuse to run (non-TTY guard)                                                                                                                                            |
+| `ALGA_TELEGRAM_ENABLED`     | No                  | Enable Telegram channel (`true`/`false`)                                                                                                                                                            |
+| `ALGA_ALGA_ENABLED`         | No                  | Enable Alga channel (`true`/`false`)                                                                                                                                                                |
 
 See [`config.yaml.example`](./config.yaml.example) for the full schema.
 
@@ -190,6 +190,7 @@ LLM sees them alongside the Alga tools and calls them transparently.
 ```
 
 The agent is both a producer and consumer of MCP tools:
+
 - **Server** (top-right): exposes every agent tool — `alga_*`, `shell`,
   `web_search` — to external MCP clients over Streamable HTTP at
   `http://<addr>/mcp`. Claude Desktop, Cursor, or any MCP-compatible client
@@ -230,6 +231,45 @@ go test ./...
 go vet ./...
 gofmt -w .
 ```
+
+### Full-Stack E2E Test
+
+An opt-in, local-only test in `e2e/` runs the real agent (real LLM, AlgaChannel
+over SSE) against a locally running Alga backend and asserts it replies in an
+alert investigation thread. It is skipped unless `ALGA_AGENT_E2E=1`, so plain
+`go test ./...` stays fast and offline. It is not intended for CI.
+
+```bash
+# 1. Start the ephemeral backend stack (from the repo root)
+docker compose -f docker-compose.e2e.yml up --build -d --wait
+
+# 2. Run the test (from apps/alga-agent)
+ALGA_AGENT_E2E=1 OPENROUTER_API_KEY=sk-... OPENAI_MODEL=<model> \
+  go test ./e2e/... -v -timeout 10m -count=1
+# or: OPENROUTER_API_KEY=... OPENAI_MODEL=<model> moon run alga-agent:test-e2e
+
+# 3. Tear down / reset
+docker compose -f docker-compose.e2e.yml down -v
+```
+
+| Env var                                 | Required | Meaning                                                                              |
+| --------------------------------------- | -------- | ------------------------------------------------------------------------------------ |
+| `ALGA_AGENT_E2E=1`                      | yes      | opt-in gate; otherwise the test skips                                                |
+| `OPENAI_API_KEY` / `OPENROUTER_API_KEY` | yes      | LLM credentials (standard config env overrides)                                      |
+| `OPENAI_BASE_URL`, `OPENAI_MODEL`       | no       | LLM endpoint/model; pick a capable model — weak free models flake                    |
+| `ALGA_E2E_SERVER_URL`                   | no       | backend base URL (default `http://localhost:3100`, the nginx proxy of the e2e stack) |
+| `ALGA_AGENT_E2E_TOOLS=1`                | no       | also assert a tool effect (agent resolves the alert); most model-dependent scenario  |
+
+Expect ~2–5 minutes per run. Notes:
+
+- Assertions are behavior-loose (agent posted a thread reply, canary echo,
+  alert resolved) because real LLM output is nondeterministic.
+- If another agent is connected to the same stack, the scheduler may dispatch
+  the investigation to it instead — use the ephemeral e2e stack exclusively.
+- The backend port is not published by `docker-compose.e2e.yml`; the test goes
+  through nginx on `:3100`, which proxies SSE fine (15s keepalives). If SSE
+  ever misbehaves, publish `ports: ["18080:8080"]` on the backend service and
+  set `ALGA_E2E_SERVER_URL=http://localhost:18080`.
 
 ### Project Structure
 

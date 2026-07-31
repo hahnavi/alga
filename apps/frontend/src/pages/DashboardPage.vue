@@ -940,21 +940,23 @@ const recentActivity = computed(() => {
 
       <Card class="rise [animation-delay:200ms]">
         <div class="flex w-full items-center gap-2">
-          <button
-            type="button"
-            class="flex min-w-0 flex-1 cursor-pointer items-center justify-between"
-            :aria-expanded="summaryExpanded"
-            @click="summaryExpanded = !summaryExpanded"
-          >
-            <h2 class="eyebrow flex items-center gap-2">
-              <Sparkles class="h-4 w-4" />
-              Daily Write-Up
-            </h2>
-            <ChevronDown
-              class="h-4 w-4 text-[var(--text-muted)] transition-transform duration-200"
-              :class="summaryExpanded ? 'rotate-180' : ''"
-            />
-          </button>
+          <h2 class="eyebrow min-w-0 flex-1">
+            <button
+              type="button"
+              class="flex w-full cursor-pointer items-center justify-between"
+              :aria-expanded="summaryExpanded"
+              @click="summaryExpanded = !summaryExpanded"
+            >
+              <span class="flex items-center gap-2">
+                <Sparkles class="h-4 w-4" />
+                Daily Write-Up
+              </span>
+              <ChevronDown
+                class="h-4 w-4 text-[var(--text-muted)] transition-transform duration-200"
+                :class="summaryExpanded ? 'rotate-180' : ''"
+              />
+            </button>
+          </h2>
           <button
             v-if="summary && summary.failed && summaryExpanded"
             class="inline-flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors"

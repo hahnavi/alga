@@ -147,7 +147,11 @@ onMounted(async () => {
       <ErrorBanner :message="error" class="mb-4" />
     </div>
 
-    <form class="auth-rise space-y-5 [animation-delay:120ms]" @submit.prevent="handleLogin">
+    <form
+      class="auth-rise space-y-5 [animation-delay:120ms]"
+      novalidate
+      @submit.prevent="handleLogin"
+    >
       <div>
         <FormLabel for="login-email" required>Email</FormLabel>
         <div class="group relative">

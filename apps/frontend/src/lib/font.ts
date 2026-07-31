@@ -63,7 +63,7 @@ export function initFont() {
   initialized = true;
 
   const stored = safeGetItem(FONT_KEY) as FontFamily | null;
-  current.value = stored && stored in fontMap ? stored : "inter";
+  current.value = stored && Object.hasOwn(fontMap, stored) ? stored : "inter";
 
   loadFont(current.value).then(applyFont);
 }

@@ -13,6 +13,12 @@ tasks:
       runInCI: false
   test:
     command: go test ./...
+  test-e2e:
+    command: go test ./e2e/... -v -timeout 15m -count=1
+    env:
+      ALGA_AGENT_E2E: '1'
+    options:
+      runInCI: false
   run:
     command: go run .
     options:

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { getErrorMessage } from "@/lib/error";
-import { computed, onMounted, onBeforeUnmount, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   Plus,
@@ -32,7 +32,8 @@ import { useDelete } from "@/composables/useDelete";
 import { useFormSubmit } from "@/composables/useFormSubmit";
 import { useAsyncData } from "@/composables/useAsyncData";
 import ConfirmDialog from "@/components/ui/ConfirmDialog.vue";
-import { setPageHeader, clearPageHeader, type HeaderBadge } from "@/lib/pageHeader";
+import { usePageHeader } from "@/composables/usePageHeader";
+import type { HeaderBadge } from "@/lib/pageHeader";
 import Button from "@/components/ui/Button.vue";
 import Card from "@/components/ui/Card.vue";
 import Input from "@/components/ui/Input.vue";
@@ -209,17 +210,16 @@ function statusDescription(status: string): string {
   }
 }
 
-function updatePageHeader() {
+usePageHeader(() => {
   const pm = postMortem.value;
   if (pm) {
     const badges: HeaderBadge[] = [
       { text: statusLabel(pm.status), cssClass: statusBadgeClass(pm.status) },
     ];
-    setPageHeader(pm.title || "Post-Mortem", badges);
-  } else {
-    setPageHeader("Post-Mortem");
+    return { title: pm.title || "Post-Mortem", badges };
   }
-}
+  return { title: "Post-Mortem" };
+});
 
 async function loadActionItems() {
   try {
@@ -380,8 +380,6 @@ onMounted(() => {
   load();
   loadActionItems();
 });
-onBeforeUnmount(() => clearPageHeader());
-watch(postMortem, () => updatePageHeader(), { immediate: true });
 watch(incidentNumber, () => {
   load();
   loadActionItems();

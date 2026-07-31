@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, h, onMounted, onBeforeUnmount, ref, watch } from "vue";
+import { computed, h, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ArrowDown, ArrowUp, Plus, Trash2, Pencil } from "@lucide/vue";
 import { api, type PlaybookRecord, type PlaybookStepRecord } from "@/lib/api";
@@ -16,7 +16,8 @@ import ErrorBanner from "@/components/ui/ErrorBanner.vue";
 import LoadingSpinner from "@/components/ui/LoadingSpinner.vue";
 import ConfirmDialog from "@/components/ui/ConfirmDialog.vue";
 import PlaybookFormModal from "@/components/playbook/PlaybookFormModal.vue";
-import { setPageHeader, clearPageHeader, type HeaderBadge } from "@/lib/pageHeader";
+import { usePageHeader } from "@/composables/usePageHeader";
+import type { HeaderBadge } from "@/lib/pageHeader";
 import { HEADER_ICON_BTN_CLASS } from "@/lib/uiClasses";
 import { formatTime } from "@/lib/time";
 
@@ -67,8 +68,8 @@ const { deleteTarget, showDeleteConfirm, confirmDelete, doDelete } = useDelete<P
   "Playbook",
 );
 
-function syncHeader() {
-  if (!playbook.value) return;
+usePageHeader(() => {
+  if (!playbook.value) return null;
   const badges: HeaderBadge[] = [
     {
       text: playbook.value.kind,
@@ -114,8 +115,8 @@ function syncHeader() {
       ),
     );
   }
-  setPageHeader(playbook.value.title, badges, { actions });
-}
+  return { title: playbook.value.title, badges, options: { actions } };
+});
 
 function resetAddStep() {
   newStepTitle.value = "";
@@ -206,16 +207,10 @@ async function handleReorder(stepId: string, direction: "up" | "down") {
 
 onMounted(async () => {
   await load();
-  syncHeader();
 });
 
 watch(playbookId, async () => {
   await load();
-  syncHeader();
-});
-
-onBeforeUnmount(() => {
-  clearPageHeader();
 });
 </script>
 
@@ -375,7 +370,7 @@ onBeforeUnmount(() => {
       @close="showEditModal = false"
       @saved="
         showEditModal = false;
-        load().then(syncHeader);
+        load();
       "
     />
 

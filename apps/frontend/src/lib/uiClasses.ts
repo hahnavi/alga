@@ -16,7 +16,7 @@ export const POPOVER_MENU_PANEL_CLASS =
 
 export const POPOVER_MENU_ITEM_CLASS = `${MENU_ITEM_BASE} text-[var(--text-primary)] hover:bg-[var(--btn-default-hover)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent`;
 
-export const POPOVER_MENU_DESTRUCTIVE_CLASS = `${MENU_ITEM_BASE} text-[var(--text-error)] hover:bg-[var(--btn-default-hover)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent`;
+export const POPOVER_MENU_DESTRUCTIVE_CLASS = `${MENU_ITEM_BASE} text-[var(--text-error)] hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent`;
 
 export const POPOVER_MENU_ITEM_ICON_CLASS = "h-4 w-4 shrink-0";
 

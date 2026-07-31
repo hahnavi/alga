@@ -5,7 +5,7 @@ import { Loader2 } from "@lucide/vue";
 
 const props = withDefaults(
   defineProps<{
-    variant?: "default" | "destructive" | "outline" | "link";
+    variant?: "default" | "primary" | "destructive" | "outline" | "link";
     size?: "sm" | "md";
     type?: "button" | "submit" | "reset";
     disabled?: boolean;
@@ -28,8 +28,10 @@ const classes = computed(() =>
         variant: {
           default:
             "border-[var(--btn-default-border)] bg-[var(--btn-default-bg)] text-[var(--btn-default-text)] hover:bg-[var(--btn-default-hover)]",
+          primary:
+            "border-transparent bg-[var(--accent)] text-white shadow-sm hover:bg-[var(--accent-strong)]",
           destructive:
-            "border-[var(--btn-destructive-border)] bg-[var(--btn-destructive-bg)] text-[var(--btn-destructive-text)] hover:bg-[var(--btn-destructive-hover)]",
+            "border-[var(--btn-destructive-border)] bg-[var(--btn-destructive-bg)] text-[var(--btn-destructive-text)] shadow-sm hover:bg-[var(--btn-destructive-hover)]",
           outline:
             "border-[var(--btn-outline-border)] bg-[var(--btn-outline-bg)] text-[var(--btn-outline-text)] hover:bg-[var(--btn-outline-hover)]",
           link: "border-transparent bg-transparent text-[var(--text-tertiary)] underline hover:text-[var(--text-primary)]",
@@ -45,8 +47,14 @@ const classes = computed(() =>
 </script>
 
 <template>
-  <button :type="type" :class="classes" :disabled="disabled || loading">
-    <Loader2 v-if="loading" class="h-4 w-4 animate-spin" />
+  <button
+    :type="type"
+    :class="classes"
+    :disabled="disabled || loading"
+    :aria-busy="loading ? 'true' : undefined"
+  >
+    <Loader2 v-if="loading" class="h-4 w-4 animate-spin" aria-hidden="true" />
+    <span v-if="loading" class="sr-only"><slot /></span>
     <slot v-else />
   </button>
 </template>

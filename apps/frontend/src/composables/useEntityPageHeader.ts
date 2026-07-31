@@ -1,5 +1,6 @@
-import { onBeforeUnmount, reactive, watch, type Ref, type VNode } from "vue";
-import { clearPageHeader, setPageHeader, type HeaderBadge } from "@/lib/pageHeader";
+import { reactive, type Ref, type VNode } from "vue";
+import { type HeaderBadge } from "@/lib/pageHeader";
+import { usePageHeader } from "@/composables/usePageHeader";
 import { useDocumentTitle } from "@/composables/useDocumentTitle";
 
 /** A bag of callbacks the page exposes to the `buildActions` builder (e.g. startEdit). */
@@ -41,26 +42,20 @@ export function useEntityPageHeader<TRow>(
     useDocumentTitle(() => getter(options.source.value));
   }
 
-  function sync(row: TRow) {
+  usePageHeader(() => {
+    const row = options.source.value;
+    if (!row) return null;
     const badges = options.buildBadges?.(row);
     const actions = options.buildActions?.(row, refs);
     const extra = options.extraOptions?.(row);
-    setPageHeader(options.buildTitle(row), badges, {
-      ...extra,
-      ...(actions ? { actions } : undefined),
-    });
-  }
-
-  watch(
-    options.source,
-    (row) => {
-      if (row) sync(row);
-    },
-    { immediate: true },
-  );
-
-  onBeforeUnmount(() => {
-    clearPageHeader();
+    return {
+      title: options.buildTitle(row),
+      badges,
+      options: {
+        ...extra,
+        ...(actions ? { actions } : undefined),
+      },
+    };
   });
 
   return refs;

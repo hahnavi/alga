@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, h, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, h, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { Clock, Trash2, Plus, X, Repeat, UserCog, CalendarRange } from "@lucide/vue";
 import { api } from "@/lib/api";
@@ -17,7 +17,7 @@ import { useAsyncData } from "@/composables/useAsyncData";
 import { useFormSubmit } from "@/composables/useFormSubmit";
 import { useEntityPermissions } from "@/composables/useEntityPermissions";
 import { useUsersIfPermitted } from "@/composables/useUsers";
-import { setPageHeader, clearPageHeader } from "@/lib/pageHeader";
+import { usePageHeader } from "@/composables/usePageHeader";
 import { getErrorMessage } from "@/lib/error";
 import { formatTime } from "@/lib/time";
 import Button from "@/components/ui/Button.vue";
@@ -167,16 +167,19 @@ const { loading, error, reload } = useAsyncData(async () => {
   overrides.value = overs;
   users.value = resolvedUsers.filter((u) => memberUserIds.has(u.id));
   layers.value = (sched.layers ?? []).map(recordToForm);
-  setHeader();
   return sched;
 });
 
-function setHeader() {
-  if (!schedule.value) return;
-  setPageHeader(schedule.value.team_name || "On-Call", undefined, {
-    titleIcon: h(Clock, { class: "h-5 w-5 text-[var(--text-muted)]" }),
-  });
-}
+usePageHeader(() => {
+  const sched = schedule.value;
+  if (!sched) return null;
+  return {
+    title: sched.team_name || "On-Call",
+    options: {
+      titleIcon: h(Clock, { class: "h-5 w-5 text-[var(--text-muted)]" }),
+    },
+  };
+});
 
 onMounted(() => {
   void reload();
@@ -184,7 +187,6 @@ onMounted(() => {
 watch(scheduleId, () => {
   void reload();
 });
-onBeforeUnmount(() => clearPageHeader());
 
 const { submitting, withSubmit } = useFormSubmit();
 
@@ -196,7 +198,6 @@ async function saveLayers() {
     });
     schedule.value = updated;
     layers.value = (updated.layers ?? []).map(recordToForm);
-    setHeader();
   }, "Rotations saved");
 }
 

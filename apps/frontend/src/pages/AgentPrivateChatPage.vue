@@ -14,7 +14,8 @@ import ChatTypingIndicator from "@/components/ui/ChatTypingIndicator.vue";
 import ChatEditorBar from "@/components/ui/ChatEditorBar.vue";
 import { useToast } from "@/lib/toast";
 import { resolveDisplayName } from "@/lib/userDisplay";
-import { clearPageHeader, createSearchActionButton, setPageHeader } from "@/lib/pageHeader";
+import { usePageHeader } from "@/composables/usePageHeader";
+import { createSearchActionButton } from "@/lib/pageHeader";
 import { formatDateSeparator, dateSeparatorKey } from "@/lib/time";
 import { useChatSearch } from "@/composables/useChatSearch";
 import { useChatThread } from "@/composables/useChatThread";
@@ -50,7 +51,6 @@ function markAgentRevoked() {
   clearAll();
   hasMore.value = false;
   clearAgentTyping();
-  setPageHeader("Deleted agent");
 }
 
 const {
@@ -176,7 +176,6 @@ async function bootstrapChat() {
   try {
     await resolveAgentTitle();
     if (seq !== chatLoadSeq) return;
-    syncAgentPageHeader();
     if (agentRevoked.value) {
       return;
     }
@@ -280,16 +279,18 @@ function normalizeHeaderAgentBrand(t?: AgentType | string): "hermes" | "openclaw
   return "hermes";
 }
 
-function syncAgentPageHeader() {
+usePageHeader(() => {
   if (agentRevoked.value) {
-    setPageHeader("Deleted agent");
-    return;
+    return { title: "Deleted agent" };
   }
-  setPageHeader(agentName.value || "Agent chat", undefined, {
-    headerAgentBrand: agentBrand.value,
-    actions: [createSearchActionButton(() => searchOpen())],
-  });
-}
+  return {
+    title: agentName.value || "Agent chat",
+    options: {
+      headerAgentBrand: agentBrand.value,
+      actions: [createSearchActionButton(() => searchOpen())],
+    },
+  };
+});
 
 async function resolveAgentTitle() {
   try {
@@ -355,7 +356,6 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   chatLoadSeq++;
-  clearPageHeader();
   clearAgentTyping();
   if (typingPostTimer) {
     clearTimeout(typingPostTimer);

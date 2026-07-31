@@ -274,9 +274,9 @@ onMounted(() => {
       </div>
 
       <template #footer>
-        <Button variant="outline" @click="formOpen = false" :disabled="saving">Cancel</Button>
-        <Button @click="save" :disabled="saving">
-          {{ saving ? "Saving..." : editing ? "Save Changes" : "Create Provider" }}
+        <Button variant="outline" :disabled="saving" @click="formOpen = false">Cancel</Button>
+        <Button variant="primary" :loading="saving" @click="save">
+          {{ editing ? "Save Changes" : "Create Provider" }}
         </Button>
       </template>
     </Modal>

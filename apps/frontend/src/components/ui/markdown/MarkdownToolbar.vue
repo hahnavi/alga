@@ -321,7 +321,7 @@ function toggleHeadingPopup() {
       </p>
       <div class="flex justify-end gap-2">
         <Button variant="outline" @click="cancelLink">Cancel</Button>
-        <Button @click="applyLink">Apply</Button>
+        <Button variant="primary" @click="applyLink">Apply</Button>
       </div>
     </div>
   </Modal>

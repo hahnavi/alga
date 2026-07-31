@@ -827,7 +827,7 @@ onUnmounted(() => {
       </div>
       <template #footer>
         <Button variant="outline" @click="showCustomRange = false">Cancel</Button>
-        <Button @click="applyCustomRange">Apply</Button>
+        <Button variant="primary" @click="applyCustomRange">Apply</Button>
       </template>
     </Modal>
 

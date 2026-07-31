@@ -218,7 +218,7 @@ onMounted(() => {
     <ErrorBanner v-if="error" :message="error" />
 
     <div class="flex items-center justify-end">
-      <Button variant="outline" @click="router.push('/credential-providers')">
+      <Button variant="outline" @click="router.push('/settings/credential-providers')">
         <Server class="h-4 w-4" />
         Manage providers
       </Button>
@@ -318,7 +318,7 @@ onMounted(() => {
           <button
             type="button"
             class="px-1 text-primary hover:underline"
-            @click="router.push('/credential-providers')"
+            @click="router.push('/settings/credential-providers')"
           >
             Manage providers
           </button>
@@ -408,9 +408,9 @@ onMounted(() => {
       </div>
 
       <template #footer>
-        <Button variant="outline" @click="formOpen = false" :disabled="saving">Cancel</Button>
-        <Button @click="save" :disabled="saving">
-          {{ saving ? "Saving..." : editing ? "Save Changes" : "Create Secret" }}
+        <Button variant="outline" :disabled="saving" @click="formOpen = false">Cancel</Button>
+        <Button variant="primary" :loading="saving" @click="save">
+          {{ editing ? "Save Changes" : "Create Secret" }}
         </Button>
       </template>
     </Modal>

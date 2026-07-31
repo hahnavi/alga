@@ -342,16 +342,8 @@ async function replaceRole(role: ICSRoleRecord | undefined | null) {
         <Button variant="outline" :disabled="assignSubmitting" @click="closeAssignDialog">
           Cancel
         </Button>
-        <Button :disabled="assignSubmitting" @click="submitAssignRole">
-          {{
-            assignSubmitting
-              ? replacingRole
-                ? "Replacing…"
-                : "Assigning…"
-              : replacingRole
-                ? "Replace"
-                : "Assign"
-          }}
+        <Button variant="primary" :loading="assignSubmitting" @click="submitAssignRole">
+          {{ replacingRole ? "Replace" : "Assign" }}
         </Button>
       </template>
     </Modal>

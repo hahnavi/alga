@@ -88,7 +88,7 @@ const maxWidthClass = computed(() => {
 });
 
 function onBackdropClick(e: MouseEvent) {
-  if (props.preventClose) return;
+  if (props.preventClose || props.loading) return;
   if (e.target === e.currentTarget) close();
 }
 
@@ -103,13 +103,13 @@ function onConfirm() {
 }
 
 function onCancel() {
+  if (props.loading) return;
   emit("cancel");
-  if (isConfirm.value) close();
-  else close();
+  close();
 }
 
 function handleEscape() {
-  if (props.preventClose) return;
+  if (props.preventClose || props.loading) return;
   close();
 }
 
@@ -146,7 +146,7 @@ useEscapeKey(handleEscape, () => props.open);
             >
               {{ title }}
             </h3>
-            <DialogCloseButton :on-click="close" :disabled="preventClose" />
+            <DialogCloseButton :on-click="close" :disabled="preventClose || loading" />
           </slot>
         </div>
 
@@ -169,11 +169,11 @@ useEscapeKey(handleEscape, () => props.open);
           class="flex shrink-0 justify-end gap-2 border-t border-[var(--border-primary)] bg-[var(--bg-secondary)]/40 px-4 py-3"
         >
           <slot name="footer">
-            <Button ref="cancelButtonRef" variant="outline" @click="onCancel">
+            <Button ref="cancelButtonRef" variant="outline" :disabled="loading" @click="onCancel">
               {{ cancelLabel }}
             </Button>
             <Button
-              :variant="destructive ? 'destructive' : 'default'"
+              :variant="destructive ? 'destructive' : 'primary'"
               :loading="loading"
               @click="onConfirm"
             >

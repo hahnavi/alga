@@ -17,6 +17,7 @@ import {
 import App from "./App.vue";
 import router from "./router";
 import "./app.css";
+import { initFont } from "@/lib/font";
 
 ChartJS.register(
   CategoryScale,
@@ -32,6 +33,7 @@ ChartJS.register(
 );
 
 async function bootstrap() {
+  initFont();
   const app = createApp(App).use(createPinia()).use(router);
   try {
     await router.isReady();

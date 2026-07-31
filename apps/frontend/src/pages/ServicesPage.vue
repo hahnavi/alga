@@ -357,8 +357,8 @@ onMounted(() => {
         <Button variant="outline" :disabled="createSubmitting" @click="closeCreateDialog">
           Cancel
         </Button>
-        <Button :disabled="createSubmitting" @click="submitCreate">
-          {{ createSubmitting ? "Creating…" : "Create service" }}
+        <Button variant="primary" :loading="createSubmitting" @click="submitCreate">
+          Create service
         </Button>
       </template>
     </Modal>

@@ -583,9 +583,7 @@ watch(serviceId, () => {
 
       <template #footer>
         <Button variant="outline" :disabled="saving" @click="cancelEdit">Cancel</Button>
-        <Button :disabled="saving" @click="saveService">
-          {{ saving ? "Saving..." : "Save" }}
-        </Button>
+        <Button variant="primary" :loading="saving" @click="saveService">Save</Button>
       </template>
     </Modal>
 

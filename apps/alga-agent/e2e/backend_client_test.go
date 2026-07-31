@@ -201,6 +201,67 @@ func (c *backendClient) getThread(alertNumber int64) ([]threadMessage, error) {
 	return resp.Data.Items, nil
 }
 
+// getInvestigationOutcome returns the root cause and resolution recorded on
+// the alert's current investigation summary (set via the set_outcome tool).
+func (c *backendClient) getInvestigationOutcome(alertNumber int64) (rootCause, resolution string, err error) {
+	var resp struct {
+		Data struct {
+			AlertInvestigation struct {
+				Summary struct {
+					RootCause  string `json:"root_cause"`
+					Resolution string `json:"resolution"`
+				} `json:"summary"`
+			} `json:"alert_investigation"`
+		} `json:"data"`
+	}
+	path := fmt.Sprintf("/api/v1/alerts/%d", alertNumber)
+	if _, err := c.do(http.MethodGet, path, nil, &resp); err != nil {
+		return "", "", err
+	}
+	return resp.Data.AlertInvestigation.Summary.RootCause, resp.Data.AlertInvestigation.Summary.Resolution, nil
+}
+
+// findIncidentByTitle searches incidents and returns the incident number of
+// the first item whose title contains the given marker.
+func (c *backendClient) findIncidentByTitle(marker string) (int64, bool, error) {
+	var resp struct {
+		Data struct {
+			Items []struct {
+				IncidentNumber int64  `json:"incident_number"`
+				Title          string `json:"title"`
+			} `json:"items"`
+		} `json:"data"`
+	}
+	path := "/api/v1/incidents?search=" + url.QueryEscape(marker)
+	if _, err := c.do(http.MethodGet, path, nil, &resp); err != nil {
+		return 0, false, err
+	}
+	for _, it := range resp.Data.Items {
+		if strings.Contains(it.Title, marker) {
+			return it.IncidentNumber, true, nil
+		}
+	}
+	return 0, false, nil
+}
+
+// incidentAlertNumbers returns the alert numbers linked to an incident.
+func (c *backendClient) incidentAlertNumbers(incidentNumber int64) ([]int64, error) {
+	var resp struct {
+		Data []struct {
+			AlertNumber int64 `json:"alert_number"`
+		} `json:"data"`
+	}
+	path := fmt.Sprintf("/api/v1/incidents/%d/alerts", incidentNumber)
+	if _, err := c.do(http.MethodGet, path, nil, &resp); err != nil {
+		return nil, err
+	}
+	nums := make([]int64, 0, len(resp.Data))
+	for _, a := range resp.Data {
+		nums = append(nums, a.AlertNumber)
+	}
+	return nums, nil
+}
+
 func (c *backendClient) getAlertStatus(alertNumber int64) (string, error) {
 	var resp struct {
 		Data struct {

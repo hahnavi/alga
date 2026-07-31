@@ -245,7 +245,7 @@ docker compose -f docker-compose.e2e.yml up --build -d --wait
 
 # 2. Run the test (from apps/alga-agent)
 ALGA_AGENT_E2E=1 OPENROUTER_API_KEY=sk-... OPENAI_MODEL=<model> \
-  go test ./e2e/... -v -timeout 10m -count=1
+  go test ./e2e/... -v -timeout 15m -count=1
 # or: OPENROUTER_API_KEY=... OPENAI_MODEL=<model> moon run alga-agent:test-e2e
 
 # 3. Tear down / reset
@@ -258,12 +258,17 @@ docker compose -f docker-compose.e2e.yml down -v
 | `OPENAI_API_KEY` / `OPENROUTER_API_KEY` | yes      | LLM credentials (standard config env overrides)                                      |
 | `OPENAI_BASE_URL`, `OPENAI_MODEL`       | no       | LLM endpoint/model; pick a capable model — weak free models flake                    |
 | `ALGA_E2E_SERVER_URL`                   | no       | backend base URL (default `http://localhost:3100`, the nginx proxy of the e2e stack) |
-| `ALGA_AGENT_E2E_TOOLS=1`                | no       | also assert a tool effect (agent resolves the alert); most model-dependent scenario  |
+| `ALGA_AGENT_E2E_TOOLS=1`                | no       | also assert tool effects (outcome, resolve, reopen, promote); most model-dependent   |
 
-Expect ~2–5 minutes per run. Notes:
+Expect ~2–5 minutes per run (~5–10 with `ALGA_AGENT_E2E_TOOLS=1`). Notes:
 
 - Assertions are behavior-loose (agent posted a thread reply, canary echo,
-  alert resolved) because real LLM output is nondeterministic.
+  backend state transitions) because real LLM output is nondeterministic.
+- Tool scenarios assert real backend effects: `outcome_tool` (canary root
+  cause/resolution on the investigation), `resolve_tool` + `reopen_tool`
+  (alert status `resolved` → `firing` on a dedicated alert), and
+  `promote_tool` (incident created with a canary title and linked to the
+  alert).
 - If another agent is connected to the same stack, the scheduler may dispatch
   the investigation to it instead — use the ephemeral e2e stack exclusively.
 - The backend port is not published by `docker-compose.e2e.yml`; the test goes

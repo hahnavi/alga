@@ -12,7 +12,9 @@ import (
 // agent in-process against a real LLM, create an alert, and assert the agent
 // participates in the alert's investigation thread. Subtests run sequentially
 // and share one alert and agent token — the mention flow depends on the
-// scheduler having assigned the agent during the dispatch flow.
+// scheduler having assigned the agent during the dispatch flow. Tool-effect
+// scenarios (outcome, resolve, reopen, promote) are gated behind
+// ALGA_AGENT_E2E_TOOLS=1 because they depend on model tool-use quality.
 func TestAlgaAgentE2E(t *testing.T) {
 	serverURL := requireE2E(t)
 	cfg := loadAgentConfig(t, serverURL)
@@ -79,6 +81,19 @@ func TestAlgaAgentE2E(t *testing.T) {
 		waitForDispatchReply(t, alertNumber)
 	})
 
+	// requireTools gates the tool-effect scenarios: they depend on model
+	// tool-use quality (may flake) and on the agent having been assigned to
+	// the shared alert's investigation by the dispatch flow.
+	requireTools := func(t *testing.T) {
+		t.Helper()
+		if os.Getenv("ALGA_AGENT_E2E_TOOLS") != "1" {
+			t.Skip("skipping: set ALGA_AGENT_E2E_TOOLS=1 to test tool effects (model-dependent, may flake)")
+		}
+		if !dispatchOK {
+			t.Skip("skipping: dispatch_reply failed, dispatch pipeline is not working")
+		}
+	}
+
 	t.Run("mention_reply", func(t *testing.T) {
 		if !dispatchOK {
 			t.Skip("skipping: dispatch_reply failed, agent was never assigned to the investigation")
@@ -104,18 +119,36 @@ func TestAlgaAgentE2E(t *testing.T) {
 		})
 	})
 
-	t.Run("resolve_tool", func(t *testing.T) {
-		if os.Getenv("ALGA_AGENT_E2E_TOOLS") != "1" {
-			t.Skip("skipping: set ALGA_AGENT_E2E_TOOLS=1 to test tool effects (model-dependent, may flake)")
+	t.Run("outcome_tool", func(t *testing.T) {
+		requireTools(t)
+		rootCanary := "E2E-ROOTCAUSE-" + runID
+		resCanary := "E2E-RESOLUTION-" + runID
+		prompt := fmt.Sprintf("Record the investigation outcome now using your set outcome tool: set the root cause to exactly %q and the resolution to exactly %q. Do not resolve or close the alert.", rootCanary, resCanary)
+		if err := bc.postThreadMessage(alertNumber, prompt, []string{"agent:" + tokenID}); err != nil {
+			t.Fatalf("post mention: %v", err)
 		}
-		if !dispatchOK {
-			t.Skip("skipping: dispatch_reply failed, dispatch pipeline is not working")
-		}
+		waitFor(t, 120*time.Second, "investigation outcome to carry both canaries", func() (bool, error) {
+			rc, res, err := bc.getInvestigationOutcome(alertNumber)
+			if err != nil {
+				return false, err
+			}
+			return strings.Contains(rc, rootCanary) && strings.Contains(res, resCanary), nil
+		})
+	})
 
-		// Use a fresh alert: the agent may have already resolved the shared
-		// alert during its dispatch turn, which would make waiting for
-		// "resolved" pass without exercising the mention-driven tool call.
-		resolveAlert, resolveFP, err := bc.createAlert(
+	// resolve_tool and reopen_tool share one fresh alert: the agent may have
+	// already resolved the shared alert during its dispatch turn, which would
+	// make waiting for "resolved" pass without exercising the mention-driven
+	// tool call.
+	var resolveAlert int64
+	var resolveFP string
+	alertResolved := false
+
+	t.Run("resolve_tool", func(t *testing.T) {
+		requireTools(t)
+
+		var err error
+		resolveAlert, resolveFP, err = bc.createAlert(
 			"e2e-agent-resolve-"+runID,
 			"warning",
 			"Synthetic alert created by the alga-agent E2E test. Briefly acknowledge it in the thread. Do not resolve or close it unless explicitly asked.",
@@ -148,5 +181,55 @@ func TestAlgaAgentE2E(t *testing.T) {
 			}
 			return status == "resolved", nil
 		})
+		alertResolved = true
+	})
+
+	t.Run("reopen_tool", func(t *testing.T) {
+		requireTools(t)
+		if !alertResolved {
+			t.Skip("skipping: resolve_tool did not resolve its alert, nothing to reopen")
+		}
+		prompt := fmt.Sprintf("That alert was resolved by mistake and the issue is still occurring. Reopen it now using your reopen tool. Its fingerprint is %s.", resolveFP)
+		if err := bc.postThreadMessage(resolveAlert, prompt, []string{"agent:" + tokenID}); err != nil {
+			t.Fatalf("post mention: %v", err)
+		}
+		waitFor(t, 120*time.Second, "alert to be reopened (firing) via the agent tool", func() (bool, error) {
+			status, err := bc.getAlertStatus(resolveAlert)
+			if err != nil {
+				return false, err
+			}
+			return status == "firing", nil
+		})
+	})
+
+	// Runs last: promotion flips the shared alert's investigation to
+	// "promoted" and spawns an incident investigation, which would add
+	// unrelated agent traffic to earlier scenarios.
+	t.Run("promote_tool", func(t *testing.T) {
+		requireTools(t)
+		title := "E2E-INCIDENT-" + runID
+		prompt := fmt.Sprintf("This needs coordinated response. Promote this investigation to an incident now using your promote tool, with the exact title %q and severity SEV2.", title)
+		if err := bc.postThreadMessage(alertNumber, prompt, []string{"agent:" + tokenID}); err != nil {
+			t.Fatalf("post mention: %v", err)
+		}
+		var incidentNumber int64
+		waitFor(t, 120*time.Second, "an incident titled "+title+" to exist", func() (bool, error) {
+			n, found, err := bc.findIncidentByTitle(title)
+			if err != nil {
+				return false, err
+			}
+			incidentNumber = n
+			return found, nil
+		})
+		nums, err := bc.incidentAlertNumbers(incidentNumber)
+		if err != nil {
+			t.Fatalf("list incident alerts: %v", err)
+		}
+		for _, n := range nums {
+			if n == alertNumber {
+				return
+			}
+		}
+		t.Errorf("incident #%d is not linked to alert #%d (linked: %v)", incidentNumber, alertNumber, nums)
 	})
 }

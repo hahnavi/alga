@@ -96,7 +96,6 @@ func loadAgentConfig(t *testing.T, serverURL string) *config.Config {
 	if err != nil {
 		t.Fatalf("config parse: %v", err)
 	}
-	cfg.Telegram.Enabled = false
 	cfg.Alga = config.AlgaConfig{Enabled: true, ServerURL: serverURL, AgentToken: "placeholder"}
 	cfg.Tools.Shell.Enabled = false
 	cfg.Tools.WebSearch.Enabled = false

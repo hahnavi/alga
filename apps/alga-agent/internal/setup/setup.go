@@ -458,104 +458,12 @@ func promptModel(cfg *config.Config, r *bufio.Reader, w io.Writer) (string, erro
 	return choices[idx], nil
 }
 
-// channelContinueIdx is the index of the "Continue" item in the channel menu.
-const channelContinueIdx = 2
-
-// channelMenuChoices builds the channel list shown in the interactive menu. The
-// Telegram and Alga rows display their current on/off state so the user can see
-// what is configured at a glance. The final row is the "Continue" action that
-// finishes channel setup and returns to the parent menu.
-func channelMenuChoices(cfg *config.Config) []string {
-	return []string{
-		channelRowLabel("Telegram", cfg.Telegram.Enabled, "(human interface)"),
-		channelRowLabel("Alga", cfg.Alga.Enabled, "(investigation threads)"),
-		"Continue",
-	}
-}
-
-// channelRowLabel renders a channel list row with its live on/off status.
-func channelRowLabel(name string, enabled bool, hint string) string {
-	status := color("off", colorDim)
-	if enabled {
-		status = color("on", colorGreen)
-	}
-	if hint != "" {
-		return fmt.Sprintf("%s %s  %s", name, status, color(hint, colorDim))
-	}
-	return fmt.Sprintf("%s %s", name, status)
-}
-
-// setupChannels presents an interactive channel list: each channel can be
-// opened for configuration, and changes are reflected live in the list. The
-// "Continue" row finishes setup. The at-least-one-channel invariant is not
-// enforced here — it is checked at the Review & Save step via Validate(), so a
-// user can leave channels disabled and fix it (or enable Alga instead) later.
+// setupChannels configures the messaging channel. Only the Alga channel is
+// supported; the at-least-one-channel invariant is checked at the Review & Save
+// step via Validate().
 func setupChannels(cfg *config.Config, r *bufio.Reader, w io.Writer) error {
 	printHeader(w, "Channels")
-	printInfo(w, "Select a channel to configure, or Continue when done.")
-	printInfo(w, "At least one channel must be enabled before you can save.")
-
-	// Default cursor to the first channel so a first-time user lands on it.
-	defIdx := 0
-	for {
-		idx, err := promptChoice(r, w, "", channelMenuChoices(cfg), defIdx)
-		if err != nil {
-			return err
-		}
-		switch idx {
-		case 0:
-			if err := setupTelegram(cfg, r, w); err != nil {
-				return err
-			}
-		case 1:
-			if err := setupAlga(cfg, r, w); err != nil {
-				return err
-			}
-		case channelContinueIdx:
-			return nil
-		}
-		// Keep the cursor on the channel just edited for quick re-edits.
-		defIdx = idx
-	}
-}
-
-// setupTelegram prompts for the Telegram channel settings and mutates cfg in
-// place. Current values are shown as defaults so re-running is non-destructive.
-func setupTelegram(cfg *config.Config, r *bufio.Reader, w io.Writer) error {
-	printHeader(w, "Telegram (human interface)")
-	tgEnabled, err := promptYesNo(r, w, "Enable Telegram channel?", cfg.Telegram.Enabled)
-	if err != nil {
-		return err
-	}
-	cfg.Telegram.Enabled = tgEnabled
-	if !tgEnabled {
-		return nil
-	}
-
-	token, err := promptSecret(r, w, "Bot token (from @BotFather)", cfg.Telegram.BotToken)
-	if err != nil {
-		return err
-	}
-	cfg.Telegram.BotToken = token
-
-	webhook, err := prompt(r, w, "Webhook URL (empty = long polling)", cfg.Telegram.WebhookURL)
-	if err != nil {
-		return err
-	}
-	cfg.Telegram.WebhookURL = webhook
-
-	addr, err := prompt(r, w, "Webhook listen address", orDefault(cfg.Telegram.WebhookAddr, "0.0.0.0:8443"))
-	if err != nil {
-		return err
-	}
-	cfg.Telegram.WebhookAddr = addr
-
-	respondInGroups, err := promptYesNo(r, w, "Respond in groups when not @mentioned?", cfg.Telegram.RespondInGroups)
-	if err != nil {
-		return err
-	}
-	cfg.Telegram.RespondInGroups = respondInGroups
-	return nil
+	return setupAlga(cfg, r, w)
 }
 
 // setupAlga prompts for the Alga channel settings and mutates cfg in place.
@@ -1067,15 +975,10 @@ func printReview(w io.Writer, cfg *config.Config) {
 	printInfo(w, "API key:     "+secretStatus(cfg.Model.APIKey))
 
 	// Channels
-	tg := "off"
-	if cfg.Telegram.Enabled {
-		tg = "on"
-	}
 	ag := "off"
 	if cfg.Alga.Enabled {
 		ag = "on"
 	}
-	printInfo(w, "Telegram:    "+tg+"  (token: "+secretStatus(cfg.Telegram.BotToken)+")")
 	printInfo(w, "Alga:        "+ag+"  (token: "+secretStatus(cfg.Alga.AgentToken)+")")
 
 	// Tools
@@ -1152,8 +1055,9 @@ func printNonInteractiveGuidance(w io.Writer) {
 	fmt.Fprintln(w)
 	printInfo(w, "The interactive wizard needs a TTY. Configure via environment variables instead:")
 	printInfo(w, "  export OPENROUTER_API_KEY=\"sk-or-...\"  # or OPENAI_API_KEY")
-	printInfo(w, "  export TELEGRAM_BOT_TOKEN=\"...\"     # if Telegram enabled")
-	printInfo(w, "  export ALGA_TELEGRAM_ENABLED=true")
+	printInfo(w, "  export ALGA_SERVER_URL=\"http://localhost:8080\"")
+	printInfo(w, "  export ALGA_AGENT_TOKEN=\"...\"")
+	printInfo(w, "  export ALGA_ALGA_ENABLED=true")
 	printInfo(w, "Or copy apps/alga-agent/config.yaml.example to "+filepath.Join(config.ResolveDataDir(), "config.yaml")+" and edit it.")
 	printInfo(w, "Run `alga-agent setup` in an interactive terminal for the full wizard.")
 }
@@ -1206,11 +1110,7 @@ func modelStatus(cfg *config.Config) string {
 }
 
 func channelStatus(cfg *config.Config) string {
-	parts := []string{
-		"telegram " + onOff(cfg.Telegram.Enabled),
-		"alga " + onOff(cfg.Alga.Enabled),
-	}
-	return strings.Join(parts, " · ")
+	return "alga " + onOff(cfg.Alga.Enabled)
 }
 
 func toolsStatus(cfg *config.Config) string {

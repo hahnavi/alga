@@ -27,8 +27,6 @@ func TestSaveLoadRoundTrip(t *testing.T) {
 	cfg.Model.Model = "anthropic/claude-3.5"
 	cfg.Model.MaxTokens = 8192
 	cfg.Model.Temperature = 0.7
-	cfg.Telegram.Enabled = true
-	cfg.Telegram.BotToken = "123:abc"
 	cfg.Alga.Enabled = true
 	cfg.Alga.ServerURL = "http://alga.local:8080"
 	cfg.Alga.AgentToken = "alga_tok"
@@ -52,9 +50,6 @@ func TestSaveLoadRoundTrip(t *testing.T) {
 	}
 	if loaded.Model.APIKey != "sk-secret-123" {
 		t.Errorf("api_key = %q, want sk-secret-123", loaded.Model.APIKey)
-	}
-	if loaded.Telegram.BotToken != "123:abc" {
-		t.Errorf("bot_token = %q, want 123:abc", loaded.Telegram.BotToken)
 	}
 	if loaded.Alga.AgentToken != "alga_tok" {
 		t.Errorf("agent_token = %q, want alga_tok", loaded.Alga.AgentToken)
@@ -144,7 +139,6 @@ func runScript(t *testing.T, cfg *config.Config, sections []string, input string
 	t.Setenv("ALGA_AGENT_HOME", dir)
 	t.Setenv("ALGA_AGENT_CONFIG", filepath.Join(dir, "config.yaml"))
 	t.Setenv("OPENAI_API_KEY", "")
-	t.Setenv("TELEGRAM_BOT_TOKEN", "")
 	t.Setenv("ALGA_AGENT_TOKEN", "")
 	t.Setenv("ALGA_SERVER_URL", "")
 	t.Cleanup(func() { t.Setenv("ALGA_AGENT_HOME", origHome) })
@@ -297,32 +291,16 @@ func TestSetupModel_OpenAILiveFetchNoEmptyDefault(t *testing.T) {
 	}
 }
 
-func TestSetupChannels_TelegramThenAlga(t *testing.T) {
+func TestSetupChannels_Alga(t *testing.T) {
 	cfg := config.Default()
-	// Channel menu:       1 (Telegram)
-	//   Enable Telegram?  y Enter
-	//   Bot token:        tg_tok Enter
-	//   Webhook URL:      Enter (empty = long polling)
-	//   Webhook addr:     Enter (keep default)
-	//   RespondInGroups?  n Enter
-	// Back to menu:       2 (Alga)
-	//   Enable Alga?      y Enter
-	//   Server URL:       Enter (keep default)
-	//   Agent token:      alga_tok Enter
-	// Back to menu:       3 (Continue)
-	input := "1\ny\ntg_tok\n\n\nn\n2\ny\n\nalga_tok\n3\n"
+	// Channel setup goes straight to the Alga flow:
+	//   Enable Alga?  y Enter
+	//   Server URL:   Enter (keep default)
+	//   Agent token:  alga_tok Enter
+	input := "y\n\nalga_tok\n"
 	_, _, err := runScript(t, cfg, []string{"channel"}, input)
 	if err != nil {
 		t.Fatalf("runScript: %v", err)
-	}
-	if !cfg.Telegram.Enabled {
-		t.Error("telegram should be enabled")
-	}
-	if cfg.Telegram.BotToken != "tg_tok" {
-		t.Errorf("bot_token = %q, want tg_tok", cfg.Telegram.BotToken)
-	}
-	if cfg.Telegram.RespondInGroups {
-		t.Error("respond_in_groups should be false")
 	}
 	if !cfg.Alga.Enabled {
 		t.Error("alga should be enabled")
@@ -332,44 +310,15 @@ func TestSetupChannels_TelegramThenAlga(t *testing.T) {
 	}
 }
 
-func TestSetupChannels_BothDisabledContinues(t *testing.T) {
+func TestSetupChannels_Disabled(t *testing.T) {
 	cfg := config.Default()
-	// Channel menu: disable Telegram (1), disable Alga (2). Picking Continue
-	// with nothing enabled now returns cleanly — the invariant is enforced at
-	// the Review & Save step via Validate(), not here.
-	//   1 → Enable Telegram? n
-	//   2 → Enable Alga?     n
-	//   3 (Continue) → returns
-	input := "1\nn\n2\nn\n3\n"
+	// Channel setup offers the Alga flow; declining leaves it disabled. The
+	// invariant is enforced at the Review & Save step via Validate(), not here.
+	//   Enable Alga? n
+	input := "n\n"
 	_, _, err := runScript(t, cfg, []string{"channel"}, input)
 	if err != nil {
 		t.Fatalf("runScript: %v", err)
-	}
-	if cfg.Telegram.Enabled {
-		t.Error("telegram should remain disabled (no forcing)")
-	}
-	if cfg.Alga.Enabled {
-		t.Error("alga should remain disabled")
-	}
-}
-
-func TestSetupChannels_DisableAfterEnabling(t *testing.T) {
-	cfg := config.Default()
-	// Enable Telegram, then return and disable it. Channel setup returns with
-	// nothing enabled; no re-opening occurs (validate-at-save handles it).
-	//   1 → y, tok, "", "", n
-	//   1 → n (disable)
-	//   3 (Continue) → returns with nothing enabled
-	input := "1\ny\ntok\n\n\nn\n1\nn\n3\n"
-	_, _, err := runScript(t, cfg, []string{"channel"}, input)
-	if err != nil {
-		t.Fatalf("runScript: %v", err)
-	}
-	if cfg.Telegram.Enabled {
-		t.Error("telegram should end disabled after explicit disable")
-	}
-	if cfg.Telegram.BotToken != "tok" {
-		t.Errorf("bot_token = %q, want tok (preserved even when disabled)", cfg.Telegram.BotToken)
 	}
 	if cfg.Alga.Enabled {
 		t.Error("alga should remain disabled")
@@ -564,8 +513,8 @@ func TestFinalize_ValidSaves(t *testing.T) {
 	path := filepath.Join(dir, "config.yaml")
 	cfg := config.Default()
 	cfg.Model.APIKey = "sk-test"
-	cfg.Telegram.Enabled = true
-	cfg.Telegram.BotToken = "tg_tok"
+	cfg.Alga.Enabled = true
+	cfg.Alga.AgentToken = "tg_tok"
 
 	var out bytes.Buffer
 	r := bufio.NewReader(strings.NewReader("y\n")) // confirm save
@@ -591,7 +540,6 @@ func TestFinalize_InvalidOffersChoice(t *testing.T) {
 	cfg := config.Default()
 	// No API key and no channel → Validate fails. Pick "Back to menu".
 	cfg.Model.APIKey = ""
-	cfg.Telegram.Enabled = false
 	cfg.Alga.Enabled = false
 
 	var out bytes.Buffer
@@ -616,7 +564,6 @@ func TestFinalize_SaveAnyway(t *testing.T) {
 	path := filepath.Join(dir, "config.yaml")
 	cfg := config.Default()
 	cfg.Model.APIKey = ""
-	cfg.Telegram.Enabled = false
 	cfg.Alga.Enabled = false
 
 	// Invalid → pick "Save anyway" (2), then confirm save (y).
@@ -639,7 +586,6 @@ func TestFinalize_Cancel(t *testing.T) {
 	path := filepath.Join(dir, "config.yaml")
 	cfg := config.Default()
 	cfg.Model.APIKey = ""
-	cfg.Telegram.Enabled = false
 	cfg.Alga.Enabled = false
 
 	// Invalid → pick "Cancel" (3).
@@ -659,8 +605,8 @@ func TestFinalize_DeclineSave(t *testing.T) {
 	path := filepath.Join(dir, "config.yaml")
 	cfg := config.Default()
 	cfg.Model.APIKey = "sk-test"
-	cfg.Telegram.Enabled = true
-	cfg.Telegram.BotToken = "tg_tok"
+	cfg.Alga.Enabled = true
+	cfg.Alga.AgentToken = "tg_tok"
 
 	// Valid config, but decline the final "Save?" prompt.
 	var out bytes.Buffer
@@ -682,9 +628,7 @@ func TestFinalize_DeclineSave(t *testing.T) {
 func TestPrintReview_HidesSecrets(t *testing.T) {
 	cfg := config.Default()
 	cfg.Model.APIKey = "sk-super-secret-123"
-	cfg.Telegram.Enabled = true
-	cfg.Telegram.BotToken = "123:abc-super-secret"
-	cfg.Alga.Enabled = false
+	cfg.Alga.Enabled = true
 	cfg.Alga.AgentToken = "" // unset → should show "✗ not set"
 	cfg.Tools.WebSearch.APIKey = "brave-secret"
 
@@ -692,7 +636,7 @@ func TestPrintReview_HidesSecrets(t *testing.T) {
 	printReview(&out, cfg)
 	visible := stripANSI(out.String())
 
-	for _, secret := range []string{"sk-super-secret-123", "123:abc-super-secret", "alga-secret-tok", "brave-secret"} {
+	for _, secret := range []string{"sk-super-secret-123", "alga-secret-tok", "brave-secret"} {
 		if strings.Contains(visible, secret) {
 			t.Errorf("review output leaked secret %q:\n%s", secret, visible)
 		}
@@ -709,8 +653,7 @@ func TestPrintReview_HidesSecrets(t *testing.T) {
 
 func TestStatusBadges(t *testing.T) {
 	cfg := config.Default()
-	cfg.Telegram.Enabled = true
-	cfg.Alga.Enabled = false
+	cfg.Alga.Enabled = true
 	cfg.Tools.Shell.Enabled = true
 	cfg.Tools.Shell.AllowedCommands = []string{"ls", "grep"}
 	cfg.Tools.WebSearch.Enabled = true
@@ -720,7 +663,7 @@ func TestStatusBadges(t *testing.T) {
 	if got := modelStatus(cfg); !strings.Contains(got, "openrouter/free") {
 		t.Errorf("modelStatus = %q", got)
 	}
-	if got := channelStatus(cfg); !strings.Contains(got, "telegram on") || !strings.Contains(got, "alga off") {
+	if got := channelStatus(cfg); !strings.Contains(got, "alga on") {
 		t.Errorf("channelStatus = %q", got)
 	}
 	if got := toolsStatus(cfg); !strings.Contains(got, "shell on") || !strings.Contains(got, "brave") {

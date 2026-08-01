@@ -20,7 +20,6 @@ import (
 type Config struct {
 	Agent         AgentConfig         `yaml:"agent"`
 	Model         ModelConfig         `yaml:"model"`
-	Telegram      TelegramConfig      `yaml:"telegram"`
 	Alga          AlgaConfig          `yaml:"alga"`
 	Tools         ToolsConfig         `yaml:"tools"`
 	AgentBehavior AgentBehaviorConfig `yaml:"agent_behavior"`
@@ -42,19 +41,6 @@ type ModelConfig struct {
 	Model       string  `yaml:"model"`
 	MaxTokens   int     `yaml:"max_tokens"`
 	Temperature float64 `yaml:"temperature"`
-}
-
-type TelegramConfig struct {
-	Enabled      bool     `yaml:"enabled"`
-	BotToken     string   `yaml:"bot_token"`
-	AllowedUsers []string `yaml:"allowed_users"`
-	WebhookURL   string   `yaml:"webhook_url"`
-	WebhookAddr  string   `yaml:"webhook_addr"`
-	// RespondInGroups controls whether the bot replies in group chats when it
-	// is not directly mentioned or replied to. Defaults to false (mention-only).
-	RespondInGroups bool `yaml:"respond_in_groups"`
-	// MinEditInterval bounds how often a streaming message is edited.
-	MinEditInterval time.Duration `yaml:"min_edit_interval"`
 }
 
 type AlgaConfig struct {
@@ -274,10 +260,6 @@ func Default() *Config {
 			MaxTokens:   4096,
 			Temperature: 0.3,
 		},
-		Telegram: TelegramConfig{
-			WebhookAddr:     "0.0.0.0:8443",
-			MinEditInterval: time.Second,
-		},
 		Alga: AlgaConfig{ServerURL: "http://localhost:8080"},
 		Tools: ToolsConfig{
 			Shell: ShellConfig{
@@ -401,12 +383,6 @@ func (c *Config) applyDefaults() {
 	if c.Metrics.Addr == "" {
 		c.Metrics.Addr = "127.0.0.1:9101"
 	}
-	if c.Telegram.WebhookAddr == "" {
-		c.Telegram.WebhookAddr = "0.0.0.0:8443"
-	}
-	if c.Telegram.MinEditInterval == 0 {
-		c.Telegram.MinEditInterval = time.Second
-	}
 	if c.Alga.ServerURL == "" {
 		c.Alga.ServerURL = "http://localhost:8080"
 	}
@@ -446,9 +422,6 @@ func applyEnvOverrides(c *Config) {
 	if v := os.Getenv("OPENAI_MODEL"); v != "" {
 		c.Model.Model = v
 	}
-	if v := os.Getenv("TELEGRAM_BOT_TOKEN"); v != "" {
-		c.Telegram.BotToken = v
-	}
 	if v := os.Getenv("ALGA_SERVER_URL"); v != "" {
 		c.Alga.ServerURL = v
 	}
@@ -459,9 +432,6 @@ func applyEnvOverrides(c *Config) {
 		c.Tools.WebSearch.APIKey = v
 	}
 	// Booleans: non-empty value interpreted as "enable unless explicitly falsey".
-	if v, ok := os.LookupEnv("ALGA_TELEGRAM_ENABLED"); ok {
-		c.Telegram.Enabled = parseBoolDefault(v, c.Telegram.Enabled)
-	}
 	if v, ok := os.LookupEnv("ALGA_ALGA_ENABLED"); ok {
 		c.Alga.Enabled = parseBoolDefault(v, c.Alga.Enabled)
 	}
@@ -499,17 +469,6 @@ func (c *Config) Validate() error {
 		errs = append(errs, "agent_behavior.context_window must be > 1")
 	}
 
-	if c.Telegram.Enabled {
-		if c.Telegram.BotToken == "" {
-			errs = append(errs, "telegram.bot_token (or TELEGRAM_BOT_TOKEN) is required when telegram.enabled")
-		}
-		if c.Telegram.WebhookURL != "" {
-			if c.Telegram.MinEditInterval < 0 {
-				errs = append(errs, "telegram.min_edit_interval must be >= 0")
-			}
-		}
-	}
-
 	if c.Alga.Enabled {
 		if c.Alga.ServerURL == "" {
 			errs = append(errs, "alga.server_url (or ALGA_SERVER_URL) is required when alga.enabled")
@@ -519,8 +478,8 @@ func (c *Config) Validate() error {
 		}
 	}
 
-	if !c.Telegram.Enabled && !c.Alga.Enabled {
-		errs = append(errs, "at least one channel (telegram or alga) must be enabled")
+	if !c.Alga.Enabled {
+		errs = append(errs, "the alga channel must be enabled (set alga.enabled: true)")
 	}
 
 	if c.Tools.Shell.Enabled && c.Tools.Shell.Timeout <= 0 {

@@ -21,16 +21,6 @@ model:
   max_tokens: 4096
   temperature: 0.3
 
-# Telegram channel (human interface).
-telegram:
-  enabled: false
-  bot_token: ${TELEGRAM_BOT_TOKEN}
-  allowed_users: []          # empty = allow all; or list user IDs / @usernames
-  webhook_url: ""            # empty = long polling (default)
-  webhook_addr: "0.0.0.0:8443"
-  respond_in_groups: false   # only respond when @mentioned or replied to
-  min_edit_interval: 1s      # throttle progressive message edits
-
 # Alga channel (backend investigation threads).
 alga:
   enabled: false

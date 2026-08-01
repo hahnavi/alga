@@ -126,7 +126,6 @@ var sensitiveKeys = map[string]struct{}{
 	"alibaba_coding_plan_api_key": {},
 	"search_api_key":              {},
 	"alga_agent_token":            {},
-	"telegram_bot_token":          {},
 }
 
 // IsSensitiveKey reports whether k is a known sensitive key.

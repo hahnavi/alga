@@ -1,13 +1,13 @@
 # Alga Agent
 
 A Go-based AI SRE assistant for the [Alga](../..) AIOps platform. It triages
-alerts, investigates incidents, and runs operations through two independent
-channels — **Telegram** (human interface) and **Alga** (investigation threads)
-— powered by an OpenAI-compatible LLM with a tool-calling loop.
+alerts, investigates incidents, and runs operations through the **Alga**
+channel (investigation threads), powered by an OpenAI-compatible LLM with a
+tool-calling loop.
 
 ## Features
 
-- **Dual-channel**: Telegram (long polling or webhook) + Alga SSE investigation threads
+- **Alga channel**: SSE investigation threads
 - **MCP integration**: expose every agent tool as an MCP server for Claude
   Desktop, Cursor, and other MCP-compatible clients. Consume external MCP
   servers (filesystem, GitHub, database, in-house) as agent tools.
@@ -18,7 +18,7 @@ channels — **Telegram** (human interface) and **Alga** (investigation threads)
   `{ok, data, error}` result envelope and panic recovery.
 - **Shell tool**: whitelisted command execution (not a sandbox — restrict the list)
 - **Web search**: DuckDuckGo (default), Brave, or Tavily
-- **Streaming**: progressive message edits on Telegram; typing indicators on Alga
+- **Streaming**: typing indicators on Alga
 - **Session memory**: per-chat ring buffer with idle eviction
 - **Idempotency-Key injection**: every state-changing SDK call is replay-safe
   — a transient 503 retry no longer double-fires a mutation
@@ -50,7 +50,7 @@ alga-agent setup logging
 ```
 
 The wizard covers every section of `config.yaml`. The main menu shows a live
-status badge for each area (e.g. `telegram on · alga off`), so you can see at a
+status badge for each area (e.g. `alga on`), so you can see at a
 glance what's configured. Before saving, a **Review & Save** step prints a full
 summary — secrets are shown only as `✓ set` / `✗ not set`, never their values —
 and runs `config.Validate()` so a broken config is caught before it's written,
@@ -79,12 +79,10 @@ cp config.yaml.example config.yaml
 
 # 2. Set required secrets via env vars.
 export OPENROUTER_API_KEY="sk-or-..."    # or OPENAI_API_KEY
-export TELEGRAM_BOT_TOKEN="123:abc..."   # if telegram enabled
 export ALGA_SERVER_URL="http://localhost:8080"
 export ALGA_AGENT_TOKEN="alga_..."
 
-# 3. Enable channels in config.yaml or via env:
-export ALGA_TELEGRAM_ENABLED=true
+# 3. Enable the channel in config.yaml or via env:
 export ALGA_ALGA_ENABLED=true
 
 # 4. Run.
@@ -99,20 +97,18 @@ config.yaml`, or `$HOME/.alga/config.yaml`. `${VAR}` environment variable
 expansion is supported. **Environment variables always override YAML values**
 — keep secrets in env vars, structure in YAML.
 
-| Variable                    | Required            | Description                                                                                                                                                                                         |
-| --------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `OPENROUTER_API_KEY`        | Yes*                | LLM API key (default OpenRouter provider)                                                                                                                                                           |
-| `OPENAI_API_KEY`            | Yes*                | LLM API key alias (OPENROUTER_API_KEY wins when both set)                                                                                                                                           |
-| Provider keys               | No                  | Per-provider keys used when `model.provider` matches: `OPENCODE_ZEN_API_KEY`, `OPENCODE_GO_API_KEY`, `ZAI_API_KEY`/`GLM_API_KEY`/`Z_AI_API_KEY`, `DASHSCOPE_API_KEY`, `ALIBABA_CODING_PLAN_API_KEY` |
-| `TELEGRAM_BOT_TOKEN`        | If Telegram enabled | Telegram bot token from @BotFather                                                                                                                                                                  |
-| `ALGA_SERVER_URL`           | If Alga enabled     | Alga server URL                                                                                                                                                                                     |
-| `ALGA_AGENT_TOKEN`          | If Alga enabled     | Alga agent authentication token                                                                                                                                                                     |
-| `SEARCH_API_KEY`            | If Brave/Tavily     | Web search API key                                                                                                                                                                                  |
-| `ALGA_AGENT_CONFIG`         | No                  | Path to config.yaml                                                                                                                                                                                 |
-| `ALGA_AGENT_HOME`           | No                  | Data dir (default `~/.alga`); config lives at `<dir>/config.yaml`                                                                                                                                   |
-| `ALGA_AGENT_NONINTERACTIVE` | No                  | Set to `1` to make `setup` refuse to run (non-TTY guard)                                                                                                                                            |
-| `ALGA_TELEGRAM_ENABLED`     | No                  | Enable Telegram channel (`true`/`false`)                                                                                                                                                            |
-| `ALGA_ALGA_ENABLED`         | No                  | Enable Alga channel (`true`/`false`)                                                                                                                                                                |
+| Variable                    | Required        | Description                                                                                                                                                                                         |
+| --------------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OPENROUTER_API_KEY`        | Yes*            | LLM API key (default OpenRouter provider)                                                                                                                                                           |
+| `OPENAI_API_KEY`            | Yes*            | LLM API key alias (OPENROUTER_API_KEY wins when both set)                                                                                                                                           |
+| Provider keys               | No              | Per-provider keys used when `model.provider` matches: `OPENCODE_ZEN_API_KEY`, `OPENCODE_GO_API_KEY`, `ZAI_API_KEY`/`GLM_API_KEY`/`Z_AI_API_KEY`, `DASHSCOPE_API_KEY`, `ALIBABA_CODING_PLAN_API_KEY` |
+| `ALGA_SERVER_URL`           | If Alga enabled | Alga server URL                                                                                                                                                                                     |
+| `ALGA_AGENT_TOKEN`          | If Alga enabled | Alga agent authentication token                                                                                                                                                                     |
+| `SEARCH_API_KEY`            | If Brave/Tavily | Web search API key                                                                                                                                                                                  |
+| `ALGA_AGENT_CONFIG`         | No              | Path to config.yaml                                                                                                                                                                                 |
+| `ALGA_AGENT_HOME`           | No              | Data dir (default `~/.alga`); config lives at `<dir>/config.yaml`                                                                                                                                   |
+| `ALGA_AGENT_NONINTERACTIVE` | No              | Set to `1` to make `setup` refuse to run (non-TTY guard)                                                                                                                                            |
+| `ALGA_ALGA_ENABLED`         | No              | Enable Alga channel (`true`/`false`)                                                                                                                                                                |
 
 See [`config.yaml.example`](./config.yaml.example) for the full schema.
 
@@ -163,19 +159,19 @@ LLM sees them alongside the Alga tools and calls them transparently.
 ## Architecture
 
 ```
-┌──────────┐  ┌──────────┐  ┌───────────────────┐
-│ Telegram │  │   Alga   │  │   Agent Core      │
-│ Channel  │  │ Channel  │  │  ┌─────────────┐  │
-│ (polling │  │ (SSE +   │  │  │ LLM Client  │  │
-│  /webhook)│  │  REST)   │  │  │ (OpenRouter)│  │
-└────┬─────┘  └────┬─────┘  │  └──────┬──────┘  │
-     └──────┬───────┘        │  ┌──────▼──────┐  │
-            ▼                │  │ Tool Router │  │
-     ┌────────────────┐      │  │ (29 tools)  │  │
-     │ Message Router │◄─────┤  └─────────────┘  │
-     │ (sessions)     │      └─────────┬─────────┘
-     └────────────────┘                │
-                                       ▼
+┌──────────┐  ┌───────────────────┐
+│   Alga   │  │   Agent Core      │
+│ Channel  │  │  ┌─────────────┐  │
+│ (SSE +   │  │  │ LLM Client  │  │
+│  REST)   │  │  │ (OpenRouter)│  │
+└────┬─────┘  │  └──────┬──────┘  │
+     │        │  ┌──────▼──────┐  │
+     ▼        │  │ Tool Router │  │
+┌────────────────┐ │ (29 tools)  │  │
+│ Message Router │◄┤  └─────────────┘  │
+│ (sessions)     │ └─────────┬─────────┘
+└────────────────┘           │
+                             ▼
                               ┌─────────────────┐
        External MCP servers   │   MCP Layer     │   External MCP clients
        (filesystem, GitHub,   │  Server  Client │   (Claude Desktop, Cursor)
@@ -215,7 +211,7 @@ final no-tool turn is streamed for progressive delivery (SPEC §5.2.1).
 ### ID Resolution
 
 The agent never infers IDs. In Alga threads, IDs come from the investigation
-context. From Telegram, users provide IDs in canonical prefixed form:
+context. Users provide IDs in canonical prefixed form:
 `inv_<id>` (investigations), `inc_<id>` (incidents), `alert:<fingerprint>`.
 
 ## Development
@@ -303,9 +299,7 @@ apps/alga-agent/
 │   ├── channels/
 │   │   ├── channel.go           # Channel interface
 │   │   ├── router.go            # Message dispatch
-│   │   ├── telegram.go          # Telegram adapter
-│   │   ├── alga.go              # Alga adapter (context-cancel-aware)
-│   │   └── webhook.go           # Webhook HTTP server
+│   │   └── alga.go              # Alga adapter (context-cancel-aware)
 │   └── metrics/                 # Prometheus text format
 ├── Dockerfile
 ├── config.yaml.example
@@ -320,8 +314,9 @@ Build from the repository root (the build context needs the local SDK):
 docker build -t alga-agent -f apps/alga-agent/Dockerfile .
 docker run --rm \
   -e OPENROUTER_API_KEY="sk-or-..." \
-  -e ALGA_TELEGRAM_ENABLED=true \
-  -e TELEGRAM_BOT_TOKEN="..." \
+  -e ALGA_ALGA_ENABLED=true \
+  -e ALGA_SERVER_URL="http://localhost:8080" \
+  -e ALGA_AGENT_TOKEN="..." \
   alga-agent
 ```
 
@@ -372,7 +367,6 @@ The agent keeps its state under `~/.alga` (override with `ALGA_AGENT_HOME`):
   privileges. Restrict `allowed_commands` and run the binary under a
   least-privilege user/container.
 - Secrets are never logged. The LLM client redacts `Authorization` headers.
-- Telegram webhook validates the secret path segment with a constant-time compare.
 - The agent never persists plaintext secrets — API keys live in env vars only.
 
 ## Error Policy
@@ -384,8 +378,6 @@ The agent keeps its state under `~/.alga` (override with `ALGA_AGENT_HOME`):
   whether to retry or report.
 - **Channel errors**: after 5 consecutive failures, the channel is marked
   unhealthy and disabled for the session.
-- **Telegram rate limits**: edits throttled to 1/s; on 429, the `retry_after`
-  value is honored; persistent limiting (>60s) finalizes the message once.
 
 ## License
 

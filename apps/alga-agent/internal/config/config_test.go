@@ -22,9 +22,10 @@ func TestLoad_DefaultsApplied(t *testing.T) {
 	path := writeTempConfig(t, `
 model:
   api_key: "test-key"
-telegram:
+alga:
   enabled: true
-  bot_token: "tok"
+  server_url: "http://localhost:8080"
+  agent_token: "tok"
 `)
 	cfg, err := Load(path)
 	if err != nil {
@@ -69,9 +70,10 @@ func TestLoad_SessionsPersistExplicitFalse(t *testing.T) {
 	path := writeTempConfig(t, `
 model:
   api_key: "test-key"
-telegram:
+alga:
   enabled: true
-  bot_token: "tok"
+  server_url: "http://localhost:8080"
+  agent_token: "tok"
 sessions:
   persist: false
 `)
@@ -87,8 +89,8 @@ sessions:
 func TestValidate_SessionsAndLoggingBounds(t *testing.T) {
 	cfg := Default()
 	cfg.Model.APIKey = "k"
-	cfg.Telegram.Enabled = true
-	cfg.Telegram.BotToken = "tok"
+	cfg.Alga.Enabled = true
+	cfg.Alga.AgentToken = "tok"
 	cfg.Sessions.RetentionDays = -1
 	cfg.Logging.MaxSizeMB = -1
 	cfg.Logging.BackupCount = -1
@@ -111,9 +113,10 @@ func TestLoad_EnvExpansion(t *testing.T) {
 model:
   api_key: ${MY_TEST_KEY}
   model: "gpt-4o-mini"
-telegram:
+alga:
   enabled: true
-  bot_token: "tok"
+  server_url: "http://localhost:8080"
+  agent_token: "tok"
 `)
 	cfg, err := Load(path)
 	if err != nil {
@@ -131,9 +134,10 @@ func TestLoad_EnvOverridesYAML(t *testing.T) {
 model:
   api_key: "yaml-key"
   model: "gpt-4o"
-telegram:
+alga:
   enabled: true
-  bot_token: "tok"
+  server_url: "http://localhost:8080"
+  agent_token: "tok"
 `)
 	cfg, err := Load(path)
 	if err != nil {
@@ -150,9 +154,10 @@ func TestLoad_OpenRouterKeyWinsOverOpenAIKey(t *testing.T) {
 	path := writeTempConfig(t, `
 model:
   api_key: "yaml-key"
-telegram:
+alga:
   enabled: true
-  bot_token: "tok"
+  server_url: "http://localhost:8080"
+  agent_token: "tok"
 `)
 	cfg, err := Load(path)
 	if err != nil {
@@ -171,9 +176,10 @@ model:
   provider: zai
   api_key: "zk"
   model: "glm-5.2"
-telegram:
+alga:
   enabled: true
-  bot_token: "tok"
+  server_url: "http://localhost:8080"
+  agent_token: "tok"
 `)
 	cfg, err := Load(path)
 	if err != nil {
@@ -192,9 +198,10 @@ model:
   provider: alibaba
   api_key: "yaml-key"
   model: "qwen3.7-max"
-telegram:
+alga:
   enabled: true
-  bot_token: "tok"
+  server_url: "http://localhost:8080"
+  agent_token: "tok"
 `)
 	cfg, err := Load(path)
 	if err != nil {
@@ -215,9 +222,10 @@ func TestLoad_GenericKeyIgnoredForNonGenericProvider(t *testing.T) {
 model:
   provider: alibaba
   model: "qwen3.7-max"
-telegram:
+alga:
   enabled: true
-  bot_token: "tok"
+  server_url: "http://localhost:8080"
+  agent_token: "tok"
 `)
 	_, err := Load(path)
 	if err == nil {
@@ -237,8 +245,8 @@ func TestValidate_APIKeyHintPerProvider(t *testing.T) {
 	cfg := Default()
 	cfg.Model.Provider = "alibaba"
 	cfg.Model.APIKey = ""
-	cfg.Telegram.Enabled = true
-	cfg.Telegram.BotToken = "tok"
+	cfg.Alga.Enabled = true
+	cfg.Alga.AgentToken = "tok"
 	err := cfg.Validate()
 	if err == nil || !strings.Contains(err.Error(), "DASHSCOPE_API_KEY") {
 		t.Fatalf("expected DASHSCOPE_API_KEY hint, got: %v", err)
@@ -247,8 +255,8 @@ func TestValidate_APIKeyHintPerProvider(t *testing.T) {
 
 func TestValidate_RequiresAPIKey(t *testing.T) {
 	cfg := Default()
-	cfg.Telegram.Enabled = true
-	cfg.Telegram.BotToken = "tok"
+	cfg.Alga.Enabled = true
+	cfg.Alga.AgentToken = "tok"
 	cfg.Model.APIKey = "" // missing
 	err := cfg.Validate()
 	if err == nil || !strings.Contains(err.Error(), "api_key") {
@@ -256,33 +264,19 @@ func TestValidate_RequiresAPIKey(t *testing.T) {
 	}
 }
 
-func TestValidate_RequiresAtLeastOneChannel(t *testing.T) {
+func TestValidate_RequiresAlgaChannel(t *testing.T) {
 	cfg := Default()
 	cfg.Model.APIKey = "k"
-	cfg.Telegram.Enabled = false
 	cfg.Alga.Enabled = false
 	err := cfg.Validate()
-	if err == nil || !strings.Contains(err.Error(), "at least one channel") {
+	if err == nil || !strings.Contains(err.Error(), "alga channel must be enabled") {
 		t.Fatalf("expected channel error, got: %v", err)
-	}
-}
-
-func TestValidate_TelegramRequiresToken(t *testing.T) {
-	cfg := Default()
-	cfg.Model.APIKey = "k"
-	cfg.Telegram.Enabled = true
-	cfg.Telegram.BotToken = ""
-	cfg.Alga.Enabled = false
-	err := cfg.Validate()
-	if err == nil || !strings.Contains(err.Error(), "bot_token") {
-		t.Fatalf("expected bot_token error, got: %v", err)
 	}
 }
 
 func TestValidate_AlgaRequiresCredentials(t *testing.T) {
 	cfg := Default()
 	cfg.Model.APIKey = "k"
-	cfg.Telegram.Enabled = false
 	cfg.Alga.Enabled = true
 	cfg.Alga.AgentToken = ""
 	err := cfg.Validate()
@@ -294,10 +288,8 @@ func TestValidate_AlgaRequiresCredentials(t *testing.T) {
 func TestValidate_WebSearchProviderRequiresKey(t *testing.T) {
 	cfg := Default()
 	cfg.Model.APIKey = "k"
-	cfg.Telegram.Enabled = false
-	cfg.Alga.Enabled = false
-	cfg.Telegram.Enabled = true
-	cfg.Telegram.BotToken = "tok"
+	cfg.Alga.Enabled = true
+	cfg.Alga.AgentToken = "tok"
 	cfg.Tools.WebSearch.Enabled = true
 	cfg.Tools.WebSearch.Provider = "brave"
 	cfg.Tools.WebSearch.APIKey = ""
@@ -320,8 +312,9 @@ func TestShellConfig_AllowedCommandSet(t *testing.T) {
 
 func TestLoad_NoFileUsesEnvVars(t *testing.T) {
 	t.Setenv("OPENAI_API_KEY", "env-only-key")
-	t.Setenv("TELEGRAM_BOT_TOKEN", "env-tok")
-	t.Setenv("ALGA_TELEGRAM_ENABLED", "true")
+	t.Setenv("ALGA_AGENT_TOKEN", "env-tok")
+	t.Setenv("ALGA_SERVER_URL", "http://localhost:8080")
+	t.Setenv("ALGA_ALGA_ENABLED", "true")
 	// Point ALGA_AGENT_HOME at an empty temp dir so neither ./config.yaml nor
 	// ~/.alga/config.yaml leaks into the "no file" path.
 	t.Setenv("ALGA_AGENT_HOME", t.TempDir())
@@ -332,18 +325,18 @@ func TestLoad_NoFileUsesEnvVars(t *testing.T) {
 	if cfg.Model.APIKey != "env-only-key" {
 		t.Errorf("api_key = %q, want env-only-key", cfg.Model.APIKey)
 	}
-	if !cfg.Telegram.Enabled {
-		t.Error("telegram should be enabled via env")
+	if !cfg.Alga.Enabled {
+		t.Error("alga should be enabled via env")
 	}
 }
 
 func TestLoad_NoFileNoChannelFails(t *testing.T) {
 	t.Setenv("OPENAI_API_KEY", "env-only-key")
-	os.Unsetenv("TELEGRAM_BOT_TOKEN")
 	os.Unsetenv("ALGA_AGENT_TOKEN")
+	os.Unsetenv("ALGA_ALGA_ENABLED")
 	t.Setenv("ALGA_AGENT_HOME", t.TempDir())
 	_, err := Load("")
-	if err == nil || !strings.Contains(err.Error(), "at least one channel") {
+	if err == nil || !strings.Contains(err.Error(), "alga channel must be enabled") {
 		t.Fatalf("expected channel error, got: %v", err)
 	}
 }

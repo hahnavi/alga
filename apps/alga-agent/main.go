@@ -1,6 +1,6 @@
-// Command alga-agent runs the Alga AIOps AI assistant. It connects to Telegram
-// and/or Alga investigation threads, processes messages through an LLM
-// tool-calling loop, and responds via the originating channel.
+// Command alga-agent runs the Alga AIOps AI assistant. It connects to Alga
+// investigation threads, processes messages through an LLM tool-calling loop,
+// and responds via the Alga channel.
 package main
 
 import (
@@ -160,7 +160,6 @@ func run() error {
 	}
 
 	logger.Info("starting alga-agent",
-		"telegram_enabled", cfg.Telegram.Enabled,
 		"alga_enabled", cfg.Alga.Enabled,
 		"model", cfg.Model.Model,
 		"base_url", cfg.Model.BaseURL)
@@ -298,19 +297,8 @@ func run() error {
 	var (
 		wg       sync.WaitGroup
 		chans    []channels.Channel
-		telegram *channels.TelegramChannel
 		algaChan *channels.AlgaChannel
 	)
-
-	if cfg.Telegram.Enabled {
-		tg, err := channels.NewTelegramChannel(cfg.Telegram, router, logger.With("component", "telegram"))
-		if err != nil {
-			return fmt.Errorf("telegram init: %w", err)
-		}
-		telegram = tg
-		router.RegisterSink(telegram.Name(), telegram)
-		chans = append(chans, telegram)
-	}
 
 	if cfg.Alga.Enabled {
 		ac, err := channels.NewAlgaChannel(cfg.Alga, router, logger.With("component", "alga"))

@@ -4,11 +4,13 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
+	"syscall"
 
 	"alga-agent/internal/config"
 )
@@ -88,6 +90,28 @@ func (f *FileTools) allowed(path string) error {
 	return fmt.Errorf("path %q is outside allowed roots", path)
 }
 
+// openVerified opens path with O_NOFOLLOW (rejecting final-component symlinks),
+// then verifies the opened file descriptor's real path remains under f.roots.
+// This eliminates the TOCTOU race between allowed() and the actual open.
+func (f *FileTools) openVerified(path string, flag int, perm os.FileMode) (*os.File, error) {
+	file, err := os.OpenFile(path, flag|syscall.O_NOFOLLOW, perm)
+	if err != nil {
+		return nil, err
+	}
+	real, err := os.Readlink(fmt.Sprintf("/proc/self/fd/%d", file.Fd()))
+	if err != nil {
+		_ = file.Close()
+		return nil, fmt.Errorf("resolve opened file: %w", err)
+	}
+	for _, root := range f.roots {
+		if root == "/" || strings.HasPrefix(real, root+string(filepath.Separator)) || real == root {
+			return file, nil
+		}
+	}
+	_ = file.Close()
+	return nil, fmt.Errorf("opened file %q resolves outside allowed roots", path)
+}
+
 // --- read_file ---
 
 type readFileInput struct {
@@ -131,7 +155,7 @@ func (f *FileTools) readFile(ctx context.Context, in readFileInput) Result[readF
 		return OK(readFileOutput{Content: sb.String(), TotalLines: len(entries), Offset: 1, Limit: len(entries)})
 	}
 
-	file, err := os.Open(in.Path)
+	file, err := f.openVerified(in.Path, os.O_RDONLY, 0)
 	if err != nil {
 		return Err[readFileOutput](err)
 	}
@@ -167,7 +191,7 @@ func (f *FileTools) readFile(ctx context.Context, in readFileInput) Result[readF
 	content := joined
 	truncated := lineNum >= offset+len(lines)
 	if int64(len(content)) > f.maxReadSize {
-		content = content[:f.maxReadSize] + "\n...[truncated]..."
+		content = truncate(content, int(f.maxReadSize))
 		truncated = true
 	}
 
@@ -222,7 +246,7 @@ func (f *FileTools) writeFile(ctx context.Context, in writeFileInput) Result[wri
 		flag |= os.O_TRUNC
 	}
 
-	file, err := os.OpenFile(in.Path, flag, perm)
+	file, err := f.openVerified(in.Path, flag, perm)
 	if err != nil {
 		return Err[writeFileOutput](err)
 	}
@@ -326,7 +350,7 @@ func (f *FileTools) searchFiles(ctx context.Context, in searchFilesInput) Result
 			return nil
 		}
 
-		file, err := os.Open(path)
+		file, err := f.openVerified(path, os.O_RDONLY, 0)
 		if err != nil {
 			return nil
 		}
@@ -390,7 +414,12 @@ func (f *FileTools) patch(ctx context.Context, in patchInput) Result[patchOutput
 	f.patchMu.Lock()
 	defer f.patchMu.Unlock()
 
-	data, err := os.ReadFile(in.Path)
+	pf, err := f.openVerified(in.Path, os.O_RDONLY, 0)
+	if err != nil {
+		return Err[patchOutput](err)
+	}
+	data, err := io.ReadAll(pf)
+	_ = pf.Close()
 	if err != nil {
 		return Err[patchOutput](err)
 	}

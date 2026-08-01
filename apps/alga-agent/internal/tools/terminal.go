@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"sync"
 	"syscall"
@@ -39,6 +40,7 @@ type TerminalTool struct {
 	quit      chan struct{}
 	stderrBuf *strings.Builder
 	stderrMu  sync.Mutex
+	readersWg sync.WaitGroup
 	cwd       string
 	maxOutput int
 	timeout   time.Duration
@@ -81,7 +83,6 @@ func NewTerminalTool(cfg config.TerminalConfig) *TerminalTool {
 		cwd:       cwd,
 		maxOutput: maxOut,
 		timeout:   timeout,
-		stderrBuf: &strings.Builder{},
 	}
 }
 
@@ -126,8 +127,16 @@ func (t *TerminalTool) ensureStarted() error {
 	t.stdin = stdin
 	t.quit = make(chan struct{})
 	t.outLines = make(chan string, 64)
-	go readLines(bufio.NewReaderSize(stdout, 256*1024), t.outLines, t.quit)
-	go drainStderr(bufio.NewReaderSize(stderr, 64*1024), t.stderrBuf, &t.stderrMu)
+	t.stderrBuf = &strings.Builder{}
+	t.readersWg.Add(2)
+	go func() {
+		defer t.readersWg.Done()
+		readLines(bufio.NewReaderSize(stdout, 256*1024), t.outLines, t.quit)
+	}()
+	go func() {
+		defer t.readersWg.Done()
+		drainStderr(bufio.NewReaderSize(stderr, 64*1024), t.stderrBuf, &t.stderrMu)
+	}()
 	t.started = true
 	return nil
 }
@@ -176,7 +185,7 @@ func (t *TerminalTool) execute(ctx context.Context, in terminalInput) (result Re
 
 	script := in.Command
 	if t.cwd != "" {
-		script = fmt.Sprintf("cd %s; %s", shellQuote(t.cwd), script)
+		script = fmt.Sprintf("cd %s && %s", shellQuote(t.cwd), script)
 	}
 	full := fmt.Sprintf("%s; echo \"%s\" $?\n", script, terminalMarkerRe)
 
@@ -202,7 +211,7 @@ readLoop:
 			return Err[terminalOutput](ctx.Err())
 		case line, ok := <-t.outLines:
 			if !ok {
-				t.reset()
+				t.stopLocked()
 				return Err[terminalOutput](fmt.Errorf("terminal: shell exited unexpectedly"))
 			}
 			// Always inspect the line for the sentinel so the marker is detected
@@ -256,32 +265,30 @@ func (t *TerminalTool) signalGroup(sig syscall.Signal) {
 	}
 }
 
-// stopLocked kills the shell process group, closes stdin, reaps the shell, and
-// resets session state. Callers must hold t.mu. Safe to call when not started.
+// stopLocked kills the shell process group, closes stdin, waits for reader
+// goroutines to drain their pipes, reaps the shell, and resets session state.
+// Callers must hold t.mu. Safe to call when not started.
 func (t *TerminalTool) stopLocked() {
 	t.signalGroup(syscall.SIGKILL)
 	if t.stdin != nil {
 		_ = t.stdin.Close()
 	}
-	if t.cmd != nil && t.cmd.Process != nil {
-		_ = t.cmd.Wait()
-	}
-	t.reset()
-}
-
-func (t *TerminalTool) kill() {
-	t.stopLocked()
-}
-
-func (t *TerminalTool) reset() {
 	if t.quit != nil {
 		close(t.quit)
+		t.quit = nil
+	}
+	t.readersWg.Wait()
+	if t.cmd != nil && t.cmd.Process != nil {
+		_ = t.cmd.Wait()
 	}
 	t.started = false
 	t.cmd = nil
 	t.stdin = nil
 	t.outLines = nil
-	t.quit = nil
+}
+
+func (t *TerminalTool) kill() {
+	t.stopLocked()
 }
 
 // Close terminates the persistent shell session.
@@ -330,6 +337,28 @@ func drainStderr(r *bufio.Reader, buf *strings.Builder, mu *sync.Mutex) {
 	}
 }
 
+var sensitiveArgRe = regexp.MustCompile(
+	`(?i)(--?password|--?passwd|--?token|--?secret|--?api[_-]?key|--?auth|--?credential|` +
+		`-p|AWS_SECRET_ACCESS_KEY|GITHUB_TOKEN|GH_TOKEN|GITLAB_TOKEN|` +
+		`password|passwd|token|secret|api[_-]?key)` +
+		`(\s*[=\s]\s*)(\S+)`)
+
+var connStringRe = regexp.MustCompile(
+	`(?i)((?:postgres|postgresql|mysql|mongodb|redis|amqp|https?)://)([^:@/\s]+):([^@/\s]+)@`)
+
+var inlineEnvSecretRe = regexp.MustCompile(
+	`(?i)([A-Z_]*(?:SECRET|TOKEN|PASSWORD|PASSWD|API_KEY|APIKEY|CREDENTIAL)[A-Z_]*)=(\S+)`)
+
+// sanitizeCommand redacts known credential patterns from a command string so
+// audit logs do not expose secrets. It preserves the command structure and
+// non-sensitive arguments for debugging.
+func sanitizeCommand(cmd string) string {
+	s := sensitiveArgRe.ReplaceAllString(cmd, "${1}${2}[REDACTED]")
+	s = connStringRe.ReplaceAllString(s, "${1}${2}:[REDACTED]@")
+	s = inlineEnvSecretRe.ReplaceAllString(s, "${1}=[REDACTED]")
+	return s
+}
+
 // auditTerminalCommand emits one structured audit event per terminal command,
 // covering both successful and failed invocations.
 func auditTerminalCommand(ctx context.Context, in terminalInput, status, errMsg string, elapsed time.Duration) {
@@ -342,7 +371,7 @@ func auditTerminalCommand(ctx context.Context, in terminalInput, status, errMsg 
 	}
 	args := []any{
 		"tool", "terminal",
-		"command", in.Command,
+		"command", sanitizeCommand(in.Command),
 		"cwd", in.CWD,
 		"chat_id", chatID,
 		"session_id", sessionID,

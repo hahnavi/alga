@@ -104,9 +104,28 @@ func safeDialContext(ctx context.Context, network, addr string) (net.Conn, error
 	return dialer.DialContext(ctx, network, net.JoinHostPort(ips[0].IP.String(), port))
 }
 
+var disallowedRanges = func() []*net.IPNet {
+	cidrs := []string{
+		"100.64.0.0/10", // RFC 6598 shared address space
+		"0.0.0.0/8",     // "this" network
+		"192.0.0.0/24",  // IETF protocol assignments
+		"198.18.0.0/15", // benchmarking
+		"240.0.0.0/4",   // reserved
+		"64:ff9b::/96",  // NAT64
+		"2002::/16",     // 6to4
+	}
+	nets := make([]*net.IPNet, 0, len(cidrs))
+	for _, c := range cidrs {
+		_, n, _ := net.ParseCIDR(c)
+		nets = append(nets, n)
+	}
+	return nets
+}()
+
 // isAllowedIP reports whether ip is a routable public address. Loopback,
 // link-local (incl. the 169.254.169.254 cloud-metadata endpoint), private
-// (RFC 1918/4193), unspecified, and multicast addresses are all rejected.
+// (RFC 1918/4193), unspecified, multicast, shared (RFC 6598), benchmarking,
+// reserved, NAT64, and 6to4 addresses are all rejected.
 func isAllowedIP(ip net.IP) bool {
 	if ip == nil {
 		return false
@@ -120,6 +139,15 @@ func isAllowedIP(ip net.IP) bool {
 	}
 	if ip.Equal(net.IPv4(169, 254, 169, 254)) {
 		return false
+	}
+	check := ip
+	if v4 := ip.To4(); v4 != nil {
+		check = v4
+	}
+	for _, n := range disallowedRanges {
+		if n.Contains(check) {
+			return false
+		}
 	}
 	return true
 }

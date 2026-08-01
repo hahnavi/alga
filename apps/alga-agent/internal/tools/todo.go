@@ -55,16 +55,16 @@ func NewTodoTool() *TodoTool {
 }
 
 // todoSessionKey resolves the per-session key from the call context, preferring
-// the Alga chat id, then the session id, then a shared default for standalone
-// use outside an Alga thread.
-func todoSessionKey(ctx context.Context) string {
+// the Alga chat id, then the session id. Returns an error when no session
+// context is available so standalone turns cannot share a global todo list.
+func todoSessionKey(ctx context.Context) (string, error) {
 	if key, err := chatIDFromCtx(ctx, nil); err == nil && key != "" {
-		return key
+		return key, nil
 	}
 	if cc, ok := CallContextFrom(ctx); ok && cc.SessionID != "" {
-		return cc.SessionID
+		return cc.SessionID, nil
 	}
-	return "default"
+	return "", fmt.Errorf("todo: no session context (requires an Alga chat or session id)")
 }
 
 // session returns the todo list for key, creating it on first use. It evicts
@@ -106,10 +106,15 @@ func (t *TodoTool) snapshot(s *todoSession) []todoItem {
 }
 
 func (t *TodoTool) handle(ctx context.Context, in todoInput) Result[todoOutput] {
+	key, err := todoSessionKey(ctx)
+	if err != nil {
+		return Err[todoOutput](err)
+	}
+
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	s := t.session(todoSessionKey(ctx))
+	s := t.session(key)
 
 	switch in.Action {
 	case "add":

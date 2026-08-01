@@ -185,7 +185,7 @@ func (t *TerminalTool) execute(ctx context.Context, in terminalInput) (result Re
 
 	script := in.Command
 	if t.cwd != "" {
-		script = fmt.Sprintf("cd %s && %s", shellQuote(t.cwd), script)
+		script = fmt.Sprintf("cd %s && { %s; }", shellQuote(t.cwd), script)
 	}
 	full := fmt.Sprintf("%s; echo \"%s\" $?\n", script, terminalMarkerRe)
 
@@ -341,13 +341,13 @@ var sensitiveArgRe = regexp.MustCompile(
 	`(?i)(--?password|--?passwd|--?token|--?secret|--?api[_-]?key|--?auth|--?credential|` +
 		`-p|AWS_SECRET_ACCESS_KEY|GITHUB_TOKEN|GH_TOKEN|GITLAB_TOKEN|` +
 		`password|passwd|token|secret|api[_-]?key)` +
-		`(\s*[=\s]\s*)(\S+)`)
+		`(\s*[=\s]\s*)("[^"]*"|'[^']*'|\S+)`)
 
 var connStringRe = regexp.MustCompile(
 	`(?i)((?:postgres|postgresql|mysql|mongodb|redis|amqp|https?)://)([^:@/\s]+):([^@/\s]+)@`)
 
 var inlineEnvSecretRe = regexp.MustCompile(
-	`(?i)([A-Z_]*(?:SECRET|TOKEN|PASSWORD|PASSWD|API_KEY|APIKEY|CREDENTIAL)[A-Z_]*)=(\S+)`)
+	`(?i)([A-Z_]*(?:SECRET|TOKEN|PASSWORD|PASSWD|API_KEY|APIKEY|CREDENTIAL)[A-Z_]*)=("[^"]*"|'[^']*'|\S+)`)
 
 // sanitizeCommand redacts known credential patterns from a command string so
 // audit logs do not expose secrets. It preserves the command structure and

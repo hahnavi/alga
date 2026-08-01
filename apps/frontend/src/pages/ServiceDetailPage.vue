@@ -246,7 +246,7 @@ async function openAddDepModal() {
 }
 
 onMounted(() => {
-  loadService();
+  if (serviceId.value) loadService();
 });
 watch(serviceId, (id) => {
   if (id) loadService();

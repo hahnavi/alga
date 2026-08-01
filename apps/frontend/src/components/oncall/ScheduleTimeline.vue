@@ -57,17 +57,27 @@ const rangeBounds = computed(() => computeRangeBounds(cursor.value, view.value, 
 
 const shifts = ref<ScheduleShift[]>([]);
 const loading = ref(false);
+let loadSeq = 0;
 
 async function load() {
-  if (!props.scheduleId) return;
+  if (!props.scheduleId) {
+    loadSeq++;
+    shifts.value = [];
+    loading.value = false;
+    return;
+  }
+  const seq = ++loadSeq;
   loading.value = true;
   try {
-    shifts.value = await api.getScheduleTimeline(props.scheduleId, rangeBounds.value);
+    const data = await api.getScheduleTimeline(props.scheduleId, rangeBounds.value);
+    if (seq !== loadSeq) return;
+    shifts.value = data;
   } catch (err) {
+    if (seq !== loadSeq) return;
     shifts.value = [];
     push("Failed to load schedule", "error");
   } finally {
-    loading.value = false;
+    if (seq === loadSeq) loading.value = false;
   }
 }
 

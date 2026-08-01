@@ -619,7 +619,7 @@ const recentActivity = computed(() => {
                   class="hidden items-center gap-1 text-[10px] font-normal normal-case tracking-normal text-[var(--text-muted)] sm:flex"
                 >
                   <Clock class="h-3 w-3" />
-                  {{ formatTimeAgo(summary.generated_at) }}
+                  Generated {{ formatTimeAgo(summary.generated_at) }}
                 </span>
                 <ChevronDown
                   class="h-4 w-4 text-[var(--text-muted)] transition-transform duration-200"
@@ -649,7 +649,7 @@ const recentActivity = computed(() => {
             <ErrorBanner :message="summaryError" />
           </div>
 
-          <div v-if="summary && summary.available">
+          <div v-if="summary && summary.available && summary.summary">
             <MarkdownRenderer :content="summary.summary" />
           </div>
           <div

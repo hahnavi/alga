@@ -182,7 +182,7 @@ usePageHeader(() => {
 });
 
 onMounted(() => {
-  void reload();
+  if (scheduleId.value) void reload();
 });
 watch(scheduleId, (id) => {
   if (id) void reload();

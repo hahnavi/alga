@@ -384,6 +384,7 @@ function goBackToIncident() {
 }
 
 onMounted(() => {
+  if (!Number.isFinite(incidentNumber.value)) return;
   load();
   loadActionItems();
 });
@@ -396,7 +397,12 @@ onMounted(() => {
 // IncidentsPage watcher guards.
 let isDeactivated = false;
 onActivated(() => {
+  const wasDeactivated = isDeactivated;
   isDeactivated = false;
+  if (wasDeactivated && Number.isFinite(incidentNumber.value)) {
+    load();
+    loadActionItems();
+  }
 });
 onDeactivated(() => {
   isDeactivated = true;

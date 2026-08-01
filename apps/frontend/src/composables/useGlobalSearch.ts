@@ -45,6 +45,7 @@ function closeGlobalSearch() {
 }
 
 function clearSearchQuery() {
+  searchSeq++;
   searchQuery.value = "";
   searchSubmitted.value = false;
   searchFocusedIndex.value = -1;

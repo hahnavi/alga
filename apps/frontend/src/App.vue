@@ -171,6 +171,7 @@ onBeforeUnmount(() => {
           <div
             class="header-title-area hidden min-w-0 flex-1 overflow-hidden text-lg font-semibold md:flex md:items-center md:gap-2"
             :class="{ 'header-title-area-collapsed': headerInlineSearchExpanded }"
+            :inert="headerInlineSearchExpanded"
           >
             <button
               v-if="showBackButton"
@@ -222,6 +223,7 @@ onBeforeUnmount(() => {
           <div
             class="header-title-area flex min-w-0 flex-1 items-center gap-2 overflow-hidden md:hidden"
             :class="{ 'header-title-area-collapsed': headerInlineSearchExpanded }"
+            :inert="headerInlineSearchExpanded"
           >
             <button
               v-if="showBackButton"

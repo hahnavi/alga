@@ -306,7 +306,9 @@ function resetAddMemberState() {
   userDropdownQuery.value = "";
 }
 
-onMounted(loadTeam);
+onMounted(() => {
+  if (teamId.value) loadTeam();
+});
 watch(teamId, (id) => {
   if (id) loadTeam();
 });

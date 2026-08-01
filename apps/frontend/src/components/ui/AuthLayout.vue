@@ -12,7 +12,7 @@ const year = new Date().getFullYear();
 </script>
 
 <template>
-  <div class="flex min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
+  <div class="flex min-h-dvh bg-[var(--bg-primary)] text-[var(--text-primary)]">
     <aside
       class="sticky top-0 hidden h-screen w-[44%] max-w-[620px] flex-col overflow-hidden bg-[#050a18] p-10 text-slate-300 lg:flex xl:p-14"
     >
@@ -82,9 +82,9 @@ const year = new Date().getFullYear();
         <Moon v-else class="h-4 w-4" />
       </button>
 
-      <div class="auth-rise flex flex-col items-center pt-14 lg:hidden">
-        <LogoMark class="h-11 w-11" />
-        <span class="mt-3 flex flex-col items-center">
+      <div class="auth-rise flex flex-col items-center pt-10 lg:hidden">
+        <LogoMark class="h-10 w-10" />
+        <span class="mt-2.5 flex flex-col items-center">
           <span class="text-lg font-semibold leading-tight tracking-tight">Alga</span>
           <span class="font-mono text-[10px] font-medium tracking-[0.28em] text-[var(--accent)]">
             OPS CONSOLE
@@ -92,8 +92,8 @@ const year = new Date().getFullYear();
         </span>
       </div>
 
-      <div class="flex flex-1 items-center justify-center px-4 py-12 sm:px-8">
-        <div :class="['relative z-10 w-full', maxWidth ?? 'max-w-sm']">
+      <div class="flex flex-1 justify-center px-4 py-8 sm:px-8 sm:py-12">
+        <div :class="['relative z-10 my-auto w-full', maxWidth ?? 'max-w-sm']">
           <slot />
         </div>
       </div>

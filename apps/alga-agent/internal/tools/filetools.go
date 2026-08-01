@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 
 	"alga-agent/internal/config"
 )
@@ -18,22 +19,29 @@ import (
 type FileTools struct {
 	roots       []string
 	maxReadSize int64
+	patchMu     sync.Mutex
 }
 
-// NewFileTools constructs a FileTools from config. Returns nil if disabled.
+// NewFileTools constructs a FileTools from config. Returns nil if disabled or
+// when no roots are configured: file tools fail closed and require at least one
+// explicitly scoped root before they are registered.
 func NewFileTools(cfg config.FileToolsConfig) *FileTools {
 	if !cfg.Enabled {
 		return nil
 	}
-	roots := cfg.Roots
-	if len(roots) == 0 {
-		roots = []string{"/"}
+	if len(cfg.Roots) == 0 {
+		return nil
 	}
-	abs := make([]string, 0, len(roots))
-	for _, r := range roots {
-		if a, err := filepath.Abs(r); err == nil {
-			abs = append(abs, a)
+	abs := make([]string, 0, len(cfg.Roots))
+	for _, r := range cfg.Roots {
+		a, err := filepath.Abs(r)
+		if err != nil {
+			continue
 		}
+		abs = append(abs, resolveSymlinks(a))
+	}
+	if len(abs) == 0 {
+		return nil
 	}
 	maxRead := cfg.MaxReadBytes
 	if maxRead <= 0 {
@@ -42,13 +50,38 @@ func NewFileTools(cfg config.FileToolsConfig) *FileTools {
 	return &FileTools{roots: abs, maxReadSize: int64(maxRead)}
 }
 
+// resolveSymlinks resolves symbolic links in path. When path exists it returns
+// filepath.EvalSymlinks(path). When path does not exist (e.g. a file about to
+// be created) it resolves the nearest existing ancestor and re-appends the
+// non-existent suffix, so the real location is still checked for containment.
+func resolveSymlinks(path string) string {
+	if resolved, err := filepath.EvalSymlinks(path); err == nil {
+		return resolved
+	}
+	dir := path
+	suffix := ""
+	for {
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		if resolved, err := filepath.EvalSymlinks(parent); err == nil {
+			return filepath.Join(resolved, suffix)
+		}
+		suffix = filepath.Join(filepath.Base(dir), suffix)
+		dir = parent
+	}
+	return path
+}
+
 func (f *FileTools) allowed(path string) error {
 	abs, err := filepath.Abs(path)
 	if err != nil {
 		return fmt.Errorf("invalid path: %w", err)
 	}
+	resolved := resolveSymlinks(abs)
 	for _, root := range f.roots {
-		if root == "/" || strings.HasPrefix(abs, root+string(filepath.Separator)) || abs == root {
+		if root == "/" || strings.HasPrefix(resolved, root+string(filepath.Separator)) || resolved == root {
 			return nil
 		}
 	}
@@ -122,19 +155,20 @@ func (f *FileTools) readFile(ctx context.Context, in readFileInput) Result[readF
 		if lineNum < offset {
 			continue
 		}
-		if len(lines) >= limit {
-			break
+		if len(lines) < limit {
+			lines = append(lines, fmt.Sprintf("%d: %s", lineNum, scanner.Text()))
 		}
-		lines = append(lines, fmt.Sprintf("%d: %s", lineNum, scanner.Text()))
 	}
 	if err := scanner.Err(); err != nil {
 		return Err[readFileOutput](err)
 	}
 
-	truncated := int64(len(strings.Join(lines, "\n"))) > f.maxReadSize
-	content := strings.Join(lines, "\n")
+	joined := strings.Join(lines, "\n")
+	content := joined
+	truncated := lineNum >= offset+len(lines)
 	if int64(len(content)) > f.maxReadSize {
 		content = content[:f.maxReadSize] + "\n...[truncated]..."
+		truncated = true
 	}
 
 	return OK(readFileOutput{
@@ -192,10 +226,13 @@ func (f *FileTools) writeFile(ctx context.Context, in writeFileInput) Result[wri
 	if err != nil {
 		return Err[writeFileOutput](err)
 	}
-	defer file.Close()
 
 	n, err := file.WriteString(in.Content)
 	if err != nil {
+		_ = file.Close()
+		return Err[writeFileOutput](err)
+	}
+	if err := file.Close(); err != nil {
 		return Err[writeFileOutput](err)
 	}
 	return OK(writeFileOutput{Path: in.Path, Bytes: n})
@@ -251,9 +288,25 @@ func (f *FileTools) searchFiles(ctx context.Context, in searchFilesInput) Result
 	var matches []searchMatch
 	rootAbs, _ := filepath.Abs(root)
 
-	filepath.Walk(rootAbs, func(path string, info os.FileInfo, err error) error {
-		if err != nil || len(matches) >= limit {
+	if err := ctx.Err(); err != nil {
+		return Err[searchFilesOutput](err)
+	}
+
+	walkErr := filepath.Walk(rootAbs, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			// An unreadable root must surface as a failure, not an empty
+			// result; unreadable subdirectories are skipped so a single
+			// permission-denied entry does not abort the whole search.
+			if path == rootAbs {
+				return err
+			}
 			return nil
+		}
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return ctxErr
+		}
+		if len(matches) >= limit {
+			return filepath.SkipAll
 		}
 		rel, _ := filepath.Rel(rootAbs, path)
 		depth := strings.Count(rel, string(filepath.Separator))
@@ -299,6 +352,9 @@ func (f *FileTools) searchFiles(ctx context.Context, in searchFilesInput) Result
 		}
 		return nil
 	})
+	if walkErr != nil {
+		return Err[searchFilesOutput](fmt.Errorf("search traversal: %w", walkErr))
+	}
 
 	return OK(searchFilesOutput{Matches: matches, Count: len(matches)})
 }
@@ -331,6 +387,9 @@ func (f *FileTools) patch(ctx context.Context, in patchInput) Result[patchOutput
 		return Err[patchOutput](err)
 	}
 
+	f.patchMu.Lock()
+	defer f.patchMu.Unlock()
+
 	data, err := os.ReadFile(in.Path)
 	if err != nil {
 		return Err[patchOutput](err)
@@ -357,7 +416,29 @@ func (f *FileTools) patch(ctx context.Context, in patchInput) Result[patchOutput
 	if info != nil {
 		perm = info.Mode().Perm()
 	}
-	if err := os.WriteFile(in.Path, []byte(result), perm); err != nil {
+
+	// Write to a temp file in the target's directory and rename over the
+	// original so the replacement is atomic and a failure never leaves a
+	// partially written file.
+	tmp, err := os.CreateTemp(filepath.Dir(in.Path), ".patch-*")
+	if err != nil {
+		return Err[patchOutput](fmt.Errorf("create temp file: %w", err))
+	}
+	tmpPath := tmp.Name()
+	defer os.Remove(tmpPath)
+
+	if _, err := tmp.WriteString(result); err != nil {
+		_ = tmp.Close()
+		return Err[patchOutput](err)
+	}
+	if err := tmp.Chmod(perm); err != nil {
+		_ = tmp.Close()
+		return Err[patchOutput](err)
+	}
+	if err := tmp.Close(); err != nil {
+		return Err[patchOutput](err)
+	}
+	if err := os.Rename(tmpPath, in.Path); err != nil {
 		return Err[patchOutput](err)
 	}
 
@@ -388,21 +469,46 @@ func RegisterFileTools(reg *Registry, ft *FileTools) {
 }
 
 func matchGlob(pattern, name string) bool {
-	patterns := strings.Split(pattern, ",")
-	for _, p := range patterns {
-		p = strings.TrimSpace(p)
-		p = strings.TrimPrefix(p, "*.")
-		if matched, _ := filepath.Match(p, name); matched {
-			return true
-		}
-		if matched, _ := filepath.Match("*."+p, name); matched {
-			return true
-		}
-		if matched, _ := filepath.Match(pattern, name); matched {
-			return true
+	for _, braced := range expandBraces(pattern) {
+		for _, raw := range strings.Split(braced, ",") {
+			p := strings.TrimSpace(raw)
+			if p == "" {
+				continue
+			}
+			trimmed := strings.TrimPrefix(p, "*.")
+			if matched, _ := filepath.Match(trimmed, name); matched {
+				return true
+			}
+			if matched, _ := filepath.Match("*."+trimmed, name); matched {
+				return true
+			}
 		}
 	}
+	if matched, _ := filepath.Match(pattern, name); matched {
+		return true
+	}
 	return false
+}
+
+// expandBraces expands brace groups such as "*.{ts,tsx}" into one pattern per
+// alternative ("*.ts", "*.tsx"). Patterns without braces are returned unchanged.
+func expandBraces(pattern string) []string {
+	open := strings.Index(pattern, "{")
+	if open < 0 {
+		return []string{pattern}
+	}
+	rest := strings.Index(pattern[open:], "}")
+	if rest < 0 {
+		return []string{pattern}
+	}
+	close := open + rest
+	prefix := pattern[:open]
+	suffix := pattern[close+1:]
+	var out []string
+	for _, alt := range strings.Split(pattern[open+1:close], ",") {
+		out = append(out, expandBraces(prefix+alt+suffix)...)
+	}
+	return out
 }
 
 var binaryExtensions = map[string]struct{}{

@@ -36,7 +36,7 @@ func (f *DefaultInvestigationForwarder) ForwardDispatchToAgent(agentIDHex, inves
 	if f == nil || f.AgentTokens == nil {
 		return errors.New("investigation forwarder not configured")
 	}
-	logger.Info("ForwardToAgent", "agent_id", agentIDHex, "investigation_id", investigationID, "sender_id", senderID, "sender_name", senderName, "message_len", len(message))
+	logger.Info("ForwardDispatchToAgent", "agent_id", agentIDHex, "investigation_id", investigationID, "sender_id", senderID, "sender_name", senderName, "message_len", len(message))
 
 	var chatID string
 	if f.AlertInvestigationStore != nil {

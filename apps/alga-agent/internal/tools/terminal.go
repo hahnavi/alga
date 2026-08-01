@@ -9,13 +9,15 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
+	"unicode/utf8"
 
 	"alga-agent/internal/config"
+	"alga-agent/internal/logging"
 )
 
 const (
-	terminalMarker   = "___ALGA_EXIT_%d___"
 	terminalMarkerRe = "___ALGA_EXIT_"
 	defaultMaxOutput = 64 * 1024
 	defaultTimeout   = 120 * time.Second
@@ -23,15 +25,20 @@ const (
 )
 
 // TerminalTool provides a persistent shell session for the agent. Unlike the
-// old whitelisted ShellTool, this runs arbitrary commands in a long-lived bash
-// process, maintaining working directory and environment across calls. It is
-// designed for deep SRE investigation: kubectl, systemctl, journalctl, curl,
-// grep across logs, etc.
+// old whitelisted ShellTool, this runs arbitrary commands in a long-lived POSIX
+// shell process, maintaining environment across calls. It is designed for deep
+// SRE investigation: kubectl, systemctl, journalctl, curl, grep across logs,
+// etc. The shell runs in its own process group so commands and their children
+// can be killed together, and output is read in a goroutine so timeouts and
+// context cancellation stay responsive even while a command blocks.
 type TerminalTool struct {
 	mu        sync.Mutex
 	cmd       *exec.Cmd
 	stdin     io.WriteCloser
-	reader    *bufio.Reader
+	outLines  chan string
+	quit      chan struct{}
+	stderrBuf *strings.Builder
+	stderrMu  sync.Mutex
 	cwd       string
 	maxOutput int
 	timeout   time.Duration
@@ -45,12 +52,12 @@ type terminalInput struct {
 }
 
 type terminalOutput struct {
-	Stdout   string `json:"stdout"`
-	Stderr   string `json:"stderr,omitempty"`
-	ExitCode int    `json:"exit_code"`
-	CWD      string `json:"cwd"`
-	TimedOut bool   `json:"timed_out,omitempty"`
-	Duration string `json:"duration_ms"`
+	Stdout     string `json:"stdout"`
+	Stderr     string `json:"stderr,omitempty"`
+	ExitCode   int    `json:"exit_code"`
+	CWD        string `json:"cwd"`
+	TimedOut   bool   `json:"timed_out,omitempty"`
+	DurationMS int64  `json:"duration_ms"`
 }
 
 // NewTerminalTool constructs a TerminalTool from config. Returns nil if disabled.
@@ -74,6 +81,7 @@ func NewTerminalTool(cfg config.TerminalConfig) *TerminalTool {
 		cwd:       cwd,
 		maxOutput: maxOut,
 		timeout:   timeout,
+		stderrBuf: &strings.Builder{},
 	}
 }
 
@@ -81,16 +89,19 @@ func (t *TerminalTool) ensureStarted() error {
 	if t.started {
 		return nil
 	}
-	shell := os.Getenv("SHELL")
-	if shell == "" {
-		shell = "/bin/bash"
-	}
+	// Always use a fixed non-interactive POSIX shell. Honoring $SHELL or running
+	// interactively (-i) would let the environment inject an arbitrary shell and
+	// produce prompt noise on the captured output.
+	const shell = "/bin/sh"
 	if _, err := os.Stat(shell); err != nil {
-		shell = "/bin/sh"
+		return fmt.Errorf("terminal: POSIX shell %s not available: %w", shell, err)
 	}
 
-	t.cmd = exec.Command(shell, "-i")
+	t.cmd = exec.Command(shell)
 	t.cmd.Env = append(os.Environ(), "TERM=dumb", "NO_COLOR=1")
+	// Run the shell in its own process group so kill can signal the shell and
+	// any child processes it spawned together.
+	t.cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	if t.cwd != "" {
 		t.cmd.Dir = t.cwd
 	}
@@ -103,18 +114,34 @@ func (t *TerminalTool) ensureStarted() error {
 	if err != nil {
 		return fmt.Errorf("terminal: stdout pipe: %w", err)
 	}
-	t.cmd.Stderr = t.cmd.Stdout
+	stderr, err := t.cmd.StderrPipe()
+	if err != nil {
+		return fmt.Errorf("terminal: stderr pipe: %w", err)
+	}
 
 	if err := t.cmd.Start(); err != nil {
 		return fmt.Errorf("terminal: start shell: %w", err)
 	}
+
 	t.stdin = stdin
-	t.reader = bufio.NewReaderSize(stdout, 256*1024)
+	t.quit = make(chan struct{})
+	t.outLines = make(chan string, 64)
+	go readLines(bufio.NewReaderSize(stdout, 256*1024), t.outLines, t.quit)
+	go drainStderr(bufio.NewReaderSize(stderr, 64*1024), t.stderrBuf, &t.stderrMu)
 	t.started = true
 	return nil
 }
 
-func (t *TerminalTool) execute(ctx context.Context, in terminalInput) Result[terminalOutput] {
+func (t *TerminalTool) execute(ctx context.Context, in terminalInput) (result Result[terminalOutput]) {
+	start := time.Now()
+	defer func() {
+		status := "ok"
+		if !result.OK {
+			status = "error"
+		}
+		auditTerminalCommand(ctx, in, status, result.Error, time.Since(start))
+	}()
+
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -122,7 +149,16 @@ func (t *TerminalTool) execute(ctx context.Context, in terminalInput) Result[ter
 		return Err[terminalOutput](err)
 	}
 
+	// Validate the requested working directory before persisting it so a failed
+	// change returns an error and the command is not run in the wrong place.
 	if in.CWD != "" {
+		info, err := os.Stat(in.CWD)
+		if err != nil {
+			return Err[terminalOutput](fmt.Errorf("terminal: invalid cwd %q: %w", in.CWD, err))
+		}
+		if !info.IsDir() {
+			return Err[terminalOutput](fmt.Errorf("terminal: cwd %q is not a directory", in.CWD))
+		}
 		t.cwd = in.CWD
 	}
 
@@ -134,111 +170,212 @@ func (t *TerminalTool) execute(ctx context.Context, in terminalInput) Result[ter
 		}
 	}
 
-	marker := fmt.Sprintf(terminalMarker, 0)
+	t.stderrMu.Lock()
+	t.stderrBuf.Reset()
+	t.stderrMu.Unlock()
+
 	script := in.Command
 	if t.cwd != "" {
-		script = fmt.Sprintf("cd %s 2>/dev/null; %s", shellQuote(t.cwd), script)
+		script = fmt.Sprintf("cd %s; %s", shellQuote(t.cwd), script)
 	}
 	full := fmt.Sprintf("%s; echo \"%s\" $?\n", script, terminalMarkerRe)
 
-	start := time.Now()
 	if _, err := io.WriteString(t.stdin, full); err != nil {
-		t.reset()
+		t.kill()
 		return Err[terminalOutput](fmt.Errorf("terminal: write: %w", err))
 	}
 
 	deadline := time.After(timeout)
 	var out strings.Builder
 	exitCode := -1
+	timedOut := false
 
+readLoop:
 	for {
 		select {
 		case <-deadline:
+			timedOut = true
 			t.kill()
-			return OK(terminalOutput{
-				Stdout:   truncate(out.String(), t.maxOutput),
-				ExitCode: -1,
-				CWD:      t.cwd,
-				TimedOut: true,
-				Duration: fmt.Sprintf("%d", time.Since(start).Milliseconds()),
-			})
+			break readLoop
 		case <-ctx.Done():
 			t.kill()
 			return Err[terminalOutput](ctx.Err())
-		default:
-		}
-
-		line, err := t.reader.ReadString('\n')
-		out.WriteString(line)
-
-		if trimmed := strings.TrimSpace(line); strings.HasPrefix(trimmed, terminalMarkerRe) {
-			fmt.Sscanf(trimmed, terminalMarkerRe+"%d", &exitCode)
-			break
-		}
-		if err != nil {
-			t.reset()
-			return Err[terminalOutput](fmt.Errorf("terminal: read: %w", err))
+		case line, ok := <-t.outLines:
+			if !ok {
+				t.reset()
+				return Err[terminalOutput](fmt.Errorf("terminal: shell exited unexpectedly"))
+			}
+			// Always inspect the line for the sentinel so the marker is detected
+			// even after output accumulation has been bounded.
+			if trimmed := strings.TrimSpace(line); strings.HasPrefix(trimmed, terminalMarkerRe) {
+				fmt.Sscanf(trimmed, terminalMarkerRe+"%d", &exitCode)
+				break readLoop
+			}
+			if out.Len() < t.maxOutput {
+				out.WriteString(line)
+			}
 		}
 	}
+
+	t.stderrMu.Lock()
+	stderrText := t.stderrBuf.String()
+	t.stderrMu.Unlock()
 
 	output := out.String()
 	if idx := strings.LastIndex(output, terminalMarkerRe); idx >= 0 {
 		output = output[:idx]
 	}
+	output = strings.TrimRight(output, "\n")
 
-	_ = marker
 	return OK(terminalOutput{
-		Stdout:   truncate(strings.TrimRight(output, "\n"), t.maxOutput),
-		ExitCode: exitCode,
-		CWD:      t.cwd,
-		Duration: fmt.Sprintf("%d", time.Since(start).Milliseconds()),
+		Stdout:     truncate(output, t.maxOutput),
+		Stderr:     truncate(stderrText, t.maxOutput),
+		ExitCode:   exitCodeOrTimeout(exitCode, timedOut),
+		CWD:        t.cwd,
+		TimedOut:   timedOut,
+		DurationMS: time.Since(start).Milliseconds(),
 	})
 }
 
-func (t *TerminalTool) kill() {
+func exitCodeOrTimeout(code int, timedOut bool) int {
+	if timedOut {
+		return -1
+	}
+	return code
+}
+
+// signalGroup signals the shell's entire process group (the shell plus any
+// children it spawned). It falls back to signaling only the shell if the group
+// signal fails.
+func (t *TerminalTool) signalGroup(sig syscall.Signal) {
+	if t.cmd == nil || t.cmd.Process == nil {
+		return
+	}
+	if err := syscall.Kill(-t.cmd.Process.Pid, sig); err != nil {
+		_ = t.cmd.Process.Signal(sig)
+	}
+}
+
+// stopLocked kills the shell process group, closes stdin, reaps the shell, and
+// resets session state. Callers must hold t.mu. Safe to call when not started.
+func (t *TerminalTool) stopLocked() {
+	t.signalGroup(syscall.SIGKILL)
+	if t.stdin != nil {
+		_ = t.stdin.Close()
+	}
 	if t.cmd != nil && t.cmd.Process != nil {
-		_ = t.cmd.Process.Kill()
+		_ = t.cmd.Wait()
 	}
 	t.reset()
 }
 
+func (t *TerminalTool) kill() {
+	t.stopLocked()
+}
+
 func (t *TerminalTool) reset() {
+	if t.quit != nil {
+		close(t.quit)
+	}
 	t.started = false
 	t.cmd = nil
 	t.stdin = nil
-	t.reader = nil
+	t.outLines = nil
+	t.quit = nil
 }
 
 // Close terminates the persistent shell session.
 func (t *TerminalTool) Close() error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	if t.stdin != nil {
-		_ = t.stdin.Close()
-	}
-	if t.cmd != nil && t.cmd.Process != nil {
-		_ = t.cmd.Process.Kill()
-		_ = t.cmd.Wait()
-	}
-	t.reset()
+	t.stopLocked()
 	return nil
+}
+
+// readLines streams lines from r into ch until EOF/error, at which point it
+// closes ch. It selects on quit so it can exit promptly after a kill/reset
+// without blocking on a channel send that no one is draining.
+func readLines(r *bufio.Reader, ch chan string, quit <-chan struct{}) {
+	for {
+		line, err := r.ReadString('\n')
+		if line != "" {
+			select {
+			case ch <- line:
+			case <-quit:
+				return
+			}
+		}
+		if err != nil {
+			close(ch)
+			return
+		}
+	}
+}
+
+// drainStderr accumulates stderr lines into buf (guarded by mu) until EOF. The
+// persistent shell interleaves stderr asynchronously, so attribution to a single
+// command is best-effort: execute resets buf before each command and snapshots it
+// after.
+func drainStderr(r *bufio.Reader, buf *strings.Builder, mu *sync.Mutex) {
+	for {
+		line, err := r.ReadString('\n')
+		if line != "" {
+			mu.Lock()
+			buf.WriteString(line)
+			mu.Unlock()
+		}
+		if err != nil {
+			return
+		}
+	}
+}
+
+// auditTerminalCommand emits one structured audit event per terminal command,
+// covering both successful and failed invocations.
+func auditTerminalCommand(ctx context.Context, in terminalInput, status, errMsg string, elapsed time.Duration) {
+	if logging.Logger == nil {
+		return
+	}
+	var chatID, sessionID string
+	if cc, ok := CallContextFrom(ctx); ok {
+		chatID, sessionID = cc.ChatID, cc.SessionID
+	}
+	args := []any{
+		"tool", "terminal",
+		"command", in.Command,
+		"cwd", in.CWD,
+		"chat_id", chatID,
+		"session_id", sessionID,
+		"status", status,
+		"elapsed_ms", elapsed.Milliseconds(),
+	}
+	if errMsg != "" {
+		args = append(args, "err", errMsg)
+	}
+	if status == "ok" {
+		logging.Info("terminal command", args...)
+	} else {
+		logging.Warn("terminal command", args...)
+	}
 }
 
 func shellQuote(s string) string {
 	if s == "" {
 		return "''"
 	}
-	if !strings.ContainsAny(s, " \t\n'\"\\$&|;()<>") {
-		return s
-	}
 	return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'"
 }
 
-func truncate(s string, max int) string {
-	if len(s) <= max {
+func truncate(s string, limit int) string {
+	if len(s) <= limit {
 		return s
 	}
-	return s[:max] + "\n...[truncated]..."
+	trunc := s[:limit]
+	// Back off to a valid UTF-8 rune boundary so the JSON result stays valid.
+	for len(trunc) > 0 && !utf8.ValidString(trunc) {
+		trunc = trunc[:len(trunc)-1]
+	}
+	return trunc + "\n...[truncated]..."
 }
 
 // RegisterTerminalTool registers the terminal tool if non-nil.
@@ -248,7 +385,7 @@ func RegisterTerminalTool(reg *Registry, t *TerminalTool) {
 	}
 	reg.Register(NewTypedTool(
 		"terminal",
-		"Execute a shell command in a persistent terminal session. Supports arbitrary commands, pipes, redirects, and chaining. Working directory and environment persist across calls. Use for system investigation: kubectl, systemctl, journalctl, curl, grep, etc.",
+		"Execute a shell command in a persistent terminal session. Supports arbitrary commands, pipes, redirects, and chaining. Environment persists across calls; the working directory is set via the cwd parameter and persists until changed. Use for system investigation: kubectl, systemctl, journalctl, curl, grep, etc.",
 		t.execute,
 		WithCategory[terminalInput, terminalOutput]("System"),
 	))

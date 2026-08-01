@@ -266,14 +266,33 @@ func (a *AlgaChannel) onInvestigationResume(ev alga.InvestigationSignalEvent) {
 	a.logger.Info("alga investigation resumed", "investigation_id", invID, "reason", ev.Reason, "actor", ev.Actor)
 }
 
+// dispatchIncidentInstruction dispatches an incident-scoped instruction
+// message to the agent. It resolves a fallback coordination chat id when chatID
+// is empty, builds the AlgaContext and session id, and enqueues the message via
+// DispatchAsync. Shared by the coordination-task, summarize-incident, and
+// comms-stale handlers.
+func (a *AlgaChannel) dispatchIncidentInstruction(incidentNumber int64, text, senderID, senderName, chatID string) {
+	if chatID == "" {
+		chatID = fmt.Sprintf("incident_coord_%d", incidentNumber)
+	}
+	ctx := a.dispatchCtx()
+	algaCtx := agent.AlgaContext{IncidentID: fmt.Sprintf("%d", incidentNumber)}
+	sessionID := SessionIDFor("alga", chatID)
+	a.router.DispatchAsync(ctx, InboundMessage{
+		SessionID:   sessionID,
+		ChatID:      chatID,
+		Text:        text,
+		SenderID:    senderID,
+		SenderName:  senderName,
+		ChannelName: a.Name(),
+		AlgaCtx:     algaCtx,
+	})
+}
+
 // onCoordinationTask handles a coordination task dispatched by the scheduler
 // on behalf of an incident commander. The agent is expected to claim the task,
 // perform the work, and complete it with a typed result.
 func (a *AlgaChannel) onCoordinationTask(ev alga.CoordinationTaskEvent) {
-	chatID := ev.ChatID
-	if chatID == "" {
-		chatID = fmt.Sprintf("incident_coord_%d", ev.IncidentNumber)
-	}
 	goal := ev.GoalText()
 	if goal == "" {
 		a.logger.Warn("coordination task dispatch with empty goal, skipping",
@@ -294,27 +313,12 @@ func (a *AlgaChannel) onCoordinationTask(ev alga.CoordinationTaskEvent) {
 		ev.IncidentNumber, ev.TaskID, ev.Kind, ev.AssigneeRole, goal,
 	)
 
-	ctx := a.dispatchCtx()
-	algaCtx := agent.AlgaContext{IncidentID: fmt.Sprintf("%d", ev.IncidentNumber)}
-	sessionID := SessionIDFor("alga", chatID)
-	a.router.DispatchAsync(ctx, InboundMessage{
-		SessionID:   sessionID,
-		ChatID:      chatID,
-		Text:        text,
-		SenderID:    "scheduler",
-		SenderName:  "Coordination Scheduler",
-		ChannelName: a.Name(),
-		AlgaCtx:     algaCtx,
-	})
+	a.dispatchIncidentInstruction(ev.IncidentNumber, text, "scheduler", "Coordination Scheduler", ev.ChatID)
 }
 
 // onSummarizeIncident handles a backend request for an incident summary
 // (typically directed at a communicate-capable agent).
 func (a *AlgaChannel) onSummarizeIncident(ev alga.SummarizeIncidentEvent) {
-	chatID := ev.ChatID
-	if chatID == "" {
-		chatID = fmt.Sprintf("incident_coord_%d", ev.IncidentNumber)
-	}
 	a.logger.Info("incident summary requested", "incident_number", ev.IncidentNumber)
 
 	text := fmt.Sprintf(
@@ -323,18 +327,7 @@ func (a *AlgaChannel) onSummarizeIncident(ev alga.SummarizeIncidentEvent) {
 		ev.IncidentNumber,
 	)
 
-	ctx := a.dispatchCtx()
-	algaCtx := agent.AlgaContext{IncidentID: fmt.Sprintf("%d", ev.IncidentNumber)}
-	sessionID := SessionIDFor("alga", chatID)
-	a.router.DispatchAsync(ctx, InboundMessage{
-		SessionID:   sessionID,
-		ChatID:      chatID,
-		Text:        text,
-		SenderID:    "backend",
-		SenderName:  "Alga Backend",
-		ChannelName: a.Name(),
-		AlgaCtx:     algaCtx,
-	})
+	a.dispatchIncidentInstruction(ev.IncidentNumber, text, "backend", "Alga Backend", ev.ChatID)
 }
 
 // onIncidentCommsStale handles a nudge when incident communications have gone
@@ -343,25 +336,13 @@ func (a *AlgaChannel) onIncidentCommsStale(ev alga.IncidentCommsStaleEvent) {
 	a.logger.Info("incident comms stale",
 		"incident_number", ev.IncidentNumber, "reason", ev.Reason)
 
-	chatID := fmt.Sprintf("incident_coord_%d", ev.IncidentNumber)
 	text := fmt.Sprintf(
 		"Incident #%d communications have gone stale (reason: %s). "+
 			"Post a status update or escalate if the incident is not progressing.",
 		ev.IncidentNumber, ev.Reason,
 	)
 
-	ctx := a.dispatchCtx()
-	algaCtx := agent.AlgaContext{IncidentID: fmt.Sprintf("%d", ev.IncidentNumber)}
-	sessionID := SessionIDFor("alga", chatID)
-	a.router.DispatchAsync(ctx, InboundMessage{
-		SessionID:   sessionID,
-		ChatID:      chatID,
-		Text:        text,
-		SenderID:    "backend",
-		SenderName:  "Alga Backend",
-		ChannelName: a.Name(),
-		AlgaCtx:     algaCtx,
-	})
+	a.dispatchIncidentInstruction(ev.IncidentNumber, text, "backend", "Alga Backend", "")
 }
 
 // onAlertAutoResolved logs that an alert the agent was investigating has

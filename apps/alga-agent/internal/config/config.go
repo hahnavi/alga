@@ -296,13 +296,13 @@ func Default() *Config {
 				Timeout:         30 * time.Second,
 			},
 			Terminal: TerminalConfig{
-				Enabled:        true,
+				Enabled:        false,
 				MaxOutputBytes: 65536,
 				Timeout:        120 * time.Second,
 			},
 			FileTools: FileToolsConfig{
-				Enabled:      true,
-				Roots:        []string{"/"},
+				Enabled:      false,
+				Roots:        nil,
 				MaxReadBytes: 262144,
 			},
 			WebSearch: WebSearchConfig{
@@ -546,6 +546,9 @@ func (c *Config) Validate() error {
 	}
 	if c.Tools.Terminal.Enabled && c.Tools.Terminal.MaxOutputBytes <= 0 {
 		errs = append(errs, "tools.terminal.max_output_bytes must be > 0 when terminal enabled")
+	}
+	if c.Tools.FileTools.Enabled && len(c.Tools.FileTools.Roots) == 0 {
+		errs = append(errs, "tools.file_tools.roots must list at least one explicitly scoped directory when file_tools enabled")
 	}
 	if c.Tools.WebSearch.Enabled {
 		switch c.Tools.WebSearch.Provider {

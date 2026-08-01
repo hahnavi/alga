@@ -32,8 +32,10 @@ tools:
   # Persistent terminal — full shell session for deep investigation.
   # Supports arbitrary commands, pipes, redirects, persistent cwd.
   # Replaces the legacy whitelisted shell when enabled.
+  # Disabled by default: it grants arbitrary command execution. Opt in only
+  # when the agent runs under a least-privilege user/container.
   terminal:
-    enabled: true
+    enabled: false
     cwd: ""                    # initial working directory; empty = process cwd
     max_output_bytes: 65536    # truncate output beyond this
     timeout: 120s              # per-command timeout
@@ -57,10 +59,13 @@ tools:
     timeout: 30s
 
   # File manipulation tools: read_file, write_file, search_files, patch.
+  # Disabled by default. When enabled, roots MUST list explicitly scoped
+  # directory trees — an empty list fails validation. Avoid ["/"]; scope to a
+  # dedicated workspace instead.
   file_tools:
-    enabled: true
-    roots:                     # allowed directory trees; ["/"] = unrestricted
-      - /
+    enabled: false
+    roots:                     # allowed directory trees; scope to a workspace, not "/"
+      - /home/alga/workspace
     max_read_bytes: 262144     # max bytes returned per read_file call
 
   web_search:

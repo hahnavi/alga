@@ -179,9 +179,14 @@ func run() error {
 	terminalTool := tools.NewTerminalTool(cfg.Tools.Terminal)
 	tools.RegisterTerminalTool(registry, terminalTool)
 
-	// Legacy shell tool (only when explicitly enabled and terminal is off).
+	// Legacy shell tool: registration is attempted whenever terminal is
+	// disabled; NewShellTool returns nil (and RegisterShellTool no-ops) when the
+	// shell is not explicitly enabled. When terminal is on, the shell tool is
+	// dropped even if configured, to avoid two overlapping shell tools.
 	if !cfg.Tools.Terminal.Enabled {
 		tools.RegisterShellTool(registry, tools.NewShellTool(cfg.Tools.Shell))
+	} else if cfg.Tools.Shell.Enabled {
+		logger.Warn("shell tool dropped because terminal is enabled", "tool", "shell")
 	}
 
 	// File tools.
@@ -393,9 +398,20 @@ func run() error {
 	// Disconnect MCP clients (external servers we were consuming).
 	mcpClient.Disconnect()
 
-	// Close the persistent terminal session.
+	// Close the persistent terminal session. Close runs in a goroutine bounded
+	// by a short timeout so a stuck shell cannot block shutdown; if it does not
+	// return in time we proceed to the existing bounded drain anyway.
 	if terminalTool != nil {
-		_ = terminalTool.Close()
+		closeDone := make(chan struct{})
+		go func() {
+			defer close(closeDone)
+			_ = terminalTool.Close()
+		}()
+		select {
+		case <-closeDone:
+		case <-time.After(3 * time.Second):
+			logger.Warn("terminal close timed out, continuing shutdown")
+		}
 	}
 
 	// Shut down the MCP server (external clients consuming us).

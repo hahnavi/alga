@@ -4,11 +4,15 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
+
+	gohtml "html"
 
 	"alga-agent/internal/config"
 )
@@ -22,8 +26,7 @@ type WebExtractTool struct {
 }
 
 type webExtractInput struct {
-	URLs   []string `json:"urls" desc:"One or more URLs to extract content from."`
-	Format string   `json:"format,omitempty" desc:"Output format: \"markdown\" (default) or \"text\"."`
+	URLs []string `json:"urls" desc:"One or more URLs to extract content from."`
 }
 
 type webExtractResult struct {
@@ -48,9 +51,77 @@ func NewWebExtractTool(cfg config.WebExtractConfig) *WebExtractTool {
 		maxChars = 50000
 	}
 	return &WebExtractTool{
-		client:   &http.Client{Timeout: 30 * time.Second},
+		client:   newSSRFSafeClient(30 * time.Second),
 		maxChars: maxChars,
 	}
+}
+
+// newSSRFSafeClient returns an HTTP client whose dialer validates that every
+// connection target resolves only to public addresses. Validation happens at
+// dial time (so DNS-rebinding cannot swap in a private address after the initial
+// check) and therefore applies to every redirect hop as well.
+func newSSRFSafeClient(timeout time.Duration) *http.Client {
+	transport := &http.Transport{
+		DialContext:         safeDialContext,
+		TLSHandshakeTimeout: 10 * time.Second,
+	}
+	return &http.Client{
+		Timeout:   timeout,
+		Transport: transport,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if req.URL.Scheme != "http" && req.URL.Scheme != "https" {
+				return fmt.Errorf("unsupported redirect scheme %q", req.URL.Scheme)
+			}
+			if len(via) >= 10 {
+				return fmt.Errorf("too many redirects")
+			}
+			return nil
+		},
+	}
+}
+
+// safeDialContext resolves the target host and refuses to connect unless every
+// resolved address is an allowed public address. It then dials the first allowed
+// address directly, so the validated IP is exactly the one connected to.
+func safeDialContext(ctx context.Context, network, addr string) (net.Conn, error) {
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return nil, err
+	}
+	ips, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+	if err != nil {
+		return nil, err
+	}
+	if len(ips) == 0 {
+		return nil, fmt.Errorf("host %q did not resolve", host)
+	}
+	for _, ipAddr := range ips {
+		if !isAllowedIP(ipAddr.IP) {
+			return nil, fmt.Errorf("host %q resolves to a disallowed address", host)
+		}
+	}
+	dialer := net.Dialer{Timeout: 10 * time.Second}
+	return dialer.DialContext(ctx, network, net.JoinHostPort(ips[0].IP.String(), port))
+}
+
+// isAllowedIP reports whether ip is a routable public address. Loopback,
+// link-local (incl. the 169.254.169.254 cloud-metadata endpoint), private
+// (RFC 1918/4193), unspecified, and multicast addresses are all rejected.
+func isAllowedIP(ip net.IP) bool {
+	if ip == nil {
+		return false
+	}
+	if ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() ||
+		ip.IsInterfaceLocalMulticast() || ip.IsMulticast() || ip.IsUnspecified() {
+		return false
+	}
+	if ip.IsPrivate() {
+		return false
+	}
+	if ip.Equal(net.IPv4(169, 254, 169, 254)) {
+		return false
+	}
+	return true
 }
 
 func (w *WebExtractTool) extract(ctx context.Context, in webExtractInput) Result[webExtractOutput] {
@@ -61,19 +132,34 @@ func (w *WebExtractTool) extract(ctx context.Context, in webExtractInput) Result
 		return ErrMsg[webExtractOutput]("maximum 5 URLs per call")
 	}
 
-	results := make([]webExtractResult, 0, len(in.URLs))
-	for _, rawURL := range in.URLs {
-		res := webExtractResult{URL: rawURL}
-		content, title, err := w.fetchOne(ctx, rawURL)
-		if err != nil {
-			res.Error = err.Error()
-		} else {
-			res.Content = content
-			res.Title = title
-			res.Chars = len(content)
-		}
-		results = append(results, res)
+	// Bound the whole batch to roughly one client timeout so a slow URL cannot
+	// stall the others indefinitely; each goroutine writes only its own index.
+	batchTimeout := w.client.Timeout
+	if batchTimeout <= 0 {
+		batchTimeout = 30 * time.Second
 	}
+	batchCtx, cancel := context.WithTimeout(ctx, batchTimeout)
+	defer cancel()
+
+	results := make([]webExtractResult, len(in.URLs))
+	var wg sync.WaitGroup
+	for i, rawURL := range in.URLs {
+		wg.Add(1)
+		go func(i int, rawURL string) {
+			defer wg.Done()
+			res := webExtractResult{URL: rawURL}
+			content, title, err := w.fetchOne(batchCtx, rawURL)
+			if err != nil {
+				res.Error = err.Error()
+			} else {
+				res.Content = content
+				res.Title = title
+				res.Chars = len(content)
+			}
+			results[i] = res
+		}(i, rawURL)
+	}
+	wg.Wait()
 	return OK(webExtractOutput{Results: results})
 }
 
@@ -128,7 +214,7 @@ func RegisterWebExtractTool(reg *Registry, t *WebExtractTool) {
 		return
 	}
 	reg.Register(NewTypedTool("web_extract",
-		"Fetch and extract readable content from one or more URLs. Returns page text/markdown. Use after web_search to read full articles.",
+		"Fetch and extract readable content from one or more URLs. Returns page plain text. Use after web_search to read full articles.",
 		t.extract, WithCategory[webExtractInput, webExtractOutput]("System")))
 }
 
@@ -137,19 +223,16 @@ var (
 	scriptRe   = regexp.MustCompile(`(?is)<script[^>]*>.*?</script>`)
 	styleRe    = regexp.MustCompile(`(?is)<style[^>]*>.*?</style>`)
 	noscriptRe = regexp.MustCompile(`(?is)<noscript[^>]*>.*?</noscript>`)
+	commentRe  = regexp.MustCompile(`(?s)<!--.*?-->`)
 	tagRe      = regexp.MustCompile(`<[^>]*>`)
 	wsRe       = regexp.MustCompile(`[ \t]+`)
 	multiNlRe  = regexp.MustCompile(`\n{3,}`)
-	entityRepl = strings.NewReplacer(
-		"&amp;", "&", "&lt;", "<", "&gt;", ">", "&quot;", `"`,
-		"&#39;", "'", "&nbsp;", " ", "&#x27;", "'", "&#x2F;", "/",
-	)
 )
 
 func extractTitle(html string) string {
 	m := titleRe.FindStringSubmatch(html)
 	if len(m) > 1 {
-		return strings.TrimSpace(entityRepl.Replace(m[1]))
+		return strings.TrimSpace(gohtml.UnescapeString(m[1]))
 	}
 	return ""
 }
@@ -158,8 +241,11 @@ func htmlToText(html string) string {
 	text := scriptRe.ReplaceAllString(html, "")
 	text = styleRe.ReplaceAllString(text, "")
 	text = noscriptRe.ReplaceAllString(text, "")
+	// Strip HTML comments before tag stripping so a ">" inside a comment does
+	// not terminate the comment early and leak into the extracted text.
+	text = commentRe.ReplaceAllString(text, "")
 	text = tagRe.ReplaceAllString(text, "\n")
-	text = entityRepl.Replace(text)
+	text = gohtml.UnescapeString(text)
 	text = wsRe.ReplaceAllString(text, " ")
 	text = multiNlRe.ReplaceAllString(text, "\n\n")
 	return text

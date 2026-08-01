@@ -166,6 +166,10 @@ func (a *AlgaChannel) registerCallbacks() {
 		c.OnPeerAsk = a.onPeerAsk
 		c.OnPeerFinding = a.onPeerFinding
 		c.OnInvestigationResume = a.onInvestigationResume
+		c.OnCoordinationTask = a.onCoordinationTask
+		c.OnSummarizeIncident = a.onSummarizeIncident
+		c.OnIncidentCommsStale = a.onIncidentCommsStale
+		c.OnAlertAutoResolved = a.onAlertAutoResolved
 	}
 }
 
@@ -260,6 +264,114 @@ func (a *AlgaChannel) onInvestigationResume(ev alga.InvestigationSignalEvent) {
 		invID = ev.AlertInvestigationID
 	}
 	a.logger.Info("alga investigation resumed", "investigation_id", invID, "reason", ev.Reason, "actor", ev.Actor)
+}
+
+// onCoordinationTask handles a coordination task dispatched by the scheduler
+// on behalf of an incident commander. The agent is expected to claim the task,
+// perform the work, and complete it with a typed result.
+func (a *AlgaChannel) onCoordinationTask(ev alga.CoordinationTaskEvent) {
+	chatID := ev.ChatID
+	if chatID == "" {
+		chatID = fmt.Sprintf("incident_coord_%d", ev.IncidentNumber)
+	}
+	goal := ev.GoalText()
+	if goal == "" {
+		a.logger.Warn("coordination task dispatch with empty goal, skipping",
+			"task_id", ev.TaskID, "incident_number", ev.IncidentNumber)
+		return
+	}
+
+	a.logger.Info("coordination task dispatched",
+		"task_id", ev.TaskID,
+		"incident_number", ev.IncidentNumber,
+		"kind", ev.Kind,
+		"assignee_role", ev.AssigneeRole)
+
+	text := fmt.Sprintf(
+		"You have been dispatched a coordination task for incident #%d.\n\n"+
+			"Task ID: %s\nKind: %s\nAssignee role: %s\nGoal: %s\n\n"+
+			"Claim this task with alga_claim_task, perform the work, then report your result with alga_complete_task.",
+		ev.IncidentNumber, ev.TaskID, ev.Kind, ev.AssigneeRole, goal,
+	)
+
+	ctx := a.dispatchCtx()
+	algaCtx := agent.AlgaContext{IncidentID: fmt.Sprintf("%d", ev.IncidentNumber)}
+	sessionID := SessionIDFor("alga", chatID)
+	a.router.DispatchAsync(ctx, InboundMessage{
+		SessionID:   sessionID,
+		ChatID:      chatID,
+		Text:        text,
+		SenderID:    "scheduler",
+		SenderName:  "Coordination Scheduler",
+		ChannelName: a.Name(),
+		AlgaCtx:     algaCtx,
+	})
+}
+
+// onSummarizeIncident handles a backend request for an incident summary
+// (typically directed at a communicate-capable agent).
+func (a *AlgaChannel) onSummarizeIncident(ev alga.SummarizeIncidentEvent) {
+	chatID := ev.ChatID
+	if chatID == "" {
+		chatID = fmt.Sprintf("incident_coord_%d", ev.IncidentNumber)
+	}
+	a.logger.Info("incident summary requested", "incident_number", ev.IncidentNumber)
+
+	text := fmt.Sprintf(
+		"The backend has requested an incident summary for incident #%d. "+
+			"Review the incident state and post a concise status update using alga_add_incident_timeline.",
+		ev.IncidentNumber,
+	)
+
+	ctx := a.dispatchCtx()
+	algaCtx := agent.AlgaContext{IncidentID: fmt.Sprintf("%d", ev.IncidentNumber)}
+	sessionID := SessionIDFor("alga", chatID)
+	a.router.DispatchAsync(ctx, InboundMessage{
+		SessionID:   sessionID,
+		ChatID:      chatID,
+		Text:        text,
+		SenderID:    "backend",
+		SenderName:  "Alga Backend",
+		ChannelName: a.Name(),
+		AlgaCtx:     algaCtx,
+	})
+}
+
+// onIncidentCommsStale handles a nudge when incident communications have gone
+// quiet past the SLA threshold.
+func (a *AlgaChannel) onIncidentCommsStale(ev alga.IncidentCommsStaleEvent) {
+	a.logger.Info("incident comms stale",
+		"incident_number", ev.IncidentNumber, "reason", ev.Reason)
+
+	chatID := fmt.Sprintf("incident_coord_%d", ev.IncidentNumber)
+	text := fmt.Sprintf(
+		"Incident #%d communications have gone stale (reason: %s). "+
+			"Post a status update or escalate if the incident is not progressing.",
+		ev.IncidentNumber, ev.Reason,
+	)
+
+	ctx := a.dispatchCtx()
+	algaCtx := agent.AlgaContext{IncidentID: fmt.Sprintf("%d", ev.IncidentNumber)}
+	sessionID := SessionIDFor("alga", chatID)
+	a.router.DispatchAsync(ctx, InboundMessage{
+		SessionID:   sessionID,
+		ChatID:      chatID,
+		Text:        text,
+		SenderID:    "backend",
+		SenderName:  "Alga Backend",
+		ChannelName: a.Name(),
+		AlgaCtx:     algaCtx,
+	})
+}
+
+// onAlertAutoResolved logs that an alert the agent was investigating has
+// auto-resolved at the source. No action is needed — the investigation is
+// complete.
+func (a *AlgaChannel) onAlertAutoResolved(ev alga.AlertAutoResolvedEvent) {
+	a.logger.Info("alert auto-resolved",
+		"investigation_id", ev.InvestigationID,
+		"fingerprint", ev.Fingerprint,
+		"alert_name", ev.AlertName)
 }
 
 // --- ResponseSink implementation ---

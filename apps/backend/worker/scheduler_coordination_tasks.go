@@ -173,6 +173,7 @@ func (s *InvestigationScheduler) dispatchCoordinationTask(ctx context.Context, t
 			"task_id":         task.ID.String(),
 			"kind":            task.Kind,
 			"assignee_role":   task.AssigneeRole,
+			"goal":            task.Goal,
 			"text":            task.Goal,
 			"trigger":         "dispatch",
 			"incident_number": task.IncidentNumber,

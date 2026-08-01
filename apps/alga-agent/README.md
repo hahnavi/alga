@@ -255,6 +255,7 @@ docker compose -f docker-compose.e2e.yml down -v
 | `OPENAI_BASE_URL`, `OPENAI_MODEL`       | no       | LLM endpoint/model; pick a capable model — weak free models flake                    |
 | `ALGA_E2E_SERVER_URL`                   | no       | backend base URL (default `http://localhost:3100`, the nginx proxy of the e2e stack) |
 | `ALGA_AGENT_E2E_TOOLS=1`                | no       | also assert tool effects (outcome, resolve, reopen, promote); most model-dependent   |
+| `ALGA_AGENT_E2E_COORDINATION=1`         | no       | run the multi-agent coordination test (two LLM agents, full incident lifecycle)      |
 
 Expect ~2–5 minutes per run (~5–10 with `ALGA_AGENT_E2E_TOOLS=1`). Notes:
 
@@ -271,6 +272,25 @@ Expect ~2–5 minutes per run (~5–10 with `ALGA_AGENT_E2E_TOOLS=1`). Notes:
   through nginx on `:3100`, which proxies SSE fine (15s keepalives). If SSE
   ever misbehaves, publish `ports: ["18080:8080"]` on the backend service and
   set `ALGA_E2E_SERVER_URL=http://localhost:18080`.
+
+### Multi-Agent Coordination E2E Test
+
+A separate opt-in test (`TestMultiAgentCoordination`) runs two agents — a
+commander (`command` capability) and a responder (`investigate` capability) —
+and asserts the full incident coordination flow: ICS role auto-assignment,
+coordination task dispatch/completion, and incident lifecycle transitions
+(detected → active → mitigated → resolved).
+
+```bash
+ALGA_AGENT_E2E=1 ALGA_AGENT_E2E_COORDINATION=1 \
+  OPENROUTER_API_KEY=sk-... OPENAI_MODEL=<model> \
+  go test ./e2e/... -run TestMultiAgentCoordination -v -timeout 20m -count=1
+```
+
+Expect ~5–10 minutes. This test is highly model-dependent: both agents must
+correctly use their coordination tools (dispatch_task, claim_task,
+complete_task, mitigate_incident, set_incident_resolution_docs,
+resolve_incident) in response to prompts.
 
 ### Project Structure
 

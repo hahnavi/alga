@@ -25,6 +25,16 @@ type incidentNumberInput struct {
 	ChatID         string `json:"chat_id,omitempty" desc:"Chat id (omit in Alga threads)"`
 }
 
+type setResolutionDocsInput struct {
+	IncidentNumber   int64  `json:"incident_number" desc:"The incident number"`
+	Summary          string `json:"summary,omitempty" desc:"Incident summary"`
+	ImpactAssessment string `json:"impact_assessment,omitempty" desc:"Impact assessment"`
+	ActionsTaken     string `json:"actions_taken,omitempty" desc:"Actions taken during the incident"`
+	RootCause        string `json:"root_cause,omitempty" desc:"Root cause of the incident"`
+	Resolution       string `json:"resolution,omitempty" desc:"How the incident was resolved"`
+	ChatID           string `json:"chat_id,omitempty" desc:"Chat id (omit in Alga threads)"`
+}
+
 func incidentTools(c AlgaClient) []Tool {
 	return []Tool{
 		NewTypedTool("alga_get_incident",
@@ -100,12 +110,37 @@ func incidentTools(c AlgaClient) []Tool {
 			"command",
 		),
 		incidentCommandTool(c, "alga_resolve_incident",
-			"Resolve an incident with a reason. Commander-capable agents only.",
+			"Resolve an incident with a reason. Commander-capable agents only. Resolution docs (summary, impact_assessment, root_cause, resolution) must be set first via alga_set_incident_resolution_docs.",
 			true,
 			func(in incidentNumberInput) alga.InvestigationCommand {
 				return alga.ResolveIncident(in.IncidentNumber, in.Reason)
 			},
 			"command",
+		),
+
+		NewTypedTool("alga_set_incident_resolution_docs",
+			"Set incident resolution documents (summary, impact assessment, actions taken, root cause, resolution). Required before resolving an incident. At least one field must be provided.",
+			func(ctx context.Context, in setResolutionDocsInput) Result[*alga.CommandResponse] {
+				if in.IncidentNumber == 0 {
+					return ErrMsg[*alga.CommandResponse]("incident_number is required")
+				}
+				if in.Summary == "" && in.ImpactAssessment == "" && in.ActionsTaken == "" && in.RootCause == "" && in.Resolution == "" {
+					return ErrMsg[*alga.CommandResponse]("at least one of summary, impact_assessment, actions_taken, root_cause, or resolution is required")
+				}
+				chatID, err := chatIDFromCtx(ctx, map[string]string{"chat_id": in.ChatID})
+				if err != nil {
+					return Err[*alga.CommandResponse](err)
+				}
+				resp, err := c.SendCommand(ctx, chatID, alga.SetIncidentResolutionDocs(
+					in.IncidentNumber, in.Summary, in.ImpactAssessment, in.ActionsTaken, in.RootCause, in.Resolution,
+				))
+				if err != nil {
+					return Err[*alga.CommandResponse](algaErr(err))
+				}
+				return OK(resp)
+			},
+			WithCategory[setResolutionDocsInput, *alga.CommandResponse](algaCategory),
+			WithCapability[setResolutionDocsInput, *alga.CommandResponse]("command"),
 		),
 	}
 }

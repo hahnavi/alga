@@ -100,12 +100,15 @@ func (c *backendClient) setupOrLogin(email, password, fullName string) error {
 	return nil
 }
 
-// mintAgentToken creates an agent bearer token with investigate+communicate
-// capabilities. The plaintext token is returned exactly once by the API.
-func (c *backendClient) mintAgentToken(name string) (id, token string, err error) {
+// mintAgentToken creates an agent bearer token with the given capabilities.
+// The plaintext token is returned exactly once by the API.
+func (c *backendClient) mintAgentToken(name string, capabilities ...string) (id, token string, err error) {
+	if len(capabilities) == 0 {
+		capabilities = []string{"investigate", "communicate"}
+	}
 	req := map[string]any{
 		"name":         name,
-		"capabilities": []string{"investigate", "communicate"},
+		"capabilities": capabilities,
 	}
 	var resp struct {
 		ID    string `json:"id"`
@@ -278,4 +281,152 @@ func (c *backendClient) getAlertStatus(alertNumber int64) (string, error) {
 		return "", fmt.Errorf("alert %d response missing status", alertNumber)
 	}
 	return resp.Data.Alert.Status, nil
+}
+
+// --- Incident helpers ---
+
+// createIncident creates an incident via the operator API and returns its
+// incident number.
+func (c *backendClient) createIncident(title, severity string) (int64, error) {
+	req := map[string]any{
+		"title":    title,
+		"severity": severity,
+	}
+	var resp struct {
+		Data struct {
+			IncidentNumber int64 `json:"incident_number"`
+		} `json:"data"`
+	}
+	if _, err := c.do(http.MethodPost, "/api/v1/incidents", req, &resp); err != nil {
+		return 0, err
+	}
+	if resp.Data.IncidentNumber == 0 {
+		return 0, fmt.Errorf("incident response missing incident_number")
+	}
+	return resp.Data.IncidentNumber, nil
+}
+
+// acknowledgeIncident transitions an incident from detected to active.
+func (c *backendClient) acknowledgeIncident(incidentNumber int64) error {
+	path := fmt.Sprintf("/api/v1/incidents/%d/acknowledge", incidentNumber)
+	_, err := c.do(http.MethodPost, path, nil, nil)
+	return err
+}
+
+// getIncidentStatus returns the current status of an incident.
+func (c *backendClient) getIncidentStatus(incidentNumber int64) (string, error) {
+	var resp struct {
+		Data struct {
+			Status string `json:"status"`
+		} `json:"data"`
+	}
+	path := fmt.Sprintf("/api/v1/incidents/%d", incidentNumber)
+	if _, err := c.do(http.MethodGet, path, nil, &resp); err != nil {
+		return "", err
+	}
+	if resp.Data.Status == "" {
+		return "", fmt.Errorf("incident %d response missing status", incidentNumber)
+	}
+	return resp.Data.Status, nil
+}
+
+// postIncidentThreadMessage posts a message into the incident's investigation
+// thread. mentions must contain "agent:<token-id>" for the agent to act.
+func (c *backendClient) postIncidentThreadMessage(incidentNumber int64, message string, mentions []string) error {
+	req := map[string]any{"message": message}
+	if len(mentions) > 0 {
+		req["mentions"] = mentions
+	}
+	path := fmt.Sprintf("/api/v1/incidents/%d/thread/messages", incidentNumber)
+	_, err := c.do(http.MethodPost, path, req, nil)
+	return err
+}
+
+// getIncidentThread returns the incident's investigation thread messages.
+func (c *backendClient) getIncidentThread(incidentNumber int64) ([]threadMessage, error) {
+	var resp struct {
+		Data struct {
+			Items []threadMessage `json:"items"`
+		} `json:"data"`
+	}
+	path := fmt.Sprintf("/api/v1/incidents/%d/thread", incidentNumber)
+	status, err := c.do(http.MethodGet, path, nil, &resp)
+	if status == http.StatusNotFound {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return resp.Data.Items, nil
+}
+
+type icsRole struct {
+	RoleType     string `json:"role_type"`
+	AssigneeType string `json:"assignee_type"`
+	AgentTokenID string `json:"agent_token_id"`
+	AgentName    string `json:"agent_name"`
+	Status       string `json:"status"`
+}
+
+// listICSRoles returns the ICS role assignments for an incident.
+func (c *backendClient) listICSRoles(incidentNumber int64) ([]icsRole, error) {
+	var resp struct {
+		Data []icsRole `json:"data"`
+	}
+	path := fmt.Sprintf("/api/v1/incidents/%d/ics/roles", incidentNumber)
+	if _, err := c.do(http.MethodGet, path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return resp.Data, nil
+}
+
+// hasActiveRole reports whether an agent holds an active ICS role of the given
+// type on the incident.
+func (c *backendClient) hasActiveRole(incidentNumber int64, roleType, agentTokenID string) (bool, error) {
+	roles, err := c.listICSRoles(incidentNumber)
+	if err != nil {
+		return false, err
+	}
+	for _, r := range roles {
+		if r.Status == "active" && r.RoleType == roleType && r.AgentTokenID == agentTokenID {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+type coordinationTask struct {
+	ID           string         `json:"id"`
+	Kind         string         `json:"kind"`
+	AssigneeRole string         `json:"assignee_role"`
+	Status       string         `json:"status"`
+	Goal         string         `json:"goal"`
+	Result       map[string]any `json:"result"`
+}
+
+// listCoordinationTasks returns the coordination tasks for an incident.
+func (c *backendClient) listCoordinationTasks(incidentNumber int64) ([]coordinationTask, error) {
+	var resp struct {
+		Data []coordinationTask `json:"data"`
+	}
+	path := fmt.Sprintf("/api/v1/incidents/%d/coordination/tasks", incidentNumber)
+	if _, err := c.do(http.MethodGet, path, nil, &resp); err != nil {
+		return nil, err
+	}
+	return resp.Data, nil
+}
+
+// findCoordinationTask returns the first coordination task matching the given
+// status (empty matches any).
+func (c *backendClient) findCoordinationTask(incidentNumber int64, status string) (*coordinationTask, error) {
+	tasks, err := c.listCoordinationTasks(incidentNumber)
+	if err != nil {
+		return nil, err
+	}
+	for i := range tasks {
+		if status == "" || tasks[i].Status == status {
+			return &tasks[i], nil
+		}
+	}
+	return nil, nil
 }

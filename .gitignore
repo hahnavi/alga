@@ -41,6 +41,7 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+!.env.e2e.example
 
 # Config overrides (keep default)
 config/routes.override.yaml

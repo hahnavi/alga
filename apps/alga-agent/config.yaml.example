@@ -21,16 +21,6 @@ model:
   max_tokens: 4096
   temperature: 0.3
 
-# Telegram channel (human interface).
-telegram:
-  enabled: false
-  bot_token: ${TELEGRAM_BOT_TOKEN}
-  allowed_users: []          # empty = allow all; or list user IDs / @usernames
-  webhook_url: ""            # empty = long polling (default)
-  webhook_addr: "0.0.0.0:8443"
-  respond_in_groups: false   # only respond when @mentioned or replied to
-  min_edit_interval: 1s      # throttle progressive message edits
-
 # Alga channel (backend investigation threads).
 alga:
   enabled: false
@@ -39,10 +29,20 @@ alga:
 
 # Tools available to the agent.
 tools:
+  # Persistent terminal — full shell session for deep investigation.
+  # Supports arbitrary commands, pipes, redirects, persistent cwd.
+  # Replaces the legacy whitelisted shell when enabled.
+  # Disabled by default: it grants arbitrary command execution. Opt in only
+  # when the agent runs under a least-privilege user/container.
+  terminal:
+    enabled: false
+    cwd: ""                    # initial working directory; empty = process cwd
+    max_output_bytes: 65536    # truncate output beyond this
+    timeout: 120s              # per-command timeout
+
+  # Legacy whitelisted shell (only used when terminal is disabled).
   shell:
-    enabled: true
-    # NOT a true sandbox — commands run with the agent's privileges.
-    # Restrict to read-only/diagnostic commands in production.
+    enabled: false
     allowed_commands:
       - ls
       - cat
@@ -57,12 +57,28 @@ tools:
       - top
     max_output_bytes: 10240
     timeout: 30s
+
+  # File manipulation tools: read_file, write_file, search_files, patch.
+  # Disabled by default. When enabled, roots MUST list explicitly scoped
+  # directory trees — an empty list fails validation. Avoid ["/"]; scope to a
+  # dedicated workspace instead.
+  file_tools:
+    enabled: false
+    roots:                     # allowed directory trees; scope to a workspace, not "/"
+      - /home/alga/workspace
+    max_read_bytes: 262144     # max bytes returned per read_file call
+
   web_search:
     enabled: true
     provider: duckduckgo     # duckduckgo | brave | tavily
     api_key: ${SEARCH_API_KEY}   # required for brave/tavily; ignored for duckduckgo
     max_results: 5
     fetch_content: false
+
+  # Fetch and extract readable content from URLs (complements web_search).
+  web_extract:
+    enabled: true
+    max_chars: 50000           # max characters per extracted page
 
 # Agent behavior.
 agent_behavior:
@@ -95,10 +111,11 @@ metrics:
 #
 # The agent plays two MCP roles:
 #
-#   server:   exposes the agent's tools (alga_*, shell, web_search) to
-#             external MCP clients — Claude Desktop, Cursor, custom automation.
-#             Point your MCP client at http://<addr><path> to list and call
-#             tools through the standard MCP Streamable HTTP transport.
+#   server:   exposes the agent's tools (alga_*, terminal, file, web_search,
+#             web_extract, todo) to external MCP clients — Claude Desktop,
+#             Cursor, custom automation. Point your MCP client at
+#             http://<addr><path> to list and call tools through the standard
+#             MCP Streamable HTTP transport.
 #
 #   clients:  imports tools from external MCP servers (filesystem browsers,
 #             GitHub clients, database inspectors, in-house tools). Each

@@ -16,7 +16,7 @@ func TestPersistRoundTrip(t *testing.T) {
 	ss := NewSessionStore(20)
 	ss.EnablePersistence(dir)
 
-	id := "telegram:12345"
+	id := "alga:12345"
 	s := ss.Get(id)
 	s.AppendMessage(llm.Message{Role: "user", Content: "hello"})
 	s.AppendMessage(llm.Message{Role: "assistant", Content: "hi there"})
@@ -74,7 +74,7 @@ func TestClearRemovesFile(t *testing.T) {
 	ss := NewSessionStore(20)
 	ss.EnablePersistence(dir)
 
-	id := "telegram:99"
+	id := "alga:99"
 	ss.Get(id).AppendMessage(llm.Message{Role: "user", Content: "x"})
 	if err := ss.Persist(id); err != nil {
 		t.Fatalf("Persist: %v", err)
@@ -102,7 +102,7 @@ func TestPersistClearNoResurrection(t *testing.T) {
 	dir := t.TempDir()
 	ss := NewSessionStore(20)
 	ss.EnablePersistence(dir)
-	id := "telegram:race"
+	id := "alga:race"
 
 	const rounds = 20
 	for r := 0; r < rounds; r++ {
@@ -139,7 +139,7 @@ func TestPersistClearNoResurrection(t *testing.T) {
 
 func TestCorruptFileFallsBackToFresh(t *testing.T) {
 	dir := t.TempDir()
-	id := "telegram:7"
+	id := "alga:7"
 	if err := os.WriteFile(filepath.Join(dir, sessionFilename(id)), []byte("{not json"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -177,14 +177,14 @@ func TestEvictIdleKeepsFileAndReloads(t *testing.T) {
 }
 
 func TestSessionFilename(t *testing.T) {
-	name := sessionFilename("telegram:12345")
+	name := sessionFilename("alga:12345")
 	if strings.ContainsAny(name, ":/\\") {
 		t.Fatalf("unsafe chars in %q", name)
 	}
 	if !strings.HasSuffix(name, ".json") {
 		t.Fatalf("missing .json suffix: %q", name)
 	}
-	if !strings.HasPrefix(name, "telegram_12345-") {
+	if !strings.HasPrefix(name, "alga_12345-") {
 		t.Fatalf("unexpected prefix: %q", name)
 	}
 	// Distinct ids that sanitize identically must still map to distinct files.

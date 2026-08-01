@@ -196,9 +196,6 @@ func (m wizardModel) confirmStep() (tea.Model, tea.Cmd) {
 	switch s.kind {
 	case stepChoice:
 		value = m.list.choices[m.list.cursor]
-		if s.key == "channel_menu" {
-			return m.handleChannelMenu()
-		}
 	case stepYesNo:
 		value = strconv.FormatBool(m.toggle.value)
 	default:
@@ -235,16 +232,6 @@ func (m wizardModel) confirmStep() (tea.Model, tea.Cmd) {
 		m.initStep()
 		return m, nil
 	}
-	if s.key == "tg_enabled" {
-		m.steps = telegramSteps(m.cfg)
-		m.advancePast(s.key)
-		if m.stepIdx >= len(m.steps) {
-			m.state = stateMenu
-			return m, nil
-		}
-		m.initStep()
-		return m, nil
-	}
 	if s.key == "alga_enabled" {
 		m.steps = algaSteps(m.cfg)
 		m.advancePast(s.key)
@@ -258,34 +245,10 @@ func (m wizardModel) confirmStep() (tea.Model, tea.Cmd) {
 
 	m.stepIdx++
 	if m.stepIdx >= len(m.steps) {
-		if sections[m.sectionIdx].key == "channel" && len(m.steps) > 1 {
-			m.confirmed = nil
-			m.steps = channelSteps(m.cfg)
-			m.stepIdx = 0
-			m.initStep()
-			return m, nil
-		}
 		m.state = stateMenu
 		return m, nil
 	}
 	m.initStep()
-	return m, nil
-}
-
-func (m wizardModel) handleChannelMenu() (tea.Model, tea.Cmd) {
-	idx := m.list.cursor
-	switch idx {
-	case 0:
-		m.steps = telegramSteps(m.cfg)
-		m.stepIdx = 0
-		m.initStep()
-	case 1:
-		m.steps = algaSteps(m.cfg)
-		m.stepIdx = 0
-		m.initStep()
-	case 2:
-		m.state = stateMenu
-	}
 	return m, nil
 }
 
@@ -480,7 +443,6 @@ func reviewView(cfg *config.Config) string {
 	})
 
 	card("Channels", [][2]string{
-		{"Telegram", onOffBadge(cfg.Telegram.Enabled) + "  token: " + secretBadge(cfg.Telegram.BotToken)},
 		{"Alga", onOffBadge(cfg.Alga.Enabled) + "  token: " + secretBadge(cfg.Alga.AgentToken)},
 	})
 

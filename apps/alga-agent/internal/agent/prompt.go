@@ -14,6 +14,10 @@ type SystemPromptOptions struct {
 	AgentDescription string
 	// AlgaCtx is injected when responding inside Alga investigation threads.
 	AlgaCtx AlgaContext
+	// DispatchContext carries behavioral rules from the backend dispatch
+	// (investigation instructions, tool allowlists, role constraints). Injected
+	// into the system prompt so they persist across long tool-heavy conversations.
+	DispatchContext string
 	// MemoryContext is the persistent-memory context retrieved via vector
 	// similarity search (SPEC §7.2). Empty in MVP — slot reserved.
 	MemoryContext string
@@ -56,13 +60,19 @@ func BuildSystemPrompt(opts SystemPromptOptions) string {
 		b.WriteString(ac)
 	}
 
-	// 3. Memory context (slot reserved for v0.2 similarity injection).
+	// 3. Dispatch behavioral rules (investigation instructions, role constraints).
+	if strings.TrimSpace(opts.DispatchContext) != "" {
+		b.WriteString("\n\n## Dispatch Instructions\n\n")
+		b.WriteString(strings.TrimSpace(opts.DispatchContext))
+	}
+
+	// 4. Memory context (slot reserved for v0.2 similarity injection).
 	if strings.TrimSpace(opts.MemoryContext) != "" {
 		b.WriteString("\n\n## Relevant Memories\n\n")
 		b.WriteString(strings.TrimSpace(opts.MemoryContext))
 	}
 
-	// 4. Tool usage guidelines.
+	// 5. Tool usage guidelines.
 	if len(opts.ToolNames) > 0 {
 		b.WriteString("\n\n## Available Tools\n\n")
 		b.WriteString("You have access to the following tools. Use them to take ")
@@ -76,7 +86,7 @@ func BuildSystemPrompt(opts SystemPromptOptions) string {
 		b.WriteString(toolListSection(opts.ToolNames))
 	}
 
-	// 5. Time awareness.
+	// 6. Time awareness.
 	now := opts.Now
 	if now.IsZero() {
 		now = time.Now()

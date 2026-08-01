@@ -96,7 +96,6 @@ func loadAgentConfig(t *testing.T, serverURL string) *config.Config {
 	if err != nil {
 		t.Fatalf("config parse: %v", err)
 	}
-	cfg.Telegram.Enabled = false
 	cfg.Alga = config.AlgaConfig{Enabled: true, ServerURL: serverURL, AgentToken: "placeholder"}
 	cfg.Tools.Shell.Enabled = false
 	cfg.Tools.WebSearch.Enabled = false
@@ -110,11 +109,13 @@ func loadAgentConfig(t *testing.T, serverURL string) *config.Config {
 // startAgent assembles and starts the real agent stack in-process, mirroring
 // main.go run(): Alga tools only, real LLM client from env-derived config,
 // AlgaChannel over SSE. Cleanup stops the channel and drains the router.
+// Safe to call multiple times with different tokens (multi-agent scenarios).
 func startAgent(t *testing.T, cfg *config.Config, agentToken string) {
 	t.Helper()
 
-	cfg.Alga.AgentToken = agentToken
-	serverURL := cfg.Alga.ServerURL
+	algaCfg := cfg.Alga
+	algaCfg.AgentToken = agentToken
+	serverURL := algaCfg.ServerURL
 
 	lw := &testLogWriter{t: t}
 	logger := slog.New(slog.NewTextHandler(lw, &slog.HandlerOptions{Level: slog.LevelDebug}))
@@ -138,7 +139,7 @@ func startAgent(t *testing.T, cfg *config.Config, agentToken string) {
 	})
 
 	router := channels.NewRouter(core, logger.With("component", "router"))
-	ch, err := channels.NewAlgaChannel(cfg.Alga, router, logger.With("component", "alga"))
+	ch, err := channels.NewAlgaChannel(algaCfg, router, logger.With("component", "alga"))
 	if err != nil {
 		t.Fatalf("alga channel init: %v", err)
 	}

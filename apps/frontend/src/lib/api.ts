@@ -135,7 +135,7 @@ export type WebhookTokenRow = {
   expired?: boolean;
 };
 
-export type AgentType = "hermes" | "openclaw" | "other";
+export type AgentType = "alga" | "hermes" | "openclaw" | "other";
 
 // Slim, list-friendly view of the current alert investigation that ships
 // inline with alert list/detail payloads so the assigned actor (agent),

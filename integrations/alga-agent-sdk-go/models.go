@@ -226,6 +226,11 @@ type MessageEvent struct {
 	ReplyToMessageID string   `json:"reply_to_message_id,omitempty"`
 	ReplyToText      string   `json:"reply_to_text,omitempty"`
 	Mentions         []string `json:"mentions,omitempty"`
+	// SystemContext carries behavioral rules (investigation instructions,
+	// tool allowlists, role constraints) that agents supporting system-prompt
+	// injection should place in the LLM system message. Agents that do not
+	// support this can ignore it; the full rules are also present in Text.
+	SystemContext string `json:"system_context,omitempty"`
 }
 
 type TypingEvent struct {
@@ -286,10 +291,20 @@ type CoordinationTaskEvent struct {
 	IncidentNumber  int64          `json:"incident_number"`
 	Kind            string         `json:"kind"`
 	Goal            string         `json:"goal"`
+	Text            string         `json:"text,omitempty"`
 	AssigneeRole    string         `json:"assignee_role,omitempty"`
 	AssigneeAgentID string         `json:"assignee_agent_id,omitempty"`
 	InputContext    map[string]any `json:"input_context,omitempty"`
 	ParentTaskID    string         `json:"parent_task_id,omitempty"`
+}
+
+// GoalText returns the task objective, preferring Goal and falling back to
+// Text (the backend historically sent the goal under the "text" key).
+func (e CoordinationTaskEvent) GoalText() string {
+	if e.Goal != "" {
+		return e.Goal
+	}
+	return e.Text
 }
 
 // SummarizeIncidentEvent asks a communicate-capable agent to produce an

@@ -271,7 +271,7 @@ func renderYesNoConfirm(w io.Writer, question string, val bool) {
 		word = "No"
 	}
 	// Trim the trailing hint-style punctuation from the question for a clean
-	// confirmation line ("Enable Telegram?" -> "Enable Telegram  Yes").
+	// confirmation line ("Enable Alga?" -> "Enable Alga  Yes").
 	q := strings.TrimRight(strings.TrimSpace(question), "?")
 	fmt.Fprintf(w, "%s %s  %s\r\n", color("✓", colorGreen), color(q, colorDim), color(word, colorBold))
 }

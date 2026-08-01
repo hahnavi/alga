@@ -44,7 +44,7 @@ const agentError = ref("");
 const agentSearchQuery = ref("");
 const agentNewName = ref("");
 const agentNewExpiresLocal = ref("");
-const agentNewType = ref<AgentType>("hermes");
+const agentNewType = ref<AgentType>("alga");
 const agentNewScope = ref<"all" | "labels">("all");
 const agentNewLabelSelectors = ref<RouteCondition[]>([]);
 const agentNewCapabilities = ref<AgentCapability[]>(["investigate"]);
@@ -187,7 +187,7 @@ function resetAgentForm() {
   agentCreatedSecret.value = null;
   agentNewName.value = "";
   agentNewExpiresLocal.value = "";
-  agentNewType.value = "hermes";
+  agentNewType.value = "alga";
   agentNewScope.value = "all";
   agentNewLabelSelectors.value = [];
   agentNewCapabilities.value = ["investigate"];
@@ -195,7 +195,7 @@ function resetAgentForm() {
 
 function resolvedAgentType(t: AgentTokenRow): AgentType {
   const s = t.agent_type ?? "hermes";
-  if (s === "openclaw" || s === "other") return s;
+  if (s === "alga" || s === "openclaw" || s === "other") return s;
   return "hermes";
 }
 
@@ -205,9 +205,18 @@ function agentIconForType(t: AgentTokenRow) {
 
 function agentOnlineLabel(t: AgentTokenRow): string {
   const type = resolvedAgentType(t);
+  if (type === "alga") return "Alga Agent connected via SSE";
   if (type === "openclaw") return "OpenClaw adapter connected via SSE";
   if (type === "other") return "Agent connected via SSE";
   return "Hermes adapter connected via SSE";
+}
+
+function agentTypeLabel(t: AgentTokenRow): string {
+  const type = resolvedAgentType(t);
+  if (type === "alga") return "Alga Agent";
+  if (type === "openclaw") return "OpenClaw";
+  if (type === "other") return "Other";
+  return "Hermes";
 }
 
 async function submitAgentToken() {
@@ -503,13 +512,7 @@ onMounted(() => {
                 >
                   <img
                     :src="agentIconForType(t)"
-                    :alt="
-                      resolvedAgentType(t) === 'openclaw'
-                        ? 'OpenClaw'
-                        : resolvedAgentType(t) === 'other'
-                          ? 'Other'
-                          : 'Hermes'
-                    "
+                    :alt="agentTypeLabel(t)"
                     class="h-full w-full rounded-full object-cover"
                     loading="lazy"
                     decoding="async"
@@ -538,13 +541,7 @@ onMounted(() => {
                 >
                   <span class="inline-flex items-center gap-1">
                     <Bot class="h-3 w-3" />
-                    {{
-                      resolvedAgentType(t) === "openclaw"
-                        ? "OpenClaw"
-                        : resolvedAgentType(t) === "other"
-                          ? "Other"
-                          : "Hermes"
-                    }}
+                    {{ agentTypeLabel(t) }}
                   </span>
                   <span class="inline-flex items-center gap-1">
                     <Clock class="h-3 w-3" />
@@ -639,6 +636,7 @@ onMounted(() => {
               class="w-full"
               @update:model-value="agentNewType = $event as AgentType"
             >
+              <option value="alga">Alga Agent</option>
               <option value="hermes">Hermes Agent</option>
               <option value="openclaw">OpenClaw</option>
               <option value="other">Other (Agent SDK / Self-developed)</option>

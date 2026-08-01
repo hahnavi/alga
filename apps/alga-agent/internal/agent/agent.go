@@ -79,6 +79,9 @@ type ProcessRequest struct {
 	Text       string
 	SenderName string
 	AlgaCtx    AlgaContext
+	// SystemContext carries behavioral rules from the backend dispatch to be
+	// injected into the LLM system prompt. Empty for non-dispatch messages.
+	SystemContext string
 	// Sink, if non-nil, receives streamed deltas from the final turn.
 	Sink StreamSink
 }
@@ -109,8 +112,15 @@ func (a *AgentCore) Process(ctx context.Context, req ProcessRequest) (Result, er
 	}
 	algaCtx := session.AlgaContext()
 
+	// Store dispatch behavioral rules on the session so they persist across
+	// turns and are injected into the system prompt on every LLM call.
+	if req.SystemContext != "" {
+		session.SetDispatchContext(req.SystemContext)
+	}
+	dispatchCtx := session.DispatchContext()
+
 	// Build/refresh system prompt if missing or context changed.
-	systemPrompt := a.buildPrompt(algaCtx)
+	systemPrompt := a.buildPrompt(algaCtx, dispatchCtx)
 
 	// Assemble the messages array: system + history + new user message.
 	history := session.Messages()
@@ -126,8 +136,14 @@ func (a *AgentCore) Process(ctx context.Context, req ProcessRequest) (Result, er
 		msgs = append(msgs, llm.Message{Role: "system", Content: systemPrompt})
 		msgs = append(msgs, history...)
 	}
-	// Append the new user message.
-	userMsg := llm.Message{Role: "user", Content: req.Text}
+	// Append the new user message. When dispatch behavioral rules are present
+	// in the system prompt, strip them from the user message to avoid
+	// redundant token usage.
+	userText := req.Text
+	if dispatchCtx != "" {
+		userText = strings.Replace(userText, "\n"+dispatchCtx, "", 1)
+	}
+	userMsg := llm.Message{Role: "user", Content: userText}
 	msgs = append(msgs, userMsg)
 
 	toolDefs := a.tools.Definitions()
@@ -297,11 +313,12 @@ func (a *AgentCore) executeToolCall(ctx context.Context, tc llm.ToolCall, req Pr
 	return result
 }
 
-func (a *AgentCore) buildPrompt(algaCtx AlgaContext) string {
+func (a *AgentCore) buildPrompt(algaCtx AlgaContext, dispatchCtx string) string {
 	return BuildSystemPrompt(SystemPromptOptions{
 		AgentName:        a.agentCfg.Name,
 		AgentDescription: a.agentCfg.Description,
 		AlgaCtx:          algaCtx,
+		DispatchContext:  dispatchCtx,
 		// MemoryContext intentionally empty (v0.2 slot).
 		ToolNames:        a.toolNames(),
 		CustomPromptFile: a.promptFile,

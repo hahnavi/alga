@@ -1,6 +1,6 @@
-// Command alga-agent runs the Alga AIOps AI assistant. It connects to Telegram
-// and/or Alga investigation threads, processes messages through an LLM
-// tool-calling loop, and responds via the originating channel.
+// Command alga-agent runs the Alga AIOps AI assistant. It connects to Alga
+// investigation threads, processes messages through an LLM tool-calling loop,
+// and responds via the Alga channel.
 package main
 
 import (
@@ -160,7 +160,6 @@ func run() error {
 	}
 
 	logger.Info("starting alga-agent",
-		"telegram_enabled", cfg.Telegram.Enabled,
 		"alga_enabled", cfg.Alga.Enabled,
 		"model", cfg.Model.Model,
 		"base_url", cfg.Model.BaseURL)
@@ -176,11 +175,31 @@ func run() error {
 		tools.RegisterAlgaTools(registry, algaClient)
 	}
 
-	// Shell tool.
-	tools.RegisterShellTool(registry, tools.NewShellTool(cfg.Tools.Shell))
+	// Terminal tool (replaces the legacy whitelisted shell).
+	terminalTool := tools.NewTerminalTool(cfg.Tools.Terminal)
+	tools.RegisterTerminalTool(registry, terminalTool)
+
+	// Legacy shell tool: registration is attempted whenever terminal is
+	// disabled; NewShellTool returns nil (and RegisterShellTool no-ops) when the
+	// shell is not explicitly enabled. When terminal is on, the shell tool is
+	// dropped even if configured, to avoid two overlapping shell tools.
+	if !cfg.Tools.Terminal.Enabled {
+		tools.RegisterShellTool(registry, tools.NewShellTool(cfg.Tools.Shell))
+	} else if cfg.Tools.Shell.Enabled {
+		logger.Warn("shell tool dropped because terminal is enabled", "tool", "shell")
+	}
+
+	// File tools.
+	tools.RegisterFileTools(registry, tools.NewFileTools(cfg.Tools.FileTools))
 
 	// Web search tool.
 	tools.RegisterWebSearchTool(registry, tools.NewWebSearchTool(cfg.Tools.WebSearch))
+
+	// Web extract tool.
+	tools.RegisterWebExtractTool(registry, tools.NewWebExtractTool(cfg.Tools.WebExtract))
+
+	// Todo tool.
+	tools.RegisterTodoTool(registry)
 
 	// --- MCP client: import external MCP servers as agent tools ---
 	// Connected before the loop starts so the imported tools are visible in
@@ -298,19 +317,8 @@ func run() error {
 	var (
 		wg       sync.WaitGroup
 		chans    []channels.Channel
-		telegram *channels.TelegramChannel
 		algaChan *channels.AlgaChannel
 	)
-
-	if cfg.Telegram.Enabled {
-		tg, err := channels.NewTelegramChannel(cfg.Telegram, router, logger.With("component", "telegram"))
-		if err != nil {
-			return fmt.Errorf("telegram init: %w", err)
-		}
-		telegram = tg
-		router.RegisterSink(telegram.Name(), telegram)
-		chans = append(chans, telegram)
-	}
 
 	if cfg.Alga.Enabled {
 		ac, err := channels.NewAlgaChannel(cfg.Alga, router, logger.With("component", "alga"))
@@ -389,6 +397,22 @@ func run() error {
 
 	// Disconnect MCP clients (external servers we were consuming).
 	mcpClient.Disconnect()
+
+	// Close the persistent terminal session. Close runs in a goroutine bounded
+	// by a short timeout so a stuck shell cannot block shutdown; if it does not
+	// return in time we proceed to the existing bounded drain anyway.
+	if terminalTool != nil {
+		closeDone := make(chan struct{})
+		go func() {
+			defer close(closeDone)
+			_ = terminalTool.Close()
+		}()
+		select {
+		case <-closeDone:
+		case <-time.After(3 * time.Second):
+			logger.Warn("terminal close timed out, continuing shutdown")
+		}
+	}
 
 	// Shut down the MCP server (external clients consuming us).
 	if mcpServer != nil {

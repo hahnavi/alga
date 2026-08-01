@@ -31,21 +31,21 @@ func (r *recordingSink) OnDelta(accumulated, delta string) bool {
 
 func TestSessionStore_GetCreatesAndReuses(t *testing.T) {
 	store := NewSessionStore(10)
-	s1 := store.Get("telegram:1")
-	s2 := store.Get("telegram:1")
+	s1 := store.Get("alga:1")
+	s2 := store.Get("alga:1")
 	if s1 != s2 {
 		t.Error("Get should return the same session instance")
 	}
-	if !store.Has("telegram:1") {
+	if !store.Has("alga:1") {
 		t.Error("Has should report true")
 	}
 }
 
 func TestSessionStore_Clear(t *testing.T) {
 	store := NewSessionStore(10)
-	store.Get("telegram:1")
-	store.Clear("telegram:1")
-	if store.Has("telegram:1") {
+	store.Get("alga:1")
+	store.Clear("alga:1")
+	if store.Has("alga:1") {
 		t.Error("session should be cleared")
 	}
 }
@@ -275,7 +275,7 @@ func TestAgent_Process_SessionIsolation(t *testing.T) {
 
 	// Process message from session A.
 	resA, err := core.Process(context.Background(), ProcessRequest{
-		SessionID: "telegram:111",
+		SessionID: "alga:111",
 		ChatID:    "111",
 		Text:      "msg-A",
 	})
@@ -284,7 +284,7 @@ func TestAgent_Process_SessionIsolation(t *testing.T) {
 	}
 	// Process message from session B.
 	resB, err := core.Process(context.Background(), ProcessRequest{
-		SessionID: "telegram:222",
+		SessionID: "alga:222",
 		ChatID:    "222",
 		Text:      "msg-B",
 	})
@@ -296,7 +296,7 @@ func TestAgent_Process_SessionIsolation(t *testing.T) {
 		t.Errorf("sessions leaked: both got %q", resA.Text)
 	}
 	// Session A history must not contain B's message.
-	msgsA := core.Store().Get("telegram:111").Messages()
+	msgsA := core.Store().Get("alga:111").Messages()
 	for _, m := range msgsA {
 		if strings.Contains(m.Content, "msg-B") {
 			t.Error("session A contains session B message")

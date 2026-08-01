@@ -181,7 +181,7 @@ func TestDriveMenu_EmptyChoices(t *testing.T) {
 func TestDriveYesNo_DefaultTrue(t *testing.T) {
 	ft := &fakeRawTerminal{keys: []keyEvent{{kind: keyEnter}}}
 	var out bytes.Buffer
-	got, err := driveYesNo(ft, &out, "Enable Telegram?", true)
+	got, err := driveYesNo(ft, &out, "Enable Alga?", true)
 	if err != nil {
 		t.Fatalf("driveYesNo: %v", err)
 	}
@@ -189,8 +189,8 @@ func TestDriveYesNo_DefaultTrue(t *testing.T) {
 		t.Error("got false, want true")
 	}
 	visible := stripANSI(out.String())
-	if !strings.Contains(visible, "✓ Enable Telegram  Yes") {
-		t.Errorf("expected '✓ Enable Telegram  Yes', got:\n%s", visible)
+	if !strings.Contains(visible, "✓ Enable Alga  Yes") {
+		t.Errorf("expected '✓ Enable Alga  Yes', got:\n%s", visible)
 	}
 }
 

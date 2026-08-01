@@ -33,7 +33,7 @@ const { push } = useToast();
 const agentTokenId = computed(() => route.params.agent_token_id as string);
 
 const agentName = ref("");
-const agentBrand = ref<"hermes" | "openclaw" | "other">("hermes");
+const agentBrand = ref<"alga" | "hermes" | "openclaw" | "other">("hermes");
 const agentRevoked = ref(false);
 const { users, loadUsers } = useUsers();
 const loading = ref(false);
@@ -272,8 +272,11 @@ function onThreadScroll() {
   }
 }
 
-function normalizeHeaderAgentBrand(t?: AgentType | string): "hermes" | "openclaw" | "other" {
+function normalizeHeaderAgentBrand(
+  t?: AgentType | string,
+): "alga" | "hermes" | "openclaw" | "other" {
   const s = String(t ?? "hermes").toLowerCase();
+  if (s === "alga") return "alga";
   if (s === "openclaw") return "openclaw";
   if (s === "other") return "other";
   return "hermes";
@@ -417,9 +420,7 @@ onBeforeUnmount(() => {
               :border-class="dmBorderClass(item.message.role)"
               :highlight-class="searchHighlight(item.message.id)"
               :avatar-src="
-                item.message.role === 'agent'
-                  ? getAgentAvatarSrc(agentBrand === 'openclaw' ? 'openclaw' : undefined)
-                  : undefined
+                item.message.role === 'agent' ? getAgentAvatarSrc(agentBrand) : undefined
               "
               :avatar-letter="
                 item.message.role !== 'agent' ? userAvatarLetter(item.message) : undefined
@@ -436,7 +437,7 @@ onBeforeUnmount(() => {
 
           <ChatTypingIndicator
             v-if="agentTyping"
-            :avatar-src="getAgentAvatarSrc(agentBrand === 'openclaw' ? 'openclaw' : undefined)"
+            :avatar-src="getAgentAvatarSrc(agentBrand)"
             avatar-bg="bg-transparent"
             :avatar-title="agentName || 'Agent'"
             :display-name="agentName || 'Agent'"

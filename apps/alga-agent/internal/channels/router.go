@@ -13,7 +13,7 @@ import (
 
 // Router dispatches inbound channel messages to the agent core and routes
 // responses back to the originating channel. Sessions are namespaced per
-// channel ("telegram:<id>", "alga:<id>") so messages never bleed across.
+// channel ("alga:<id>") so messages never bleed across.
 type Router struct {
 	agent  *agent.AgentCore
 	logger *slog.Logger
@@ -67,12 +67,13 @@ func (r *Router) Dispatch(ctx context.Context, msg InboundMessage) {
 		agentSink = asAgentSink(ctx, sink, msg.ChatID)
 	}
 	result, err := r.agent.Process(ctx, agent.ProcessRequest{
-		SessionID:  msg.SessionID,
-		ChatID:     msg.ChatID,
-		Text:       msg.Text,
-		SenderName: msg.SenderName,
-		AlgaCtx:    msg.AlgaCtx,
-		Sink:       agentSink,
+		SessionID:     msg.SessionID,
+		ChatID:        msg.ChatID,
+		Text:          msg.Text,
+		SenderName:    msg.SenderName,
+		AlgaCtx:       msg.AlgaCtx,
+		SystemContext: msg.SystemContext,
+		Sink:          agentSink,
 	})
 	if err != nil {
 		// Context cancellation (graceful shutdown) is not a user-facing error.

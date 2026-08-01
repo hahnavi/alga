@@ -228,55 +228,78 @@ func BuildDispatchPrompt(in DispatchInput) string {
 		fmt.Fprintf(&b, "\n%s\n", guidance)
 	}
 
-	b.WriteString("\n## Investigation Instructions\n")
-	fmt.Fprintf(&b, "**Alerts are pre-acknowledged by the system.** Do NOT send a chat text message saying \"acknowledging\" or \"resolved\". The system posts action messages automatically.\n")
+	writeInvestigationInstructions(&b, in, true)
+	writeAvailableTools(&b, in)
+	writeIncidentInstructions(&b, in)
+	writeHumanEscalation(&b, in)
+
+	return b.String()
+}
+
+// BuildDispatchSystemContext returns only the behavioral-rule sections of the
+// dispatch prompt (investigation instructions, available tools, incident
+// instructions, human escalation). Agents that support system-prompt injection
+// (e.g. the native alga-agent) place this in the LLM system message so the
+// rules persist across long tool-heavy conversations. The full dispatch prompt
+// returned by BuildDispatchPrompt still contains these sections verbatim for
+// agents that only read the user message.
+func BuildDispatchSystemContext(in DispatchInput) string {
+	var b strings.Builder
+
+	writeInvestigationInstructions(&b, in, false)
+	writeAvailableTools(&b, in)
+	writeIncidentInstructions(&b, in)
+	writeHumanEscalation(&b, in)
+
+	return b.String()
+}
+
+func writeInvestigationInstructions(b *strings.Builder, in DispatchInput, leadingNL bool) {
+	if leadingNL {
+		b.WriteString("\n")
+	}
+	b.WriteString("## Investigation Instructions\n")
+	fmt.Fprintf(b, "**Alerts are pre-acknowledged by the system.** Do NOT send a chat text message saying \"acknowledging\" or \"resolved\". The system posts action messages automatically.\n")
 	if !in.IncidentScope {
-		fmt.Fprintf(&b, "**Verify before acting, then follow the runbook for promotion.** Do not blindly promote. First verify the alert is genuine and still firing (re-check the linked alerts with `alga_list_alerts`; if every linked alert is already `resolved`, finalize the investigation with `alga_set_outcome` instead of promoting). The alert runbook is authoritative for promotion when it speaks: if it specifies promotion criteria — including mandatory/immediate promotion (e.g. \"any node down → promote immediately\") — call `alga_promote_to_incident` as the runbook directs once its conditions are met, without mitigating first or imposing extra gates. **A runbook is not required for promotion.** When the runbook is silent on promotion — or no runbook matches this alert at all — promote when there is real, current **user-facing** impact AND the alert is still firing. Verify the user-facing impact (failing requests, error budget burn, customer-visible errors, blocked deploys) and call `alga_promote_to_incident`. **Once you call `alga_promote_to_incident`, stop immediately — do not run any further commands, SSH sessions, log checks, or tool calls in this investigation. The incident response team owns all follow-up from that point; your alert investigation is done.**\n")
+		fmt.Fprintf(b, "**Verify before acting, then follow the runbook for promotion.** Do not blindly promote. First verify the alert is genuine and still firing (re-check the linked alerts with `alga_list_alerts`; if every linked alert is already `resolved`, finalize the investigation with `alga_set_outcome` instead of promoting). The alert runbook is authoritative for promotion when it speaks: if it specifies promotion criteria — including mandatory/immediate promotion (e.g. \"any node down → promote immediately\") — call `alga_promote_to_incident` as the runbook directs once its conditions are met, without mitigating first or imposing extra gates. **A runbook is not required for promotion.** When the runbook is silent on promotion — or no runbook matches this alert at all — promote when there is real, current **user-facing** impact AND the alert is still firing. Verify the user-facing impact (failing requests, error budget burn, customer-visible errors, blocked deploys) and call `alga_promote_to_incident`. **Once you call `alga_promote_to_incident`, stop immediately — do not run any further commands, SSH sessions, log checks, or tool calls in this investigation. The incident response team owns all follow-up from that point; your alert investigation is done.**\n")
 	}
 	if in.IncidentScope && !in.PromotedAlertHandoff {
 		if in.IncidentRole == "incident_commander" {
-			fmt.Fprintf(&b, "**Verify recovery before resolving.** You are strictly forbidden from performing technical investigation, environment validation, running commands against the environment, or inspecting environment/service health. Closing the linked alert with `alga_resolve_alert` (after checking its state with `alga_list_alerts`) is part of incident closure, not a technical action, and is part of your role. All other technical actions must be handled by the Responder.\n")
+			fmt.Fprintf(b, "**Verify recovery before resolving.** You are strictly forbidden from performing technical investigation, environment validation, running commands against the environment, or inspecting environment/service health. Closing the linked alert with `alga_resolve_alert` (after checking its state with `alga_list_alerts`) is part of incident closure, not a technical action, and is part of your role. All other technical actions must be handled by the Responder.\n")
 		} else {
-			fmt.Fprintf(&b, "**Verify recovery before resolving.** Do not resolve based only on process state, TCP readiness, or a single green check. First verify the user-visible service or database operation that the alert describes. Once recovery is verified, do NOT attempt to call alert tools (such as alert resolution/reopening) or resolve the alert yourself, as you are FORBIDDEN from calling `alga_resolve_alert` or `alga_reopen_alert` on alerts linked to an active incident — alert closure is part of incident closure and is owned by the incident commander. Let the commander close the alert. You are also FORBIDDEN from calling `alga_who_is_on_call` to identify who to hand off to. You do not need to look up who is on call; the handoff in the investigation thread (using `alga_post_handoff` with `audience=\"commander\"`) is always directly to the incident commander. Record findings (root cause, evidence, impact, resolution) on the incident investigation thread via coordination updates.\n")
+			fmt.Fprintf(b, "**Verify recovery before resolving.** Do not resolve based only on process state, TCP readiness, or a single green check. First verify the user-visible service or database operation that the alert describes. Once recovery is verified, do NOT attempt to call alert tools (such as alert resolution/reopening) or resolve the alert yourself, as you are FORBIDDEN from calling `alga_resolve_alert` or `alga_reopen_alert` on alerts linked to an active incident — alert closure is part of incident closure and is owned by the incident commander. Let the commander close the alert. You are also FORBIDDEN from calling `alga_who_is_on_call` to identify who to hand off to. You do not need to look up who is on call; the handoff in the investigation thread (using `alga_post_handoff` with `audience=\"commander\"`) is always directly to the incident commander. Record findings (root cause, evidence, impact, resolution) on the incident investigation thread via coordination updates.\n")
 		}
 	} else if !in.IncidentScope {
-		fmt.Fprintf(&b, "**Verify recovery before resolving.** Do not resolve based only on process state, TCP readiness, or a single green check. First verify the user-visible service or database operation that the alert describes. After recovery is verified (or the alert is already recovered), call `alga_resolve_alert` to resolve the alert and finalize the investigation. Record root cause, evidence, impact, and resolution via `alga_set_outcome`; include `root_cause` and `resolution` in the resolve call only when they are ready.\n")
+		fmt.Fprintf(b, "**Verify recovery before resolving.** Do not resolve based only on process state, TCP readiness, or a single green check. First verify the user-visible service or database operation that the alert describes. After recovery is verified (or the alert is already recovered), call `alga_resolve_alert` to resolve the alert and finalize the investigation. Record root cause, evidence, impact, and resolution via `alga_set_outcome`; include `root_cause` and `resolution` in the resolve call only when they are ready.\n")
 	}
-	fmt.Fprintf(&b, "**Read runbooks before debugging.** Knowledge search results and the auto-injected shared-knowledge previews are truncated. When a runbook or known issue matches this alert, call `alga_get_knowledge` with its id to read the full body and follow its steps before attempting your own recovery commands. The full body often holds exact users, commands, and ports that the preview omits.\n")
+	fmt.Fprintf(b, "**Read runbooks before debugging.** Knowledge search results and the auto-injected shared-knowledge previews are truncated. When a runbook or known issue matches this alert, call `alga_get_knowledge` with its id to read the full body and follow its steps before attempting your own recovery commands. The full body often holds exact users, commands, and ports that the preview omits.\n")
+}
 
+func writeAvailableTools(b *strings.Builder, in DispatchInput) {
 	b.WriteString("\n## Available Tools\n")
 	if in.IncidentScope && !in.PromotedAlertHandoff {
-		// Incident-scope role agents: show shared communication tools upfront so
-		// the agent knows alga_publish_status_update exists. The responder does
-		// NOT get alga_post_handoff advertised here because every
-		// call activates other agents and causes ping-pong loops during active
-		// investigation work; the role-specific section below re-introduces it
-		// under strict "final-handoff-only" rules.
 		commonTools := "`alga_publish_status_update`, `alga_get_incident_context`, `alga_cancel_investigation`, `alga_pause_investigation`, `alga_set_severity`, `alga_search_knowledge`, `alga_get_knowledge`, `alga_create_knowledge`, `alga_list_alerts`"
 		if in.IncidentRole == "responder" {
-			fmt.Fprintf(&b, "%s. Role-specific tools (commander-only or responder-only) are detailed in the Incident Instructions section below.\n", commonTools)
+			fmt.Fprintf(b, "%s. Role-specific tools (commander-only or responder-only) are detailed in the Incident Instructions section below.\n", commonTools)
 		} else {
-			fmt.Fprintf(&b, "%s, `alga_post_handoff`, `alga_resolve_alert`. Role-specific tools (commander-only or responder-only) are detailed in the Incident Instructions section below.\n", commonTools)
+			fmt.Fprintf(b, "%s, `alga_post_handoff`, `alga_resolve_alert`. Role-specific tools (commander-only or responder-only) are detailed in the Incident Instructions section below.\n", commonTools)
 		}
 	} else if in.IncidentScope {
-		// Promoted alert handoff: agent must stop; do not advertise coordination tools.
-		fmt.Fprintf(&b, "`alga_cancel_investigation`, `alga_pause_investigation`, `alga_set_severity`, `alga_search_knowledge`, `alga_get_knowledge`, `alga_create_knowledge`, `alga_list_alerts`.\n")
+		fmt.Fprintf(b, "`alga_cancel_investigation`, `alga_pause_investigation`, `alga_set_severity`, `alga_search_knowledge`, `alga_get_knowledge`, `alga_create_knowledge`, `alga_list_alerts`.\n")
 	} else {
-		fmt.Fprintf(&b, "`alga_cancel_investigation`, `alga_pause_investigation`, `alga_set_outcome`, `alga_resolve_alert`, `alga_reopen_alert`, `alga_set_severity`, `alga_search_knowledge`, `alga_get_knowledge`, `alga_create_knowledge`, `alga_list_alerts`.\n")
+		fmt.Fprintf(b, "`alga_cancel_investigation`, `alga_pause_investigation`, `alga_set_outcome`, `alga_resolve_alert`, `alga_reopen_alert`, `alga_set_severity`, `alga_search_knowledge`, `alga_get_knowledge`, `alga_create_knowledge`, `alga_list_alerts`.\n")
 	}
+}
 
+func writeIncidentInstructions(b *strings.Builder, in DispatchInput) {
 	if in.IncidentScope {
 		b.WriteString("\n## Incident Instructions\n")
 		if in.PromotedAlertHandoff {
-			// The alert investigation has been promoted. The alert-investigation
-			// agent's job ends here: a separate incident investigation (handled by
-			// the incident-response team) owns follow-up. Do not advertise incident
-			// tools or instruct the agent to continue working in the incident scope.
 			incidentRef := ""
 			if in.IncidentNumber > 0 {
 				incidentRef = fmt.Sprintf(" Incident **#%d**", in.IncidentNumber)
 			}
-			fmt.Fprintf(&b, "This alert investigation has been promoted to an incident%s. Your alert investigation is now complete — stop here and take no further investigative action.\n", incidentRef)
+			fmt.Fprintf(b, "This alert investigation has been promoted to an incident%s. Your alert investigation is now complete — stop here and take no further investigative action.\n", incidentRef)
 			b.WriteString("- Follow-up is handled by a separate incident investigation, owned by the incident-response team (commander, communicator, responders) in its own thread.\n")
 			b.WriteString("- Do NOT call incident tools (priority, severity, mitigation, resolution, escalation, coordination updates, status updates) from this alert investigation — those belong to the incident team.\n")
 			b.WriteString("- Do NOT post in the incident coordination thread; that thread is owned by the incident team.\n")
@@ -286,19 +309,19 @@ func BuildDispatchPrompt(in DispatchInput) string {
 			b.WriteString("- Do NOT list technical recovery steps, log checks, or command suggestions as \"Required Actions (for incident commander)\" in your final notes or summaries. The incident commander does not perform technical actions; technical recovery tasks belong only to the Responder.\n")
 			b.WriteString("\n")
 		} else {
-			fmt.Fprintf(&b, "%s\n", incidentRoleInstructions(in.IncidentRole, in.IncidentStatus))
+			fmt.Fprintf(b, "%s\n", incidentRoleInstructions(in.IncidentRole, in.IncidentStatus))
 		}
 	}
+}
 
+func writeHumanEscalation(b *strings.Builder, in DispatchInput) {
 	if in.AdminTeamID != "" {
 		teamLabel := in.AdminTeamName
 		if teamLabel == "" {
 			teamLabel = "ops-team"
 		}
-		fmt.Fprintf(&b, "\n## Human Escalation\nIf you need human confirmation, input, or approval during investigation, send a chat text message with `\"mentions\": [\"team:%s\"]` to notify the **%s** team, then call `alga_pause_investigation` to pause until a human responds. Example: post a text message asking your question with the ops team mentioned, then pause.\n", in.AdminTeamID, teamLabel)
+		fmt.Fprintf(b, "\n## Human Escalation\nIf you need human confirmation, input, or approval during investigation, send a chat text message with `\"mentions\": [\"team:%s\"]` to notify the **%s** team, then call `alga_pause_investigation` to pause until a human responds. Example: post a text message asking your question with the ops team mentioned, then pause.\n", in.AdminTeamID, teamLabel)
 	}
-
-	return b.String()
 }
 
 func BuildDispatchPromptWithKnowledge(ctx context.Context, in DispatchInput, src KnowledgeSource) string {

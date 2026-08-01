@@ -73,28 +73,7 @@ func modelSteps(cfg *config.Config) []step {
 }
 
 func channelSteps(cfg *config.Config) []step {
-	return []step{
-		{kind: stepChoice, label: "Channel", key: "channel_menu", choices: []string{
-			"Telegram " + channelBadge(cfg.Telegram.Enabled) + "  (human interface)",
-			"Alga " + channelBadge(cfg.Alga.Enabled) + "  (investigation threads)",
-			"Done",
-		}, defIdx: 0},
-	}
-}
-
-func telegramSteps(cfg *config.Config) []step {
-	steps := []step{
-		{kind: stepYesNo, label: "Enable Telegram channel?", key: "tg_enabled", defBool: cfg.Telegram.Enabled},
-	}
-	if cfg.Telegram.Enabled {
-		steps = append(steps,
-			step{kind: stepSecret, label: "Bot token (from @BotFather)", key: "tg_token", def: cfg.Telegram.BotToken},
-			step{kind: stepText, label: "Webhook URL (empty = long polling)", key: "tg_webhook", def: cfg.Telegram.WebhookURL},
-			step{kind: stepText, label: "Webhook listen address", key: "tg_addr", def: orDefault(cfg.Telegram.WebhookAddr, "0.0.0.0:8443")},
-			step{kind: stepYesNo, label: "Respond in groups when not @mentioned?", key: "tg_groups", defBool: cfg.Telegram.RespondInGroups},
-		)
-	}
-	return steps
+	return algaSteps(cfg)
 }
 
 func algaSteps(cfg *config.Config) []step {
@@ -175,13 +154,6 @@ func loggingSteps(cfg *config.Config) []step {
 	return steps
 }
 
-func channelBadge(enabled bool) string {
-	if enabled {
-		return "[on]"
-	}
-	return "[off]"
-}
-
 func applyStepResult(cfg *config.Config, s step, value string) error {
 	switch s.key {
 	case "provider":
@@ -207,16 +179,6 @@ func applyStepResult(cfg *config.Config, s step, value string) error {
 			return fmt.Errorf("temperature: %w", err)
 		}
 		cfg.Model.Temperature = f
-	case "tg_enabled":
-		cfg.Telegram.Enabled = value == "true"
-	case "tg_token":
-		cfg.Telegram.BotToken = value
-	case "tg_webhook":
-		cfg.Telegram.WebhookURL = value
-	case "tg_addr":
-		cfg.Telegram.WebhookAddr = value
-	case "tg_groups":
-		cfg.Telegram.RespondInGroups = value == "true"
 	case "alga_enabled":
 		cfg.Alga.Enabled = value == "true"
 	case "alga_url":

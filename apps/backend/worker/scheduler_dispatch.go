@@ -231,8 +231,9 @@ func (s *InvestigationScheduler) dispatchIncidentInvestigation(ctx context.Conte
 	}
 	s.enrichWithOpsTeam(ctx, &input)
 	p := s.buildDispatchPrompt(ctx, input)
+	sc := s.buildDispatchSystemContext(input)
 
-	if err := s.resolver.ForwardToAgent(agentID, invID, "system", "System", p); err != nil {
+	if err := s.resolver.ForwardDispatchToAgent(agentID, invID, "system", "System", p, sc); err != nil {
 		logger.Error("Scheduler failed to forward incident investigation to agent", "component", "scheduler", "incident_investigation_id", invID, "agent_name", agent.Name, "error", err)
 		_ = s.incidentInvestigationStore.UpdateIncidentInvestigationStatus(ctx, invID, store.IncidentInvestigationStatusPending)
 		s.healthTracker.RecordFailure(agentID)
@@ -657,8 +658,9 @@ func (s *InvestigationScheduler) dispatch(ctx context.Context, investigation *st
 	}
 	s.enrichWithOpsTeam(ctx, &input)
 	p := s.buildDispatchPrompt(ctx, input)
+	sc := s.buildDispatchSystemContext(input)
 	dispatchStart := time.Now()
-	if err := s.resolver.ForwardToAgent(agentID, invID, "system", "System", p); err != nil {
+	if err := s.resolver.ForwardDispatchToAgent(agentID, invID, "system", "System", p, sc); err != nil {
 		logger.Error("Scheduler failed to forward investigation to agent", "component", "scheduler", "alert_investigation_id", invID, "agent_name", agent.Name, "error", err)
 		_ = s.alertInvestigationStore.TransitionAlertInvestigationStatus(ctx, investigation.ID.String(), []string{"assigned"}, "pending")
 		s.recordBackoff(invID, attempts)

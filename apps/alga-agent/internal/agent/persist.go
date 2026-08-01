@@ -16,11 +16,12 @@ import (
 // sessionRecord is the on-disk representation of a session. Only data fields
 // are persisted; mutexes and the ring-buffer cap stay runtime-only.
 type sessionRecord struct {
-	ID         string        `json:"id"`
-	Created    time.Time     `json:"created"`
-	LastActive time.Time     `json:"last_active"`
-	AlgaCtx    AlgaContext   `json:"alga_ctx"`
-	Messages   []llm.Message `json:"messages"`
+	ID          string        `json:"id"`
+	Created     time.Time     `json:"created"`
+	LastActive  time.Time     `json:"last_active"`
+	AlgaCtx     AlgaContext   `json:"alga_ctx"`
+	DispatchCtx string        `json:"dispatch_ctx,omitempty"`
+	Messages    []llm.Message `json:"messages"`
 }
 
 // EnablePersistence turns on JSON-file persistence under dir. Sessions are
@@ -33,7 +34,7 @@ func (ss *SessionStore) EnablePersistence(dir string) {
 }
 
 // sessionFilename maps a session id to a safe, deterministic file name. The
-// sanitized prefix keeps files recognizable (e.g. telegram_12345); the hash
+// sanitized prefix keeps files recognizable (e.g. alga_12345); the hash
 // suffix guarantees uniqueness and prevents path traversal via crafted ids.
 func sessionFilename(id string) string {
 	sanitized := strings.Map(func(r rune) rune {
@@ -66,11 +67,12 @@ func (ss *SessionStore) Persist(id string) error {
 
 	s.mu.Lock()
 	rec := sessionRecord{
-		ID:         id,
-		Created:    s.created,
-		LastActive: s.lastActive,
-		AlgaCtx:    s.AlgaCtx,
-		Messages:   make([]llm.Message, len(s.messages)),
+		ID:          id,
+		Created:     s.created,
+		LastActive:  s.lastActive,
+		AlgaCtx:     s.AlgaCtx,
+		DispatchCtx: s.dispatchCtx,
+		Messages:    make([]llm.Message, len(s.messages)),
 	}
 	copy(rec.Messages, s.messages)
 	s.mu.Unlock()
@@ -122,11 +124,12 @@ func (ss *SessionStore) loadSession(id string) *Session {
 		return nil
 	}
 	s := &Session{
-		maxTurns:   ss.maxTurns,
-		messages:   rec.Messages,
-		AlgaCtx:    rec.AlgaCtx,
-		created:    rec.Created,
-		lastActive: time.Now(),
+		maxTurns:    ss.maxTurns,
+		messages:    rec.Messages,
+		AlgaCtx:     rec.AlgaCtx,
+		dispatchCtx: rec.DispatchCtx,
+		created:     rec.Created,
+		lastActive:  time.Now(),
 	}
 	s.trim()
 	return s

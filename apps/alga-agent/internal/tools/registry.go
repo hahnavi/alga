@@ -33,13 +33,13 @@ type Tool interface {
 // id, incident id, alerts) so that tools can resolve IDs without inference,
 // per SPEC §6.1.
 type CallContext struct {
-	// ChatID is the channel-local chat identifier (e.g. telegram chat id or
-	// Alga investigation chat id).
+	// ChatID is the channel-local chat identifier (e.g. Alga investigation
+	// chat id).
 	ChatID string
-	// SessionID is the fully-qualified session id ("telegram:<id>" | "alga:<id>").
+	// SessionID is the fully-qualified session id ("alga:<id>").
 	SessionID string
 	// AlgaInvestigationID is the investigation id when responding inside an
-	// Alga thread; empty for Telegram.
+	// Alga thread; empty when no investigation context is present.
 	AlgaInvestigationID string
 	// AlgaIncidentID is the incident id (if any) associated with the current
 	// investigation context.

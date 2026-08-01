@@ -17,6 +17,7 @@ import (
 )
 
 const (
+	AgentTypeAlga     = "alga"
 	AgentTypeHermes   = "hermes"
 	AgentTypeOpenClaw = "openclaw"
 	AgentTypeOther    = "other"
@@ -24,6 +25,8 @@ const (
 
 func NormalizeAgentType(s string) string {
 	switch strings.TrimSpace(strings.ToLower(s)) {
+	case AgentTypeAlga:
+		return AgentTypeAlga
 	case AgentTypeOpenClaw:
 		return AgentTypeOpenClaw
 	case AgentTypeOther:
@@ -37,6 +40,8 @@ func ParseAgentType(s string) (string, error) {
 	switch strings.TrimSpace(strings.ToLower(s)) {
 	case "":
 		return AgentTypeHermes, nil
+	case AgentTypeAlga:
+		return AgentTypeAlga, nil
 	case AgentTypeHermes:
 		return AgentTypeHermes, nil
 	case AgentTypeOpenClaw:
@@ -44,7 +49,7 @@ func ParseAgentType(s string) (string, error) {
 	case AgentTypeOther:
 		return AgentTypeOther, nil
 	default:
-		return "", fmt.Errorf("invalid agent_type (use %q, %q, or %q): %w", AgentTypeHermes, AgentTypeOpenClaw, AgentTypeOther, ErrInvalidAgentType)
+		return "", fmt.Errorf("invalid agent_type (use %q, %q, %q, or %q): %w", AgentTypeAlga, AgentTypeHermes, AgentTypeOpenClaw, AgentTypeOther, ErrInvalidAgentType)
 	}
 }
 

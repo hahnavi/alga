@@ -29,10 +29,14 @@ type DefaultInvestigationForwarder struct {
 var _ webhook.InvestigationAgentForwarder = (*DefaultInvestigationForwarder)(nil)
 
 func (f *DefaultInvestigationForwarder) ForwardToAgent(agentIDHex, investigationID, senderID, senderName, message string) error {
+	return f.ForwardDispatchToAgent(agentIDHex, investigationID, senderID, senderName, message, "")
+}
+
+func (f *DefaultInvestigationForwarder) ForwardDispatchToAgent(agentIDHex, investigationID, senderID, senderName, message, systemContext string) error {
 	if f == nil || f.AgentTokens == nil {
 		return errors.New("investigation forwarder not configured")
 	}
-	logger.Info("ForwardToAgent", "agent_id", agentIDHex, "investigation_id", investigationID, "sender_id", senderID, "sender_name", senderName, "message_len", len(message))
+	logger.Info("ForwardDispatchToAgent", "agent_id", agentIDHex, "investigation_id", investigationID, "sender_id", senderID, "sender_name", senderName, "message_len", len(message))
 
 	var chatID string
 	if f.AlertInvestigationStore != nil {
@@ -61,17 +65,22 @@ func (f *DefaultInvestigationForwarder) ForwardToAgent(agentIDHex, investigation
 		return fmt.Errorf("could not resolve owner-scoped chat ID for investigation %s", investigationID)
 	}
 
+	data := map[string]any{
+		"type":        "message",
+		"message_id":  uuid.NewString(),
+		"chat_id":     chatID,
+		"text":        message,
+		"sender_id":   senderID,
+		"sender_name": senderName,
+		"trigger":     "dispatch",
+	}
+	if systemContext != "" {
+		data["system_context"] = systemContext
+	}
+
 	event := sse.Event{
 		Type: "message",
-		Data: map[string]any{
-			"type":        "message",
-			"message_id":  uuid.NewString(),
-			"chat_id":     chatID,
-			"text":        message,
-			"sender_id":   senderID,
-			"sender_name": senderName,
-			"trigger":     "dispatch",
-		},
+		Data: data,
 	}
 
 	if f.AgentSSE != nil {

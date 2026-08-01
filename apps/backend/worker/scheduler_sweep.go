@@ -687,7 +687,8 @@ func (s *InvestigationScheduler) nudgeByStatus(ctx context.Context, listFn func(
 		input := prompt.FromAlertInvestigationRecord(&inv)
 		s.enrichWithOpsTeam(ctx, &input)
 		p := s.buildDispatchPrompt(ctx, input)
-		if err := s.resolver.ForwardToAgent(inv.AgentID, inv.AlertInvestigationID, "system", "System", p); err != nil {
+		sc := s.buildDispatchSystemContext(input)
+		if err := s.resolver.ForwardDispatchToAgent(inv.AgentID, inv.AlertInvestigationID, "system", "System", p, sc); err != nil {
 			logger.Warn("Scheduler failed to re-dispatch investigation to agent", "component", "scheduler", "status", label, "alert_investigation_id", inv.AlertInvestigationID, "agent_name", inv.AgentName, "error", err)
 			s.nudged.Delete(inv.AlertInvestigationID)
 			continue
@@ -711,6 +712,10 @@ func (s *InvestigationScheduler) buildDispatchPrompt(ctx context.Context, input 
 		}
 	}
 	return p
+}
+
+func (s *InvestigationScheduler) buildDispatchSystemContext(input prompt.DispatchInput) string {
+	return prompt.BuildDispatchSystemContext(input)
 }
 
 func (s *InvestigationScheduler) nudgeAssigned(ctx context.Context, threshold time.Duration) {

@@ -1,4 +1,4 @@
-// Package channels implements the messaging channel adapters (Telegram, Alga)
+// Package channels implements the messaging channel adapters (Alga)
 // and the message router that dispatches inbound messages to the agent core.
 package channels
 
@@ -10,7 +10,7 @@ import (
 
 // Channel is the interface every messaging adapter implements.
 type Channel interface {
-	// Name returns the channel identifier ("telegram" or "alga").
+	// Name returns the channel identifier ("alga").
 	Name() string
 	// Start begins receiving messages. Blocks until ctx is cancelled or the
 	// channel stops. Must be safe to call in a goroutine.
@@ -23,8 +23,8 @@ type Channel interface {
 // InboundMessage is a message received from a channel, to be routed to the
 // agent core.
 type InboundMessage struct {
-	// SessionID is the fully-qualified session id ("telegram:<chat_id>" or
-	// "alga:<chat_id>"). Constructed by the channel adapter.
+	// SessionID is the fully-qualified session id ("alga:<chat_id>").
+	// Constructed by the channel adapter.
 	SessionID string
 	// ChatID is the channel-local chat identifier.
 	ChatID string
@@ -34,10 +34,13 @@ type InboundMessage struct {
 	SenderID string
 	// SenderName is a human-readable name for the sender.
 	SenderName string
-	// ChannelName is "telegram" or "alga".
+	// ChannelName is "alga".
 	ChannelName string
 	// AlgaCtx carries Alga investigation context (alga channel only).
 	AlgaCtx agent.AlgaContext
+	// SystemContext carries behavioral rules from the backend dispatch that
+	// should be injected into the LLM system prompt (alga channel only).
+	SystemContext string
 }
 
 // ResponseSink is implemented by channels to receive the agent's response.

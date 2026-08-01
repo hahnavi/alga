@@ -14,7 +14,7 @@ import (
 
 // AlgaContext carries the current investigation/incident context into the agent
 // so it can resolve IDs and inject context into the system prompt. Populated by
-// the Alga channel; empty for Telegram-initiated requests.
+// the Alga channel; empty when not provided by the backend dispatch.
 type AlgaContext struct {
 	InvestigationID     string   `json:"investigation_id,omitempty"`
 	IncidentID          string   `json:"incident_id,omitempty"`
@@ -39,6 +39,9 @@ type Session struct {
 	// AlgaCtx is the most recent Alga context for this session (investigation
 	// threads). Refreshed on each inbound Alga message.
 	AlgaCtx AlgaContext
+	// dispatchCtx holds behavioral rules from the backend dispatch, injected
+	// into the system prompt on every turn for the lifetime of the session.
+	dispatchCtx string
 	// created tracks when the session was first seen, for idle-eviction.
 	created time.Time
 	// lastActive is updated on each inbound message.
@@ -89,6 +92,20 @@ func (s *Session) AlgaContext() AlgaContext {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.AlgaCtx
+}
+
+// SetDispatchContext stores the behavioral rules from a backend dispatch.
+func (s *Session) SetDispatchContext(ctx string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.dispatchCtx = ctx
+}
+
+// DispatchContext returns the stored dispatch behavioral rules.
+func (s *Session) DispatchContext() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.dispatchCtx
 }
 
 // trim enforces the ring buffer cap. Leading system messages are always

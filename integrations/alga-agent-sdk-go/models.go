@@ -226,6 +226,11 @@ type MessageEvent struct {
 	ReplyToMessageID string   `json:"reply_to_message_id,omitempty"`
 	ReplyToText      string   `json:"reply_to_text,omitempty"`
 	Mentions         []string `json:"mentions,omitempty"`
+	// SystemContext carries behavioral rules (investigation instructions,
+	// tool allowlists, role constraints) that agents supporting system-prompt
+	// injection should place in the LLM system message. Agents that do not
+	// support this can ignore it; the full rules are also present in Text.
+	SystemContext string `json:"system_context,omitempty"`
 }
 
 type TypingEvent struct {

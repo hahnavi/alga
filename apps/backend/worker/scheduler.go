@@ -36,6 +36,7 @@ type ssePublisher interface {
 // and the test mocks satisfy this interface.
 type AgentResolver interface {
 	ForwardToAgent(agentIDHex, investigationID, senderID, senderName, message string) error
+	ForwardDispatchToAgent(agentIDHex, investigationID, senderID, senderName, message, systemContext string) error
 	ForwardEventToAgent(agentIDHex string, event sse.Event) error
 	AgentOnline(agentIDHex string) bool
 }

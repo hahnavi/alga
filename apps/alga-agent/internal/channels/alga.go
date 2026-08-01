@@ -198,13 +198,14 @@ func (a *AlgaChannel) onMessage(ev alga.MessageEvent) {
 
 	sessionID := SessionIDFor("alga", chatID)
 	a.router.DispatchAsync(ctx, InboundMessage{
-		SessionID:   sessionID,
-		ChatID:      chatID,
-		Text:        ev.Text,
-		SenderID:    ev.SenderID,
-		SenderName:  ev.SenderName,
-		ChannelName: a.Name(),
-		AlgaCtx:     algaCtx,
+		SessionID:     sessionID,
+		ChatID:        chatID,
+		Text:          ev.Text,
+		SenderID:      ev.SenderID,
+		SenderName:    ev.SenderName,
+		ChannelName:   a.Name(),
+		AlgaCtx:       algaCtx,
+		SystemContext: ev.SystemContext,
 	})
 }
 

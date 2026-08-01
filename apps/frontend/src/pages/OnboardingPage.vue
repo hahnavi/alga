@@ -209,17 +209,12 @@ function prevStep() {
                       <strong class="font-medium text-[var(--text-secondary)]">
                         Incoming Webhooks
                       </strong>
-                      page, then pass it as a
+                      page, then pass it in the
                       <code
                         class="rounded bg-[var(--bg-code)] px-1 py-0.5 font-mono text-[11px] text-[var(--text-code)]"
-                        >Bearer</code
+                        >Authorization: Bearer &lt;token&gt;</code
                       >
-                      token or
-                      <code
-                        class="rounded bg-[var(--bg-code)] px-1 py-0.5 font-mono text-[11px] text-[var(--text-code)]"
-                        >?token=</code
-                      >
-                      query parameter.
+                      header.
                     </p>
                   </div>
                 </template>

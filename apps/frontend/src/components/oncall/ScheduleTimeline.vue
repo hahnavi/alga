@@ -59,6 +59,7 @@ const shifts = ref<ScheduleShift[]>([]);
 const loading = ref(false);
 
 async function load() {
+  if (!props.scheduleId) return;
   loading.value = true;
   try {
     shifts.value = await api.getScheduleTimeline(props.scheduleId, rangeBounds.value);

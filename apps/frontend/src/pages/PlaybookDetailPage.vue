@@ -25,7 +25,7 @@ defineOptions({ name: "PlaybookDetailPage" });
 
 const route = useRoute();
 const router = useRouter();
-const playbookId = computed(() => route.params.id as string);
+const playbookId = computed(() => (route.params.id as string) ?? "");
 
 const {
   data: playbook,
@@ -209,8 +209,8 @@ onMounted(async () => {
   await load();
 });
 
-watch(playbookId, async () => {
-  await load();
+watch(playbookId, async (id) => {
+  if (id) await load();
 });
 </script>
 

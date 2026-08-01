@@ -1,7 +1,18 @@
-import type { Component, ComponentPublicInstance, Ref, VNode } from "vue";
-import { h, isRef, isVNode, nextTick, ref, toValue } from "vue";
+import type { Component, Ref, VNode } from "vue";
+import {
+  h,
+  isRef,
+  isVNode,
+  nextTick,
+  onActivated,
+  onBeforeUnmount,
+  onDeactivated,
+  ref,
+  toValue,
+} from "vue";
 import { Plus, Search, SlidersHorizontal, X } from "@lucide/vue";
 import { HEADER_ICON_BTN_CLASS } from "@/lib/uiClasses";
+import { headerInlineSearchExpanded } from "@/lib/pageHeader";
 import { usePageHeader } from "@/composables/usePageHeader";
 
 interface UsePageHeaderActionsOptions {
@@ -30,14 +41,26 @@ interface UsePageHeaderActionsOptions {
 }
 
 interface UsePageHeaderActionsReturn {
-  /** Whether the inline search input is open. Use in the page template to gate the filter card. */
+  /** Whether the inline search bar is expanded in the shell header. */
   showSearch: Ref<boolean>;
   /** Whether the filter card is open. Use in the page template to gate the filter card. */
   showFilters: Ref<boolean>;
 }
 
-const SEARCH_INPUT_CLASS =
-  "h-9 w-full rounded-md border border-[var(--border-primary)] bg-[var(--bg-primary)] pl-9 pr-3 text-sm text-[var(--text-primary)] outline-none transition-colors placeholder:text-[var(--text-muted)] focus:border-[var(--focus-ring)] focus:ring-1 focus:ring-[var(--focus-ring)]";
+const SEARCH_INPUT_CLASS = "field h-9 pl-9 pr-10";
+
+const SEARCH_CLEAR_BTN_CLASS =
+  "absolute right-2 top-1/2 flex h-5 w-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-[var(--text-muted)] transition-colors hover:bg-[var(--hover-neutral)] hover:text-[var(--text-primary)]";
+
+const SEARCH_ESC_HINT_CLASS =
+  "pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded border border-[var(--border-primary)] bg-[var(--bg-primary)] px-1.5 py-0.5 font-mono text-[10px] leading-none text-[var(--text-muted)]";
+
+// Tracks which usePageHeaderActions instance expanded the header search.
+// Under KeepAlive the outgoing page's deactivate hook can fire AFTER the
+// incoming page's activate hook, so only the instance that expanded the
+// search may collapse the shared header state (same ownership pattern as
+// headerOwner in usePageHeader).
+let searchExpandedOwner: symbol | null = null;
 
 export function usePageHeaderActions(
   options: UsePageHeaderActionsOptions,
@@ -47,35 +70,108 @@ export function usePageHeaderActions(
   const filtersEnabled = options.showFilters === true;
   const addRef = isRef(options.showAdd) ? options.showAdd : null;
   const searchInput = options.searchInput;
+  const ownerId = Symbol("pageHeaderActionsOwner");
+
+  function focusSearchInput() {
+    document.querySelector<HTMLInputElement>("[data-page-header-search]")?.focus();
+  }
+
+  function expandSearch() {
+    showSearch.value = true;
+    searchExpandedOwner = ownerId;
+    headerInlineSearchExpanded.value = true;
+    nextTick(focusSearchInput);
+  }
+
+  function releaseSearchExpansion() {
+    if (searchExpandedOwner !== ownerId) return;
+    searchExpandedOwner = null;
+    headerInlineSearchExpanded.value = false;
+  }
+
+  function closeSearch() {
+    if (!showSearch.value) return;
+    showSearch.value = false;
+    releaseSearchExpansion();
+    if (searchInput) {
+      searchInput.value = "";
+      options.onSearchInput?.();
+    }
+    nextTick(() => {
+      document.querySelector<HTMLElement>("[data-page-header-search-toggle]")?.focus();
+    });
+  }
+
+  onActivated(() => {
+    if (!showSearch.value || !searchInput) return;
+    searchExpandedOwner = ownerId;
+    headerInlineSearchExpanded.value = true;
+  });
+  onDeactivated(releaseSearchExpansion);
+  onBeforeUnmount(releaseSearchExpansion);
+
+  function buildSearchBar(): VNode {
+    const query = searchInput!.value;
+    return h("div", { class: "page-header-search-bar flex min-w-0 flex-1 items-center gap-1.5" }, [
+      h("div", { class: "relative min-w-0 flex-1" }, [
+        h(Search, {
+          class:
+            "pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]",
+          "aria-hidden": "true",
+        }),
+        h("input", {
+          type: "search",
+          value: query,
+          "data-page-header-search": "",
+          "aria-label": options.searchPlaceholder ?? "Search",
+          placeholder: options.searchPlaceholder ?? "Search...",
+          class: SEARCH_INPUT_CLASS,
+          onInput: (e: Event) => {
+            searchInput!.value = (e.target as HTMLInputElement).value;
+            options.onSearchInput?.();
+          },
+          onKeydown: (e: KeyboardEvent) => {
+            if (e.key === "Escape") closeSearch();
+          },
+        }),
+        query
+          ? h(
+              "button",
+              {
+                type: "button",
+                class: SEARCH_CLEAR_BTN_CLASS,
+                "aria-label": "Clear search",
+                title: "Clear search",
+                onClick: () => {
+                  searchInput!.value = "";
+                  options.onSearchInput?.();
+                  focusSearchInput();
+                },
+              },
+              [h(X, { class: "h-3.5 w-3.5", "aria-hidden": "true" })],
+            )
+          : h("kbd", { class: SEARCH_ESC_HINT_CLASS, "aria-hidden": "true" }, "Esc"),
+      ]),
+      h(
+        "button",
+        {
+          type: "button",
+          class: HEADER_ICON_BTN_CLASS,
+          "aria-label": "Close search",
+          title: "Close search (Esc)",
+          onClick: closeSearch,
+        },
+        [h(X, { class: "h-4 w-4", "aria-hidden": "true" })],
+      ),
+    ]);
+  }
 
   function buildActions(): VNode[] {
-    const actions: VNode[] = [];
-
     if (showSearch.value && searchInput) {
-      actions.push(
-        h("div", { class: "relative min-w-48 flex-1" }, [
-          h(Search, {
-            class:
-              "pointer-events-none absolute left-2.5 top-1/2 z-[1] h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]",
-          }),
-          h("input", {
-            type: "search",
-            "data-page-header-search": "",
-            placeholder: options.searchPlaceholder ?? "Search...",
-            class: SEARCH_INPUT_CLASS,
-            ref: (el: Element | ComponentPublicInstance | null) => {
-              if (el instanceof HTMLInputElement && el.value !== searchInput!.value) {
-                el.value = searchInput!.value;
-              }
-            },
-            onInput: (e: Event) => {
-              searchInput!.value = (e.target as HTMLInputElement).value;
-              options.onSearchInput?.();
-            },
-          }),
-        ]),
-      );
+      return [buildSearchBar()];
     }
+
+    const actions: VNode[] = [];
 
     if (searchInput) {
       actions.push(
@@ -84,23 +180,12 @@ export function usePageHeaderActions(
           {
             type: "button",
             class: HEADER_ICON_BTN_CLASS,
-            "aria-label": showSearch.value ? "Close search" : "Search",
+            "data-page-header-search-toggle": "",
+            "aria-label": "Search",
             title: "Search",
-            onClick: () => {
-              const wasOpen = showSearch.value;
-              showSearch.value = !showSearch.value;
-              if (wasOpen) {
-                searchInput!.value = "";
-                options.onSearchInput?.();
-              }
-              if (showSearch.value) {
-                nextTick(() => {
-                  document.querySelector<HTMLInputElement>("[data-page-header-search]")?.focus();
-                });
-              }
-            },
+            onClick: expandSearch,
           },
-          [h(showSearch.value ? X : Search, { class: "h-4 w-4", "aria-hidden": "true" })],
+          [h(Search, { class: "h-4 w-4", "aria-hidden": "true" })],
         ),
       );
     }

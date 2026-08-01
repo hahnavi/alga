@@ -90,6 +90,7 @@ body {
   --bg-internal-note: rgb(30 27 10 / 0.6);
   --border-internal-note: #854d0e;
   --shadow-popup: 0 4px 16px rgba(0 0 0 / 0.3);
+  --shadow-card-rest: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --mention-group-bg: rgb(168 85 247 / 0.15);
   --mention-group-color: rgb(168 85 247);
   --send-btn-divider: rgb(255 255 255 / 0.2);
@@ -178,7 +179,9 @@ body {
   --sidebar-hover: rgb(100 116 139 / 0.1);
   --bg-internal-note: rgb(255 251 235 / 0.8);
   --border-internal-note: #d97706;
-  --shadow-popup: 0 4px 16px rgba(0 0 0 / 0.15);
+  --shadow-popup: none;
+  /* Transparent layer, not `none`: keyframes compose it inside multi-layer lists. */
+  --shadow-card-rest: 0 0 #0000;
   --mention-group-bg: rgb(168 85 247 / 0.15);
   --mention-group-color: rgb(168 85 247);
   --send-btn-divider: rgb(0 0 0 / 0.15);
@@ -195,6 +198,14 @@ body {
   --chart-amber-fill: rgba(245, 158, 11, 0.1);
   --chart-grid-dark: rgba(255, 255, 255, 0.05);
   --chart-grid-light: rgba(0, 0, 0, 0.06);
+}
+
+/* Light theme is flat: every Tailwind shadow utility compiles to --tw-shadow,
+   so zeroing it removes all drop shadows while focus rings stay intact. */
+:root.light *,
+:root.light *::before,
+:root.light *::after {
+  --tw-shadow: 0 0 #0000;
 }
 
 @layer components {
@@ -223,6 +234,50 @@ body {
   .field::placeholder {
     color: var(--text-muted);
   }
+}
+
+/* Shell header inline search (usePageHeaderActions): the title areas
+   collapse while the actions area grows so the search bar fills the header. */
+.header-title-area {
+  transition:
+    flex-grow 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.18s ease;
+}
+
+.header-title-area-collapsed {
+  flex-grow: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.header-actions-area {
+  transition: flex-grow 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.header-actions-expanded {
+  flex-grow: 1;
+}
+
+@keyframes page-header-search-in {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.page-header-search-bar {
+  animation: page-header-search-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* The header search bar renders its own clear button. */
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .badge-red,
@@ -464,25 +519,25 @@ body {
   0%,
   100% {
     border-color: var(--border-primary);
-    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    box-shadow: var(--shadow-card-rest);
     filter: brightness(1);
   }
   22% {
     border-color: rgb(59 130 246 / 0.65);
     box-shadow:
-      0 1px 2px 0 rgb(0 0 0 / 0.05),
+      var(--shadow-card-rest),
       0 0 0 3px rgb(59 130 246 / 0.22);
     filter: brightness(1.06);
   }
   44% {
     border-color: var(--border-primary);
-    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    box-shadow: var(--shadow-card-rest);
     filter: brightness(1);
   }
   66% {
     border-color: rgb(59 130 246 / 0.5);
     box-shadow:
-      0 1px 2px 0 rgb(0 0 0 / 0.05),
+      var(--shadow-card-rest),
       0 0 0 2px rgb(59 130 246 / 0.16);
     filter: brightness(1.04);
   }
@@ -564,6 +619,15 @@ body {
   .auth-swap-enter-active,
   .auth-swap-leave-active {
     transition: none !important;
+  }
+
+  .header-title-area,
+  .header-actions-area {
+    transition: none !important;
+  }
+
+  .page-header-search-bar {
+    animation: none !important;
   }
 }
 

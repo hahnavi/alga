@@ -65,5 +65,5 @@ const items = computed<Item[]>(() => {
 </script>
 
 <template>
-  <HeaderActionsMenu :items="items" label="Alert actions" />
+  <HeaderActionsMenu :items="items" :icon="icon" label="Alert actions" />
 </template>

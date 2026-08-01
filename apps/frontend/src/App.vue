@@ -12,7 +12,12 @@ import RouteLoadingBar from "@/components/ui/RouteLoadingBar.vue";
 import LoadingSpinner from "@/components/ui/LoadingSpinner.vue";
 import { useAuthStore } from "@/stores/auth";
 import { useNotificationStore } from "@/stores/notifications";
-import { pageHeader, headerSearchActive, headerSearchState } from "@/lib/pageHeader";
+import {
+  pageHeader,
+  headerSearchActive,
+  headerSearchState,
+  headerInlineSearchExpanded,
+} from "@/lib/pageHeader";
 import ChatSearchBar from "@/components/ui/ChatSearchBar.vue";
 import { useAuthBootstrap } from "@/composables/useAuthBootstrap";
 import { useSessionKeepAlive } from "@/composables/useSessionKeepAlive";
@@ -164,7 +169,8 @@ onBeforeUnmount(() => {
         />
         <template v-else>
           <div
-            class="hidden min-w-0 flex-1 overflow-hidden text-lg font-semibold md:flex md:items-center md:gap-2"
+            class="header-title-area hidden min-w-0 flex-1 overflow-hidden text-lg font-semibold md:flex md:items-center md:gap-2"
+            :class="{ 'header-title-area-collapsed': headerInlineSearchExpanded }"
           >
             <button
               v-if="showBackButton"
@@ -213,7 +219,10 @@ onBeforeUnmount(() => {
             </template>
             <template v-else>{{ pageTitle }}</template>
           </div>
-          <div class="flex min-w-0 flex-1 items-center gap-2 overflow-hidden md:hidden">
+          <div
+            class="header-title-area flex min-w-0 flex-1 items-center gap-2 overflow-hidden md:hidden"
+            :class="{ 'header-title-area-collapsed': headerInlineSearchExpanded }"
+          >
             <button
               v-if="showBackButton"
               type="button"
@@ -261,7 +270,10 @@ onBeforeUnmount(() => {
             </template>
             <span v-else class="truncate text-lg font-semibold">{{ pageTitle }}</span>
           </div>
-          <div class="flex min-w-0 items-center gap-2">
+          <div
+            class="header-actions-area flex min-w-0 items-center gap-2"
+            :class="{ 'header-actions-expanded': headerInlineSearchExpanded }"
+          >
             <component
               v-for="(action, i) in pageHeader?.actions ?? []"
               :key="`a-${i}`"

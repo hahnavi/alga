@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, computed, h } from "vue";
+import { onMounted, ref, computed, h, watch } from "vue";
 import { useRouter } from "vue-router";
 import {
   Flame,
@@ -74,6 +74,10 @@ const {
   setRange,
   formatMinutes,
 } = useDashboardData(selectedRange);
+
+watch(summary, (s) => {
+  if (s?.available && s.summary) summaryExpanded.value = true;
+});
 
 usePageHeader(() => ({
   title: "Dashboard",
@@ -596,7 +600,85 @@ const recentActivity = computed(() => {
         </Card>
       </div>
 
-      <div class="rise [animation-delay:60ms]" :class="chartGridClass">
+      <Card class="rise [animation-delay:60ms]">
+        <div class="flex w-full items-center gap-2">
+          <h2 class="eyebrow min-w-0 flex-1">
+            <button
+              type="button"
+              class="flex w-full cursor-pointer items-center justify-between"
+              :aria-expanded="summaryExpanded"
+              @click="summaryExpanded = !summaryExpanded"
+            >
+              <span class="flex items-center gap-2">
+                <Sparkles class="h-4 w-4 text-[var(--focus-ring)]" />
+                Daily Write-Up
+              </span>
+              <span class="flex items-center gap-2">
+                <span
+                  v-if="summary && summary.available"
+                  class="hidden items-center gap-1 text-[10px] font-normal normal-case tracking-normal text-[var(--text-muted)] sm:flex"
+                >
+                  <Clock class="h-3 w-3" />
+                  {{ formatTimeAgo(summary.generated_at) }}
+                </span>
+                <ChevronDown
+                  class="h-4 w-4 text-[var(--text-muted)] transition-transform duration-200"
+                  :class="summaryExpanded ? 'rotate-180' : ''"
+                />
+              </span>
+            </button>
+          </h2>
+          <button
+            v-if="summary && summary.failed && summaryExpanded"
+            class="inline-flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors"
+            :class="
+              summaryLoading
+                ? 'cursor-wait bg-[var(--bg-secondary)] text-[var(--text-muted)]'
+                : 'bg-[var(--focus-ring)] text-white hover:opacity-90'
+            "
+            :disabled="summaryLoading"
+            @click="generateSummary"
+          >
+            <Loader2 v-if="summaryLoading" class="h-3 w-3 animate-spin" />
+            {{ summaryLoading ? "Generating..." : "Retry" }}
+          </button>
+        </div>
+
+        <div v-if="summaryExpanded" class="mt-4">
+          <div v-if="summaryError" class="mb-3">
+            <ErrorBanner :message="summaryError" />
+          </div>
+
+          <div v-if="summary && summary.available">
+            <MarkdownRenderer :content="summary.summary" />
+          </div>
+          <div
+            v-else-if="summary && summary.failed"
+            class="rounded-md border border-dashed border-[var(--border-secondary)] p-6 text-center"
+          >
+            <Sparkles class="mx-auto mb-2 h-6 w-6 text-[var(--text-muted)]" />
+            <p class="text-sm text-[var(--text-secondary)]">Summary Generation Failed</p>
+            <p class="mt-1 text-xs text-[var(--text-muted)]">
+              {{ summary.error || "Click retry to try again." }}
+            </p>
+          </div>
+          <div
+            v-else-if="summary && !summary.available"
+            class="rounded-md border border-dashed border-[var(--border-secondary)] p-6 text-center"
+          >
+            <Sparkles class="mx-auto mb-2 h-6 w-6 text-[var(--text-muted)]" />
+            <p class="text-sm text-[var(--text-secondary)]">AI Summary Unavailable</p>
+            <p class="mt-1 text-xs text-[var(--text-muted)]">
+              Configure MEMORY_LLM_URL in the backend to enable AI-powered daily summaries.
+            </p>
+          </div>
+          <div v-else class="py-4 text-center text-sm text-[var(--text-muted)]">
+            No daily summary available
+          </div>
+        </div>
+      </Card>
+
+      <div class="rise [animation-delay:120ms]" :class="chartGridClass">
         <Card>
           <h2 class="eyebrow mb-3 flex items-center gap-2">
             <Activity class="h-4 w-4" />
@@ -690,7 +772,7 @@ const recentActivity = computed(() => {
         </Card>
       </div>
 
-      <div class="rise grid grid-cols-1 gap-4 md:grid-cols-3 [animation-delay:120ms]">
+      <div class="rise grid grid-cols-1 gap-4 md:grid-cols-3 [animation-delay:180ms]">
         <Card class="sm:col-span-1 lg:col-span-1">
           <div class="mb-3 flex items-center justify-between">
             <h2 class="eyebrow flex items-center gap-2">
@@ -906,7 +988,7 @@ const recentActivity = computed(() => {
         </Card>
       </div>
 
-      <Card class="rise [animation-delay:160ms]">
+      <Card class="rise [animation-delay:220ms]">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
           <div class="text-sm font-medium text-[var(--text-secondary)]">
             Investigations
@@ -938,83 +1020,7 @@ const recentActivity = computed(() => {
         </div>
       </Card>
 
-      <Card class="rise [animation-delay:200ms]">
-        <div class="flex w-full items-center gap-2">
-          <h2 class="eyebrow min-w-0 flex-1">
-            <button
-              type="button"
-              class="flex w-full cursor-pointer items-center justify-between"
-              :aria-expanded="summaryExpanded"
-              @click="summaryExpanded = !summaryExpanded"
-            >
-              <span class="flex items-center gap-2">
-                <Sparkles class="h-4 w-4" />
-                Daily Write-Up
-              </span>
-              <ChevronDown
-                class="h-4 w-4 text-[var(--text-muted)] transition-transform duration-200"
-                :class="summaryExpanded ? 'rotate-180' : ''"
-              />
-            </button>
-          </h2>
-          <button
-            v-if="summary && summary.failed && summaryExpanded"
-            class="inline-flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors"
-            :class="
-              summaryLoading
-                ? 'cursor-wait bg-[var(--bg-secondary)] text-[var(--text-muted)]'
-                : 'bg-[var(--focus-ring)] text-white hover:opacity-90'
-            "
-            :disabled="summaryLoading"
-            @click="generateSummary"
-          >
-            <Loader2 v-if="summaryLoading" class="h-3 w-3 animate-spin" />
-            {{ summaryLoading ? "Generating..." : "Retry" }}
-          </button>
-        </div>
-
-        <div v-if="summaryExpanded" class="mt-4">
-          <div v-if="summaryError" class="mb-3">
-            <ErrorBanner :message="summaryError" />
-          </div>
-
-          <div
-            v-if="summary && summary.available"
-            class="rounded-md border border-[var(--border-primary)] p-4"
-          >
-            <div class="mb-3 flex items-center gap-2 text-xs text-[var(--text-muted)]">
-              <Clock class="h-3 w-3" />
-              Generated {{ formatTimeAgo(summary.generated_at) }}
-            </div>
-            <MarkdownRenderer :content="summary.summary" />
-          </div>
-          <div
-            v-else-if="summary && summary.failed"
-            class="rounded-md border border-dashed border-[var(--border-secondary)] p-6 text-center"
-          >
-            <Sparkles class="mx-auto mb-2 h-6 w-6 text-[var(--text-muted)]" />
-            <p class="text-sm text-[var(--text-secondary)]">Summary Generation Failed</p>
-            <p class="mt-1 text-xs text-[var(--text-muted)]">
-              {{ summary.error || "Click retry to try again." }}
-            </p>
-          </div>
-          <div
-            v-else-if="summary && !summary.available"
-            class="rounded-md border border-dashed border-[var(--border-secondary)] p-6 text-center"
-          >
-            <Sparkles class="mx-auto mb-2 h-6 w-6 text-[var(--text-muted)]" />
-            <p class="text-sm text-[var(--text-secondary)]">AI Summary Unavailable</p>
-            <p class="mt-1 text-xs text-[var(--text-muted)]">
-              Configure MEMORY_LLM_URL in the backend to enable AI-powered daily summaries.
-            </p>
-          </div>
-          <div v-else class="py-4 text-center text-sm text-[var(--text-muted)]">
-            No daily summary available
-          </div>
-        </div>
-      </Card>
-
-      <div v-if="recentActivity.length > 0" class="rise [animation-delay:240ms]">
+      <div v-if="recentActivity.length > 0" class="rise [animation-delay:260ms]">
         <Card>
           <div class="mb-3 flex items-center justify-between">
             <h2 class="eyebrow">Recent Activity</h2>
@@ -1082,50 +1088,3 @@ const recentActivity = computed(() => {
     </template>
   </div>
 </template>
-
-<style scoped>
-.search-backdrop {
-  background: rgb(0 0 0 / 0.5);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-}
-
-:root.light .search-backdrop {
-  background: rgb(0 0 0 / 0.3);
-}
-
-.search-dialog {
-  background: var(--bg-primary);
-}
-
-.search-overlay-enter-active {
-  transition: opacity 0.15s ease;
-}
-.search-overlay-enter-active .search-dialog {
-  transition:
-    opacity 0.15s ease,
-    transform 0.15s ease;
-}
-.search-overlay-leave-active {
-  transition: opacity 0.1s ease;
-}
-.search-overlay-leave-active .search-dialog {
-  transition:
-    opacity 0.1s ease,
-    transform 0.1s ease;
-}
-.search-overlay-enter-from {
-  opacity: 0;
-}
-.search-overlay-enter-from .search-dialog {
-  opacity: 0;
-  transform: scale(0.97) translateY(-8px);
-}
-.search-overlay-leave-to {
-  opacity: 0;
-}
-.search-overlay-leave-to .search-dialog {
-  opacity: 0;
-  transform: scale(0.97) translateY(-4px);
-}
-</style>

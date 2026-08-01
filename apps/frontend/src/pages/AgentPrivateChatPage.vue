@@ -30,7 +30,7 @@ defineOptions({ name: "AgentPrivateChatPage" });
 const route = useRoute();
 const { push } = useToast();
 
-const agentTokenId = computed(() => route.params.agent_token_id as string);
+const agentTokenId = computed(() => (route.params.agent_token_id as string) ?? "");
 
 const agentName = ref("");
 const agentBrand = ref<"hermes" | "openclaw" | "other">("hermes");

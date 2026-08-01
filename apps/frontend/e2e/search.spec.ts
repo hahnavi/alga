@@ -105,6 +105,8 @@ test.describe("alerts page inline search", () => {
       alertUrls.push(route.request().url());
       return route.fulfill(dataEnvelope([]));
     });
+    await page.route("**/api/v1/notifications**", (route) => route.fulfill(dataEnvelope([])));
+    await page.route("**/api/v1/events**", (route) => route.abort());
 
     await page.goto("/alerts");
     await page.getByRole("button", { name: "Search" }).click();
@@ -113,5 +115,38 @@ test.describe("alerts page inline search", () => {
     await expect
       .poll(() => alertUrls.some((u) => new URL(u).searchParams.get("search") === "memory"))
       .toBe(true);
+  });
+
+  test("expands to fill the header and collapses on Escape", async ({ page }) => {
+    await mockAuthenticated(page);
+    await page.route("**/api/v1/alerts**", (route) => route.fulfill(dataEnvelope([])));
+    await page.route("**/api/v1/notifications**", (route) => route.fulfill(dataEnvelope([])));
+    await page.route("**/api/v1/events**", (route) => route.abort());
+
+    await page.goto("/alerts");
+    const title = page.locator(".header-title-area").first();
+    const input = page.locator("[data-page-header-search]");
+    await expect(title).not.toHaveClass(/header-title-area-collapsed/);
+
+    await page.getByRole("button", { name: "Search" }).click();
+
+    // The bar takes over the header: title collapses, other actions hide.
+    await expect(input).toBeFocused();
+    await expect(title).toHaveClass(/header-title-area-collapsed/);
+    await expect(page.getByRole("button", { name: "Create alert" })).toBeHidden();
+    await expect(page.getByRole("button", { name: "Toggle filters" })).toBeHidden();
+
+    // Typing swaps the Esc hint for a clear button; clearing keeps the bar open.
+    await input.fill("memory");
+    await page.getByRole("button", { name: "Clear search" }).click();
+    await expect(input).toHaveValue("");
+    await expect(input).toBeVisible();
+
+    // Escape collapses the bar and restores the normal header.
+    await input.fill("cpu");
+    await input.press("Escape");
+    await expect(input).toBeHidden();
+    await expect(title).not.toHaveClass(/header-title-area-collapsed/);
+    await expect(page.getByRole("button", { name: "Create alert" })).toBeVisible();
   });
 });

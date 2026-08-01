@@ -50,8 +50,35 @@ type AlgaConfig struct {
 }
 
 type ToolsConfig struct {
-	Shell     ShellConfig     `yaml:"shell"`
-	WebSearch WebSearchConfig `yaml:"web_search"`
+	Shell      ShellConfig      `yaml:"shell"`
+	Terminal   TerminalConfig   `yaml:"terminal"`
+	FileTools  FileToolsConfig  `yaml:"file_tools"`
+	WebSearch  WebSearchConfig  `yaml:"web_search"`
+	WebExtract WebExtractConfig `yaml:"web_extract"`
+}
+
+// TerminalConfig controls the persistent terminal tool. When enabled, it
+// replaces the whitelisted shell tool with a full shell session that supports
+// arbitrary commands, pipes, and persistent working directory.
+type TerminalConfig struct {
+	Enabled        bool          `yaml:"enabled"`
+	CWD            string        `yaml:"cwd"`
+	MaxOutputBytes int           `yaml:"max_output_bytes"`
+	Timeout        time.Duration `yaml:"timeout"`
+}
+
+// FileToolsConfig controls the file manipulation tools (read_file, write_file,
+// search_files, patch). Roots restricts access to specific directory trees.
+type FileToolsConfig struct {
+	Enabled      bool     `yaml:"enabled"`
+	Roots        []string `yaml:"roots"`
+	MaxReadBytes int      `yaml:"max_read_bytes"`
+}
+
+// WebExtractConfig controls the web_extract tool for fetching page content.
+type WebExtractConfig struct {
+	Enabled  bool `yaml:"enabled"`
+	MaxChars int  `yaml:"max_chars"`
 }
 
 type ShellConfig struct {
@@ -263,15 +290,29 @@ func Default() *Config {
 		Alga: AlgaConfig{ServerURL: "http://localhost:8080"},
 		Tools: ToolsConfig{
 			Shell: ShellConfig{
-				Enabled:         true,
+				Enabled:         false,
 				AllowedCommands: []string{"ls", "cat", "grep", "head", "tail", "wc", "curl", "dig", "ping", "ps", "top"},
 				MaxOutputBytes:  10240,
 				Timeout:         30 * time.Second,
+			},
+			Terminal: TerminalConfig{
+				Enabled:        true,
+				MaxOutputBytes: 65536,
+				Timeout:        120 * time.Second,
+			},
+			FileTools: FileToolsConfig{
+				Enabled:      true,
+				Roots:        []string{"/"},
+				MaxReadBytes: 262144,
 			},
 			WebSearch: WebSearchConfig{
 				Enabled:    true,
 				Provider:   "duckduckgo",
 				MaxResults: 5,
+			},
+			WebExtract: WebExtractConfig{
+				Enabled:  true,
+				MaxChars: 50000,
 			},
 		},
 		AgentBehavior: AgentBehaviorConfig{
@@ -364,6 +405,18 @@ func (c *Config) applyDefaults() {
 	}
 	if c.Tools.Shell.MaxOutputBytes == 0 {
 		c.Tools.Shell.MaxOutputBytes = 10240
+	}
+	if c.Tools.Terminal.Timeout == 0 {
+		c.Tools.Terminal.Timeout = 120 * time.Second
+	}
+	if c.Tools.Terminal.MaxOutputBytes == 0 {
+		c.Tools.Terminal.MaxOutputBytes = 65536
+	}
+	if c.Tools.FileTools.MaxReadBytes == 0 {
+		c.Tools.FileTools.MaxReadBytes = 262144
+	}
+	if c.Tools.WebExtract.MaxChars == 0 {
+		c.Tools.WebExtract.MaxChars = 50000
 	}
 	if c.Tools.WebSearch.Provider == "" {
 		c.Tools.WebSearch.Provider = "duckduckgo"
@@ -487,6 +540,12 @@ func (c *Config) Validate() error {
 	}
 	if c.Tools.Shell.Enabled && c.Tools.Shell.MaxOutputBytes <= 0 {
 		errs = append(errs, "tools.shell.max_output_bytes must be > 0 when shell enabled")
+	}
+	if c.Tools.Terminal.Enabled && c.Tools.Terminal.Timeout <= 0 {
+		errs = append(errs, "tools.terminal.timeout must be > 0 when terminal enabled")
+	}
+	if c.Tools.Terminal.Enabled && c.Tools.Terminal.MaxOutputBytes <= 0 {
+		errs = append(errs, "tools.terminal.max_output_bytes must be > 0 when terminal enabled")
 	}
 	if c.Tools.WebSearch.Enabled {
 		switch c.Tools.WebSearch.Provider {

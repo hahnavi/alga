@@ -175,11 +175,26 @@ func run() error {
 		tools.RegisterAlgaTools(registry, algaClient)
 	}
 
-	// Shell tool.
-	tools.RegisterShellTool(registry, tools.NewShellTool(cfg.Tools.Shell))
+	// Terminal tool (replaces the legacy whitelisted shell).
+	terminalTool := tools.NewTerminalTool(cfg.Tools.Terminal)
+	tools.RegisterTerminalTool(registry, terminalTool)
+
+	// Legacy shell tool (only when explicitly enabled and terminal is off).
+	if !cfg.Tools.Terminal.Enabled {
+		tools.RegisterShellTool(registry, tools.NewShellTool(cfg.Tools.Shell))
+	}
+
+	// File tools.
+	tools.RegisterFileTools(registry, tools.NewFileTools(cfg.Tools.FileTools))
 
 	// Web search tool.
 	tools.RegisterWebSearchTool(registry, tools.NewWebSearchTool(cfg.Tools.WebSearch))
+
+	// Web extract tool.
+	tools.RegisterWebExtractTool(registry, tools.NewWebExtractTool(cfg.Tools.WebExtract))
+
+	// Todo tool.
+	tools.RegisterTodoTool(registry)
 
 	// --- MCP client: import external MCP servers as agent tools ---
 	// Connected before the loop starts so the imported tools are visible in
@@ -377,6 +392,11 @@ func run() error {
 
 	// Disconnect MCP clients (external servers we were consuming).
 	mcpClient.Disconnect()
+
+	// Close the persistent terminal session.
+	if terminalTool != nil {
+		_ = terminalTool.Close()
+	}
 
 	// Shut down the MCP server (external clients consuming us).
 	if mcpServer != nil {

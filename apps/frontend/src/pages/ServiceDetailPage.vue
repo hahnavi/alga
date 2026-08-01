@@ -39,7 +39,7 @@ const router = useRouter();
 const { push } = useToast();
 const { canWrite: canEdit, canDelete: canRemove } = useEntityPermissions("services");
 
-const serviceId = computed(() => route.params.service_id as string);
+const serviceId = computed(() => (route.params.service_id as string) ?? "");
 const dependencies = ref<ServiceDependencyRecord[]>([]);
 const dependents = ref<ServiceDependencyRecord[]>([]);
 const incidents = ref<IncidentRecord[]>([]);
@@ -246,10 +246,10 @@ async function openAddDepModal() {
 }
 
 onMounted(() => {
-  loadService();
+  if (serviceId.value) loadService();
 });
-watch(serviceId, () => {
-  loadService();
+watch(serviceId, (id) => {
+  if (id) loadService();
 });
 </script>
 

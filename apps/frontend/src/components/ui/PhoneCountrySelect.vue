@@ -145,7 +145,7 @@ function scrollToActive() {
     >
       <div
         v-if="open"
-        class="absolute left-0 z-50 mt-1 w-72 overflow-hidden rounded-lg border border-[var(--border-primary)] bg-[var(--bg-card)] shadow-xl"
+        class="absolute left-0 z-50 mt-1 w-72 overflow-hidden rounded border border-[var(--border-primary)] bg-[var(--bg-dialog)] shadow-xl"
       >
         <div class="flex items-center gap-2 border-b border-[var(--border-primary)] p-2">
           <Search class="h-4 w-4 shrink-0 text-[var(--text-muted)]" />

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { getErrorMessage } from "@/lib/error";
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onActivated, onDeactivated, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   Plus,
@@ -68,6 +68,13 @@ const {
 } = useAsyncData(async () => {
   try {
     const pm = await api.getPostMortem(incidentNumber.value);
+    // The backend returns a null payload (not a 404) when no post-mortem
+    // exists for the incident yet. Treat that the same as not-found so we
+    // render the create empty-state instead of crashing in syncForm.
+    if (!pm) {
+      notFound.value = true;
+      return null;
+    }
     syncForm(pm);
     notFound.value = false;
     return pm;
@@ -377,12 +384,36 @@ function goBackToIncident() {
 }
 
 onMounted(() => {
+  if (!Number.isFinite(incidentNumber.value)) return;
   load();
   loadActionItems();
 });
-watch(incidentNumber, () => {
-  load();
-  loadActionItems();
+
+// KeepAlive keeps this page (and this watcher) alive after navigating away.
+// Without the deactivated/NaN guards, browsing to another incident's detail or
+// list page mutates :incident_number and triggers a background post-mortem load
+// for an incident that may have none — the null payload then crashes syncForm
+// and surfaces an error toast on the way out. Mirror the IncidentDetailPage /
+// IncidentsPage watcher guards.
+let isDeactivated = false;
+onActivated(() => {
+  const wasDeactivated = isDeactivated;
+  isDeactivated = false;
+  if (wasDeactivated && Number.isFinite(incidentNumber.value)) {
+    load();
+    loadActionItems();
+  }
+});
+onDeactivated(() => {
+  isDeactivated = true;
+});
+watch(incidentNumber, (next, prev) => {
+  if (isDeactivated) return;
+  if (!Number.isFinite(next)) return;
+  if (prev !== undefined && next !== prev) {
+    load();
+    loadActionItems();
+  }
 });
 </script>
 

@@ -42,8 +42,8 @@ export function usePageHeader(getSpec: () => PageHeaderSpec | null): void {
   }
 
   function sync() {
-    if (!active) return;
     const spec = getSpec();
+    if (!active) return;
     if (spec) {
       headerOwner = owner;
       setPageHeader(spec.title, spec.badges, spec.options);

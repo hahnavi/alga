@@ -36,11 +36,21 @@ function openGlobalSearch() {
 function closeGlobalSearch() {
   searchActive.value = false;
   searchSubmitted.value = false;
+  searchFocusedIndex.value = -1;
+  searchAlertResults.value = [];
+  searchIncidentResults.value = [];
+  searchError.value = "";
+  searchLoading.value = false;
+  searchSeq++;
 }
 
 function clearSearchQuery() {
+  searchSeq++;
   searchQuery.value = "";
   searchSubmitted.value = false;
+  searchFocusedIndex.value = -1;
+  searchAlertResults.value = [];
+  searchIncidentResults.value = [];
 }
 
 async function executeGlobalSearch(query: string) {
@@ -86,6 +96,7 @@ function submitSearch() {
     searchAlertResults.value = [];
     searchIncidentResults.value = [];
     searchSubmitted.value = false;
+    searchFocusedIndex.value = -1;
     return;
   }
   searchSubmitted.value = true;

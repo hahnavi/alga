@@ -25,7 +25,7 @@ defineOptions({ name: "PlaybookDetailPage" });
 
 const route = useRoute();
 const router = useRouter();
-const playbookId = computed(() => route.params.id as string);
+const playbookId = computed(() => (route.params.id as string) ?? "");
 
 const {
   data: playbook,
@@ -209,8 +209,8 @@ onMounted(async () => {
   await load();
 });
 
-watch(playbookId, async () => {
-  await load();
+watch(playbookId, async (id) => {
+  if (id) await load();
 });
 </script>
 
@@ -389,7 +389,7 @@ watch(playbookId, async () => {
       @click.self="showAddStep = false"
     >
       <div
-        class="w-full max-w-lg rounded-lg border border-[var(--border-primary)] bg-[var(--bg-card)] p-6 shadow-xl"
+        class="w-full max-w-lg rounded border border-[var(--border-primary)] bg-[var(--bg-dialog)] p-6 shadow-xl"
         @click.stop
       >
         <h3 class="mb-4 text-base font-semibold text-[var(--text-primary)]">Add Step</h3>

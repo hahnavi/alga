@@ -45,7 +45,7 @@ const route = useRoute();
 const auth = useAuthStore();
 const { push } = useToast();
 
-const scheduleId = computed(() => route.params.id as string);
+const scheduleId = computed(() => (route.params.id as string) ?? "");
 const { canWrite: canEdit } = useEntityPermissions("oncall");
 
 const schedule = ref<OnCallScheduleRecord | null>(null);
@@ -182,10 +182,10 @@ usePageHeader(() => {
 });
 
 onMounted(() => {
-  void reload();
+  if (scheduleId.value) void reload();
 });
-watch(scheduleId, () => {
-  void reload();
+watch(scheduleId, (id) => {
+  if (id) void reload();
 });
 
 const { submitting, withSubmit } = useFormSubmit();

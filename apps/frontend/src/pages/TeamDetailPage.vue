@@ -30,7 +30,7 @@ const route = useRoute();
 const router = useRouter();
 const escalationPerms = useEntityPermissions("escalation");
 
-const teamId = computed(() => route.params.id as string);
+const teamId = computed(() => (route.params.id as string) ?? "");
 const members = ref<TeamMemberRecord[]>([]);
 const allUsers = ref<UserInfo[]>([]);
 const policies = ref<EscalationPolicyRecord[]>([]);
@@ -306,8 +306,12 @@ function resetAddMemberState() {
   userDropdownQuery.value = "";
 }
 
-onMounted(loadTeam);
-watch(teamId, loadTeam);
+onMounted(() => {
+  if (teamId.value) loadTeam();
+});
+watch(teamId, (id) => {
+  if (id) loadTeam();
+});
 </script>
 
 <template>

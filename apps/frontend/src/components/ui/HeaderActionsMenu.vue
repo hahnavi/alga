@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import type { Component } from "vue";
-import { MoreVertical } from "@lucide/vue";
+import { MoreHorizontal, MoreVertical } from "@lucide/vue";
 import { useDropdownLifecycle } from "@/composables/useDropdownLifecycle";
 import {
   HEADER_ICON_BTN_CLASS,
@@ -22,15 +22,19 @@ type HeaderActionItem = {
   target?: "_blank";
 };
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     items: HeaderActionItem[];
     label?: string;
+    icon?: "vertical" | "horizontal";
   }>(),
   {
     label: "Page actions",
+    icon: "vertical",
   },
 );
+
+const iconComponent = computed(() => (props.icon === "horizontal" ? MoreHorizontal : MoreVertical));
 
 const open = ref(false);
 const rootRef = ref<HTMLElement | null>(null);
@@ -59,7 +63,7 @@ useDropdownLifecycle(open, rootRef);
       aria-haspopup="menu"
       @click="toggle"
     >
-      <MoreVertical class="h-4 w-4" aria-hidden="true" />
+      <component :is="iconComponent" class="h-4 w-4" aria-hidden="true" />
     </button>
     <div v-if="open" :class="POPOVER_MENU_PANEL_CLASS" role="menu" :aria-label="label">
       <a

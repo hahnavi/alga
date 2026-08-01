@@ -51,6 +51,13 @@ export function clearPageHeader() {
 
 export const headerSearchActive = ref(false);
 
+/**
+ * True while a page's inline search (see `usePageHeaderActions`) is expanded
+ * to fill the shell header. The shell collapses the title areas while this is
+ * set so the search field can take the full header width.
+ */
+export const headerInlineSearchExpanded = ref(false);
+
 export function createSearchActionButton(onClick: () => void): VNode {
   return h(
     "button",

@@ -25,6 +25,7 @@ These rules override convenience. Violating them is a bug.
 - Reuse frontend composables in `apps/frontend/src/composables/` before creating local async, delete, search, SSE, clipboard, filter, or form logic.
 - Reuse UI primitives from `apps/frontend/src/components/ui/`; do not create duplicate Button, Input, Modal, Card, EmptyState, ErrorBanner, or loading components.
 - Import frontend icons from `@lucide/vue`, never `lucide-vue-next`.
+- Do not use left accent border strips (colored `border-l` rails) anywhere in the UI.
 - Reuse existing store errors such as `store.ErrNotFound` and entity-specific not-found errors. Do not create overlapping sentinel errors.
 - Use structured `logger.Info/Warn/Error` logging. Do not use `fmt.Println`, `log.Printf`, or ad-hoc debug output.
 

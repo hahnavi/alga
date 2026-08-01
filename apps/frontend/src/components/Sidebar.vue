@@ -163,7 +163,7 @@ const popupStyle = computed(() => {
             <router-link
               v-if="!isNavGroup(entry)"
               :to="entry.to"
-              class="flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors cursor-pointer"
+              class="flex items-center gap-3 rounded-sm px-3 py-2 text-sm transition-colors cursor-pointer"
               @mouseenter="prefetch(entry.to)"
               @focus="prefetch(entry.to)"
               :class="isActive(entry.to) ? 'nav-link-active' : 'nav-link-inactive'"
@@ -177,7 +177,7 @@ const popupStyle = computed(() => {
               <button
                 :data-popup-trigger="entry.label"
                 type="button"
-                class="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors cursor-pointer"
+                class="flex w-full items-center gap-3 rounded-sm px-3 py-2 text-sm transition-colors cursor-pointer"
                 :class="[
                   isEntryActive(entry)
                     ? 'text-[var(--text-primary)] font-medium'
@@ -211,7 +211,7 @@ const popupStyle = computed(() => {
                   v-for="child in entry.children"
                   :key="child.to"
                   :to="child.to"
-                  class="flex items-center gap-3 rounded-md px-3 py-1.5 text-sm transition-colors cursor-pointer"
+                  class="flex items-center gap-3 rounded-sm px-3 py-1.5 text-sm transition-colors cursor-pointer"
                   @mouseenter="prefetch(child.to)"
                   @focus="prefetch(child.to)"
                   :class="isActive(child.to) ? 'nav-link-active' : 'nav-link-inactive'"

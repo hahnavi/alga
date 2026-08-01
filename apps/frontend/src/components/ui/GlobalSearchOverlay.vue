@@ -47,7 +47,7 @@ useEscapeKey(
         @click.self="closeGlobalSearch"
       >
         <div
-          class="search-dialog relative flex max-h-[75vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-[var(--border-primary)] shadow-2xl sm:rounded-2xl"
+          class="search-dialog relative flex max-h-[75vh] w-full max-w-2xl flex-col overflow-hidden rounded border border-[var(--border-primary)] bg-[var(--bg-dialog)] text-[var(--text-primary)] shadow-2xl"
         >
           <div class="flex items-center gap-3 border-b border-[var(--border-primary)] px-4 py-3">
             <Search class="h-5 w-5 shrink-0 text-[var(--text-muted)]" />
@@ -253,3 +253,46 @@ useEscapeKey(
     </Transition>
   </Teleport>
 </template>
+
+<style scoped>
+.search-backdrop {
+  background: rgb(0 0 0 / 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+:root.light .search-backdrop {
+  background: rgb(0 0 0 / 0.3);
+}
+
+.search-overlay-enter-active {
+  transition: opacity 0.15s ease;
+}
+.search-overlay-enter-active .search-dialog {
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+.search-overlay-leave-active {
+  transition: opacity 0.1s ease;
+}
+.search-overlay-leave-active .search-dialog {
+  transition:
+    opacity 0.1s ease,
+    transform 0.1s ease;
+}
+.search-overlay-enter-from {
+  opacity: 0;
+}
+.search-overlay-enter-from .search-dialog {
+  opacity: 0;
+  transform: scale(0.97) translateY(-8px);
+}
+.search-overlay-leave-to {
+  opacity: 0;
+}
+.search-overlay-leave-to .search-dialog {
+  opacity: 0;
+  transform: scale(0.97) translateY(-4px);
+}
+</style>

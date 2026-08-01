@@ -118,7 +118,8 @@ test.describe("dashboard: daily write-up", () => {
     });
 
     await page.goto("/");
-    await page.getByRole("button", { name: /daily write-up/i }).click();
+    const summaryToggle = page.getByRole("button", { name: /daily write-up/i });
+    await expect(summaryToggle).toHaveAttribute("aria-expanded", "true");
     await expect(page.getByText(/Two alerts fired on payments/i)).toBeVisible();
     await expect(page.getByText(/generated/i)).toBeVisible();
   });

@@ -45,5 +45,5 @@ const items = computed(() =>
 </script>
 
 <template>
-  <HeaderActionsMenu :items="items" label="Incident actions" />
+  <HeaderActionsMenu :items="items" icon="horizontal" label="Incident actions" />
 </template>

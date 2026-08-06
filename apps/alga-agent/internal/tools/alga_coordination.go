@@ -29,7 +29,7 @@ type claimTaskInput struct {
 
 type completeTaskInput struct {
 	TaskID string         `json:"task_id" desc:"The task id being completed"`
-	Result map[string]any `json:"result" desc:"Typed result (e.g. finding, evidence, root_cause_candidate, published_status_id)"`
+	Result map[string]any `json:"result" desc:"Typed result (e.g. finding, evidence, root_cause_candidate, published_status_id). Results that assert a claim (root_cause, root_cause_candidate, finding) MUST include an evidence key with the specific observations supporting it (command output, metric, log line, alert state); a confidence field (observed, inferred, unverified) is recommended."`
 	ChatID string         `json:"chat_id,omitempty" desc:"Chat id (omit in Alga threads)"`
 }
 
@@ -97,10 +97,13 @@ func coordinationTools(c AlgaClient) []Tool {
 		),
 
 		NewTypedTool("alga_complete_task",
-			"Mark a claimed task done and record its typed result. This is the normal path for handing work back to the commander (replaces post_handoff).",
+			"Mark a claimed task done and record its typed result. This is the normal path for handing work back to the commander (replaces post_handoff). A result that asserts a root cause or finding is rejected unless it includes the evidence supporting it.",
 			func(ctx context.Context, in completeTaskInput) Result[*alga.CommandResponse] {
 				if in.TaskID == "" {
 					return ErrMsg[*alga.CommandResponse]("task_id is required")
+				}
+				if reason := missingEvidenceReason(in.Result); reason != "" {
+					return ErrMsg[*alga.CommandResponse](reason)
 				}
 				chatID, err := chatIDFromCtx(ctx, map[string]string{"chat_id": in.ChatID})
 				if err != nil {

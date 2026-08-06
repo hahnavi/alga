@@ -22,6 +22,9 @@ tool-calling loop.
 - **Session memory**: per-chat ring buffer with idle eviction
 - **Idempotency-Key injection**: every state-changing SDK call is replay-safe
   — a transient 503 retry no longer double-fires a mutation
+- **Evidence gate**: a coordination-task result that asserts a root cause or
+  finding is rejected unless it carries the supporting evidence, keeping
+  claims bounded by observations instead of speculation
 - **Zero-external-dep metrics**: Prometheus text format on `/metrics`
 - **Graceful shutdown**: SIGINT/SIGTERM with 10s drain
 

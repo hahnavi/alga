@@ -86,7 +86,11 @@ func BuildSystemPrompt(opts SystemPromptOptions) string {
 		b.WriteString(toolListSection(opts.ToolNames))
 	}
 
-	// 6. Time awareness.
+	// 6. Evidence discipline: keep claims bounded by their evidence.
+	b.WriteString("\n\n## Evidence Discipline\n\n")
+	b.WriteString(evidenceDiscipline())
+
+	// 7. Time awareness.
 	now := opts.Now
 	if now.IsZero() {
 		now = time.Now()
@@ -125,6 +129,16 @@ with shell access and web search to diagnose and resolve issues.
 - Do not expose raw secrets, tokens, or credentials in your responses.
 - Respect severity: do not resolve or mitigate without confirming intent
   when the action is destructive or customer-impacting.`)
+}
+
+// evidenceDiscipline returns the evidence-bounded-claims rules injected into
+// every system prompt. Claims must be tied to observations; missing evidence
+// stays explicit instead of being filled with speculation.
+func evidenceDiscipline() string {
+	return `- Separate observed facts from inference. Observed facts come from tool output, command results, metrics, or logs; anything else is inference and must be labeled as such.
+- Every root cause claim or finding must cite its evidence: the specific tool output, command result, metric, or log line that supports it.
+- Keep missing evidence explicit. If something could not be verified, state what is unverified rather than filling the gap with speculation.
+- After a mitigation or recovery action, verify its effect (re-check the failing operation, metric, or alert state) before reporting success.`
 }
 
 func algaContextSection(ctx AlgaContext) string {

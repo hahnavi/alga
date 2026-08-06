@@ -191,6 +191,18 @@ func TestBuildSystemPrompt_EmptyAlgaContextOmitted(t *testing.T) {
 	}
 }
 
+func TestBuildSystemPrompt_EvidenceDiscipline(t *testing.T) {
+	prompt := BuildSystemPrompt(SystemPromptOptions{})
+	if !strings.Contains(prompt, "## Evidence Discipline") {
+		t.Error("prompt missing Evidence Discipline section")
+	}
+	for _, rule := range []string{"observed facts from inference", "must cite its evidence", "unverified"} {
+		if !strings.Contains(prompt, rule) {
+			t.Errorf("Evidence Discipline missing rule %q", rule)
+		}
+	}
+}
+
 func TestBuildSystemPrompt_CustomPromptFile(t *testing.T) {
 	dir := t.TempDir()
 	path := dir + "/prompt.txt"
@@ -202,6 +214,10 @@ func TestBuildSystemPrompt_CustomPromptFile(t *testing.T) {
 	})
 	if !strings.Contains(prompt, "CUSTOM PROMPT BODY") {
 		t.Errorf("custom prompt not used: %q", prompt)
+	}
+	// The evidence baseline applies even when the identity section is overridden.
+	if !strings.Contains(prompt, "## Evidence Discipline") {
+		t.Error("custom prompt should still include Evidence Discipline")
 	}
 }
 

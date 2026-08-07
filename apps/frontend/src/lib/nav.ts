@@ -39,7 +39,7 @@ import { useAuthStore } from "@/stores/auth";
  *   - `MobileMoreMenu.vue` (the "More" bottom-sheet on mobile)
  *   - `MobileAgentMenu.vue` (the "Agents" bottom-sheet on mobile)
  *
- * The mobile bottom bar (Home / Alerts / Incidents) is the static
+ * The mobile bottom bar (Dashboard / Alerts / Incidents) is the static
  * `TOP_NAV_ITEMS` list; the App.vue shell reads it directly because
  * the icons never change.
  *
@@ -66,7 +66,7 @@ export function isNavGroup(entry: NavEntry): entry is NavGroup {
 }
 
 export const TOP_NAV_ITEMS: ReadonlyArray<NavFlat> = [
-  { to: "/", icon: BarChart3, label: "Home" },
+  { to: "/", icon: BarChart3, label: "Dashboard" },
   { to: "/alerts", icon: Bell, label: "Alerts" },
   { to: "/incidents", icon: AlertTriangle, label: "Incidents" },
 ];

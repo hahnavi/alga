@@ -118,9 +118,9 @@ export type UserInfo = {
   google_linked?: boolean;
   /**
    * Permission strings the user holds, populated from
-   * `apps/backend/rbac/roles.go` by `/auth/me`. May be missing on older
-   * backends; `stores/auth.ts` falls back to a role-derived map when
-   * empty.
+   * `apps/backend/rbac/roles.go` by both `/auth/login` and `/auth/me`.
+   * When missing, `stores/auth.ts` denies every `hasPermission(...)`
+   * call (safe default).
    */
   permissions?: string[];
 };

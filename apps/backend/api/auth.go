@@ -187,6 +187,15 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	// Log successful login
 	s.auditStore.Log(store.AuditLoginSuccess, &user.ID, user.Email, clientIP, r.UserAgent(), true, nil)
 
+	// Include permissions so the frontend can gate UI (sidebar, route
+	// metadata) immediately after login without a second round-trip to
+	// /auth/me. Mirrors handleGetCurrentUser.
+	perms := rbac.AllPermissions(user.Role)
+	permStrings := make([]string, len(perms))
+	for i, p := range perms {
+		permStrings[i] = string(p)
+	}
+
 	writeJSON(w, http.StatusOK, map[string]any{
 		"id":            user.ID.String(),
 		"email":         user.Email,
@@ -195,6 +204,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		"phone_country": user.PhoneCountry,
 		"role":          user.Role,
 		"created_at":    user.CreatedAt,
+		"permissions":   permStrings,
 		"csrf_token":    csrfToken,
 	})
 }

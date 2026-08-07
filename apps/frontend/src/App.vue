@@ -53,6 +53,24 @@ useAuthBootstrap();
 const moreMenuOpen = ref(false);
 const agentMenuOpen = ref(false);
 
+function toggleAgentMenu() {
+  if (agentMenuOpen.value) {
+    agentMenuOpen.value = false;
+  } else {
+    moreMenuOpen.value = false;
+    agentMenuOpen.value = true;
+  }
+}
+
+function toggleMoreMenu() {
+  if (moreMenuOpen.value) {
+    moreMenuOpen.value = false;
+  } else {
+    agentMenuOpen.value = false;
+    moreMenuOpen.value = true;
+  }
+}
+
 const { mobileMorePaths } = useNavSections();
 const navItems = TOP_NAV_ITEMS;
 
@@ -307,7 +325,7 @@ onBeforeUnmount(() => {
     <!-- Mobile bottom navigation -->
     <nav
       v-if="!hideMobileChatChrome"
-      class="fixed bottom-0 left-0 right-0 z-[21] flex h-16 border-t border-[var(--border-primary)] bg-[var(--bg-sidebar)] pb-[env(safe-area-inset-bottom)] md:hidden"
+      class="fixed bottom-0 left-0 right-0 z-[21] flex h-16 border-t border-[var(--border-primary)] bg-[var(--bg-sidebar)]/90 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_20px_rgb(0_0_0_/_0.18)] backdrop-blur-lg md:hidden"
       aria-label="Mobile navigation"
     >
       <router-link
@@ -316,29 +334,39 @@ onBeforeUnmount(() => {
         :to="item.to"
         class="mobile-bottom-nav-item"
         :class="isActive(item.to) ? 'active' : ''"
+        :aria-current="isActive(item.to) ? 'page' : undefined"
         @mouseenter="prefetch(item.to)"
         @focus="prefetch(item.to)"
       >
-        <div v-if="isActive(item.to)" class="active-indicator" />
-        <component :is="item.icon" class="h-5 w-5" />
+        <span class="mobile-nav-pill" aria-hidden="true">
+          <component :is="item.icon" class="h-5 w-5" />
+        </span>
         <span>{{ item.label }}</span>
       </router-link>
       <button
+        type="button"
         class="mobile-bottom-nav-item"
         :class="agentGroupActive || agentMenuOpen ? 'active' : ''"
-        @click="agentMenuOpen = !agentMenuOpen"
+        aria-haspopup="dialog"
+        :aria-expanded="agentMenuOpen"
+        @click="toggleAgentMenu"
       >
-        <div v-if="agentGroupActive || agentMenuOpen" class="active-indicator" />
-        <Bot class="h-5 w-5" />
+        <span class="mobile-nav-pill" aria-hidden="true">
+          <Bot class="h-5 w-5" />
+        </span>
         <span>Agents</span>
       </button>
       <button
+        type="button"
         class="mobile-bottom-nav-item"
         :class="moreNavActive || moreMenuOpen ? 'active' : ''"
-        @click="moreMenuOpen = !moreMenuOpen"
+        aria-haspopup="dialog"
+        :aria-expanded="moreMenuOpen"
+        @click="toggleMoreMenu"
       >
-        <div v-if="moreNavActive || moreMenuOpen" class="active-indicator" />
-        <Menu class="h-5 w-5" />
+        <span class="mobile-nav-pill" aria-hidden="true">
+          <Menu class="h-5 w-5" />
+        </span>
         <span>More</span>
       </button>
     </nav>

@@ -1,11 +1,23 @@
 <script setup lang="ts">
 import { getErrorMessage } from "@/lib/error";
-import { computed, onActivated, onDeactivated, onMounted, ref, watch } from "vue";
+import {
+  computed,
+  onActivated,
+  onBeforeUnmount,
+  onDeactivated,
+  onMounted,
+  ref,
+  watch,
+  type ComponentPublicInstance,
+  type Ref,
+} from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   Plus,
   ArrowLeft,
   CheckCircle2,
+  CircleDashed,
+  Check,
   Clock,
   Edit3,
   Eye,
@@ -26,6 +38,7 @@ import {
 } from "@/lib/api";
 import { postMortemStatusBadgeClass } from "@/lib/alertLabels";
 import { formatTime } from "@/lib/time";
+import { getScrollContainer } from "@/lib/scrollContainer";
 import { useEntityPermissions } from "@/composables/useEntityPermissions";
 import { useToast } from "@/lib/toast";
 import { useDelete } from "@/composables/useDelete";
@@ -38,7 +51,6 @@ import Button from "@/components/ui/Button.vue";
 import Card from "@/components/ui/Card.vue";
 import Input from "@/components/ui/Input.vue";
 import DatePicker from "@/components/ui/DatePicker.vue";
-import Textarea from "@/components/ui/Textarea.vue";
 import FormLabel from "@/components/ui/FormLabel.vue";
 import Checkbox from "@/components/ui/Checkbox.vue";
 import Select from "@/components/ui/Select.vue";
@@ -46,9 +58,89 @@ import Modal from "@/components/ui/Modal.vue";
 import ErrorBanner from "@/components/ui/ErrorBanner.vue";
 import LoadingSpinner from "@/components/ui/LoadingSpinner.vue";
 import EmptyState from "@/components/ui/EmptyState.vue";
+import MarkdownRenderer from "@/components/ui/MarkdownRenderer.vue";
 import ActionItemRow from "@/components/postmortem/ActionItemRow.vue";
+import SectionEditor from "@/components/postmortem/SectionEditor.vue";
 
 defineOptions({ name: "PostMortemPage" });
+
+type SectionKey =
+  | "summary"
+  | "impact"
+  | "root_cause"
+  | "contributing_factors"
+  | "lessons_learned"
+  | "what_went_well"
+  | "what_went_wrong"
+  | "blameless";
+
+type SectionDef = {
+  key: SectionKey;
+  num: string;
+  label: string;
+  hint: string;
+  placeholder: string;
+};
+
+const SECTIONS: SectionDef[] = [
+  {
+    key: "summary",
+    num: "01",
+    label: "Summary",
+    hint: "A short, factual account of what happened and why this review exists.",
+    placeholder: "What happened, when, and for how long?",
+  },
+  {
+    key: "impact",
+    num: "02",
+    label: "Impact",
+    hint: "Who and what was affected — customers, services, data, revenue, teams.",
+    placeholder: "Describe the blast radius: users affected, SLO burn, revenue, support load…",
+  },
+  {
+    key: "root_cause",
+    num: "03",
+    label: "Root Cause",
+    hint: "The underlying system or process failure, not the proximate trigger.",
+    placeholder: "Walk through the causal chain down to the underlying cause…",
+  },
+  {
+    key: "contributing_factors",
+    num: "04",
+    label: "Contributing Factors",
+    hint: "Secondary conditions that made the incident possible or worse.",
+    placeholder:
+      "List each factor on its own line, e.g.\n- Monitoring gap on queue depth\n- Runbook out of date",
+  },
+  {
+    key: "lessons_learned",
+    num: "05",
+    label: "Lessons Learned",
+    hint: "What this incident taught us about the system and how we run it.",
+    placeholder: "What did we learn that we didn't know before?",
+  },
+  {
+    key: "what_went_well",
+    num: "06",
+    label: "What Went Well",
+    hint: "Response strengths worth keeping and reinforcing.",
+    placeholder: "Detection, coordination, tooling, people — what worked?",
+  },
+  {
+    key: "what_went_wrong",
+    num: "07",
+    label: "Needs Improvement",
+    hint: "Gaps in detection, response, tooling, or process.",
+    placeholder: "Where did detection, response, or communication fall short?",
+  },
+  {
+    key: "blameless",
+    num: "08",
+    label: "Blameless Review",
+    hint: "Confirm the review focuses on systems and processes, not people.",
+    placeholder: "Optional notes on how blamelessness was upheld…",
+  },
+];
 
 const route = useRoute();
 const router = useRouter();
@@ -90,7 +182,7 @@ const {
 const title = ref("");
 const summary = ref("");
 const rootCause = ref("");
-const factorsCsv = ref("");
+const factorsMarkdown = ref("");
 const impact = ref("");
 const lessonsLearned = ref("");
 const whatWentWell = ref("");
@@ -124,11 +216,47 @@ function isNotFoundError(err: unknown): boolean {
   return msg === "404" || msg.startsWith("404 ") || msg.endsWith(" 404");
 }
 
+function factorsToMarkdown(factors: string[] | null | undefined): string {
+  return (factors ?? []).map((f) => `- ${f}`).join("\n");
+}
+
+function markdownToFactors(md: string): string[] {
+  const lines = md
+    .split("\n")
+    .map((r) => r.trim())
+    .filter((l) => l.length > 0);
+  // Only fall back to comma-splitting when the whole input is free-form prose
+  // with no list markers at all. Otherwise a non-list line is kept whole so
+  // prose sentences aren't shredded at every comma.
+  const hasListMarker = lines.some((l) => /^[-*+]\s+/.test(l) || /^\d+[.)]\s+/.test(l));
+  const items: string[] = [];
+  for (const line of lines) {
+    const bullet = line.match(/^[-*+]\s+(.*)$/);
+    if (bullet) {
+      if (bullet[1].trim()) items.push(bullet[1].trim());
+      continue;
+    }
+    const numbered = line.match(/^\d+[.)]\s+(.*)$/);
+    if (numbered) {
+      if (numbered[1].trim()) items.push(numbered[1].trim());
+      continue;
+    }
+    if (hasListMarker) {
+      items.push(line);
+    } else {
+      for (const part of line.split(",")) {
+        if (part.trim()) items.push(part.trim());
+      }
+    }
+  }
+  return items;
+}
+
 function syncForm(pm: PostMortemRecord) {
   title.value = pm.title ?? "";
   summary.value = pm.summary ?? "";
   rootCause.value = pm.root_cause ?? "";
-  factorsCsv.value = (pm.contributing_factors ?? []).join(", ");
+  factorsMarkdown.value = factorsToMarkdown(pm.contributing_factors);
   impact.value = pm.impact ?? "";
   lessonsLearned.value = pm.lessons_learned ?? "";
   whatWentWell.value = pm.what_went_well ?? "";
@@ -137,19 +265,49 @@ function syncForm(pm: PostMortemRecord) {
   blamelessNotes.value = pm.blameless_notes ?? "";
 }
 
-function displayText(value: string | undefined | null): string {
-  const trimmed = value?.trim();
-  return trimmed || "Not documented yet.";
+const sectionTextRefs: Record<SectionKey, Ref<string>> = {
+  summary,
+  impact,
+  root_cause: rootCause,
+  contributing_factors: factorsMarkdown,
+  lessons_learned: lessonsLearned,
+  what_went_well: whatWentWell,
+  what_went_wrong: whatWentWrong,
+  blameless: blamelessNotes,
+};
+
+function sectionValue(key: SectionKey): string {
+  return sectionTextRefs[key].value;
 }
 
-function isEmptyText(value: string | undefined | null): boolean {
-  return !value?.trim();
+function setSectionValue(key: SectionKey, value: string) {
+  sectionTextRefs[key].value = value;
 }
 
-function completionLabel(): string {
-  if (actionItems.value.length === 0) return "No action items";
-  return `${completedActionItems.value}/${actionItems.value.length} completed`;
+function isSectionFilled(key: SectionKey): boolean {
+  if (key === "blameless") return blamelessConfirmed.value || !!blamelessNotes.value.trim();
+  return !!sectionValue(key).trim();
 }
+
+const filledCount = computed(() => SECTIONS.filter((s) => isSectionFilled(s.key)).length);
+
+const isDirty = computed(() => {
+  const pm = postMortem.value;
+  if (!pm) return false;
+  return (
+    title.value !== (pm.title ?? "") ||
+    summary.value !== (pm.summary ?? "") ||
+    rootCause.value !== (pm.root_cause ?? "") ||
+    markdownToFactors(factorsMarkdown.value).join("\n") !==
+      (pm.contributing_factors ?? []).join("\n") ||
+    impact.value !== (pm.impact ?? "") ||
+    lessonsLearned.value !== (pm.lessons_learned ?? "") ||
+    whatWentWell.value !== (pm.what_went_well ?? "") ||
+    whatWentWrong.value !== (pm.what_went_wrong ?? "") ||
+    blamelessConfirmed.value !== (pm.blameless_confirmed ?? false) ||
+    blamelessNotes.value !== (pm.blameless_notes ?? "")
+  );
+});
 
 const timelineEntries = computed<PostMortemTimelineEntry[]>(() => {
   const tl = postMortem.value?.timeline;
@@ -255,15 +413,11 @@ async function handleCreate() {
 async function handleSave() {
   if (!postMortem.value) return;
   await withSubmit(async () => {
-    const contributing_factors = factorsCsv.value
-      .split(",")
-      .map((f) => f.trim())
-      .filter(Boolean);
     const pm = await api.updatePostMortem(incidentNumber.value, {
       title: title.value,
       summary: summary.value,
       root_cause: rootCause.value,
-      contributing_factors,
+      contributing_factors: markdownToFactors(factorsMarkdown.value),
       impact: impact.value,
       lessons_learned: lessonsLearned.value,
       what_went_well: whatWentWell.value,
@@ -382,6 +536,63 @@ const { showDeleteConfirm, confirmDelete, doDelete } = useDelete<PostMortemRecor
 function goBackToIncident() {
   router.push(`/incidents/${incidentNumber.value}`);
 }
+
+const sectionEls = new Map<SectionKey, HTMLElement>();
+const activeSection = ref<SectionKey>("summary");
+
+function setSectionRef(key: SectionKey) {
+  return (el: Element | ComponentPublicInstance | null) => {
+    if (el instanceof HTMLElement) sectionEls.set(key, el);
+    else sectionEls.delete(key);
+  };
+}
+
+function scrollToSection(key: SectionKey) {
+  sectionEls.get(key)?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+let spy: IntersectionObserver | null = null;
+
+function setupScrollSpy() {
+  cleanupScrollSpy();
+  if (!postMortem.value) return;
+  const root = getScrollContainer();
+  spy = new IntersectionObserver(
+    (entries) => {
+      let topmost: { key: SectionKey; top: number } | null = null;
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        const key = (entry.target as HTMLElement).dataset.sectionKey as SectionKey | undefined;
+        if (!key) continue;
+        const top = entry.boundingClientRect.top;
+        if (topmost === null || top < topmost.top) {
+          topmost = { key, top };
+        }
+      }
+      if (topmost) activeSection.value = topmost.key;
+    },
+    { root, rootMargin: "0px 0px -70% 0px", threshold: 0 },
+  );
+  for (const el of sectionEls.values()) spy.observe(el);
+}
+
+function cleanupScrollSpy() {
+  spy?.disconnect();
+  spy = null;
+}
+
+watch([isEditable, postMortem], () => {
+  requestAnimationFrame(setupScrollSpy);
+});
+
+watch(isEditable, (editing) => {
+  if (!editing) return;
+  requestAnimationFrame(() => {
+    getScrollContainer()?.scrollTo({ top: 0, behavior: "smooth" });
+  });
+});
+
+onBeforeUnmount(cleanupScrollSpy);
 
 onMounted(() => {
   if (!Number.isFinite(incidentNumber.value)) return;
@@ -548,7 +759,11 @@ watch(incidentNumber, (next, prev) => {
           </span>
           <span class="flex items-center gap-1">
             <ListChecks class="h-3 w-3" />
-            {{ completionLabel() }}
+            {{
+              actionItems.length === 0
+                ? "No action items"
+                : `${completedActionItems}/${actionItems.length} completed`
+            }}
           </span>
         </div>
       </Card>
@@ -601,266 +816,235 @@ watch(incidentNumber, (next, prev) => {
 
       <ErrorBanner v-if="isEditable && formError" :message="formError" />
 
-      <!-- Report sections -->
-      <Card v-if="!isEditable">
-        <div class="space-y-6">
-          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h3 class="text-sm font-semibold text-[var(--text-primary)]">Report</h3>
-              <p class="mt-1 text-xs text-[var(--text-muted)]">
-                Narrative, impact, cause analysis, and follow-up learnings.
-              </p>
-            </div>
-            <Button v-if="canEditDraft" variant="outline" size="sm" @click="startEditing">
-              <Edit3 class="h-3.5 w-3.5" />
-              Edit
-            </Button>
-          </div>
-
-          <h2 v-if="postMortem.title" class="text-lg font-semibold text-[var(--text-primary)]">
-            {{ postMortem.title }}
-          </h2>
-
-          <div class="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-            <div class="space-y-5">
-              <section>
-                <h4 class="mb-2 text-xs font-semibold uppercase text-[var(--text-muted)]">
-                  Summary
-                </h4>
-                <p
-                  class="whitespace-pre-wrap text-sm leading-6 text-[var(--text-primary)]"
-                  :class="{ 'text-[var(--text-muted)]': isEmptyText(postMortem.summary) }"
-                >
-                  {{ displayText(postMortem.summary) }}
-                </p>
-              </section>
-              <section>
-                <h4 class="mb-2 text-xs font-semibold uppercase text-[var(--text-muted)]">
-                  Impact
-                </h4>
-                <p
-                  class="whitespace-pre-wrap text-sm leading-6 text-[var(--text-primary)]"
-                  :class="{ 'text-[var(--text-muted)]': isEmptyText(postMortem.impact) }"
-                >
-                  {{ displayText(postMortem.impact) }}
-                </p>
-              </section>
-              <section>
-                <h4 class="mb-2 text-xs font-semibold uppercase text-[var(--text-muted)]">
-                  Root cause
-                </h4>
-                <p
-                  class="whitespace-pre-wrap text-sm leading-6 text-[var(--text-primary)]"
-                  :class="{ 'text-[var(--text-muted)]': isEmptyText(postMortem.root_cause) }"
-                >
-                  {{ displayText(postMortem.root_cause) }}
-                </p>
-              </section>
-            </div>
-
-            <div class="space-y-5">
-              <section>
-                <h4 class="mb-2 text-xs font-semibold uppercase text-[var(--text-muted)]">
-                  Contributing factors
-                </h4>
-                <div v-if="postMortem.contributing_factors?.length" class="flex flex-wrap gap-2">
-                  <span
-                    v-for="factor in postMortem.contributing_factors"
-                    :key="factor"
-                    class="rounded-md border border-[var(--border-primary)] bg-[var(--bg-secondary)] px-2 py-1 text-xs text-[var(--text-secondary)]"
-                  >
-                    {{ factor }}
-                  </span>
-                </div>
-                <p v-else class="text-sm text-[var(--text-muted)]">Not documented yet.</p>
-              </section>
-              <section>
-                <h4 class="mb-2 text-xs font-semibold uppercase text-[var(--text-muted)]">
-                  Lessons learned
-                </h4>
-                <p
-                  class="whitespace-pre-wrap text-sm leading-6 text-[var(--text-primary)]"
-                  :class="{ 'text-[var(--text-muted)]': isEmptyText(postMortem.lessons_learned) }"
-                >
-                  {{ displayText(postMortem.lessons_learned) }}
-                </p>
-              </section>
-              <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-                <div>
-                  <h4 class="mb-2 text-xs font-semibold uppercase text-[var(--text-muted)]">
-                    Went well
-                  </h4>
-                  <p
-                    class="whitespace-pre-wrap text-sm leading-6 text-[var(--text-primary)]"
-                    :class="{ 'text-[var(--text-muted)]': isEmptyText(postMortem.what_went_well) }"
-                  >
-                    {{ displayText(postMortem.what_went_well) }}
-                  </p>
-                </div>
-                <div>
-                  <h4 class="mb-2 text-xs font-semibold uppercase text-[var(--text-muted)]">
-                    Needs improvement
-                  </h4>
-                  <p
-                    class="whitespace-pre-wrap text-sm leading-6 text-[var(--text-primary)]"
-                    :class="{ 'text-[var(--text-muted)]': isEmptyText(postMortem.what_went_wrong) }"
-                  >
-                    {{ displayText(postMortem.what_went_wrong) }}
-                  </p>
-                </div>
-              </section>
-              <section>
-                <h4 class="mb-2 text-xs font-semibold uppercase text-[var(--text-muted)]">
-                  Blameless notes
-                </h4>
-                <p
-                  class="whitespace-pre-wrap text-sm leading-6 text-[var(--text-primary)]"
-                  :class="{ 'text-[var(--text-muted)]': isEmptyText(postMortem.blameless_notes) }"
-                >
-                  {{ displayText(postMortem.blameless_notes) }}
-                </p>
-              </section>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      <Card v-else>
-        <div class="space-y-6">
-          <div class="space-y-4">
-            <h3 class="text-sm font-semibold text-[var(--text-primary)]">Overview</h3>
-            <div>
-              <FormLabel for="pm-title" required>Title</FormLabel>
-              <Input
-                id="pm-title"
-                v-model="title"
-                :disabled="!isEditable"
-                placeholder="Post-mortem title"
-              />
-            </div>
-            <div>
-              <FormLabel for="pm-summary">Summary</FormLabel>
-              <Textarea
-                id="pm-summary"
-                v-model="summary"
-                :disabled="!isEditable"
-                rows="3"
-                placeholder="Brief summary of the incident and post-mortem"
-              />
-            </div>
-            <div>
-              <FormLabel for="pm-impact">Impact</FormLabel>
-              <Textarea
-                id="pm-impact"
-                v-model="impact"
-                :disabled="!isEditable"
-                rows="3"
-                placeholder="What was the impact of this incident?"
-              />
-            </div>
-          </div>
-
-          <div class="border-t border-[var(--border-primary)] pt-4">
-            <h3 class="mb-4 text-sm font-semibold text-[var(--text-primary)]">Analysis</h3>
-            <div class="space-y-4">
-              <div>
-                <FormLabel for="pm-root-cause">Root Cause</FormLabel>
-                <Textarea
-                  id="pm-root-cause"
-                  v-model="rootCause"
-                  :disabled="!isEditable"
-                  rows="4"
-                  placeholder="What was the root cause of this incident?"
-                />
-              </div>
-              <div>
-                <FormLabel for="pm-factors">Contributing Factors</FormLabel>
-                <Input
-                  id="pm-factors"
-                  v-model="factorsCsv"
-                  :disabled="!isEditable"
-                  placeholder="comma, separated, factors"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div class="border-t border-[var(--border-primary)] pt-4">
-            <h3 class="mb-4 text-sm font-semibold text-[var(--text-primary)]">Lessons</h3>
-            <div class="space-y-4">
-              <div>
-                <FormLabel for="pm-lessons">Lessons Learned</FormLabel>
-                <Textarea
-                  id="pm-lessons"
-                  v-model="lessonsLearned"
-                  :disabled="!isEditable"
-                  rows="3"
-                  placeholder="What did we learn from this incident?"
-                />
-              </div>
-              <div class="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <FormLabel for="pm-went-well">Went Well</FormLabel>
-                  <Textarea
-                    id="pm-went-well"
-                    v-model="whatWentWell"
-                    :disabled="!isEditable"
-                    rows="3"
-                    placeholder="What went well?"
-                  />
-                </div>
-                <div>
-                  <FormLabel for="pm-went-wrong">Needs Improvement</FormLabel>
-                  <Textarea
-                    id="pm-went-wrong"
-                    v-model="whatWentWrong"
-                    :disabled="!isEditable"
-                    rows="3"
-                    placeholder="What could have gone better?"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="border-t border-[var(--border-primary)] pt-4">
-            <h3 class="mb-4 text-sm font-semibold text-[var(--text-primary)]">Blameless Review</h3>
-            <div class="space-y-2">
-              <label
-                class="flex items-start gap-3 cursor-pointer"
-                :class="{ 'pointer-events-none opacity-60': !isEditable }"
+      <!-- Document -->
+      <Card class="overflow-visible">
+        <div class="grid gap-6 lg:grid-cols-[210px_minmax(0,1fr)] lg:gap-10">
+          <!-- Section outline -->
+          <aside class="hidden lg:block">
+            <div class="sticky top-4">
+              <p
+                class="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]"
               >
-                <Checkbox
-                  id="pm-blameless"
-                  v-model="blamelessConfirmed"
-                  :disabled="!isEditable"
-                  class="mt-0.5"
-                />
-                <span class="text-sm text-[var(--text-primary)]">
-                  I confirm this post-mortem focuses on systems and processes, not people
-                </span>
-              </label>
-              <Textarea
-                v-if="blamelessConfirmed"
-                v-model="blamelessNotes"
-                :disabled="!isEditable"
-                rows="2"
-                placeholder="Optional notes on blamelessness..."
-              />
+                On this page
+              </p>
+              <nav class="mt-3 flex flex-col" aria-label="Post-mortem sections">
+                <button
+                  v-for="s in SECTIONS"
+                  :key="s.key"
+                  type="button"
+                  class="group flex items-center gap-2 rounded-md py-1.5 pl-3 pr-2 text-left text-[13px] transition-colors"
+                  :class="
+                    activeSection === s.key
+                      ? 'bg-[var(--bg-secondary)] font-medium text-[var(--text-primary)]'
+                      : 'text-[var(--text-muted)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-secondary)]'
+                  "
+                  :aria-current="activeSection === s.key ? 'true' : undefined"
+                  @click="scrollToSection(s.key)"
+                >
+                  <CheckCircle2
+                    v-if="isSectionFilled(s.key)"
+                    class="h-3.5 w-3.5 shrink-0 text-[var(--accent)]"
+                  />
+                  <CircleDashed v-else class="h-3.5 w-3.5 shrink-0 opacity-50" />
+                  <span class="truncate">{{ s.label }}</span>
+                </button>
+              </nav>
+              <div class="mt-4 border-t border-[var(--border-primary)] pt-3">
+                <div class="flex items-center justify-between text-[11px] text-[var(--text-muted)]">
+                  <span>Sections filled</span>
+                  <span class="font-medium text-[var(--text-secondary)]"
+                    >{{ filledCount }}/{{ SECTIONS.length }}</span
+                  >
+                </div>
+                <div class="mt-1.5 h-1 overflow-hidden rounded-full bg-[var(--bg-secondary)]">
+                  <div
+                    class="h-full rounded-full bg-[var(--accent)] transition-[width] duration-300"
+                    :style="{ width: `${(filledCount / SECTIONS.length) * 100}%` }"
+                  />
+                </div>
+              </div>
             </div>
-          </div>
+          </aside>
 
-          <div
-            v-if="isEditable"
-            class="flex items-center justify-between border-t border-[var(--border-primary)] pt-4"
-          >
-            <p class="text-xs text-[var(--text-muted)]">
-              Save your changes before submitting for review.
-            </p>
-            <Button :loading="saving" @click="handleSave">Save Draft</Button>
+          <!-- Document body -->
+          <div class="min-w-0">
+            <div class="max-w-3xl">
+              <p
+                class="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]"
+              >
+                Post-mortem · Incident
+                <template v-if="postMortem.incident_number"
+                  >#{{ postMortem.incident_number }}</template
+                >
+              </p>
+
+              <h2
+                v-if="!isEditable"
+                class="mt-2 text-2xl font-bold leading-snug tracking-tight text-[var(--text-primary)] md:text-[28px]"
+              >
+                {{ postMortem.title || "Untitled post-mortem" }}
+              </h2>
+              <Input
+                v-else
+                v-model="title"
+                aria-label="Post-mortem title"
+                placeholder="Untitled post-mortem"
+                class="mt-2 border-transparent bg-transparent px-0 text-2xl font-bold tracking-tight shadow-none focus:border-transparent focus:shadow-none md:text-[28px]"
+              />
+
+              <div
+                class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]"
+              >
+                <span :class="statusBadgeClass(postMortem.status)">
+                  {{ statusLabel(postMortem.status) }}
+                </span>
+                <span class="flex items-center gap-1">
+                  <Clock class="h-3 w-3" />
+                  Created {{ formatTime(postMortem.created_at) }}
+                </span>
+                <span v-if="postMortem.published_at" class="flex items-center gap-1">
+                  <CheckCircle2 class="h-3 w-3" />
+                  Published {{ formatTime(postMortem.published_at) }}
+                </span>
+              </div>
+
+              <div class="my-6 border-t border-[var(--border-primary)]" />
+
+              <div class="space-y-10">
+                <section
+                  v-for="s in SECTIONS"
+                  :id="`pm-section-${s.key}`"
+                  :key="s.key"
+                  :ref="setSectionRef(s.key)"
+                  :data-section-key="s.key"
+                  class="scroll-mt-6"
+                >
+                  <div class="flex items-baseline gap-3">
+                    <span
+                      class="font-mono text-xs font-semibold tabular-nums"
+                      :class="
+                        isSectionFilled(s.key) ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'
+                      "
+                      >{{ s.num }}</span
+                    >
+                    <div class="min-w-0">
+                      <h3 class="text-base font-semibold text-[var(--text-primary)]">
+                        {{ s.label }}
+                      </h3>
+                      <p class="mt-0.5 text-xs text-[var(--text-muted)]">{{ s.hint }}</p>
+                    </div>
+                  </div>
+
+                  <div class="mt-3 border-l-2 border-[var(--border-primary)] pl-4 md:pl-5">
+                    <template v-if="!isEditable">
+                      <template v-if="s.key === 'blameless'">
+                        <span
+                          class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium"
+                          :class="
+                            postMortem.blameless_confirmed
+                              ? 'border-green-500/30 bg-green-500/10 text-green-600 dark:text-green-400'
+                              : 'border-[var(--border-primary)] bg-[var(--bg-secondary)] text-[var(--text-muted)]'
+                          "
+                        >
+                          <CheckCircle2 v-if="postMortem.blameless_confirmed" class="h-3.5 w-3.5" />
+                          <CircleDashed v-else class="h-3.5 w-3.5" />
+                          {{
+                            postMortem.blameless_confirmed
+                              ? "Blamelessness confirmed"
+                              : "Not confirmed yet"
+                          }}
+                        </span>
+                        <MarkdownRenderer
+                          v-if="postMortem.blameless_notes?.trim()"
+                          class="mt-3 text-sm"
+                          :content="postMortem.blameless_notes"
+                        />
+                        <p v-else class="mt-3 text-sm italic text-[var(--text-muted)]">
+                          No notes recorded.
+                        </p>
+                      </template>
+                      <template v-else-if="s.key === 'contributing_factors'">
+                        <MarkdownRenderer
+                          v-if="postMortem.contributing_factors?.length"
+                          class="text-sm"
+                          :content="factorsToMarkdown(postMortem.contributing_factors)"
+                        />
+                        <p v-else class="text-sm italic text-[var(--text-muted)]">
+                          Not documented yet.
+                        </p>
+                      </template>
+                      <template v-else>
+                        <MarkdownRenderer
+                          v-if="sectionValue(s.key).trim()"
+                          class="text-sm"
+                          :content="sectionValue(s.key)"
+                        />
+                        <p v-else class="text-sm italic text-[var(--text-muted)]">
+                          Not documented yet.
+                        </p>
+                      </template>
+                    </template>
+
+                    <template v-else>
+                      <template v-if="s.key === 'blameless'">
+                        <label class="mb-3 flex cursor-pointer items-start gap-3">
+                          <Checkbox v-model="blamelessConfirmed" class="mt-0.5" />
+                          <span class="text-sm text-[var(--text-primary)]">
+                            I confirm this post-mortem focuses on systems and processes, not people
+                          </span>
+                        </label>
+                        <SectionEditor
+                          :model-value="blamelessNotes"
+                          :placeholder="s.placeholder"
+                          min-height="90px"
+                          @update:model-value="setSectionValue('blameless', $event)"
+                        />
+                      </template>
+                      <SectionEditor
+                        v-else
+                        :model-value="sectionValue(s.key)"
+                        :placeholder="s.placeholder"
+                        :min-height="s.key === 'contributing_factors' ? '110px' : '140px'"
+                        @update:model-value="setSectionValue(s.key, $event)"
+                      />
+                    </template>
+                  </div>
+                </section>
+              </div>
+            </div>
           </div>
         </div>
       </Card>
+
+      <!-- Sticky save bar while editing -->
+      <div
+        v-if="isEditable"
+        class="sticky bottom-3 z-20 flex items-center justify-between gap-3 rounded-lg border border-[var(--border-primary)] bg-[var(--bg-card)]/95 px-4 py-2.5 shadow-lg backdrop-blur"
+      >
+        <div class="flex min-w-0 items-center gap-2 text-xs">
+          <template v-if="isDirty">
+            <span class="h-2 w-2 shrink-0 animate-pulse rounded-full bg-amber-500" />
+            <span class="font-medium text-[var(--text-secondary)]">Unsaved changes</span>
+          </template>
+          <template v-else>
+            <Check class="h-3.5 w-3.5 shrink-0 text-green-600 dark:text-green-400" />
+            <span class="text-[var(--text-muted)]">All changes saved</span>
+          </template>
+          <span class="hidden truncate text-[var(--text-muted)] sm:inline"
+            >· Markdown supported in every section</span
+          >
+        </div>
+        <div class="flex shrink-0 items-center gap-2">
+          <Button variant="outline" size="sm" @click="cancelEditing">
+            <X class="h-3.5 w-3.5" />
+            Cancel
+          </Button>
+          <Button :loading="saving" size="sm" @click="handleSave">
+            <Save class="h-3.5 w-3.5" />
+            Save Draft
+          </Button>
+        </div>
+      </div>
 
       <!-- Incident timeline -->
       <Card v-if="timelineEntries.length > 0">

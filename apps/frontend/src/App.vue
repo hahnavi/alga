@@ -53,6 +53,24 @@ useAuthBootstrap();
 const moreMenuOpen = ref(false);
 const agentMenuOpen = ref(false);
 
+function toggleAgentMenu() {
+  if (agentMenuOpen.value) {
+    agentMenuOpen.value = false;
+  } else {
+    moreMenuOpen.value = false;
+    agentMenuOpen.value = true;
+  }
+}
+
+function toggleMoreMenu() {
+  if (moreMenuOpen.value) {
+    moreMenuOpen.value = false;
+  } else {
+    agentMenuOpen.value = false;
+    moreMenuOpen.value = true;
+  }
+}
+
 const { mobileMorePaths } = useNavSections();
 const navItems = TOP_NAV_ITEMS;
 
@@ -331,7 +349,7 @@ onBeforeUnmount(() => {
         :class="agentGroupActive || agentMenuOpen ? 'active' : ''"
         aria-haspopup="dialog"
         :aria-expanded="agentMenuOpen"
-        @click="agentMenuOpen = !agentMenuOpen"
+        @click="toggleAgentMenu"
       >
         <span class="mobile-nav-pill" aria-hidden="true">
           <Bot class="h-5 w-5" />
@@ -344,7 +362,7 @@ onBeforeUnmount(() => {
         :class="moreNavActive || moreMenuOpen ? 'active' : ''"
         aria-haspopup="dialog"
         :aria-expanded="moreMenuOpen"
-        @click="moreMenuOpen = !moreMenuOpen"
+        @click="toggleMoreMenu"
       >
         <span class="mobile-nav-pill" aria-hidden="true">
           <Menu class="h-5 w-5" />

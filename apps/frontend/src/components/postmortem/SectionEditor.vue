@@ -108,7 +108,11 @@ defineExpose({ focus });
 </script>
 
 <template>
-  <div class="section-editor" :class="{ 'section-editor--disabled': disabled }">
+  <div
+    class="section-editor"
+    :class="{ 'section-editor--disabled': disabled }"
+    :style="{ '--section-editor-min-height': minHeight }"
+  >
     <div class="section-editor__toolbar">
       <MarkdownToolbar :editor="editor" :disabled="disabled" />
     </div>

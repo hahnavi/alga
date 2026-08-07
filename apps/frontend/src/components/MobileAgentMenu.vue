@@ -5,6 +5,7 @@ import DialogCloseButton from "@/components/ui/DialogCloseButton.vue";
 import { isActiveRoute } from "@/lib/routing";
 import { useRoutePrefetch } from "@/composables/useRoutePrefetch";
 import { useDropdownLifecycle } from "@/composables/useDropdownLifecycle";
+import { useDialogFocusOnMount } from "@/lib/dialogFocus";
 import { useNavSections } from "@/lib/nav";
 
 const emit = defineEmits<{
@@ -18,6 +19,7 @@ const { mobileAgentItems: agentItems } = useNavSections();
 const sheetOpen = ref(true);
 const sheetRef = ref<HTMLElement | null>(null);
 useDropdownLifecycle(sheetOpen, sheetRef);
+useDialogFocusOnMount(() => sheetRef.value);
 watch(sheetOpen, (open) => {
   if (!open) emit("close");
 });
@@ -41,6 +43,7 @@ watch(
       role="dialog"
       aria-modal="true"
       aria-label="Agents"
+      tabindex="-1"
     >
       <div
         class="flex shrink-0 items-center justify-between border-b border-[var(--border-primary)] px-4 py-3"

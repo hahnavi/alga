@@ -9,6 +9,7 @@ import {
   ref,
   watch,
   type ComponentPublicInstance,
+  type Ref,
 } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
@@ -220,10 +221,16 @@ function factorsToMarkdown(factors: string[] | null | undefined): string {
 }
 
 function markdownToFactors(md: string): string[] {
+  const lines = md
+    .split("\n")
+    .map((r) => r.trim())
+    .filter((l) => l.length > 0);
+  // Only fall back to comma-splitting when the whole input is free-form prose
+  // with no list markers at all. Otherwise a non-list line is kept whole so
+  // prose sentences aren't shredded at every comma.
+  const hasListMarker = lines.some((l) => /^[-*+]\s+/.test(l) || /^\d+[.)]\s+/.test(l));
   const items: string[] = [];
-  for (const raw of md.split("\n")) {
-    const line = raw.trim();
-    if (!line) continue;
+  for (const line of lines) {
     const bullet = line.match(/^[-*+]\s+(.*)$/);
     if (bullet) {
       if (bullet[1].trim()) items.push(bullet[1].trim());
@@ -234,8 +241,12 @@ function markdownToFactors(md: string): string[] {
       if (numbered[1].trim()) items.push(numbered[1].trim());
       continue;
     }
-    for (const part of line.split(",")) {
-      if (part.trim()) items.push(part.trim());
+    if (hasListMarker) {
+      items.push(line);
+    } else {
+      for (const part of line.split(",")) {
+        if (part.trim()) items.push(part.trim());
+      }
     }
   }
   return items;
@@ -254,54 +265,23 @@ function syncForm(pm: PostMortemRecord) {
   blamelessNotes.value = pm.blameless_notes ?? "";
 }
 
+const sectionTextRefs: Record<SectionKey, Ref<string>> = {
+  summary,
+  impact,
+  root_cause: rootCause,
+  contributing_factors: factorsMarkdown,
+  lessons_learned: lessonsLearned,
+  what_went_well: whatWentWell,
+  what_went_wrong: whatWentWrong,
+  blameless: blamelessNotes,
+};
+
 function sectionValue(key: SectionKey): string {
-  switch (key) {
-    case "summary":
-      return summary.value;
-    case "impact":
-      return impact.value;
-    case "root_cause":
-      return rootCause.value;
-    case "contributing_factors":
-      return factorsMarkdown.value;
-    case "lessons_learned":
-      return lessonsLearned.value;
-    case "what_went_well":
-      return whatWentWell.value;
-    case "what_went_wrong":
-      return whatWentWrong.value;
-    case "blameless":
-      return blamelessNotes.value;
-  }
+  return sectionTextRefs[key].value;
 }
 
 function setSectionValue(key: SectionKey, value: string) {
-  switch (key) {
-    case "summary":
-      summary.value = value;
-      break;
-    case "impact":
-      impact.value = value;
-      break;
-    case "root_cause":
-      rootCause.value = value;
-      break;
-    case "contributing_factors":
-      factorsMarkdown.value = value;
-      break;
-    case "lessons_learned":
-      lessonsLearned.value = value;
-      break;
-    case "what_went_well":
-      whatWentWell.value = value;
-      break;
-    case "what_went_wrong":
-      whatWentWrong.value = value;
-      break;
-    case "blameless":
-      blamelessNotes.value = value;
-      break;
-  }
+  sectionTextRefs[key].value = value;
 }
 
 function isSectionFilled(key: SectionKey): boolean {
@@ -579,11 +559,17 @@ function setupScrollSpy() {
   const root = getScrollContainer();
   spy = new IntersectionObserver(
     (entries) => {
+      let topmost: { key: SectionKey; top: number } | null = null;
       for (const entry of entries) {
         if (!entry.isIntersecting) continue;
         const key = (entry.target as HTMLElement).dataset.sectionKey as SectionKey | undefined;
-        if (key) activeSection.value = key;
+        if (!key) continue;
+        const top = entry.boundingClientRect.top;
+        if (topmost === null || top < topmost.top) {
+          topmost = { key, top };
+        }
       }
+      if (topmost) activeSection.value = topmost.key;
     },
     { root, rootMargin: "0px 0px -70% 0px", threshold: 0 },
   );
@@ -846,12 +832,13 @@ watch(incidentNumber, (next, prev) => {
                   v-for="s in SECTIONS"
                   :key="s.key"
                   type="button"
-                  class="group -ml-px flex items-center gap-2 border-l-2 py-1.5 pl-3 pr-2 text-left text-[13px] transition-colors"
+                  class="group flex items-center gap-2 rounded-md py-1.5 pl-3 pr-2 text-left text-[13px] transition-colors"
                   :class="
                     activeSection === s.key
-                      ? 'border-[var(--accent)] font-medium text-[var(--text-primary)]'
-                      : 'border-[var(--border-primary)] text-[var(--text-muted)] hover:border-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+                      ? 'bg-[var(--bg-secondary)] font-medium text-[var(--text-primary)]'
+                      : 'text-[var(--text-muted)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-secondary)]'
                   "
+                  :aria-current="activeSection === s.key ? 'true' : undefined"
                   @click="scrollToSection(s.key)"
                 >
                   <CheckCircle2

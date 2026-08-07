@@ -42,7 +42,7 @@
 }
 
 .section-editor__content {
-  min-height: v-bind(minHeight);
+  min-height: var(--section-editor-min-height, 140px);
   max-height: 480px;
   padding: 12px 14px;
 }

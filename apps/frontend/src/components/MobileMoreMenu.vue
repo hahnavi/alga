@@ -9,6 +9,7 @@ import DialogCloseButton from "@/components/ui/DialogCloseButton.vue";
 import { isActiveRoute } from "@/lib/routing";
 import { useRoutePrefetch } from "@/composables/useRoutePrefetch";
 import { useDropdownLifecycle } from "@/composables/useDropdownLifecycle";
+import { useDialogFocusOnMount } from "@/lib/dialogFocus";
 import { useNavSections } from "@/lib/nav";
 import { MOBILE_MORE_USER_ACTION_CLASS } from "@/lib/uiClasses";
 
@@ -25,6 +26,7 @@ const { mobileMoreSections: sections } = useNavSections();
 const sheetOpen = ref(true);
 const sheetRef = ref<HTMLElement | null>(null);
 useDropdownLifecycle(sheetOpen, sheetRef);
+useDialogFocusOnMount(() => sheetRef.value);
 watch(sheetOpen, (open) => {
   if (!open) emit("close");
 });
@@ -58,6 +60,7 @@ async function handleLogout() {
       role="dialog"
       aria-modal="true"
       aria-label="Menu"
+      tabindex="-1"
     >
       <div
         class="flex shrink-0 items-center justify-between border-b border-[var(--border-primary)] px-4 py-3"

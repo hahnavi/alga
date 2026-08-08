@@ -6,7 +6,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/joho/godotenv v1.5.1
-	github.com/nyaruka/phonenumbers/v2 v2.0.6
+	github.com/nyaruka/phonenumbers/v2 v2.0.7
 	github.com/pgvector/pgvector-go v0.4.1
 	github.com/pressly/goose/v3 v3.27.3
 	github.com/rabbitmq/amqp091-go v1.13.0

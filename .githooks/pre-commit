@@ -102,9 +102,23 @@ if [[ -n "$staged_md" ]]; then
   else
     echo "✖ oxfmt: these markdown files need formatting:"
     cat /tmp/precommit-oxfmt-md.log
-    echo "  Fix: pnpm exec oxfmt $staged_md"
+    echo "  Fix: pnpm --filter frontend exec oxfmt $staged_md"
     status=1
   fi
+fi
+
+# ── Secret scan: betterleaks on the staged diff ──
+# CI runs the full-history scan; this catches secrets before they land in a
+# commit at all. .betterleaks.toml at the repo root is picked up automatically.
+if command -v betterleaks >/dev/null 2>&1; then
+  if ! betterleaks git "$repo_root" --pre-commit --staged >/tmp/precommit-betterleaks.log 2>&1; then
+    echo "✖ betterleaks: secrets detected in staged changes"
+    cat /tmp/precommit-betterleaks.log
+    echo "  If these are fixtures/placeholders, extend the prefilter in .betterleaks.toml"
+    status=1
+  fi
+else
+  echo "ℹ betterleaks not installed, skipping staged secret scan (CI still enforces it)"
 fi
 
 if [[ $status -ne 0 ]]; then

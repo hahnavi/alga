@@ -29,11 +29,11 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Pinned to the exact patch in apps/backend/go.mod (`go 1.26.5`) so setup-go
+  # Pinned to the exact patch in apps/backend/go.mod (`go 1.26.6`) so setup-go
   # installs a toolchain that already satisfies the module floor. GOTOOLCHAIN=local
   # is the belt-and-suspenders guard: if the pin drifts behind go.mod, Go fails
   # loudly instead of auto-downloading a toolchain into the read-only module cache.
-  GO_VERSION: "1.26.5"
+  GO_VERSION: "1.26.6"
   GOTOOLCHAIN: local
   NODE_VERSION: "24"
   # Keep in sync with `packageManager` in package.json and the corepack pin in
@@ -42,12 +42,12 @@ env:
   PNPM_VERSION: "11.17.0"
   # Pinned to the latest stable release built with Go 1.26 (go1.26.2).
   # golangci-lint can only lint Go versions ≤ its build toolchain, so this must
-  # stay ≥ the `go 1.26.5` floor in apps/backend/go.mod. v2.4.0 was built with
+  # stay ≥ the `go 1.26.6` floor in apps/backend/go.mod. v2.4.0 was built with
   # go1.25 and could not even load the config against go1.26.1.
   GOLANGCI_LINT_VERSION: "v2.12.2"
   # Pinned for the native gosec step in security-scan. The securego/gosec
   # Docker action was dropped because its image ships a fixed Go toolchain that
-  # can drift below the `go 1.26.5` floor in go.work; with GOTOOLCHAIN=local
+  # can drift below the `go 1.26.6` floor in go.work; with GOTOOLCHAIN=local
   # that made every package fail to load (0 files scanned). `go install` builds
   # gosec against the runner's own GO_VERSION instead.
   GOSEC_VERSION: "v2.22.2"
@@ -420,7 +420,7 @@ jobs:
       # Fail on High/Critical; surface findings as annotations. Installed
       # natively (not via the securego/gosec Docker action) so it builds
       # against this job's GO_VERSION toolchain — the action's pinned image
-      # bundles an older Go that cannot load the `go 1.26.5` floor in go.work
+      # bundles an older Go that cannot load the `go 1.26.6` floor in go.work
       # under GOTOOLCHAIN=local.
       - name: gosec
         if: needs.changes.outputs.backend == 'true'

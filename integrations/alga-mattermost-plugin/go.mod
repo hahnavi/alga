@@ -1,6 +1,6 @@
 module com.alga.mattermost-plugin
 
-go 1.26.5
+go 1.26.6
 
 require github.com/mattermost/mattermost/server/public v0.4.3
 

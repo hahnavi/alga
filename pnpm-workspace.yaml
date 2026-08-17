@@ -18,4 +18,4 @@ overrides:
   # size is zero. postcss (via vue > @vue/compiler-sfc) still pins ^3.3.17, so
   # force the patched 3.x release. Stay within major 3 — nanoid >=4 is ESM-only
   # and postcss 8 requires the CJS build.
-  "nanoid@<3.3.18": "3.3.18"
+  "nanoid@<3.3.18": "6.0.1"

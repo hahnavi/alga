@@ -9,7 +9,7 @@ require (
 	github.com/nyaruka/phonenumbers/v2 v2.0.7
 	github.com/pgvector/pgvector-go v0.4.1
 	github.com/pressly/goose/v3 v3.27.3
-	github.com/rabbitmq/amqp091-go v1.13.0
+	github.com/rabbitmq/amqp091-go v1.14.0
 	github.com/spf13/cobra v1.10.2
 	github.com/testcontainers/testcontainers-go v0.44.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.44.0
@@ -95,4 +95,4 @@ require (
 // (via github.com/containerd/errdefs/pkg@v0.3.0) would otherwise resolve
 // grpc v1.67.0. A replace directive survives `go mod tidy` (unlike an
 // indirect require, which tidy prunes for unimported modules).
-replace google.golang.org/grpc => google.golang.org/grpc v1.83.0
+replace google.golang.org/grpc => google.golang.org/grpc v1.83.1

@@ -4,7 +4,7 @@ go 1.26.6
 
 require (
 	charm.land/bubbles/v2 v2.1.1
-	charm.land/bubbletea/v2 v2.0.8
+	charm.land/bubbletea/v2 v2.0.9
 	charm.land/lipgloss/v2 v2.0.6
 	github.com/alga/agent-sdk-go v0.0.0-00010101000000-000000000000
 	github.com/modelcontextprotocol/go-sdk v1.7.0

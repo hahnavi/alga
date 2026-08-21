@@ -50,7 +50,7 @@ env:
   # can drift below the `go 1.27.0` floor in go.work; with GOTOOLCHAIN=local
   # that made every package fail to load (0 files scanned). `go install` builds
   # gosec against the runner's own GO_VERSION instead.
-  GOSEC_VERSION: "v2.22.2"
+  GOSEC_VERSION: "v2.28.0"
 
 jobs:
   # ─────────────────────────────── Change detection ────────────────────────

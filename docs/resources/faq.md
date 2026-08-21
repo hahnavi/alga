@@ -43,7 +43,7 @@ See [Quick Start Guide](/getting-started/) for details.
 - CPU: 2 cores
 - RAM: 4 GB
 - Disk: 20 GB
-- Go 1.26.5+
+- Go 1.27+
 - Node.js 18+
 
 **Recommended for production:**

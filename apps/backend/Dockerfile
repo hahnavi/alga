@@ -14,7 +14,7 @@
 #   docker build -t alga-backend -f apps/backend/Dockerfile \
 #     --target with-mm-plugin .
 
-FROM golang:1.26-alpine AS builder
+FROM golang:1.27-alpine AS builder
 
 WORKDIR /app
 

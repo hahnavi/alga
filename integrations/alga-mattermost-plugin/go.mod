@@ -1,6 +1,6 @@
 module com.alga.mattermost-plugin
 
-go 1.26.6
+go 1.27.0
 
 require github.com/mattermost/mattermost/server/public v0.4.3
 
@@ -29,7 +29,7 @@ require (
 	github.com/mattermost/logr/v2 v2.0.22 // indirect
 	github.com/mattermost/xml-roundtrip-validator v0.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
-	github.com/mattn/go-isatty v0.0.22 // indirect
+	github.com/mattn/go-isatty v0.0.23 // indirect
 	github.com/oklog/run v1.2.0 // indirect
 	github.com/pborman/uuid v1.2.1 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
@@ -44,14 +44,14 @@ require (
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/wiggin77/merror v1.0.5 // indirect
 	github.com/wiggin77/srslog v1.0.1 // indirect
-	go.opentelemetry.io/otel v1.44.0 // indirect
-	go.opentelemetry.io/otel/sdk/metric v1.44.0 // indirect
-	golang.org/x/crypto v0.54.0 // indirect
-	golang.org/x/mod v0.37.0 // indirect
-	golang.org/x/net v0.56.0 // indirect
+	go.opentelemetry.io/otel v1.45.0 // indirect
+	go.opentelemetry.io/otel/sdk/metric v1.45.0 // indirect
+	golang.org/x/crypto v0.55.0 // indirect
+	golang.org/x/mod v0.38.0 // indirect
+	golang.org/x/net v0.57.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.40.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260630182238-925bb5da69e7 // indirect
+	golang.org/x/text v0.41.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260720211330-0afa2a65878a // indirect
 	google.golang.org/grpc v1.82.1 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect

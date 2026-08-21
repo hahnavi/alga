@@ -207,11 +207,15 @@ func parseJWK(jwk *oidcJWK) (crypto.PublicKey, error) {
 		if err != nil {
 			return nil, fmt.Errorf("decode EC y: %w", err)
 		}
-		return &ecdsa.PublicKey{
-			Curve: crv,
-			X:     new(big.Int).SetBytes(xBytes),
-			Y:     new(big.Int).SetBytes(yBytes),
-		}, nil
+		point := make([]byte, 1+len(xBytes)+len(yBytes))
+		point[0] = 0x04
+		copy(point[1:], xBytes)
+		copy(point[1+len(xBytes):], yBytes)
+		pub, err := ecdsa.ParseUncompressedPublicKey(crv, point)
+		if err != nil {
+			return nil, fmt.Errorf("parse EC public key: %w", err)
+		}
+		return pub, nil
 	default:
 		return nil, fmt.Errorf("unsupported JWK key type: %s", jwk.Kty)
 	}

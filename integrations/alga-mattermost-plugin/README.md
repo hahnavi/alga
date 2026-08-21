@@ -15,7 +15,7 @@ This means Alga only needs a single shared secret (the **Webhook Secret**) and t
 ## Requirements
 
 - Mattermost Server 7.0+
-- Go 1.26.5+ (for building)
+- Go 1.27+ (for building)
 - Alga backend
 
 ## Installation
@@ -52,12 +52,13 @@ cp -r server/dist /path/to/mattermost/plugins/com.alga.mattermost-plugin/server/
 
 Configure the plugin in **System Console > Plugins > Alga Investigation Sync**.
 
-| Setting | Required | Description |
-|---|---|---|
-| **Alga Webhook URL** | Yes | The Alga backend webhook endpoint URL (e.g., `https://alga.example.com/webhooks/mattermost`) |
-| **Webhook Secret** | Yes | Shared secret for authenticating requests in both directions. Click **Regenerate** to create a new secret. |
+| Setting              | Required | Description                                                                                                |
+| -------------------- | -------- | ---------------------------------------------------------------------------------------------------------- |
+| **Alga Webhook URL** | Yes      | The Alga backend webhook endpoint URL (e.g., `https://alga.example.com/webhooks/mattermost`)               |
+| **Webhook Secret**   | Yes      | Shared secret for authenticating requests in both directions. Click **Regenerate** to create a new secret. |
 
 On the Alga side, configure:
+
 - `MATTERMOST_SERVER_URL` — The Mattermost server base URL (e.g., `https://mattermost.example.com`)
 - `MATTERMOST_WEBHOOK_SECRET` — The same secret configured in the plugin
 
@@ -67,19 +68,20 @@ No bot token or team ID is needed on the Alga side — the plugin handles all Ma
 
 The plugin exposes authenticated REST endpoints that Alga calls. All endpoints require `Authorization: Bearer <webhook_secret>`.
 
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/health` | Health check (no auth required) |
-| `POST` | `/api/v1/post` | Create a post in a channel |
-| `POST` | `/api/v1/reply` | Reply to a thread |
-| `PUT` | `/api/v1/update-post` | Update an existing post |
-| `GET` | `/api/v1/channel?name=<name>` | Resolve channel name to ID |
-| `GET` | `/api/v1/channels` | List all channels |
-| `GET` | `/api/v1/username` | Get bot username |
+| Method | Path                          | Description                     |
+| ------ | ----------------------------- | ------------------------------- |
+| `GET`  | `/health`                     | Health check (no auth required) |
+| `POST` | `/api/v1/post`                | Create a post in a channel      |
+| `POST` | `/api/v1/reply`               | Reply to a thread               |
+| `PUT`  | `/api/v1/update-post`         | Update an existing post         |
+| `GET`  | `/api/v1/channel?name=<name>` | Resolve channel name to ID      |
+| `GET`  | `/api/v1/channels`            | List all channels               |
+| `GET`  | `/api/v1/username`            | Get bot username                |
 
 ### Request/Response Formats
 
-**POST /api/v1/post**
+#### POST /api/v1/post
+
 ```json
 {
   "channel_id": "abc123",
@@ -87,9 +89,11 @@ The plugin exposes authenticated REST endpoints that Alga calls. All endpoints r
   "props": { "attachments": [...] }
 }
 ```
+
 Response: `{"id": "post_id"}`
 
-**POST /api/v1/reply**
+#### POST /api/v1/reply
+
 ```json
 {
   "root_post_id": "def456",
@@ -97,9 +101,11 @@ Response: `{"id": "post_id"}`
   "props": null
 }
 ```
+
 Response: `{"id": "reply_id", "channel_id": "abc123"}`
 
-**PUT /api/v1/update-post**
+#### PUT /api/v1/update-post
+
 ```json
 {
   "post_id": "ghi789",
@@ -107,6 +113,7 @@ Response: `{"id": "reply_id", "channel_id": "abc123"}`
   "props": { "attachments": [...] }
 }
 ```
+
 Response: `{"status": "updated"}`
 
 **GET /api/v1/channel?name=alerts**
@@ -137,6 +144,7 @@ The plugin sends the following JSON payload for each thread reply to the Alga we
 ```
 
 The request includes:
+
 - `Authorization: Bearer <webhook_secret>` header
 - `Content-Type: application/json` header
 - `User-Agent: Alga-Mattermost-Plugin/0.0.1` header
@@ -150,11 +158,13 @@ GET /plugins/com.alga.mattermost-plugin/health
 ```
 
 Response:
+
 ```json
-{"status": "configured"}
+{ "status": "configured" }
 ```
 
 Possible values for `status`:
+
 - `configured` - The webhook URL is set and the plugin is ready.
 - `not_configured` - The webhook URL has not been set.
 

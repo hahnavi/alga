@@ -4,7 +4,7 @@
 >
 > This project is experimental. Use at your own risk. Do not run in production unless you are fully aware of the implications. Monitor AI token usage closely when using autonomous investigation features.
 
-[![Go Version](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/Go-1.27-00ADD8?logo=go)](https://go.dev/)
 [![Vue Version](https://img.shields.io/badge/Vue-3.5-42b883?logo=vuedotjs)](https://vuejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker)](https://hub.docker.com/)
@@ -114,7 +114,7 @@ flowchart LR
 
 | Layer    | Technology                                                                                     |
 | -------- | ---------------------------------------------------------------------------------------------- |
-| Backend  | Go 1.26, method-based `net/http` routing, Bun ORM (pgx/v5, goose migrations), RabbitMQ, Valkey |
+| Backend  | Go 1.27, method-based `net/http` routing, Bun ORM (pgx/v5, goose migrations), RabbitMQ, Valkey |
 | Frontend | Vue 3.5 + TypeScript, Vite, Pinia, Tailwind CSS v4, TipTap, Chart.js                           |
 | Database | PostgreSQL 18 with pgvector                                                                    |
 | Infra    | Docker Compose, Caddy (HTTPS), Helm chart, Moonrepo build orchestration                        |

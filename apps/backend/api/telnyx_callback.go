@@ -242,7 +242,7 @@ func (s *Server) recordVoiceTimelineEntry(ctx context.Context, incidentNumber in
 				logger.Error("timeline entry goroutine panicked", "component", "telnyx-callback", "incident_number", incidentNumber, "panic", r)
 			}
 		}()
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
 		defer cancel()
 		if err := s.incidentStore.AddTimelineEntry(ctx, entry); err != nil {
 			logger.WarnCtx(ctx, "failed to add incident timeline entry", "incident_number", incidentNumber, "event_type", eventType, "error", err)

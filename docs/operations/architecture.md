@@ -14,7 +14,7 @@ Alga is a full-stack monorepo architecture designed for high availability, scala
 ### Backend (Go)
 
 - **Location:** `apps/backend/`
-- **Version:** Go 1.26.5
+- **Version:** Go 1.27.0
 - **Module:** `alga`
 
 The backend provides:
@@ -400,7 +400,7 @@ Each exchange routes to a dedicated processing queue plus `alga.dead_letter`. Do
 
 | Component               | Technology           | Version             | Purpose                        |
 | ----------------------- | -------------------- | ------------------- | ------------------------------ |
-| **Backend**             | Go                   | 1.26.5              | REST API, webhooks, workers    |
+| **Backend**             | Go                   | 1.27.0              | REST API, webhooks, workers    |
 | **Frontend**            | Vue                  | 3                   | Operations console             |
 | **Frontend**            | Vite                 | Latest              | Build tooling                  |
 | **Frontend**            | Tailwind CSS         | v4                  | Styling                        |

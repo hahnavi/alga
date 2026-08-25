@@ -4,6 +4,7 @@ import { api, type NotificationRecord } from "@/lib/api";
 import { MAX_NOTIFICATIONS } from "@/lib/threadLimits";
 import {
   notificationNewEventSchema,
+  notificationRecordSchema,
   notificationUnreadCountEventSchema,
   validate,
 } from "@/lib/validation";
@@ -96,10 +97,11 @@ export const useNotificationStore = defineStore("notifications", () => {
         const envelope = validate(notificationNewEventSchema, data);
         // The backend has historically emitted the record at the top level;
         // also accept the wrapped `{notification: ...}` shape.
-        const raw =
-          (envelope as { notification?: NotificationRecord }).notification ??
-          (data as NotificationRecord);
-        n = raw;
+        if ((envelope as { notification?: NotificationRecord }).notification) {
+          n = (envelope as { notification: NotificationRecord }).notification;
+        } else {
+          n = validate(notificationRecordSchema, data);
+        }
       } catch {
         return; // malformed event — drop instead of corrupting UI state
       }

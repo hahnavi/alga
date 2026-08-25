@@ -55,6 +55,12 @@ export function useIncidentDocumentSections(
       documentSections.value = await api.getIncidentDocument(incidentNumber.value);
     } catch (err) {
       documentSections.value = [];
+      impactContent.value = "";
+      impactVersion.value = 0;
+      rootCauseContent.value = "";
+      rootCauseVersion.value = 0;
+      resolutionContent.value = "";
+      resolutionVersion.value = 0;
       push(getErrorMessage(err, "Failed to load document sections"), "error");
       return;
     }

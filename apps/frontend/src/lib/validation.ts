@@ -208,14 +208,20 @@ export const incidentDetailSchema = z.object({ incident: incidentRecordSchema })
 export const notificationRecordSchema = z
   .object({
     id: z.string(),
+    user_id: z.string(),
     type: z.string(),
     title: z.string(),
+    message: z.string(),
+    read: z.boolean(),
+    resource_type: z.string(),
+    resource_id: z.string(),
+    triggered_by_user_id: z.string().optional(),
+    triggered_by_display_name: z.string().optional(),
     body: z.string().optional(),
     url: z.string().optional(),
     severity: z.string().optional(),
     actor_id: z.string().optional(),
     actor_name: z.string().optional(),
-    read: z.boolean().optional(),
     created_at: z.string(),
   })
   .passthrough();

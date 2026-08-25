@@ -42,6 +42,7 @@ import {
   type OwnerThreadMessageSource,
   type AgentTokenRow,
 } from "@/lib/api";
+import { alertRecordSchema, validate } from "@/lib/validation";
 import {
   alertSeverityLabel,
   incidentPriorityBorderColor,
@@ -595,7 +596,17 @@ function scheduleTypingNotify() {
 }
 
 function handleAlertSSE(data: unknown) {
-  const rec = data as AlertRecord;
+  // `data` is the wire payload. Validate shape with the alert schema so a
+  // malformed event (e.g. partial push from the server) is dropped instead
+  // of causing a needless reload. The zod-inferred type is slightly looser
+  // than `AlertRecord` (e.g. `agent_type` is a free-form string); the cast
+  // narrows the runtime-validated value to the consumer's expected type.
+  let rec: AlertRecord;
+  try {
+    rec = validate(alertRecordSchema, data) as AlertRecord;
+  } catch {
+    return;
+  }
   if (rec.alert_number != null && rec.alert_number !== alertNumber.value) return;
   scheduleReload();
 }
@@ -1025,18 +1036,20 @@ function onDeleteFromHeader() {
   if (alert.value) confirmDelete(alert.value);
 }
 
-function chatSourceBorderClass(source: string): string {
+// Indicator chip class per chat source. Rendered as a non-rail dot in
+// ChatMessageRow's meta line — see lib/chatMessage.ts for the shared helper.
+function chatSourceIndicatorClass(source: string): string {
   switch (source) {
     case "agent":
-      return "border-l-purple-500";
+      return "bg-purple-500/15 text-purple-700 dark:text-purple-300";
     case "system":
-      return "border-l-blue-500";
+      return "bg-blue-500/15 text-blue-700 dark:text-blue-300";
     case "mattermost":
-      return "border-l-indigo-500";
+      return "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300";
     case "slack":
-      return "border-l-emerald-500";
+      return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300";
     default:
-      return "border-l-[var(--bg-online)]";
+      return "bg-[var(--bg-online)]";
   }
 }
 
@@ -1885,7 +1898,7 @@ onMounted(async () => {
             <ChatMessageRow
               v-else
               :id="item.message.id"
-              :border-class="chatSourceBorderClass(item.message.source)"
+              :indicator-class="chatSourceIndicatorClass(item.message.source)"
               :highlight-class="searchHighlight(item.message.id)"
               :avatar-src="chatAvatarSrc(item.message)"
               :avatar-letter="

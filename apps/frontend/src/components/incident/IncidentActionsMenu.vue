@@ -3,6 +3,7 @@ import { computed } from "vue";
 import HeaderActionsMenu from "@/components/ui/HeaderActionsMenu.vue";
 import type { IncidentStatus } from "@/lib/api";
 import { incidentMenuItemsFor } from "@/lib/incidentActions";
+defineOptions({ name: "IncidentActionsMenu" });
 
 const props = defineProps<{
   status: IncidentStatus;

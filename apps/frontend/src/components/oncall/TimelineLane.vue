@@ -8,6 +8,8 @@ import {
   type TimeTick,
 } from "@/lib/scheduleTimeline";
 
+defineOptions({ name: "TimelineLane" });
+
 const props = defineProps<{
   /** Display name for the lane. */
   title: string;
@@ -67,7 +69,7 @@ const userIds = computed(() => getParticipants(props.shifts));
         </div>
         <div class="relative h-7 flex-1 rounded bg-[var(--bg-secondary)]">
           <template
-            v-for="s in (shifts as ScheduleShift[]).filter(
+            v-for="s in shifts.filter(
               (x) => x.user_id === uid && shiftWithinRange(x, rangeStartMs, rangeEndMs),
             )"
             :key="s.start"
@@ -82,7 +84,7 @@ const userIds = computed(() => getParticipants(props.shifts));
                   : shiftClass,
               ]"
               :style="shiftStyle(s, rangeStartMs, rangeMs)"
-              :title="`${nameForUserId(uid)} (${(s as ScheduleShift).source})`"
+              :title="`${nameForUserId(uid)} (${s.source})`"
             >
               {{ nameForUserId(uid) }}
             </div>

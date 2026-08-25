@@ -17,6 +17,7 @@ import {
   rootMessages,
 } from "./coordinationHelpers";
 import { getAgentAvatarSrc } from "@/lib/agentAvatar";
+defineOptions({ name: "IncidentCoordinationStream" });
 
 const avatarSrc = (msg: {
   source?: string;
@@ -186,7 +187,7 @@ const isEmpty = computed(() => props.messages.length === 0);
             v-else
             :id="item.message.id"
             variant="thread"
-            :border-class="borderClass(item.message)"
+            :indicator-class="borderClass(item.message)"
             :avatar-src="avatarSrc(item.message)"
             :avatar-letter="
               item.message.actor_type === 'agent' ? undefined : avatarLetter(item.message)

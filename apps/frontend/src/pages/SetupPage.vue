@@ -5,6 +5,7 @@ import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { api } from "@/lib/api";
 import { validatePassword } from "@/lib/validators";
+import { safeRedirectTarget } from "@/lib/redirect";
 import { Eye, EyeOff } from "@lucide/vue";
 import Button from "@/components/ui/Button.vue";
 import FormLabel from "@/components/ui/FormLabel.vue";
@@ -99,13 +100,6 @@ async function handleSetup() {
   } finally {
     loading.value = false;
   }
-}
-
-function safeRedirectTarget(redirect: unknown): string {
-  if (typeof redirect === "string" && redirect.startsWith("/")) {
-    return redirect;
-  }
-  return "/";
 }
 </script>
 

@@ -30,6 +30,7 @@ import {
   startOfDay,
   type TimelineRange,
 } from "@/lib/scheduleTimeline";
+defineOptions({ name: "ScheduleTimeline" });
 
 type ViewKind = "timeline" | "calendar";
 

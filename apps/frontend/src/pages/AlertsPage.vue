@@ -15,6 +15,7 @@ import { useRoute, useRouter, type LocationQuery } from "vue-router";
 import { queryString } from "@/lib/routing";
 import { Bell, Bot, CircleAlert, Clock, User, X, ShieldCheck } from "@lucide/vue";
 import { api, type AlertRecord } from "@/lib/api";
+import { alertRecordSchema, validate } from "@/lib/validation";
 import {
   alertSeverityLabel,
   nonHeaderLabelKeys,
@@ -295,7 +296,12 @@ function investigationActor(alert: AlertRecord): { name: string; isAgent: boolea
 }
 
 function handleAlertCreatedSSE(data: unknown) {
-  const alert = data as AlertRecord;
+  let alert: AlertRecord;
+  try {
+    alert = validate(alertRecordSchema, data) as AlertRecord;
+  } catch {
+    return; // malformed event — drop instead of corrupting the list
+  }
   if (!passesListFilters(alert)) return;
   if (alerts.value.some((a) => a.alert_number === alert.alert_number)) return;
   alerts.value = sortAlerts([alert, ...alerts.value], sortBy.value);
@@ -303,7 +309,12 @@ function handleAlertCreatedSSE(data: unknown) {
 }
 
 function handleAlertUpdatedSSE(data: unknown) {
-  const alert = data as AlertRecord;
+  let alert: AlertRecord;
+  try {
+    alert = validate(alertRecordSchema, data) as AlertRecord;
+  } catch {
+    return;
+  }
   const idx = alerts.value.findIndex((a) => a.alert_number === alert.alert_number);
   if (idx !== -1) {
     if (passesListFilters(alert)) {
@@ -321,7 +332,12 @@ function handleAlertUpdatedSSE(data: unknown) {
 }
 
 function handleAlertDeletedSSE(data: unknown) {
-  const alert = data as AlertRecord;
+  let alert: AlertRecord;
+  try {
+    alert = validate(alertRecordSchema, data) as AlertRecord;
+  } catch {
+    return;
+  }
   alerts.value = alerts.value.filter((a) => a.alert_number !== alert.alert_number);
 }
 

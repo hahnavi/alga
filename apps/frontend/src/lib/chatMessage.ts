@@ -49,31 +49,39 @@ export function avatarLetter(message: ChatMessage): string {
   return displayName(message).slice(0, 1).toUpperCase() || "?";
 }
 
-/** Left-border accent per source. */
+/**
+ * Indicator tint per source. Returned as a non-rail chip class so chat rows
+ * can render a small colored dot/pill near the avatar instead of a left
+ * accent border strip (which AGENTS.md explicitly forbids).
+ */
 export function sourceColor(source: ChatSource | string): string {
   switch (source) {
     case "agent":
-      return "border-l-purple-500";
+      return "bg-purple-500/15 text-purple-700 dark:text-purple-300";
     case "system":
-      return "border-l-blue-500";
+      return "bg-blue-500/15 text-blue-700 dark:text-blue-300";
     case "mattermost":
-      return "border-l-indigo-500";
+      return "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300";
     case "slack":
-      return "border-l-emerald-500";
+      return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300";
     default:
-      return "border-l-[var(--border-primary)]";
+      return "bg-[var(--bg-secondary)] text-[var(--text-secondary)]";
   }
 }
 
 /**
- * Border accent derived from incident-coordination `kind` (decision/action/
- * investigation_summary/agent_reply). Falls back to sourceColor.
+ * Indicator tint derived from incident-coordination `kind`
+ * (decision/action/investigation_summary/agent_reply). Falls back to
+ * sourceColor. Returns a non-rail chip class (see `sourceColor`).
  */
 export function borderClass(message: IncidentCoordinationMessage): string {
-  if (message.kind === "decision") return "border-l-emerald-500";
-  if (message.kind === "action") return "border-l-amber-500";
-  if (message.kind === "agent_reply") return "border-l-purple-500";
-  if (message.kind === "investigation_summary") return "border-l-cyan-500";
+  if (message.kind === "decision")
+    return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300";
+  if (message.kind === "action") return "bg-amber-500/15 text-amber-700 dark:text-amber-300";
+  if (message.kind === "agent_reply")
+    return "bg-purple-500/15 text-purple-700 dark:text-purple-300";
+  if (message.kind === "investigation_summary")
+    return "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300";
   return sourceColor(message.source);
 }
 

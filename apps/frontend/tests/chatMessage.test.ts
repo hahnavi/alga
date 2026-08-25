@@ -97,23 +97,31 @@ describe("avatarLetter", () => {
 });
 
 describe("sourceColor", () => {
-  it("returns the per-source left border class", () => {
-    expect(sourceColor("agent")).toBe("border-l-purple-500");
-    expect(sourceColor("system")).toBe("border-l-blue-500");
-    expect(sourceColor("slack")).toBe("border-l-emerald-500");
-    expect(sourceColor("mattermost")).toBe("border-l-indigo-500");
-    expect(sourceColor("user")).toBe("border-l-[var(--border-primary)]");
+  it("returns a per-source indicator chip class (not a left rail)", () => {
+    expect(sourceColor("agent")).toBe("bg-purple-500/15 text-purple-700 dark:text-purple-300");
+    expect(sourceColor("system")).toBe("bg-blue-500/15 text-blue-700 dark:text-blue-300");
+    expect(sourceColor("slack")).toBe("bg-emerald-500/15 text-emerald-700 dark:text-emerald-300");
+    expect(sourceColor("mattermost")).toBe("bg-indigo-500/15 text-indigo-700 dark:text-indigo-300");
+    expect(sourceColor("user")).toBe("bg-[var(--bg-secondary)] text-[var(--text-secondary)]");
   });
 });
 
 describe("borderClass", () => {
   it("falls back to sourceColor except for known kinds", () => {
-    expect(borderClass(incidentMsg({ kind: "decision" }))).toBe("border-l-emerald-500");
-    expect(borderClass(incidentMsg({ kind: "action" }))).toBe("border-l-amber-500");
-    expect(borderClass(incidentMsg({ kind: "agent_reply" }))).toBe("border-l-purple-500");
-    expect(borderClass(incidentMsg({ kind: "investigation_summary" }))).toBe("border-l-cyan-500");
+    expect(borderClass(incidentMsg({ kind: "decision" }))).toBe(
+      "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+    );
+    expect(borderClass(incidentMsg({ kind: "action" }))).toBe(
+      "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+    );
+    expect(borderClass(incidentMsg({ kind: "agent_reply" }))).toBe(
+      "bg-purple-500/15 text-purple-700 dark:text-purple-300",
+    );
+    expect(borderClass(incidentMsg({ kind: "investigation_summary" }))).toBe(
+      "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300",
+    );
     expect(borderClass(incidentMsg({ kind: "chat", source: "slack" }))).toBe(
-      "border-l-emerald-500",
+      "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
     );
   });
 });

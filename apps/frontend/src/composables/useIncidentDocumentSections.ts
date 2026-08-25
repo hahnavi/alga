@@ -53,8 +53,16 @@ export function useIncidentDocumentSections(
   async function load() {
     try {
       documentSections.value = await api.getIncidentDocument(incidentNumber.value);
-    } catch {
+    } catch (err) {
       documentSections.value = [];
+      impactContent.value = "";
+      impactVersion.value = 0;
+      rootCauseContent.value = "";
+      rootCauseVersion.value = 0;
+      resolutionContent.value = "";
+      resolutionVersion.value = 0;
+      push(getErrorMessage(err, "Failed to load document sections"), "error");
+      return;
     }
     const impact = documentSections.value.find((s) => s.section === "impact_assessment");
     impactContent.value = unescapeDocContent(impact?.content ?? "");

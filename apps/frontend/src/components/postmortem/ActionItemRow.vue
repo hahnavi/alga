@@ -4,6 +4,7 @@ import { actionItemTypeBadgeClass } from "@/lib/alertLabels";
 import Button from "@/components/ui/Button.vue";
 import Select from "@/components/ui/Select.vue";
 import { formatDate } from "@/lib/time";
+defineOptions({ name: "ActionItemRow" });
 
 const props = defineProps<{
   item: ActionItemRecord;

@@ -6,6 +6,7 @@ import { incidentStatusBadgeClass, incidentStatusLabel } from "@/lib/alertLabels
 import { formatTimeAgo } from "@/lib/time";
 import InteractiveCard from "@/components/ui/InteractiveCard.vue";
 import IncidentListActionsMenu from "@/components/incident/IncidentListActionsMenu.vue";
+defineOptions({ name: "IncidentCard" });
 
 const props = withDefaults(
   defineProps<{

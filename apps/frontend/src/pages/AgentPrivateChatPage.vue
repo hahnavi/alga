@@ -315,8 +315,10 @@ async function resolveAgentTitle() {
   }
 }
 
-function dmBorderClass(role: AgentDMMessageRow["role"]): string {
-  return role === "agent" ? "border-l-[var(--accent)]" : "border-l-[var(--bg-online)]";
+// Indicator chip class per DM role. Rendered as a non-rail dot inside
+// ChatMessageRow's meta line — see lib/chatMessage.ts for the shared helper.
+function dmIndicatorClass(role: AgentDMMessageRow["role"]): string {
+  return role === "agent" ? "bg-[var(--accent)]/30" : "bg-[var(--bg-online)]/40";
 }
 
 function dmAvatarClass(role: AgentDMMessageRow["role"]): string {
@@ -417,7 +419,7 @@ onBeforeUnmount(() => {
             <ChatMessageRow
               v-else
               :id="item.message.id"
-              :border-class="dmBorderClass(item.message.role)"
+              :indicator-class="dmIndicatorClass(item.message.role)"
               :highlight-class="searchHighlight(item.message.id)"
               :avatar-src="
                 item.message.role === 'agent' ? getAgentAvatarSrc(agentBrand) : undefined

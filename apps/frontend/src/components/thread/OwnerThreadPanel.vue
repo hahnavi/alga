@@ -35,6 +35,8 @@ import MessageContextMenu, { type MessageAction } from "@/components/ui/MessageC
 import TypingIndicator from "@/components/ui/TypingIndicator.vue";
 import { formatDateSeparator, dateSeparatorKey } from "@/lib/time";
 
+defineOptions({ name: "OwnerThreadPanel" });
+
 const avatarSrc = (msg: OwnerThreadMessage): string | undefined =>
   shouldShowAgentAvatar(msg) ? getAgentAvatarSrc(msg.agent_type) : undefined;
 
@@ -328,7 +330,7 @@ onMounted(loadThread);
         <ChatMessageRow
           v-else
           :id="item.message.id"
-          :border-class="sourceColor(item.message.source)"
+          :indicator-class="sourceColor(item.message.source)"
           :avatar-src="avatarSrc(item.message)"
           :avatar-letter="
             item.message.source === 'agent' ? undefined : displayName(item.message).charAt(0)

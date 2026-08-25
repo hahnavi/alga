@@ -15,7 +15,7 @@ import { HEADER_ICON_BTN_CLASS } from "@/lib/uiClasses";
 import { headerInlineSearchExpanded } from "@/lib/pageHeader";
 import { usePageHeader } from "@/composables/usePageHeader";
 
-interface UsePageHeaderActionsOptions {
+type UsePageHeaderActionsOptions = {
   /** Page title shown in the shell header. */
   title: string;
   /** Optional Lucide icon component (or pre-built VNode) shown before the title. */
@@ -38,14 +38,14 @@ interface UsePageHeaderActionsOptions {
   addLabel?: string;
   /** Click handler for the add button. */
   onAdd?: () => void;
-}
+};
 
-interface UsePageHeaderActionsReturn {
+type UsePageHeaderActionsReturn = {
   /** Whether the inline search bar is expanded in the shell header. */
   showSearch: Ref<boolean>;
   /** Whether the filter card is open. Use in the page template to gate the filter card. */
   showFilters: Ref<boolean>;
-}
+};
 
 const SEARCH_INPUT_CLASS = "field h-9 pl-9 pr-10";
 

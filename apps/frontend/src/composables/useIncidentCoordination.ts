@@ -126,16 +126,18 @@ export function useIncidentCoordination(incidentNumber: Ref<number>) {
       coordinationMessages.value = await api.getIncidentCoordinationMessages(incidentNumber.value, {
         limit: 200,
       });
-    } catch {
+    } catch (err) {
       coordinationMessages.value = [];
+      push(getErrorMessage(err, "Failed to load coordination messages"), "error");
     }
   }
 
   async function loadCoordinationTasks() {
     try {
       coordinationTasks.value = await api.getIncidentCoordinationTasks(incidentNumber.value);
-    } catch {
+    } catch (err) {
       coordinationTasks.value = [];
+      push(getErrorMessage(err, "Failed to load coordination tasks"), "error");
     }
   }
 
@@ -145,7 +147,9 @@ export function useIncidentCoordination(incidentNumber: Ref<number>) {
     try {
       statusUpdates.value = await api.getIncidentStatusUpdates(incidentNumber.value);
     } catch (err: unknown) {
-      statusUpdatesError.value = getErrorMessage(err, "Failed to load status updates");
+      const msg = getErrorMessage(err, "Failed to load status updates");
+      statusUpdatesError.value = msg;
+      push(msg, "error");
     } finally {
       statusUpdatesLoading.value = false;
     }
@@ -194,8 +198,9 @@ export function useIncidentCoordination(incidentNumber: Ref<number>) {
     void editorValue;
     try {
       agents.value = await api.getAgentTokens();
-    } catch {
+    } catch (err) {
       agents.value = [];
+      push(getErrorMessage(err, "Failed to load agents for mentions"), "error");
     }
     await loadUsers();
   }

@@ -11,7 +11,6 @@ import type {
   TeamMemberRecord,
   UserInfo,
 } from "@/lib/api";
-import { useAuthStore } from "@/stores/auth";
 import { useToast } from "@/lib/toast";
 import { useAsyncData } from "@/composables/useAsyncData";
 import { useFormSubmit } from "@/composables/useFormSubmit";
@@ -42,11 +41,15 @@ import TimePicker from "@/components/ui/TimePicker.vue";
 defineOptions({ name: "ScheduleEditorPage" });
 
 const route = useRoute();
-const auth = useAuthStore();
 const { push } = useToast();
 
 const scheduleId = computed(() => (route.params.id as string) ?? "");
 const { canWrite: canEdit } = useEntityPermissions("oncall");
+// `users:manage` is a non-standard action — bind it to the "manage" slot
+// so the composable's `can("manage")` resolves to the right permission.
+const { can: canManageUsers } = useEntityPermissions("users", {
+  actions: { manage: "users:manage" },
+});
 
 const schedule = ref<OnCallScheduleRecord | null>(null);
 const overrides = ref<ScheduleOverrideRecord[]>([]);
@@ -152,7 +155,7 @@ const { loading, error, reload } = useAsyncData(async () => {
   const memberUserIds = new Set(members.map((m) => m.user_id));
   await loadPermittedUsers();
   let resolvedUsers: UserInfo[];
-  if (auth.hasPermission("users:manage")) {
+  if (canManageUsers("manage")) {
     resolvedUsers = permittedUsers.value;
   } else {
     resolvedUsers = members.map<UserInfo>((m) => ({

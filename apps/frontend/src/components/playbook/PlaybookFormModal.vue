@@ -9,6 +9,7 @@ import FormLabel from "@/components/ui/FormLabel.vue";
 import Button from "@/components/ui/Button.vue";
 import ErrorBanner from "@/components/ui/ErrorBanner.vue";
 import { useFormSubmit } from "@/composables/useFormSubmit";
+defineOptions({ name: "PlaybookFormModal" });
 
 type SelectorEntry = { key: string; op: string; value: string };
 

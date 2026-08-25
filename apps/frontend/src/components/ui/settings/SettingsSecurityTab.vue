@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { api } from "@/lib/api";
 import { getErrorMessage } from "@/lib/error";
+import { validatePassword } from "@/lib/validators";
 import Button from "@/components/ui/Button.vue";
 import Input from "@/components/ui/Input.vue";
 import FormLabel from "@/components/ui/FormLabel.vue";
@@ -14,6 +15,23 @@ const message = ref("");
 const error = ref("");
 const submitting = ref(false);
 
+// Client-side preview using the shared password policy so users get the same
+// feedback the server will eventually enforce. The server is still the
+// source of truth — the policy may evolve after this build.
+const passwordCheck = computed(() => validatePassword(newPassword.value));
+const passwordError = computed(() => {
+  if (!newPassword.value) return "";
+  if (passwordCheck.value.valid) return "";
+  return passwordCheck.value.error;
+});
+const confirmError = computed(() => {
+  if (!confirmPassword.value) return "";
+  if (newPassword.value !== confirmPassword.value) {
+    return "New password confirmation does not match.";
+  }
+  return "";
+});
+
 async function changePassword() {
   message.value = "";
   error.value = "";
@@ -21,12 +39,12 @@ async function changePassword() {
     error.value = "All password fields are required.";
     return;
   }
-  if (newPassword.value.length < 8) {
-    error.value = "New password must be at least 8 characters.";
+  if (passwordError.value) {
+    error.value = passwordError.value;
     return;
   }
-  if (newPassword.value !== confirmPassword.value) {
-    error.value = "New password confirmation does not match.";
+  if (confirmError.value) {
+    error.value = confirmError.value;
     return;
   }
 
@@ -46,22 +64,37 @@ async function changePassword() {
 </script>
 
 <template>
-  <p class="text-sm text-[var(--text-muted)]">Change password</p>
+  <h2 class="text-sm font-semibold text-[var(--text-primary)]">Change password</h2>
   <div class="space-y-1.5">
-    <FormLabel>Current password</FormLabel>
-    <Input v-model="currentPassword" type="password" />
+    <FormLabel for="current-password">Current password</FormLabel>
+    <Input
+      id="current-password"
+      v-model="currentPassword"
+      type="password"
+      autocomplete="current-password"
+    />
   </div>
   <div class="space-y-1.5">
-    <FormLabel>New password</FormLabel>
-    <Input v-model="newPassword" type="password" />
+    <FormLabel for="new-password">New password</FormLabel>
+    <Input
+      id="new-password"
+      v-model="newPassword"
+      type="password"
+      autocomplete="new-password"
+      :error="passwordError"
+    />
   </div>
   <div class="space-y-1.5">
-    <FormLabel>Confirm new password</FormLabel>
-    <Input v-model="confirmPassword" type="password" />
+    <FormLabel for="confirm-password">Confirm new password</FormLabel>
+    <Input
+      id="confirm-password"
+      v-model="confirmPassword"
+      type="password"
+      autocomplete="new-password"
+      :error="confirmError"
+    />
   </div>
-  <p v-if="error" class="text-xs text-[var(--text-error)]">{{ error }}</p>
+  <p v-if="error" class="text-xs text-[var(--text-error)]" role="alert">{{ error }}</p>
   <p v-if="message" class="text-xs text-[var(--text-success)]">{{ message }}</p>
-  <Button :disabled="submitting" @click="changePassword">
-    {{ submitting ? "Updating..." : "Update password" }}
-  </Button>
+  <Button :loading="submitting" @click="changePassword">Update password</Button>
 </template>

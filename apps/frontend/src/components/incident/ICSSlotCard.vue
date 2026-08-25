@@ -6,6 +6,7 @@ import { formatTimeAgo } from "@/lib/time";
 import { getAgentAvatarSrc } from "@/lib/agentAvatar";
 import Avatar from "@/components/ui/Avatar.vue";
 import IconBtn from "@/components/ui/IconBtn.vue";
+defineOptions({ name: "ICSSlotCard" });
 
 const props = defineProps<{
   roleType: ICSRoleType;

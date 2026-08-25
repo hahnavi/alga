@@ -2,6 +2,12 @@ import { ref, computed } from "vue";
 import { defineStore } from "pinia";
 import { api, type NotificationRecord } from "@/lib/api";
 import { MAX_NOTIFICATIONS } from "@/lib/threadLimits";
+import {
+  notificationNewEventSchema,
+  notificationRecordSchema,
+  notificationUnreadCountEventSchema,
+  validate,
+} from "@/lib/validation";
 
 export const useNotificationStore = defineStore("notifications", () => {
   const notifications = ref<NotificationRecord[]>([]);
@@ -86,15 +92,29 @@ export const useNotificationStore = defineStore("notifications", () => {
 
   function handleSSEEvent(eventType: string, data: unknown) {
     if (eventType === "notification_new") {
-      const n = data as NotificationRecord;
+      let n: NotificationRecord | null = null;
+      try {
+        const envelope = validate(notificationNewEventSchema, data);
+        // The backend has historically emitted the record at the top level;
+        // also accept the wrapped `{notification: ...}` shape.
+        if ((envelope as { notification?: NotificationRecord }).notification) {
+          n = (envelope as { notification: NotificationRecord }).notification;
+        } else {
+          n = validate(notificationRecordSchema, data);
+        }
+      } catch {
+        return; // malformed event — drop instead of corrupting UI state
+      }
       if (!n?.id || typeof n.id !== "string") return;
       if (seenIds.value.has(n.id)) return;
       notifications.value = [n, ...notifications.value].slice(0, MAX_NOTIFICATIONS);
       unreadCount.value += 1;
     } else if (eventType === "notification_unread_count") {
-      const d = data as { count: number };
-      if (typeof d?.count === "number") {
+      try {
+        const d = validate(notificationUnreadCountEventSchema, data);
         unreadCount.value = d.count;
+      } catch {
+        // malformed unread-count event — keep the existing count
       }
     }
   }

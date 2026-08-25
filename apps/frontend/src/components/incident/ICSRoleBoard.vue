@@ -17,6 +17,7 @@ import UserLabel from "@/components/ui/UserLabel.vue";
 import { useToast } from "@/lib/toast";
 import { useEntityPermissions } from "@/composables/useEntityPermissions";
 import { useUsersIfPermitted } from "@/composables/useUsers";
+defineOptions({ name: "ICSRoleBoard" });
 
 const props = defineProps<{
   roles: ICSRoleRecord[];

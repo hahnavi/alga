@@ -5,12 +5,18 @@ import { useLongPress, type LongPressPosition } from "@/composables/useLongPress
 import Avatar from "./Avatar.vue";
 import MarkdownRenderer from "./MarkdownRenderer.vue";
 
-defineOptions({ inheritAttrs: false });
+defineOptions({ name: "ChatMessageRow", inheritAttrs: false });
 
 const props = withDefaults(
   defineProps<{
     id: string;
-    borderClass: string;
+    /**
+     * Small colored chip class shown next to the message meta. Replaces the
+     * old `borderClass` prop and is intentionally NOT applied as a left
+     * accent border strip (AGENTS.md forbids colored `border-l` rails).
+     * Pass a non-rail class such as `bg-purple-500/15 text-purple-700`.
+     */
+    indicatorClass?: string;
     highlightClass?: string;
     avatarSrc?: string;
     avatarLetter?: string;
@@ -28,6 +34,7 @@ const props = withDefaults(
     replyToAuthor?: string;
   }>(),
   {
+    indicatorClass: "",
     highlightClass: "",
     edited: false,
     internal: false,
@@ -74,12 +81,9 @@ const containerClasses = computed(() => {
       }
     }
   } else {
-    base.push("rounded", "border-l-2");
-    if (props.internal) {
-      base.push("bg-[var(--bg-internal-note)]", "border-l-amber-500");
-    } else {
-      base.push(props.borderClass, "bg-[var(--bg-card)]");
-    }
+    // Thread rows get a single neutral left edge — no colored rail.
+    base.push("rounded", "border-l-2", "border-l-[var(--border-primary)]");
+    base.push(props.internal ? "bg-[var(--bg-internal-note)]" : "bg-[var(--bg-card)]");
   }
 
   if (props.highlightClass) {
@@ -87,6 +91,11 @@ const containerClasses = computed(() => {
   }
 
   return base;
+});
+
+const indicatorDotClass = computed(() => {
+  // Extract just the bg color so the dot doesn't pick up the text color.
+  return props.indicatorClass.split(/\s+/).find((c) => c.startsWith("bg-")) ?? "";
 });
 
 const longPress = useLongPress({
@@ -142,6 +151,11 @@ function onContextMenu(event: MouseEvent) {
       />
       <div class="min-w-0 flex-1">
         <div class="mb-0.5 flex flex-wrap items-center gap-1.5">
+          <span
+            v-if="indicatorDotClass"
+            :class="['inline-block h-2 w-2 shrink-0 rounded-full', indicatorDotClass]"
+            aria-hidden="true"
+          />
           <span class="text-sm font-semibold text-[var(--text-primary)]">
             {{ displayName }}
           </span>
@@ -153,7 +167,7 @@ function onContextMenu(event: MouseEvent) {
         </div>
         <div
           v-if="replyToText"
-          class="mb-1.5 border-l-2 border-[var(--accent)]/40 bg-[var(--bg-muted)]/40 rounded-r px-2 py-1 text-xs text-[var(--text-muted)]"
+          class="mb-1.5 rounded-md border border-[var(--border-primary)] bg-[var(--bg-muted)]/40 px-2 py-1 text-xs text-[var(--text-muted)]"
         >
           <span v-if="replyToAuthor" class="font-semibold text-[var(--text-secondary)]">{{
             replyToAuthor

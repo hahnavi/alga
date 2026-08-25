@@ -3,6 +3,7 @@ import type { NotificationPreferenceRule } from "@/lib/api";
 import Switch from "@/components/ui/Switch.vue";
 import Select from "@/components/ui/Select.vue";
 import Checkbox from "@/components/ui/Checkbox.vue";
+defineOptions({ name: "PreferenceRuleEditor" });
 
 const props = defineProps<{
   rule: NotificationPreferenceRule;

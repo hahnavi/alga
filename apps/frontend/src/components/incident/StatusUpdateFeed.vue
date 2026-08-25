@@ -18,6 +18,7 @@ import { CARD_ICON_BTN_CLASS } from "@/lib/uiClasses";
 import EmptyState from "@/components/ui/EmptyState.vue";
 import { formatTimeAgo } from "@/lib/time";
 import { useEscapeKey } from "@/composables/useEscapeKey";
+defineOptions({ name: "StatusUpdateFeed" });
 
 type Props = {
   incidentId: string;

@@ -5,6 +5,7 @@ import { User } from "@lucide/vue";
 import type { OnCallCurrent, OnCallScheduleRecord } from "@/lib/api";
 import { formatTime } from "@/lib/time";
 import InteractiveCard from "@/components/ui/InteractiveCard.vue";
+defineOptions({ name: "ScheduleCard" });
 
 const props = defineProps<{
   schedule: OnCallScheduleRecord;

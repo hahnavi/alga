@@ -8,6 +8,7 @@ import {
   type ServiceRecord,
 } from "@/lib/api";
 import { getErrorMessage } from "@/lib/error";
+import { useToast } from "@/lib/toast";
 import { useSSE } from "@/composables/useSSE";
 
 export type DateRange = "24h" | "7d" | "30d" | "90d";
@@ -18,6 +19,7 @@ export type DateRange = "24h" | "7d" | "30d" | "90d";
  * composable so the dashboard view stops owning data fetching.
  */
 export function useDashboardData(selectedRange: Ref<DateRange>) {
+  const { push } = useToast();
   const stats = ref<DashboardStats | null>(null);
   const metrics = ref<IncidentMetrics | null>(null);
   const onCallEntries = ref<OnCallCurrent[]>([]);
@@ -55,7 +57,9 @@ export function useDashboardData(selectedRange: Ref<DateRange>) {
     try {
       stats.value = await api.getDashboardStats();
     } catch (e: unknown) {
-      loadError.value = getErrorMessage(e, "Failed to load dashboard stats");
+      const msg = getErrorMessage(e, "Failed to load dashboard stats");
+      loadError.value = msg;
+      push(msg, "error");
     } finally {
       loading.value = false;
     }
@@ -65,16 +69,18 @@ export function useDashboardData(selectedRange: Ref<DateRange>) {
     try {
       const { start, end } = dateRangeToISO(selectedRange.value);
       metrics.value = await api.getIncidentMetrics(start, end);
-    } catch {
+    } catch (e: unknown) {
       metrics.value = null;
+      push(getErrorMessage(e, "Failed to load incident metrics"), "error");
     }
   }
 
   async function loadOnCall() {
     try {
       onCallEntries.value = await api.getWhoIsOnCall();
-    } catch {
+    } catch (e: unknown) {
       onCallEntries.value = [];
+      push(getErrorMessage(e, "Failed to load on-call schedule"), "error");
     }
   }
 
@@ -82,16 +88,18 @@ export function useDashboardData(selectedRange: Ref<DateRange>) {
     try {
       const result = await api.getServices({ limit: 20 });
       services.value = result.items ?? [];
-    } catch {
+    } catch (e: unknown) {
       services.value = [];
+      push(getErrorMessage(e, "Failed to load services"), "error");
     }
   }
 
   async function loadSummary() {
     try {
       summary.value = await api.getDailySummary();
-    } catch {
+    } catch (e: unknown) {
       summary.value = null;
+      push(getErrorMessage(e, "Failed to load daily summary"), "error");
     }
   }
 
@@ -101,7 +109,9 @@ export function useDashboardData(selectedRange: Ref<DateRange>) {
     try {
       summary.value = await api.generateDailySummary();
     } catch (e: unknown) {
-      summaryError.value = getErrorMessage(e, "Failed to generate summary");
+      const msg = getErrorMessage(e, "Failed to generate summary");
+      summaryError.value = msg;
+      push(msg, "error");
     } finally {
       summaryLoading.value = false;
     }

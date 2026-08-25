@@ -2,6 +2,7 @@
 import type { PlaybookRecord } from "@/lib/api";
 import Card from "@/components/ui/Card.vue";
 import { FileText } from "@lucide/vue";
+defineOptions({ name: "PlaybookCard" });
 
 defineProps<{
   playbook: PlaybookRecord;

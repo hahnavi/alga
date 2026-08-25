@@ -1,5 +1,7 @@
 import { computed, reactive, shallowRef, type Ref } from "vue";
 import { api, type OwnerThread, type OwnerThreadMessage } from "@/lib/api";
+import { getErrorMessage } from "@/lib/error";
+import { useToast } from "@/lib/toast";
 import { MAX_THREAD_MESSAGES } from "@/lib/threadLimits";
 
 type OwnerThreadKind = "incident_inv" | "incident_coord";
@@ -17,6 +19,7 @@ export function useIncidentThread(
     scheduleReload: () => void;
   },
 ) {
+  const { push } = useToast();
   const incidentThread = shallowRef<OwnerThread | null>(null);
   const incidentThreadMessageCount = computed(() => incidentThread.value?.messages?.length ?? 0);
 
@@ -38,8 +41,9 @@ export function useIncidentThread(
       } else {
         incidentThread.value = fresh;
       }
-    } catch {
+    } catch (err) {
       incidentThread.value = null;
+      push(getErrorMessage(err, "Failed to load incident thread"), "error");
     }
   }
 

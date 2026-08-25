@@ -8,6 +8,7 @@ import {
 } from "@/lib/api";
 import { useAsyncData } from "@/composables/useAsyncData";
 import { getErrorMessage } from "@/lib/error";
+import { useToast } from "@/lib/toast";
 
 /**
  * Owns the load pipeline for the alert detail page: alert + its
@@ -20,6 +21,7 @@ import { getErrorMessage } from "@/lib/error";
  * without unwrapping an extra layer.
  */
 export function useAlertDetailData(alertNumber: Ref<number>) {
+  const { push } = useToast();
   const investigation = ref<AlertInvestigationRecord | null>(null);
   const relatedAlerts = ref<RelatedAlert[]>([]);
   const relatedIncident = ref<RelatedIncident | null>(null);
@@ -43,8 +45,7 @@ export function useAlertDetailData(alertNumber: Ref<number>) {
     } catch (err) {
       relatedAlerts.value = [];
       relatedIncident.value = null;
-      // Keep the toast-only behavior of the previous inline loader.
-      getErrorMessage(err, "Failed to load related alerts");
+      push(getErrorMessage(err, "Failed to load related alerts"), "error");
     }
   }
 

@@ -10,6 +10,7 @@ import { Markdown } from "tiptap-markdown";
 import MarkdownToolbar from "@/components/ui/markdown/MarkdownToolbar.vue";
 import "@/components/ui/MarkdownEditor.css";
 import "./SectionEditor.css";
+defineOptions({ name: "SectionEditor" });
 
 const props = withDefaults(
   defineProps<{

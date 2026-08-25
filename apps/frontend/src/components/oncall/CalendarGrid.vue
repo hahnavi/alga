@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { ScheduleShift } from "@/lib/api";
 import { WEEK_DAYS, type CalendarCell } from "@/lib/scheduleTimeline";
+defineOptions({ name: "CalendarGrid" });
 
 defineProps<{
   cells: CalendarCell[];
@@ -83,7 +83,7 @@ function isCurrentWeek(weekStartCell: Date): boolean {
             </div>
             <div class="space-y-0.5">
               <div
-                v-for="s in (cell.shifts as ScheduleShift[]).slice(0, 3)"
+                v-for="s in cell.shifts.slice(0, 3)"
                 :key="s.start"
                 :class="[
                   'flex items-center gap-1 truncate rounded px-1 py-0.5 text-[0.6rem] font-medium',

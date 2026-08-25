@@ -12,6 +12,7 @@ import {
 } from "@lucide/vue";
 import type { IncidentTimelineRecord } from "@/lib/api";
 import { formatTimeAgo, formatTimeFull } from "@/lib/time";
+defineOptions({ name: "IncidentTimeline" });
 
 const props = defineProps<{
   entries: IncidentTimelineRecord[];

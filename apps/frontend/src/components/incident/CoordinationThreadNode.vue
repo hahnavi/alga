@@ -12,15 +12,6 @@ import {
 } from "./coordinationHelpers";
 import { getAgentAvatarSrc } from "@/lib/agentAvatar";
 
-const avatarSrc = (msg: {
-  source?: string;
-  metadata?: { agent_type?: unknown };
-  agent_type?: string;
-}) =>
-  msg.source === "agent"
-    ? getAgentAvatarSrc((msg.metadata?.agent_type as string | undefined) ?? msg.agent_type)
-    : undefined;
-
 defineOptions({ name: "CoordinationThreadNode" });
 
 const props = defineProps<{
@@ -32,6 +23,15 @@ const props = defineProps<{
 const emit = defineEmits<{
   "context-menu": [payload: { id: string; clientX: number; clientY: number }];
 }>();
+
+const avatarSrc = (msg: {
+  source?: string;
+  metadata?: { agent_type?: unknown };
+  agent_type?: string;
+}) =>
+  msg.source === "agent"
+    ? getAgentAvatarSrc((msg.metadata?.agent_type as string | undefined) ?? msg.agent_type)
+    : undefined;
 
 const collapsed = ref(false);
 
@@ -67,7 +67,7 @@ function onContextMenu(payload: { id: string; clientX: number; clientY: number }
         <ChatMessageRow
           :id="message.id"
           variant="thread"
-          :border-class="borderClass(message)"
+          :indicator-class="borderClass(message)"
           :avatar-src="avatarSrc(message)"
           :avatar-letter="message.actor_type === 'agent' ? undefined : avatarLetter(message)"
           :avatar-bg="avatarBg(message)"

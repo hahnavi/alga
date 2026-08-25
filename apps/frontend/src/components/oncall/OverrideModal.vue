@@ -8,6 +8,7 @@ import TimezoneSelect from "@/components/ui/TimezoneSelect.vue";
 import DateTimePicker from "@/components/ui/DateTimePicker.vue";
 import type { UserInfo } from "@/lib/api";
 import { tzLocalToRFC3339 } from "@/lib/time";
+defineOptions({ name: "OverrideModal" });
 
 const props = defineProps<{
   open: boolean;

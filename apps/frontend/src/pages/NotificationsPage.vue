@@ -148,9 +148,7 @@ watch(
         :key="n.id"
         type="button"
         class="flex w-full cursor-pointer gap-3 rounded-lg border border-[var(--border-primary)] px-4 py-3 text-left transition-colors hover:bg-[var(--sidebar-hover,rgb(148_163_184/0.08))]"
-        :class="
-          n.read ? 'bg-[var(--bg-card)]' : 'bg-[var(--bg-card)] border-l-2 border-l-[var(--accent)]'
-        "
+        :class="n.read ? 'bg-[var(--bg-card)]' : 'bg-[var(--accent)]/5'"
         @click="clickNotification(n)"
       >
         <div class="mt-0.5 shrink-0">

@@ -108,28 +108,33 @@ const alertInvestigationSummarySchema = z.object({
   promoted_incident_number: z.number().int().optional(),
 });
 
-export const alertRecordSchema = z.object({
-  fingerprint: z.string(),
-  alert_number: z.number().int().optional(),
-  status: z.enum(["firing", "resolved"]),
-  acknowledged: z.boolean().optional(),
-  silenced: z.boolean().optional(),
-  delivery_targets: z.array(z.unknown()).optional(),
-  labels: z.record(z.string(), z.string()),
-  annotations: z.record(z.string(), z.string()),
-  // Backend serializes a nil map as JSON `null` (no `omitempty` on the Go
-  // struct field).
-  values: z.union([z.record(z.string(), z.unknown()), z.null()]).optional(),
-  starts_at: z.string(),
-  // Backend serializes a nil `*time.Time` as JSON `null` (no `omitempty`).
-  ends_at: z.union([z.string(), z.null()]).optional(),
-  generator_url: z.string().optional(),
-  events: z.array(alertEventSchema).optional(),
-  updated_at: z.string(),
-  created_at: z.string(),
-  deleted_at: z.union([z.string(), z.null()]).optional(),
-  investigation: alertInvestigationSummarySchema.optional(),
-});
+export const alertRecordSchema = z
+  .object({
+    fingerprint: z.string(),
+    alert_number: z.number().int().optional(),
+    status: z.enum(["firing", "resolved"]),
+    acknowledged: z.boolean().optional(),
+    silenced: z.boolean().optional(),
+    // `delivery_targets` is loose — the backend can add provider-specific
+    // fields without breaking the boundary check. The TS type narrows this
+    // to `DeliveryTarget[]`; consumers cast at use sites.
+    delivery_targets: z.array(z.unknown()).optional(),
+    labels: z.record(z.string(), z.string()),
+    annotations: z.record(z.string(), z.string()),
+    // Backend serializes a nil map as JSON `null` (no `omitempty` on the Go
+    // struct field).
+    values: z.union([z.record(z.string(), z.unknown()), z.null()]).optional(),
+    starts_at: z.string(),
+    // Backend serializes a nil `*time.Time` as JSON `null` (no `omitempty`).
+    ends_at: z.union([z.string(), z.null()]).optional(),
+    generator_url: z.string().optional(),
+    events: z.array(alertEventSchema).optional(),
+    updated_at: z.string(),
+    created_at: z.string(),
+    deleted_at: z.union([z.string(), z.null()]).optional(),
+    investigation: alertInvestigationSummarySchema.optional(),
+  })
+  .passthrough();
 
 const alertDetailSchema = z.object({
   alert: alertRecordSchema,
@@ -188,3 +193,50 @@ export const alertListSchema = z.array(alertRecordSchema).nullable();
 export const alertDetailResponseSchema = alertDetailSchema;
 export const incidentListSchema = paginatedData(incidentRecordSchema);
 export const incidentDetailSchema = z.object({ incident: incidentRecordSchema }).passthrough();
+
+// ---------------------------------------------------------------------------
+// SSE event payloads
+//
+// `useSSE` dispatches event data as `unknown`; the REST boundary uses
+// `validate(schema, value)` for the same reason these schemas exist. The
+// zod default (strip unknown keys) keeps the consumer-facing types stable
+// when the backend adds new fields; failed parses drop the event silently
+// rather than corrupting UI state.
+// ---------------------------------------------------------------------------
+
+// `notification_new` — see apps/backend/api/notification.go.
+export const notificationRecordSchema = z
+  .object({
+    id: z.string(),
+    type: z.string(),
+    title: z.string(),
+    body: z.string().optional(),
+    url: z.string().optional(),
+    severity: z.string().optional(),
+    actor_id: z.string().optional(),
+    actor_name: z.string().optional(),
+    read: z.boolean().optional(),
+    created_at: z.string(),
+  })
+  .passthrough();
+
+export const notificationNewEventSchema = z
+  .object({
+    notification: notificationRecordSchema.optional(),
+  })
+  .passthrough();
+
+// `notification_unread_count` — backend emits `{count: number}`.
+export const notificationUnreadCountEventSchema = z.object({
+  count: z.number().int().nonnegative(),
+});
+
+// `owner_thread_message` / `_edited` / `_deleted` share the same envelope
+// shape: `{owner_type, owner_id, ...payload}`. Validate the envelope, then
+// cast to the consumer's expected type since `message` is open-shaped.
+export const ownerThreadEnvelopeSchema = z
+  .object({
+    owner_type: z.string(),
+    owner_id: z.union([z.string(), z.number()]),
+  })
+  .passthrough();

@@ -13,6 +13,7 @@ import type { CoordinationTask } from "@/lib/api";
 import Card from "@/components/ui/Card.vue";
 import Button from "@/components/ui/Button.vue";
 import EmptyState from "@/components/ui/EmptyState.vue";
+defineOptions({ name: "CoordinationTaskBoard" });
 
 const props = withDefaults(
   defineProps<{

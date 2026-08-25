@@ -8,9 +8,9 @@ type StringField<T> = {
 
 type ListFilterField<T> = StringField<T> | ((item: T) => string | undefined);
 
-interface ListFilterOptions<T> {
+type ListFilterOptions<T> = {
   sort?: (a: T, b: T) => number;
-}
+};
 
 export function useListFilter<T>(
   source: Ref<T[]>,
@@ -19,7 +19,7 @@ export function useListFilter<T>(
   options: ListFilterOptions<T> = {},
 ): Ref<T[]> {
   return computed<T[]>(() => {
-    const list: T[] = (source.value as T[] | null | undefined) ?? [];
+    const list = source.value;
     const q = query.value.trim().toLowerCase();
     if (!q) {
       return options.sort ? list.slice().sort(options.sort) : list;

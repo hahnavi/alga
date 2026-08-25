@@ -57,8 +57,9 @@ export function useIncidentDetailData(
   async function loadAlerts() {
     try {
       alerts.value = await api.getIncidentAlerts(incidentNumber.value);
-    } catch {
+    } catch (err) {
       alerts.value = [];
+      push(getErrorMessage(err, "Failed to load linked alerts"), "error");
     }
   }
 
@@ -74,8 +75,9 @@ export function useIncidentDetailData(
         service_id: target.service_id,
       });
       mitigationPlaybooks.value = result.items ?? [];
-    } catch {
+    } catch (err) {
       mitigationPlaybooks.value = [];
+      push(getErrorMessage(err, "Failed to load mitigation playbooks"), "error");
     }
   }
 
@@ -89,9 +91,10 @@ export function useIncidentDetailData(
       const pm = await api.getPostMortem(incident.value.incident_number);
       postMortemStatus.value = pm?.status ?? null;
       postMortemTitle.value = pm?.title ?? "";
-    } catch {
+    } catch (err) {
       postMortemStatus.value = null;
       postMortemTitle.value = "";
+      push(getErrorMessage(err, "Failed to load post-mortem status"), "error");
     }
   }
 
@@ -132,7 +135,9 @@ export function useIncidentDetailData(
       loadPostMortemStatus();
     } catch (err) {
       if (seq !== loadSeq) return;
-      error.value = getErrorMessage(err, "Failed to load incident");
+      const msg = getErrorMessage(err, "Failed to load incident");
+      error.value = msg;
+      push(msg, "error");
     } finally {
       if (seq === loadSeq) {
         loading.value = false;

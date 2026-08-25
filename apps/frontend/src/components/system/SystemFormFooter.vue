@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { RotateCcw, Save } from "@lucide/vue";
 import Button from "@/components/ui/Button.vue";
+defineOptions({ name: "SystemFormFooter" });
 
 defineProps<{
   dirty: boolean;

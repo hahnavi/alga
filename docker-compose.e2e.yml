@@ -36,7 +36,7 @@ services:
       - e2e
 
   rabbitmq:
-    image: rabbitmq:4.3.4-management-alpine
+    image: rabbitmq:4.3.5-management-alpine
     environment:
       RABBITMQ_DEFAULT_USER: alga
       RABBITMQ_DEFAULT_PASS: alga_e2e_only

@@ -44,9 +44,20 @@ Thanks for your interest in contributing! This guide covers development setup, c
 ### Go (Backend)
 
 - Run `gofmt -w .` before committing
-- Run `go vet ./...` to catch common issues
+- Run `go vet ./...` to catch common issues (also run by CI)
 - Run `go mod tidy` after adding or removing dependencies
 - Use standard library `testing` for tests
+
+### Pre-Commit Hook
+
+The pre-commit hook (`.githooks/pre-commit`, activated via `git config core.hooksPath .githooks`) runs fast checks **on staged files only**:
+
+- Go: `gofmt`
+- Frontend + integrations TS/JS: `oxlint` and `oxfmt --check`
+- Markdown: `markdownlint-cli2` and `oxfmt --check`
+- Secrets: `betterleaks` on the staged diff
+
+`go vet`, tests, and typechecking are not part of the hook — CI runs them on every PR.
 
 ### Frontend (Vue 3 + TypeScript)
 

@@ -16,7 +16,6 @@ All health and metrics endpoints are unauthenticated. Gate `/metrics` at the net
 | `GET /health`           | Readiness (alias for `/ready`)                    | None                   |
 | `GET /api/v1/readiness` | Readiness (alias for `/ready`)                    | None                   |
 | `GET /metrics`          | Prometheus-format metrics (primary scrape target) | None (network-gate it) |
-| `GET /debug/vars`       | expvar metrics (secondary)                        | None                   |
 
 ### Liveness
 
@@ -36,39 +35,48 @@ Returns JSON with dependency connectivity (PostgreSQL, Valkey, RabbitMQ). `/heal
 
 ## Metrics
 
-All metrics are exposed in Prometheus format at `/metrics` (the primary scrape target for Prometheus). The same metrics are also available in expvar format at `/debug/vars` as a secondary endpoint. Both endpoints are unauthenticated — restrict access at the network level.
+All metrics are exposed in Prometheus format at `/metrics` (the primary and only metrics endpoint). The endpoint is unauthenticated — restrict access at the network level. Every metric below is exported as a Prometheus **gauge** (all are `expvar.Int` under the hood), so counter-style series must be read with `rate()`/`increase()` knowing resets happen per process restart.
+
+The catalog is regenerated from the registrations in `apps/backend/metrics/*.go`: 48 metrics total, including 21 scheduler gauges.
 
 ### Correlator Metrics
 
-| Metric                                 | Description                                |
-| -------------------------------------- | ------------------------------------------ |
-| `alga_correlator_alerts_total`         | Total alerts received                      |
-| `alga_correlator_alerts_merged_total`  | Alerts merged into existing windows        |
-| `alga_correlator_published_total`      | Investigations published after correlation |
-| `alga_correlator_dropped_total`        | Alerts dropped                             |
-| `alga_correlator_fail_closed_total`    | Fail-closed events                         |
-| `alga_correlator_windows_opened_total` | New correlation windows opened             |
-| `alga_correlator_flushes_total`        | Windows flushed (expired)                  |
+| Metric                              | Description                                |
+| ----------------------------------- | ------------------------------------------ |
+| `alga_correlator_alerts_total`      | Alerts entering correlation                |
+| `alga_correlator_merged_total`      | Alerts merged into existing windows        |
+| `alga_correlator_published_total`   | Investigations published after correlation |
+| `alga_correlator_dropped_total`     | Alerts dropped                             |
+| `alga_correlator_window_open_total` | New correlation windows opened             |
+| `alga_correlator_window_depth`      | Currently open correlation windows         |
+| `alga_correlator_flush_total`       | Windows flushed (expired)                  |
+| `alga_correlator_fail_closed_total` | Fail-closed events                         |
 
 ### Scheduler Metrics
 
-| Metric                                        | Description                            |
-| --------------------------------------------- | -------------------------------------- |
-| `alga_scheduler_pending`                      | Current pending investigation depth    |
-| `alga_scheduler_online_agents`                | Agents currently online (all replicas) |
-| `alga_scheduler_agent_capacity_used`          | Aggregate used capacity                |
-| `alga_scheduler_agent_capacity_total`         | Aggregate total capacity               |
-| `alga_scheduler_scheduled_total`              | Successful investigation binds         |
-| `alga_scheduler_no_candidate_total`           | Pending with no eligible agent         |
-| `alga_scheduler_bind_failed_total`            | Atomic claim or forward failures       |
-| `alga_scheduler_skip_backoff_total`           | Skipped due to failure backoff         |
-| `alga_scheduler_tick_total`                   | Total scheduler ticks                  |
-| `alga_scheduler_tick_duration_ms`             | Last tick duration                     |
-| `alga_scheduler_is_leader`                    | 1 on leader replica, 0 elsewhere       |
-| `alga_scheduler_stale_alerts_swept`           | Uninvestigated alerts found per sweep  |
-| `alga_scheduler_stale_investigations_created` | Investigations from stale alerts       |
-| `alga_scheduler_stale_sweep_tick_total`       | Total stale sweep ticks                |
-| `alga_scheduler_nudge_total`                  | Scheduler nudge events                 |
+| Metric                                        | Description                              |
+| --------------------------------------------- | ---------------------------------------- |
+| `alga_scheduler_pending`                      | Pending investigation queue depth        |
+| `alga_scheduler_scheduled_total`              | Successful investigation binds           |
+| `alga_scheduler_bind_failed_total`            | Atomic claim or forward failures         |
+| `alga_scheduler_no_candidate_total`           | Pending with no eligible agent           |
+| `alga_scheduler_skip_active_backoff_total`    | Skips due to per-agent failure backoff   |
+| `alga_scheduler_tick_duration_ms`             | Last tick duration                       |
+| `alga_scheduler_tick_total`                   | Total scheduler ticks                    |
+| `alga_scheduler_agent_capacity_used`          | Aggregate used capacity                  |
+| `alga_scheduler_agent_capacity_total`         | Aggregate total capacity                 |
+| `alga_scheduler_is_leader`                    | 1 on leader replica, 0 elsewhere         |
+| `alga_scheduler_online_agents`                | Agents currently online (all replicas)   |
+| `alga_scheduler_nudge_total`                  | Scheduler nudge (wake-up) events         |
+| `alga_scheduler_stale_alerts_swept`           | Uninvestigated alerts found per sweep    |
+| `alga_scheduler_stale_investigations_created` | Investigations created from stale alerts |
+| `alga_scheduler_stale_sweep_tick_total`       | Total stale-alert sweep ticks            |
+| `alga_scheduler_incident_sweep_tick_total`    | Total incident sweep ticks               |
+| `alga_scheduler_summary_sweep_total`          | Incident-summary sweeps run              |
+| `alga_scheduler_summary_dispatched_total`     | Summaries dispatched by the sweep        |
+| `alga_scheduler_summary_skipped_total`        | Summary dispatches skipped               |
+| `alga_scheduler_dispatch_latency_ms`          | Bind-to-agent-dispatch latency           |
+| `alga_scheduler_dlq_total`                    | Messages routed to the scheduler DLQ     |
 
 ### Webhook Metrics
 
@@ -78,13 +86,16 @@ All metrics are exposed in Prometheus format at `/metrics` (the primary scrape t
 | `alga_webhook_alert_publish_sync_fallback_total`  | Webhook alerts published via sync fallback |
 | `alga_webhook_alert_publish_sync_processed_total` | Webhook alerts processed synchronously     |
 
-### Escalation Metrics
+### Escalation / SLA Metrics
 
-| Metric                           | Description                  |
-| -------------------------------- | ---------------------------- |
-| `alga_escalations_fired_total`   | Total escalations fired      |
-| `alga_sla_breach_response_total` | SLA response time breaches   |
-| `alga_sla_breach_resolve_total`  | SLA resolution time breaches |
+| Metric                                      | Description                       |
+| ------------------------------------------- | --------------------------------- |
+| `alga_escalations_fired_total`              | Total escalations fired           |
+| `alga_sla_breach_response_total`            | SLA response time breaches        |
+| `alga_sla_breach_resolve_total`             | SLA resolution time breaches      |
+| `alga_stuck_investigations_escalated_total` | Stuck investigations escalated    |
+| `alga_voice_calls_placed_total`             | Voice escalation calls placed     |
+| `alga_voice_calls_suppressed_total`         | Voice escalation calls suppressed |
 
 ### Incident Metrics
 
@@ -98,39 +109,18 @@ All metrics are exposed in Prometheus format at `/metrics` (the primary scrape t
 | `alga_incidents_cancelled_total` | Total incidents cancelled  |
 | `alga_incidents_reopened_total`  | Total incidents reopened   |
 
-### Triage Metrics
+### Worker Metrics
 
-| Metric                            | Description                        |
-| --------------------------------- | ---------------------------------- |
-| `alga_triage_total`               | Total triage evaluations           |
-| `alga_triage_decision_*`          | Per-decision outcome counters      |
-| `alga_triage_confirmed_total`     | Triage decisions confirmed         |
-| `alga_triage_overridden_total`    | Triage decisions overridden        |
-| `alga_triage_short_circuit_total` | Triage evaluations short-circuited |
-| `alga_triage_llm_total`           | LLM-based triage evaluations       |
-| `alga_triage_llm_duration_ms`     | LLM triage duration                |
+| Metric                                      | Description                           |
+| ------------------------------------------- | ------------------------------------- |
+| `alga_investigate_worker_create_latency_ms` | Investigation record creation latency |
+| `alga_worker_dlq_total`                     | Messages routed to the worker DLQ     |
 
-### Playbook Metrics
+### Summary Metrics
 
-| Metric                                 | Description                         |
-| -------------------------------------- | ----------------------------------- |
-| `alga_playbooks_matched_total`         | Playbooks matched to investigations |
-| `alga_playbooks_steps_completed_total` | Playbook steps completed            |
-
-### ICS Metrics
-
-| Metric                          | Description           |
-| ------------------------------- | --------------------- |
-| `alga_ics_roles_assigned_total` | ICS roles assigned    |
-| `alga_ics_handoffs_total`       | IC handoffs performed |
-
-### Handoff Metrics
-
-| Metric                                    | Description            |
-| ----------------------------------------- | ---------------------- |
-| `alga_oncall_handoffs_total`              | On-call handoffs       |
-| `alga_oncall_handoffs_acknowledged_total` | Handoffs acknowledged  |
-| `alga_oncall_reminders_sent_total`        | On-call reminders sent |
+| Metric                      | Description               |
+| --------------------------- | ------------------------- |
+| `alga_summary_posted_total` | Incident summaries posted |
 
 ## Prometheus Integration
 
@@ -158,13 +148,14 @@ Import `deploy/grafana/alga-dashboard.json` into Grafana for a pre-built monitor
 
 ## OpenTelemetry Tracing
 
-Alga exports distributed traces via OTLP/HTTP when tracing is enabled. Tracing activates when `ALGA_OTEL_ENABLED=true` or when an OTLP endpoint is configured.
+Distributed tracing is implemented but **off by default** — with no tracing configuration Alga installs a no-op tracer provider, so no spans are created or exported and the overhead is effectively zero. Trace export is opt-in: set `ALGA_OTEL_ENABLED=true` or configure an OTLP endpoint (`OTEL_EXPORTER_OTLP_ENDPOINT`, or `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` for the traces signal specifically) to enable OTLP/HTTP export.
 
-| Variable                      | Description                                                                               |
-| ----------------------------- | ----------------------------------------------------------------------------------------- |
-| `ALGA_OTEL_ENABLED`           | Set to `true` to enable trace export                                                      |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP collector endpoint (a gRPC `:4317` endpoint is rewritten to `:4318` for HTTP export) |
-| `ALGA_OTEL_SAMPLE_RATIO`      | Sampling ratio for the ParentBased(TraceIDRatioBased) sampler (0.0–1.0)                   |
+| Variable                             | Description                                                                               |
+| ------------------------------------ | ----------------------------------------------------------------------------------------- |
+| `ALGA_OTEL_ENABLED`                  | Set to `true` to enable trace export                                                      |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`        | OTLP collector endpoint (a gRPC `:4317` endpoint is rewritten to `:4318` for HTTP export) |
+| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | Per-signal override for the traces endpoint                                               |
+| `ALGA_OTEL_SAMPLE_RATIO`             | Sampling ratio for the ParentBased(TraceIDRatioBased) sampler (0.0–1.0)                   |
 
 ### Cross-Broker Trace Propagation
 

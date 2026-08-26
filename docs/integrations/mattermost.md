@@ -60,13 +60,17 @@ Use `openssl rand -base64 32` to generate a secure `MATTERMOST_WEBHOOK_SECRET`. 
 
 The Alga Mattermost plugin enables bidirectional sync — without it, Alga can only post one-way notifications.
 
-1. **Download the plugin** from your Alga instance: `http://your-alga-host:8080/internal/mm-plugin`
+1. **Download the plugin** from your Alga instance: `http://your-alga-host:8080/internal/mm-plugin` — this serves the bundle baked into the backend image at `/app/plugins/com.alga.mattermost-plugin-0.0.1.tar.gz` and always responds with that exact filename
 2. In Mattermost, go to **System Console → Plugins → Management**
 3. **Upload** the plugin tarball
 4. **Enable** the plugin
 5. **Configure the plugin settings:**
-   - **Alga URL**: `http://your-alga-host:8080` (must be reachable from the Mattermost server)
+   - **Alga Webhook URL**: `http://your-alga-host:8080/webhooks/mattermost` (must be reachable from the Mattermost server)
    - **Webhook Secret**: Same value as `MATTERMOST_WEBHOOK_SECRET`
+
+::: warning Pinned bundle filename
+The served tarball filename `com.alga.mattermost-plugin-0.0.1.tar.gz` is a build-time constant: it is pinned by `PLUGIN_VERSION` in `integrations/alga-mattermost-plugin/Makefile`, by the `/internal/mm-plugin` handler in `apps/backend/api/chat_integration.go`, and by the COPY path in `apps/backend/Dockerfile`. The GitHub release workflow (`plugin-release.yml`) version-stamps its attached asset (`-<semver>.tar.gz`), but deployments mounting or baking the tarball for `/internal/mm-plugin` must keep the exact `-0.0.1.tar.gz` name at `/app/plugins/`.
+:::
 
 ::: warning Network reachability
 The Mattermost server must be able to reach the Alga backend URL. If Alga is behind a reverse proxy or firewall, ensure the plugin can reach it. The Alga backend must also be able to reach `MATTERMOST_SERVER_URL`.
@@ -159,3 +163,7 @@ When disabled, Alga stops posting to Mattermost immediately. Existing threads re
 - [Routing](/core-features/routing) — configure which alerts go to which channels
 - [Notifications](/core-features/notifications) — the notification dispatch system
 - [Environment Variables](/configuration/environment-variables) — all Mattermost config vars
+
+## Plugin Release Assets
+
+The GitHub release workflow attaches a version-stamped asset (`com.alga.mattermost-plugin-<semver>.tar.gz`) built from the standalone module, while the backend's `/internal/mm-plugin` endpoint serves the pinned `com.alga.mattermost-plugin-0.0.1.tar.gz`. Both names come from one source: bump `PLUGIN_VERSION` in `integrations/alga-mattermost-plugin/Makefile` and `version` in `plugin.json` together with the handler path in `apps/backend/api/chat_integration.go` when releasing a new plugin version.

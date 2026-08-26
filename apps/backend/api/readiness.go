@@ -16,7 +16,7 @@ type Readiness struct {
 
 // SchedulerSnapshot is a point-in-time view of the scheduler's metrics.
 // Useful as a single readiness call instead of forcing operators to scrape
-// /debug/vars on every replica.
+// /metrics on every replica.
 type SchedulerSnapshot struct {
 	IsLeader                   bool  `json:"is_leader"`
 	PendingDepth               int64 `json:"pending_depth"`

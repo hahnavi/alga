@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -35,6 +36,48 @@ var (
 	ErrCoordinationTaskNotFound       = errors.New("coordination task not found")
 	ErrCoordinationTaskStatusConflict = errors.New("coordination task status conflict")
 )
+
+// coordinationTaskTransitions is the authoritative state machine for
+// coordination-task status moves: each key lists the statuses it may legally
+// transition to. Terminal states (complete, failed, cancelled) have no
+// outgoing edges. Every status-mutating store method consults this map —
+// either up front via CanTransitionCoordinationTask or by deriving its CAS
+// source set from it — so all workers and handlers reject illegal jumps with
+// ErrCoordinationTaskStatusConflict.
+var coordinationTaskTransitions = map[string][]string{
+	CoordinationTaskStatusPending:    {CoordinationTaskStatusAssigned, CoordinationTaskStatusFailed, CoordinationTaskStatusCancelled},
+	CoordinationTaskStatusAssigned:   {CoordinationTaskStatusPending, CoordinationTaskStatusInProgress, CoordinationTaskStatusFailed, CoordinationTaskStatusCancelled},
+	CoordinationTaskStatusInProgress: {CoordinationTaskStatusPending, CoordinationTaskStatusComplete, CoordinationTaskStatusFailed, CoordinationTaskStatusCancelled},
+}
+
+// CanTransitionCoordinationTask reports whether moving a coordination task from
+// one status to another is legal under coordinationTaskTransitions. Restating
+// the current status is an accepted no-op (the revert/bump paths re-set pending
+// on tasks that are already pending). Unknown statuses are always illegal.
+func CanTransitionCoordinationTask(from, to string) error {
+	if from == to {
+		return nil
+	}
+	targets, known := coordinationTaskTransitions[from]
+	if !known || !slices.Contains(targets, to) {
+		return fmt.Errorf("cannot transition coordination task from %q to %q: %w", from, to, ErrCoordinationTaskStatusConflict)
+	}
+	return nil
+}
+
+// coordinationTaskSourcesTo returns every status that may legally transition to
+// the given target status according to coordinationTaskTransitions. Self-edges
+// are excluded; callers that also accept same-status rows add them explicitly.
+func coordinationTaskSourcesTo(to string) []string {
+	var sources []string
+	for from, targets := range coordinationTaskTransitions {
+		if slices.Contains(targets, to) {
+			sources = append(sources, from)
+		}
+	}
+	slices.Sort(sources)
+	return sources
+}
 
 // CoordinationTaskRecord is the transfer object for a coordination task row.
 type CoordinationTaskRecord struct {
@@ -375,6 +418,9 @@ func (s *pgCoordinationTaskStore) ListInProgressByAgent(ctx context.Context, age
 // claimant's role must match the task's targeted role. Returns
 // ErrCoordinationTaskStatusConflict if the row is no longer pending.
 func (s *pgCoordinationTaskStore) ClaimTask(ctx context.Context, taskID uuid.UUID, role, agentIDHex, agentName string) (*CoordinationTaskRecord, error) {
+	if err := CanTransitionCoordinationTask(CoordinationTaskStatusPending, CoordinationTaskStatusAssigned); err != nil {
+		return nil, err
+	}
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
@@ -404,6 +450,9 @@ func (s *pgCoordinationTaskStore) ClaimTask(ctx context.Context, taskID uuid.UUI
 
 // MarkInProgress performs an atomic CAS from assigned to in_progress.
 func (s *pgCoordinationTaskStore) MarkInProgress(ctx context.Context, taskID uuid.UUID) error {
+	if err := CanTransitionCoordinationTask(CoordinationTaskStatusAssigned, CoordinationTaskStatusInProgress); err != nil {
+		return err
+	}
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
@@ -429,8 +478,8 @@ func (s *pgCoordinationTaskStore) MarkInProgress(ctx context.Context, taskID uui
 
 // RevertByAgent atomically resets all tasks owned by an agent that are still in
 // flight (assigned or in_progress) back to pending, increments the dispatch
-// attempt counter, and clears assignment metadata. Returns the number of rows
-// reverted.
+// attempt counter, and clears assignment metadata. The source set is derived
+// from coordinationTaskTransitions. Returns the number of rows reverted.
 func (s *pgCoordinationTaskStore) RevertByAgent(ctx context.Context, agentIDHex string) (int, error) {
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
@@ -444,7 +493,7 @@ func (s *pgCoordinationTaskStore) RevertByAgent(ctx context.Context, agentIDHex 
 		Set("dispatch_attempts = dispatch_attempts + 1").
 		Set("updated_at = ?", now).
 		Where("assignee_agent_id = ?", agentIDHex).
-		Where("status IN (?)", bun.List([]string{CoordinationTaskStatusAssigned, CoordinationTaskStatusInProgress})).
+		Where("status IN (?)", bun.List(coordinationTaskSourcesTo(CoordinationTaskStatusPending))).
 		Exec(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to revert coordination tasks by agent: %w", err)
@@ -462,6 +511,9 @@ func (s *pgCoordinationTaskStore) RevertByAgent(ctx context.Context, agentIDHex 
 // (parent) investigation. The parent summary is intentionally left untouched;
 // the commander owns the conclusion.
 func (s *pgCoordinationTaskStore) CompleteTask(ctx context.Context, taskID uuid.UUID, result map[string]any) error {
+	if err := CanTransitionCoordinationTask(CoordinationTaskStatusInProgress, CoordinationTaskStatusComplete); err != nil {
+		return err
+	}
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
@@ -501,6 +553,9 @@ func (s *pgCoordinationTaskStore) CompleteTask(ctx context.Context, taskID uuid.
 	})
 }
 
+// FailTask transitions a non-terminal task to failed, persisting the reason.
+// Terminal tasks (complete/failed/cancelled) cannot be failed; the legal source
+// set is derived from coordinationTaskTransitions.
 func (s *pgCoordinationTaskStore) FailTask(ctx context.Context, taskID uuid.UUID, reason string) error {
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
@@ -512,6 +567,7 @@ func (s *pgCoordinationTaskStore) FailTask(ctx context.Context, taskID uuid.UUID
 		Set("completed_at = ?", now).
 		Set("updated_at = ?", now).
 		Where("id = ?", taskID).
+		Where("status IN (?)", bun.List(coordinationTaskSourcesTo(CoordinationTaskStatusFailed))).
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to fail coordination task: %w", err)
@@ -521,14 +577,19 @@ func (s *pgCoordinationTaskStore) FailTask(ctx context.Context, taskID uuid.UUID
 		return fmt.Errorf("failed to fail coordination task: %w", err)
 	}
 	if n == 0 {
-		return fmt.Errorf("coordination task %s not found: %w", taskID, ErrCoordinationTaskNotFound)
+		if !s.coordinationTaskExists(ctx, taskID) {
+			return fmt.Errorf("coordination task %s not found: %w", taskID, ErrCoordinationTaskNotFound)
+		}
+		return fmt.Errorf("coordination task %s not failable from its current status: %w", taskID, ErrCoordinationTaskStatusConflict)
 	}
 	return nil
 }
 
-// CancelTask cancels a task and recursively cancels its child tasks. It does
-// not transition any linked investigation — investigation cancellation is the
-// caller's responsibility (kept here to avoid an import cycle).
+// CancelTask cancels a task and recursively cancels its child tasks. Only
+// non-terminal tasks can be cancelled; the legal source set is derived from
+// coordinationTaskTransitions. It does not transition any linked investigation
+// — investigation cancellation is the caller's responsibility (kept here to
+// avoid an import cycle).
 func (s *pgCoordinationTaskStore) CancelTask(ctx context.Context, taskID uuid.UUID) error {
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
@@ -538,6 +599,7 @@ func (s *pgCoordinationTaskStore) CancelTask(ctx context.Context, taskID uuid.UU
 		Set("status = ?", CoordinationTaskStatusCancelled).
 		Set("updated_at = ?", now).
 		Where("id = ?", taskID).
+		Where("status IN (?)", bun.List(coordinationTaskSourcesTo(CoordinationTaskStatusCancelled))).
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to cancel coordination task: %w", err)
@@ -547,7 +609,10 @@ func (s *pgCoordinationTaskStore) CancelTask(ctx context.Context, taskID uuid.UU
 		return fmt.Errorf("failed to cancel coordination task: %w", err)
 	}
 	if n == 0 {
-		return fmt.Errorf("coordination task %s not found: %w", taskID, ErrCoordinationTaskNotFound)
+		if !s.coordinationTaskExists(ctx, taskID) {
+			return fmt.Errorf("coordination task %s not found: %w", taskID, ErrCoordinationTaskNotFound)
+		}
+		return fmt.Errorf("coordination task %s not cancellable from its current status: %w", taskID, ErrCoordinationTaskStatusConflict)
 	}
 	return s.cancelChildTasks(ctx, taskID, now)
 }
@@ -556,7 +621,7 @@ func (s *pgCoordinationTaskStore) cancelChildTasks(ctx context.Context, parentTa
 	var children []models.CoordinationTask
 	if err := s.db.NewSelect().Model(&children).
 		Where("parent_task_id = ?", parentTaskID).
-		Where("status NOT IN (?)", bun.List([]string{CoordinationTaskStatusComplete, CoordinationTaskStatusFailed, CoordinationTaskStatusCancelled})).
+		Where("status IN (?)", bun.List(coordinationTaskSourcesTo(CoordinationTaskStatusCancelled))).
 		Scan(ctx); err != nil {
 		return fmt.Errorf("failed to query child coordination tasks: %w", err)
 	}
@@ -576,8 +641,15 @@ func (s *pgCoordinationTaskStore) cancelChildTasks(ctx context.Context, parentTa
 }
 
 // UpdateTaskStatus performs a generic atomic CAS from any of fromStatuses to
-// toStatus. A zero-rows-affected result yields ErrCoordinationTaskStatusConflict.
+// toStatus. Every from→to pair is validated against
+// coordinationTaskTransitions before executing, and a zero-rows-affected result
+// yields ErrCoordinationTaskStatusConflict.
 func (s *pgCoordinationTaskStore) UpdateTaskStatus(ctx context.Context, taskID uuid.UUID, fromStatuses []string, toStatus string) error {
+	for _, from := range fromStatuses {
+		if err := CanTransitionCoordinationTask(from, toStatus); err != nil {
+			return err
+		}
+	}
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
@@ -605,12 +677,15 @@ func (s *pgCoordinationTaskStore) UpdateTaskStatus(ctx context.Context, taskID u
 
 // BumpDispatchAttempts increments the dispatch attempt counter, ensures the task
 // is pending, and clears stale assignee fields. Used by the scheduler when a
-// dispatch attempt fails to acquire an agent.
+// dispatch attempt fails to acquire an agent. Tasks already pending are
+// re-stated (accepted no-op transition), so the source set is the map's legal
+// sources for pending plus pending itself.
 func (s *pgCoordinationTaskStore) BumpDispatchAttempts(ctx context.Context, taskID uuid.UUID) error {
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
 	now := time.Now().UTC()
+	sources := append(coordinationTaskSourcesTo(CoordinationTaskStatusPending), CoordinationTaskStatusPending)
 	res, err := s.db.NewUpdate().Model((*models.CoordinationTask)(nil)).
 		Set("status = ?", CoordinationTaskStatusPending).
 		Set("assignee_agent_id = ''").
@@ -619,7 +694,7 @@ func (s *pgCoordinationTaskStore) BumpDispatchAttempts(ctx context.Context, task
 		Set("dispatch_attempts = dispatch_attempts + 1").
 		Set("updated_at = ?", now).
 		Where("id = ?", taskID).
-		Where("status IN (?)", bun.List([]string{CoordinationTaskStatusPending, CoordinationTaskStatusAssigned, CoordinationTaskStatusInProgress})).
+		Where("status IN (?)", bun.List(sources)).
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to bump coordination task dispatch attempts: %w", err)
@@ -632,6 +707,14 @@ func (s *pgCoordinationTaskStore) BumpDispatchAttempts(ctx context.Context, task
 		return fmt.Errorf("coordination task %s not found or terminal: %w", taskID, ErrCoordinationTaskStatusConflict)
 	}
 	return nil
+}
+
+// coordinationTaskExists reports whether a task row with the given id exists.
+func (s *pgCoordinationTaskStore) coordinationTaskExists(ctx context.Context, taskID uuid.UUID) bool {
+	exists, err := s.db.NewSelect().Model((*models.CoordinationTask)(nil)).
+		Where("id = ?", taskID).
+		Exists(ctx)
+	return err == nil && exists
 }
 
 // rollupChildInvestigation merges the child investigation's findings and

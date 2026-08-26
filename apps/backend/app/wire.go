@@ -616,6 +616,8 @@ func (a *App) wire() error {
 
 		icsProvisioner := api.NewICSWarRoomProvisioner(a.stores.ICSRole, a.stores.IncidentDocument, a.stores.Incident, provisionMeetClient(a.cfg, googleMeetClient))
 		icsWorker := worker.NewICSWorker(icsProvisioner, publisher)
+		icsWorker.SetSSEPublisher(&sse.DualPublisher{Broker: a.sseBroker, VKClient: a.valkeyClient})
+		icsWorker.SetValkeyClient(a.valkeyClient)
 		a.workerSet.SetICSWorker(icsWorker)
 
 		// W6 transactional outbox: a worker drains the outbox table and

@@ -37,6 +37,11 @@ const { prefetch } = useRoutePrefetch();
 useSessionKeepAlive();
 const { handleGlobalSearchKeydown, closeGlobalSearch } = useGlobalSearch();
 const notificationSSE = useSSE("/api/v1/events", {
+  // `notification` — dispatch-worker events (escalations, handoffs, action
+  // items). `notification_new` — API-side test sends with the full record.
+  notification: (data: unknown) => {
+    notificationStore.handleSSEEvent("notification", data);
+  },
   notification_new: (data: unknown) => {
     notificationStore.handleSSEEvent("notification_new", data);
   },

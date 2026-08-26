@@ -136,7 +136,12 @@ const filteredAgents = computed(() => {
 });
 
 const capabilityCounts = computed(() => {
-  const counts: Record<AgentCapability, number> = { investigate: 0, communicate: 0, command: 0 };
+  const counts: Record<AgentCapability, number> = {
+    investigate: 0,
+    communicate: 0,
+    command: 0,
+    secrets: 0,
+  };
   for (const t of agentTokens.value) {
     for (const cap of t.capabilities ?? []) {
       if (cap in counts) counts[cap] += 1;

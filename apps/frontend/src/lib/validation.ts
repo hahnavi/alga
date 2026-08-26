@@ -204,7 +204,8 @@ export const incidentDetailSchema = z.object({ incident: incidentRecordSchema })
 // rather than corrupting UI state.
 // ---------------------------------------------------------------------------
 
-// `notification_new` — see apps/backend/api/notification.go.
+// `notification_new` — see apps/backend/api/notification.go (test-send path
+// ships the full record, optionally wrapped in `{notification}`).
 export const notificationRecordSchema = z
   .object({
     id: z.string(),
@@ -229,6 +230,21 @@ export const notificationRecordSchema = z
 export const notificationNewEventSchema = z
   .object({
     notification: notificationRecordSchema.optional(),
+  })
+  .passthrough();
+
+// `notification` — see apps/backend/worker/notification_dispatch.go. Emitted
+// per dispatch-created record; the payload omits the owning `user_id`
+// (implied by the targeted stream) and `read` (always false when born).
+export const notificationDispatchEventSchema = z
+  .object({
+    id: z.string(),
+    type: z.string(),
+    title: z.string(),
+    message: z.string(),
+    resource_type: z.string(),
+    resource_id: z.string(),
+    created_at: z.string(),
   })
   .passthrough();
 

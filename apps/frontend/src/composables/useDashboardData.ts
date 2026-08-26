@@ -138,7 +138,7 @@ export function useDashboardData(selectedRange: Ref<DateRange>) {
     investigation_update: () => scheduleRefresh(),
     investigation_started: () => scheduleRefresh(),
     investigation_complete: () => scheduleRefresh(),
-    investigation_deleted: () => scheduleRefresh(),
+    investigation_status_changed: () => scheduleRefresh(),
     investigation_patch: () => scheduleRefresh(),
   });
 

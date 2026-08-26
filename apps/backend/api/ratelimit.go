@@ -10,8 +10,6 @@ import (
 
 	"alga/config"
 	"alga/logger"
-
-	"golang.org/x/time/rate"
 )
 
 // RateLimiting is the interface for per-IP rate limiting.
@@ -137,28 +135,41 @@ func (ex *ipExtractor) clientIP(r *http.Request) string {
 	return remoteIP
 }
 
-// memoryRateLimiter implements per-IP rate limiting with sliding window
+// memoryRateLimiter implements per-IP fixed-window counting, matching the
+// Valkey implementation's semantics exactly (WP-B2): each key gets `limit`
+// requests per `window`, resetting on window rollover. Previously this was a
+// token bucket whose effective allowance diverged ~30x from the Valkey path
+// depending on deployment mode. `nowFn` is a seam for tests that double the
+// clock.
 type memoryRateLimiter struct {
 	mu       sync.RWMutex
-	limiters map[string]*ipLimiter
-	rate     rate.Limit
-	burst    int
+	counters map[string]*windowCounter
+	limit    int
+	window   time.Duration
 	ttl      time.Duration
+	nowFn    func() time.Time
 	stopCh   chan struct{}
 }
 
-type ipLimiter struct {
-	limiter  *rate.Limiter
-	lastSeen time.Time
+type windowCounter struct {
+	count       int
+	windowStart time.Time
+	lastSeen    time.Time
 }
 
-// NewRateLimiter creates a new rate limiter
-func NewRateLimiter(requestsPerSecond rate.Limit, burst int) RateLimiting {
+// NewRateLimiter creates a fixed-window rate limiter (e.g. limit=20,
+// window=time.Minute for the documented public-surface contract).
+func NewRateLimiter(limit int, window time.Duration) RateLimiting {
+	if limit <= 0 || window <= 0 {
+		logger.Error("rate limiter misconfigured; allowing all traffic", "component", "api", "limit", limit, "window", window.String())
+		return allowAllLimiter{}
+	}
 	rl := &memoryRateLimiter{
-		limiters: make(map[string]*ipLimiter),
-		rate:     requestsPerSecond,
-		burst:    burst,
+		counters: make(map[string]*windowCounter),
+		limit:    limit,
+		window:   window,
 		ttl:      5 * time.Minute,
+		nowFn:    time.Now,
 		stopCh:   make(chan struct{}),
 	}
 
@@ -166,6 +177,11 @@ func NewRateLimiter(requestsPerSecond rate.Limit, burst int) RateLimiting {
 
 	return rl
 }
+
+type allowAllLimiter struct{}
+
+func (allowAllLimiter) Allow(string) bool { return true }
+func (allowAllLimiter) Stop()             {}
 
 func (rl *memoryRateLimiter) Stop() {
 	close(rl.stopCh)
@@ -176,17 +192,24 @@ func (rl *memoryRateLimiter) Allow(ip string) bool {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
-	l, exists := rl.limiters[ip]
+	now := rl.nowFn()
+	c, exists := rl.counters[ip]
 	if !exists {
-		l = &ipLimiter{
-			limiter:  rate.NewLimiter(rl.rate, rl.burst),
-			lastSeen: time.Now(),
-		}
-		rl.limiters[ip] = l
+		c = &windowCounter{count: 0, windowStart: now, lastSeen: now}
+		rl.counters[ip] = c
+	}
+	c.lastSeen = now
+
+	if now.Sub(c.windowStart) >= rl.window {
+		c.count = 0
+		c.windowStart = now
 	}
 
-	l.lastSeen = time.Now()
-	return l.limiter.Allow()
+	if c.count >= rl.limit {
+		return false
+	}
+	c.count++
+	return true
 }
 
 // cleanup removes stale limiters periodically
@@ -206,9 +229,9 @@ func (rl *memoryRateLimiter) cleanup() {
 		case <-ticker.C:
 		}
 		rl.mu.Lock()
-		for ip, l := range rl.limiters {
-			if time.Since(l.lastSeen) > rl.ttl {
-				delete(rl.limiters, ip)
+		for ip, c := range rl.counters {
+			if time.Since(c.lastSeen) > rl.ttl {
+				delete(rl.counters, ip)
 			}
 		}
 		rl.mu.Unlock()

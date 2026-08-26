@@ -271,7 +271,7 @@ See [Personal Access Tokens](/operations/personal-access-tokens) for details.
 - **HSTS** — `Strict-Transport-Security` emitted on all HTTPS responses regardless of the `SecureCookies` flag
 - **Encryption at Rest** — AES-256-GCM envelope encryption for integration secrets and auth secrets (Google/OIDC client secrets in system config)
 - **Constant-Time Comparison** — All secret checks use `crypto/subtle`
-- **Rate Limiting** — Per-IP rate limiting for public endpoints; per-agent-token rate limiting for agent endpoints; login attempts limited to 5 per 15 minutes
+- **Rate Limiting** — Per-IP fixed-window rate limiting (default 20/min, `RATE_LIMIT_GENERAL_PER_MINUTE`) for public endpoints; per-agent-token limiting (default 120/min, `RATE_LIMIT_AGENT_PER_MINUTE`) for agent endpoints — both backends enforce identical semantics; login attempts limited to 5 per 15 minutes
 - **Account Lockout** — Failed login tracking with time-based lockout
 - **Audit Logging** — Fire-and-forget audit trail for every create, update, delete, command, and state transition; must not block request success
 - **Idempotency-Key** — Optional replay protection for mutating requests (requires Valkey); first request executes, subsequent requests with the same key return the cached response

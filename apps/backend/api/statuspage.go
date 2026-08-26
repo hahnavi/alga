@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -72,13 +73,6 @@ type statusPageComponentRequest struct {
 	ServiceID    string `json:"service_id,omitempty"`
 	DisplayOrder *int   `json:"display_order,omitempty"`
 	Status       string `json:"status,omitempty"`
-}
-
-type statusPageViewResponse struct {
-	Page          store.StatusPageRecord            `json:"page"`
-	OverallStatus string                            `json:"overall_status"`
-	Components    []store.StatusPageComponentRecord `json:"components"`
-	Incidents     []store.IncidentRecord            `json:"incidents"`
 }
 
 func (s *Server) handleListStatusPages(w http.ResponseWriter, r *http.Request) {
@@ -167,9 +161,46 @@ func (s *Server) handleCreateStatusPage(w http.ResponseWriter, r *http.Request) 
 	writeData(w, http.StatusCreated, out)
 }
 
-// handleStatusPageViewBySlug returns the page payload: the page, its components
-// (ordered), the derived overall status, and current active incidents so
-// internal viewers see live impact alongside component health.
+// View-models for the slug view (WP-B1). Field allow-list is exactly what a
+// public renderer could show, so an unauthenticated route can later become a
+// thin wrapper over this serializer without re-litigating the payload.
+
+type statusPageViewPage struct {
+	Name        string `json:"name"`
+	Slug        string `json:"slug"`
+	Description string `json:"description,omitempty"`
+}
+
+type statusPageViewComponent struct {
+	Name         string `json:"name"`
+	Description  string `json:"description,omitempty"`
+	Status       string `json:"status"`
+	DisplayOrder int    `json:"display_order"`
+}
+
+type statusPageViewIncident struct {
+	Title     string     `json:"title"`
+	Status    string     `json:"status"`
+	Severity  string     `json:"severity"`
+	StartedAt *time.Time `json:"started_at,omitempty"`
+}
+
+type statusPageViewResponse struct {
+	Page          statusPageViewPage        `json:"page"`
+	OverallStatus string                    `json:"overall_status"`
+	Components    []statusPageViewComponent `json:"components"`
+	Incidents     []statusPageViewIncident  `json:"incidents"`
+}
+
+// handleStatusPageViewBySlug returns the page payload: the page name/slug/
+// description, its components (ordered), the derived overall status, and
+// active incidents scoped to the services the page's components map to.
+//
+// Hardening per WP-B1: disabled pages 404 uniformly with missing slugs; the
+// payload is an allow-listed view model — no internal ids, owner team,
+// Slack/war-room linkage, SLA or responder fields. The route stays behind
+// authMiddleware(rbac.StatusPagesRead); this shape doubles as the contract
+// for any future public renderer (spec S3).
 func (s *Server) handleStatusPageViewBySlug(w http.ResponseWriter, r *http.Request) {
 	if !s.requireStore(w, s.statusPageStore, "status page store") {
 		return
@@ -184,7 +215,9 @@ func (s *Server) handleStatusPageViewBySlug(w http.ResponseWriter, r *http.Reque
 		writeInternalError(w, err, "failed to get status page")
 		return
 	}
-	if page == nil {
+	if page == nil || !page.Enabled {
+		// Uniform 404: never reveal that a disabled page exists. Management
+		// continues via /status-pages/{id} CRUD.
 		writeError(w, ErrorCodeNotFound, "status page not found")
 		return
 	}
@@ -197,19 +230,46 @@ func (s *Server) handleStatusPageViewBySlug(w http.ResponseWriter, r *http.Reque
 		components = []store.StatusPageComponentRecord{}
 	}
 
-	incidents := []store.IncidentRecord{}
-	if s.incidentStore != nil {
-		active, err := s.incidentStore.ListActiveIncidents(r.Context())
+	viewComponents := make([]statusPageViewComponent, 0, len(components))
+	serviceIDs := make([]uuid.UUID, 0, len(components))
+	for _, c := range components {
+		viewComponents = append(viewComponents, statusPageViewComponent{
+			Name:         c.Name,
+			Description:  c.Description,
+			Status:       c.Status,
+			DisplayOrder: c.DisplayOrder,
+		})
+		if c.ServiceID != nil {
+			serviceIDs = append(serviceIDs, *c.ServiceID)
+		}
+	}
+
+	incidents := []statusPageViewIncident{}
+	if s.incidentStore != nil && len(serviceIDs) > 0 {
+		active, err := s.incidentStore.ListActiveIncidentsForServices(r.Context(), serviceIDs)
 		if err != nil {
 			logger.Warn("status page view: failed to list active incidents", "component", "api", "error", err)
 		} else {
-			incidents = active
+			incidents = make([]statusPageViewIncident, 0, len(active))
+			for i := range active {
+				inc := &active[i]
+				incidents = append(incidents, statusPageViewIncident{
+					Title:     inc.Title,
+					Status:    inc.Status,
+					Severity:  inc.Severity,
+					StartedAt: inc.StartedAt,
+				})
+			}
 		}
 	}
 	writeData(w, http.StatusOK, statusPageViewResponse{
-		Page:          *page,
+		Page: statusPageViewPage{
+			Name:        page.Name,
+			Slug:        page.Slug,
+			Description: page.Description,
+		},
 		OverallStatus: overallStatus(components),
-		Components:    components,
+		Components:    viewComponents,
 		Incidents:     incidents,
 	})
 }

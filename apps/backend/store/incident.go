@@ -113,6 +113,10 @@ type IncidentStore interface {
 	CountActiveByPriority(ctx context.Context, serviceID string) (map[string]int, error)
 	ListActiveSummarizableIncidents(ctx context.Context) ([]IncidentRecord, error)
 	ListActiveIncidents(ctx context.Context) ([]IncidentRecord, error)
+	// ListActiveIncidentsForServices returns active incidents whose
+	// service_id is in the given set (WP-B1 status-page scoping). An empty
+	// input yields an empty slice without querying.
+	ListActiveIncidentsForServices(ctx context.Context, serviceIDs []uuid.UUID) ([]IncidentRecord, error)
 	GetIncidentBySlackChannel(ctx context.Context, channelID string) (*IncidentRecord, error)
 	SetIncidentWarRoomMeet(ctx context.Context, incidentNumber int64, spaceName, conferenceURL string) error
 }
@@ -890,6 +894,35 @@ func (s *pgIncidentStore) ListActiveIncidents(ctx context.Context) ([]IncidentRe
 		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("query active incidents: %w", err)
+	}
+	out := make([]IncidentRecord, 0, len(rows))
+	for i := range rows {
+		out = append(out, *s.toIncidentRecord(&rows[i]))
+	}
+	return out, nil
+}
+
+// ListActiveIncidentsForServices returns active, non-deleted incidents whose
+// service_id is in serviceIDs (WP-B1: status-page slug views must only see
+// impact for services the page actually maps). Empty input short-circuits to
+// an empty slice — a page with no service-linked components has no incident
+// surface.
+func (s *pgIncidentStore) ListActiveIncidentsForServices(ctx context.Context, serviceIDs []uuid.UUID) ([]IncidentRecord, error) {
+	if len(serviceIDs) == 0 {
+		return []IncidentRecord{}, nil
+	}
+	ctx, cancel := pgctx(ctx)
+	defer cancel()
+
+	var rows []models.Incident
+	err := s.db.NewSelect().Model(&rows).
+		Where("status NOT IN (?)", bun.List([]string{"resolved", "closed", "cancelled"})).
+		Where("deleted_at IS NULL").
+		Where("service_id IN (?)", bun.List(serviceIDs)).
+		Order("created_at ASC").
+		Scan(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("query active incidents for services: %w", err)
 	}
 	out := make([]IncidentRecord, 0, len(rows))
 	for i := range rows {

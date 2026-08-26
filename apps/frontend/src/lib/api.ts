@@ -651,11 +651,33 @@ export type StatusPageComponentRecord = {
   updated_at: string;
 };
 
+export type StatusPageViewPage = {
+  name: string;
+  slug: string;
+  description?: string;
+};
+
+export type StatusPageViewComponent = {
+  name: string;
+  description?: string;
+  status: ComponentStatus;
+  display_order: number;
+};
+
+export type StatusPageViewIncident = {
+  title: string;
+  status: string;
+  severity: string;
+  started_at?: string;
+};
+
+// Allow-listed payload of GET /status-pages/slug/{slug} (WP-B1): no internal
+// ids, owner team, Slack/war-room linkage or SLA fields.
 export type StatusPageView = {
-  page: StatusPageRecord;
+  page: StatusPageViewPage;
   overall_status: ComponentStatus;
-  components: StatusPageComponentRecord[];
-  incidents: IncidentRecord[];
+  components: StatusPageViewComponent[];
+  incidents: StatusPageViewIncident[];
 };
 
 export type OIDCProviderRecord = {

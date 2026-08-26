@@ -48,14 +48,14 @@ When an incident is resolved, Alga can auto-create a post-mortem draft pre-popul
 
 Action items are tracked per post-mortem and can be assigned, prioritized, and driven to completion.
 
-| Field                           | Description                                          |
-| ------------------------------- | ---------------------------------------------------- |
-| `description`                   | What needs to be done (required)                     |
-| `type`                          | Kind of follow-up (defaults to `investigate`)        |
-| `assignee_id` / `assignee_name` | User responsible                                     |
-| `status`                        | `open` → `in_progress` → `done` (defaults to `open`) |
-| `priority`                      | Priority level (defaults to `medium`)                |
-| `due_date`                      | Target completion date                               |
+| Field                           | Description                                               |
+| ------------------------------- | --------------------------------------------------------- |
+| `description`                   | What needs to be done (required)                          |
+| `type`                          | Kind of follow-up (defaults to `investigate`)             |
+| `assignee_id` / `assignee_name` | User responsible                                          |
+| `status`                        | `open` → `in_progress` → `completed` (defaults to `open`) |
+| `priority`                      | Priority level (defaults to `medium`)                     |
+| `due_date`                      | Target completion date                                    |
 
 View all open action items globally at `GET /api/v1/action-items`.
 

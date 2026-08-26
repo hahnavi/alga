@@ -577,6 +577,7 @@ func (a *App) wire() error {
 		a.workerSet.SetEscalationSweepWorker(escalationSweepWorker)
 
 		actionItemSweepWorker := worker.NewActionItemSweepWorker(a.stores.ActionItem, a.stores.Incident)
+		actionItemSweepWorker.SetSignals(a.stores.Notification, &sse.DualPublisher{Broker: a.sseBroker, VKClient: a.valkeyClient}, a.valkeyClient)
 		a.workerSet.SetActionItemSweepWorker(actionItemSweepWorker)
 
 		heartbeatSweepWorker := worker.NewHeartbeatSweepWorker(a.stores.Heartbeat, a.stores.Alert, a.stores.Audit, whReceiver)

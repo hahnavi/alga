@@ -9,14 +9,12 @@ import Card from "@/components/ui/Card.vue";
 import ErrorBanner from "@/components/ui/ErrorBanner.vue";
 import LoadingSpinner from "@/components/ui/LoadingSpinner.vue";
 import EmptyState from "@/components/ui/EmptyState.vue";
-import { useToast } from "@/lib/toast";
 import { formatTimeAgo } from "@/lib/time";
 
 defineOptions({ name: "StatusPageViewPage" });
 
 const route = useRoute();
 const router = useRouter();
-const { push } = useToast();
 
 const view = ref<StatusPageView | null>(null);
 const loading = ref(false);

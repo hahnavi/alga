@@ -96,6 +96,9 @@ type InvestigationScheduler struct {
 	staleThreshold time.Duration
 	staleInterval  time.Duration
 
+	slaSweepPublisher slaSweepPublisher
+	slaSweepInterval  time.Duration
+
 	dataRetentionDays int
 	pruneInterval     time.Duration
 
@@ -137,6 +140,12 @@ type InvestigationScheduler struct {
 // stale alert sweep to publish InvestigateMessage jobs.
 type staleInvestigatePublisher interface {
 	PublishInvestigation(ctx context.Context, msg rabbitmq.InvestigateMessage) error
+}
+
+// slaSweepPublisher is the subset of rabbitmq.Publisher used by the SLA sweep
+// loop to publish SLA sweep request ticks (decided DT-E1: scheduler-owned).
+type slaSweepPublisher interface {
+	PublishSLASweep(ctx context.Context, msg rabbitmq.SLASweepMessage) error
 }
 
 // NotificationPublisher is the subset of rabbitmq.Publisher used by the
@@ -298,6 +307,23 @@ func (s *InvestigationScheduler) SetDataRetention(days int, interval time.Durati
 	s.pruneInterval = interval
 }
 
+// SetSLAPublisher wires the RabbitMQ publisher used by the SLA sweep loop.
+// Without a publisher the sweep never starts (no external producer is
+// assumed — see the DT-E1 decision in spec 05_incidents/04).
+func (s *InvestigationScheduler) SetSLAPublisher(p slaSweepPublisher) {
+	s.slaSweepPublisher = p
+}
+
+// SetSLASweepInterval configures how often the leader publishes an SLA sweep
+// request tick. Values <= 0 disable publication; positive values below 5s are
+// clamped to 5s so a misconfigured interval cannot churn the queue.
+func (s *InvestigationScheduler) SetSLASweepInterval(d time.Duration) {
+	if d <= 0 {
+		return
+	}
+	s.slaSweepInterval = max(d, 5*time.Second)
+}
+
 func NewInvestigationScheduler(
 	alertInvestigationStore store.AlertInvestigationStore,
 	agentTokenStore store.AgentTokenStore,
@@ -327,6 +353,10 @@ func (s *InvestigationScheduler) Start() {
 		s.wg.Add(1)
 		go s.runStaleSweep()
 	}
+	if s.slaSweepPublisher != nil && s.slaSweepInterval > 0 {
+		s.wg.Add(1)
+		go s.runSLASweep()
+	}
 	if s.alertStore != nil && s.dataRetentionDays > 0 {
 		s.wg.Add(1)
 		go s.runPrune()
@@ -349,7 +379,7 @@ func (s *InvestigationScheduler) Start() {
 		s.wg.Add(1)
 		go s.runCoordinationTaskSweep()
 	}
-	logger.Info("Investigation scheduler started", "component", "scheduler", "max_concurrent", s.maxConcurrent, "leader", s.leader != nil, "stale_sweep", s.staleThreshold > 0, "incident_sweep", s.incidentStore != nil, "summary_sweep", s.summaryEnabled)
+	logger.Info("Investigation scheduler started", "component", "scheduler", "max_concurrent", s.maxConcurrent, "leader", s.leader != nil, "stale_sweep", s.staleThreshold > 0, "sla_sweep", s.slaSweepPublisher != nil && s.slaSweepInterval > 0, "incident_sweep", s.incidentStore != nil, "summary_sweep", s.summaryEnabled)
 }
 
 func (s *InvestigationScheduler) Stop() {

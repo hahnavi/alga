@@ -511,6 +511,13 @@ func (a *App) wire() error {
 		a.scheduler.SetCoordinationTaskStore(a.stores.CoordinationTask)
 		a.scheduler.SetCoordinationTaskSweepInterval(5 * time.Minute)
 
+		// DT-E1 / WP-A3: the scheduler leader owns SLA sweep tick publication;
+		// interval <= 0 disables publication entirely.
+		if publisher != nil {
+			a.scheduler.SetSLAPublisher(publisher)
+			a.scheduler.SetSLASweepInterval(a.cfg.SLASweepInterval)
+		}
+
 		ssePublisher := &sse.DualPublisher{Broker: a.sseBroker, VKClient: a.valkeyClient}
 		alertLifecycle = api.NewAlertInvestigationLifecycleService(a.stores.Alert, a.stores.AlertInvestigation, a.stores.Audit, ssePublisher, a.scheduler)
 		a.scheduler.SetAlertInvestigationLifecycleService(alertLifecycle)

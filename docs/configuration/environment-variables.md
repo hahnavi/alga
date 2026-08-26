@@ -195,6 +195,12 @@ Agent dispatch and SSE connections use bearer tokens created per-agent in the Al
 | `STALE_ALERT_THRESHOLD`      | `15m`   | No       | Minimum age before a firing alert with no investigation is considered stale. `0` disables |
 | `STALE_ALERT_SWEEP_INTERVAL` | `5m`    | No       | How often the scheduler scans for stale alerts                                            |
 
+## SLA Sweep
+
+| Variable             | Default | Required | Description                                                                                                          |
+| -------------------- | ------- | -------- | -------------------------------------------------------------------------------------------------------------------- |
+| `SLA_SWEEP_INTERVAL` | `60s`   | No       | How often the scheduler leader publishes an SLA breach-detection sweep tick. Values ≤ 0 disable publication entirely |
+
 ## Stuck-Investigation Escalation
 
 | Variable                                       | Default    | Required | Description                                                                                                                           |

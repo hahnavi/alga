@@ -220,6 +220,50 @@ func (s *InvestigationScheduler) staleSweepTick(ctx context.Context) {
 	}
 }
 
+// runSLASweep is the long-running goroutine that periodically publishes an
+// SLA sweep request tick to RabbitMQ so the SLAWorker can detect breaches.
+// It exists because nothing else produces SLASweepMessage (finding A3; the
+// DT-E1 decision assigned publication to the scheduler leader rather than an
+// external cron, whose silence was the original failure mode).
+func (s *InvestigationScheduler) runSLASweep() {
+	defer s.wg.Done()
+	interval := s.slaSweepInterval
+	if interval <= 0 {
+		interval = time.Minute
+	}
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-s.stopCh:
+			return
+		case <-ticker.C:
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						logger.Error("scheduler tick panicked", "component", "scheduler", "tick", "sla_sweep", "panic", r, "stack", string(debug.Stack()))
+					}
+				}()
+				s.slaSweepTick(context.Background())
+			}()
+		}
+	}
+}
+
+// slaSweepTick runs one pass of the SLA sweep publisher. Only the leader
+// publishes ticks; non-leader replicas skip silently. Publish failures log a
+// warning and never stop the loop — the next interval retries.
+func (s *InvestigationScheduler) slaSweepTick(ctx context.Context) {
+	if !s.acquireLeadership(ctx) {
+		return
+	}
+	if err := s.slaSweepPublisher.PublishSLASweep(ctx, rabbitmq.SLASweepMessage{}); err != nil {
+		logger.Warn("SLA sweep failed to publish request tick", "component", "scheduler", "error", err)
+		return
+	}
+	logger.Info("SLA sweep published request tick", "component", "scheduler", "interval", s.slaSweepInterval)
+}
+
 func (s *InvestigationScheduler) runHandoffTick() {
 	defer s.wg.Done()
 	ticker := time.NewTicker(30 * time.Second)

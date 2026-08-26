@@ -120,12 +120,12 @@ The **Memory** page (brain icon in the sidebar) lets you browse, create, edit, a
 
 Agents interact with memories through their own bearer-scoped endpoints:
 
-| Method   | Endpoint                      | Description                                                |
-| -------- | ----------------------------- | ---------------------------------------------------------- |
-| `GET`    | `/api/v1/agent/memories`      | List/search memories                                       |
-| `POST`   | `/api/v1/agent/memories`      | Create a memory (auto-stamps the calling agent's ID)       |
-| `GET`    | `/api/v1/agent/memories/{id}` | Get a specific memory (any agent can read any memory)      |
-| `DELETE` | `/api/v1/agent/memories/{id}` | Delete — only the owning agent can delete its own memories |
+| Method   | Endpoint                      | Description                                                                                                                                                                                                                                |           |
+| -------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------- |
+| `GET`    | `/api/v1/agent/memories`      | List/search memories (requires `investigate\                                                                                                                                                                                               | command`) |
+| `POST`   | `/api/v1/agent/memories`      | Create a memory (requires `investigate`; auto-stamps the calling agent's ID)                                                                                                                                                               |           |
+| `GET`    | `/api/v1/agent/memories/{id}` | Get a specific memory (requires `investigate\                                                                                                                                                                                              | command`) |
+| `DELETE` | `/api/v1/agent/memories/{id}` | Delete — requires `investigate` AND ownership; memories with no owning agent (extraction output) can only be removed by an operator via the RBAC-gated `/api/v1/memories/{id}`, and every successful delete is audited as `memory_deleted` |           |
 
 ## Memory Fields
 

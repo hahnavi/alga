@@ -40,7 +40,7 @@ SLA metrics are derived from lifecycle timestamps written by status transitions:
 
 ## Breach Detection
 
-A background SLA worker (`SLAWorker`) sweeps SLA-eligible incidents — those in `detected`, `triaging`, `active`, or `mitigated` status with a response or resolve target set. For each incident past a deadline:
+SLA sweep ticks are published by the **scheduler leader** on the `alga.sla` exchange every `SLA_SWEEP_INTERVAL` (default 60s); values ≤ 0 disable publication. The `SLAWorker` consumes these ticks and sweeps SLA-eligible incidents — those in `detected`, `triaging`, `active`, or `mitigated` status with a response or resolve target set. For each incident past a deadline:
 
 1. **Response breach** — `sla_target_respond_at` passed and not yet acknowledged (`sla_acknowledged_at` is null):
    - A `sla_breach` timeline entry is added ("Response SLA breached")

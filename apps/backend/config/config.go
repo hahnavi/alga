@@ -175,6 +175,11 @@ type Config struct {
 	// alerts and publishes investigation jobs for them.
 	StaleAlertSweepInterval time.Duration `yaml:"stale_alert_sweep_interval"`
 
+	// SLASweepInterval is how often the scheduler's leader publishes an SLA
+	// sweep request to RabbitMQ, driving SLA breach detection (decided:
+	// scheduler-owned publication). Values <= 0 disable publication entirely.
+	SLASweepInterval time.Duration `yaml:"sla_sweep_interval"`
+
 	// StuckInvestigationEscalationMultiplier is the multiple of
 	// InvestigationTimeout after which an in-progress alert investigation is
 	// considered "stuck" and triggers an ops-team page. Default 2 (i.e. 2x the
@@ -318,6 +323,7 @@ func Defaults() *Config {
 		StatusUpdateInterval:                     15 * time.Minute,
 		StaleAlertThreshold:                      15 * time.Minute,
 		StaleAlertSweepInterval:                  5 * time.Minute,
+		SLASweepInterval:                         60 * time.Second,
 		StuckInvestigationEscalationMultiplier:   2,
 		StuckInvestigationEscalationTickInterval: 30 * time.Second,
 		OpsTeamName:                              "ops-team",
@@ -760,6 +766,11 @@ func Load() (*Config, error) {
 	if v := os.Getenv("STALE_ALERT_SWEEP_INTERVAL"); v != "" {
 		if d, err := time.ParseDuration(v); err == nil {
 			cfg.StaleAlertSweepInterval = d
+		}
+	}
+	if v := os.Getenv("SLA_SWEEP_INTERVAL"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			cfg.SLASweepInterval = d
 		}
 	}
 	if v := os.Getenv("STUCK_INVESTIGATION_ESCALATION_MULTIPLIER"); v != "" {

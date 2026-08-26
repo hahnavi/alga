@@ -194,7 +194,7 @@ type slackInteractionPayload struct {
 
 func (h *SlackWebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
 		return
 	}
 	if h.rateLimiter != nil && !h.rateLimiter.Allow(clientIPFromRequest(r)) {
@@ -202,7 +202,7 @@ func (h *SlackWebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if h.signingSecret == "" {
-		http.Error(w, "slack webhook not configured", http.StatusServiceUnavailable)
+		platform.WriteErrorStatus(w, http.StatusServiceUnavailable, platform.ErrorCodeInternal, "slack webhook not configured")
 		return
 	}
 
@@ -211,7 +211,7 @@ func (h *SlackWebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	if strings.HasPrefix(contentType, "application/x-www-form-urlencoded") {
 		body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
 		if err != nil {
-			http.Error(w, "bad request", http.StatusBadRequest)
+			platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "bad request")
 			return
 		}
 
@@ -219,13 +219,13 @@ func (h *SlackWebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		sig := r.Header.Get("X-Slack-Signature")
 		if !verifySlackRequest(h.signingSecret, ts, body, sig) {
 			logger.Warn("Slack webhook rejected: invalid signature", "component", "webhook")
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			webhookError(w, platform.ErrorCodeUnauthorized, "unauthorized")
 			return
 		}
 
 		r.Body = io.NopCloser(bytes.NewReader(body))
 		if err := r.ParseForm(); err != nil {
-			http.Error(w, "bad request", http.StatusBadRequest)
+			platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "bad request")
 			return
 		}
 
@@ -241,7 +241,7 @@ func (h *SlackWebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
 	if err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
+		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "bad request")
 		return
 	}
 
@@ -249,13 +249,13 @@ func (h *SlackWebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	sig := r.Header.Get("X-Slack-Signature")
 	if !verifySlackRequest(h.signingSecret, ts, body, sig) {
 		logger.Warn("Slack webhook rejected: invalid signature", "component", "webhook")
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		webhookError(w, platform.ErrorCodeUnauthorized, "unauthorized")
 		return
 	}
 
 	var probe slackURLVerification
 	if err := json.Unmarshal(body, &probe); err != nil {
-		http.Error(w, "invalid json", http.StatusBadRequest)
+		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "invalid json")
 		return
 	}
 	if probe.Type == "url_verification" {
@@ -272,7 +272,7 @@ func (h *SlackWebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	var env slackEnvelope
 	if err := json.Unmarshal(body, &env); err != nil {
-		http.Error(w, "invalid json", http.StatusBadRequest)
+		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "invalid json")
 		return
 	}
 
@@ -308,7 +308,7 @@ func (h *SlackWebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	record, err := h.alertInvestigationStore.GetAlertInvestigationBySlackThread(r.Context(), ev.Channel, rootTS)
 	if err != nil {
 		logger.Error("Failed to query investigation by Slack thread", "component", "webhook", "error", err)
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		webhookError(w, platform.ErrorCodeInternal, "internal error")
 		return
 	}
 	if record == nil {
@@ -340,7 +340,7 @@ func (h *SlackWebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	if err := h.alertInvestigationStore.AddAlertInvestigationUpdate(r.Context(), record.AlertInvestigationID, update); err != nil {
 		logger.Error("Failed to add investigation update from Slack", "component", "webhook", "error", err)
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		webhookError(w, platform.ErrorCodeInternal, "internal error")
 		return
 	}
 

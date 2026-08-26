@@ -267,10 +267,10 @@ func (s *Server) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/auth/profile", s.authMiddleware(s.handleUpdateProfile))
 	mux.HandleFunc("/api/v1/auth/forgot-password", s.rateLimitMiddleware(s.handleForgotPassword))
 	mux.HandleFunc("/api/v1/auth/reset-password", s.rateLimitMiddleware(s.handleResetPassword))
-	mux.HandleFunc("/api/v1/auth/google/enabled", s.handleGoogleOAuthEnabled)
+	mux.HandleFunc("/api/v1/auth/google/enabled", s.rateLimitMiddleware(s.handleGoogleOAuthEnabled))
 	mux.HandleFunc("/api/v1/auth/google", s.rateLimitMiddleware(s.handleGoogleOAuthAuthorize))
 	mux.HandleFunc("/api/v1/auth/google/callback", s.rateLimitMiddleware(s.handleGoogleOAuthCallback))
-	mux.HandleFunc("/api/v1/auth/slack/enabled", s.handleSlackSignInEnabled)
+	mux.HandleFunc("/api/v1/auth/slack/enabled", s.rateLimitMiddleware(s.handleSlackSignInEnabled))
 	mux.HandleFunc("/api/v1/auth/slack", s.rateLimitMiddleware(s.handleSlackSignInAuthorize))
 	mux.HandleFunc("/api/v1/auth/slack/callback", s.rateLimitMiddleware(s.handleSlackSignInCallback))
 

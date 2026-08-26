@@ -224,7 +224,7 @@ func (r *Receiver) Router() *http.ServeMux {
 // handleWebhook processes incoming webhook alerts
 func (r *Receiver) handleWebhook(w http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
 		return
 	}
 
@@ -235,18 +235,18 @@ func (r *Receiver) handleWebhook(w http.ResponseWriter, req *http.Request) {
 
 	token := r.webhookTokenFromRequest(req)
 	if token == "" {
-		http.Error(w, "Unauthorized: missing token", http.StatusUnauthorized)
+		webhookError(w, platform.ErrorCodeUnauthorized, "unauthorized: missing token")
 		return
 	}
 
 	valid, err := r.webhookTokenStore.ValidateToken(token)
 	if err != nil {
 		logger.Error("Failed to validate webhook token", "component", "webhook", "error", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		webhookError(w, platform.ErrorCodeInternal, "internal server error")
 		return
 	}
 	if !valid {
-		http.Error(w, "Unauthorized: invalid token", http.StatusUnauthorized)
+		webhookError(w, platform.ErrorCodeUnauthorized, "unauthorized: invalid token")
 		return
 	}
 
@@ -258,13 +258,13 @@ func (r *Receiver) handleWebhook(w http.ResponseWriter, req *http.Request) {
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
 		logger.Error("Failed to read webhook request body", "component", "webhook", "error", err)
-		http.Error(w, "Bad request", http.StatusBadRequest)
+		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "bad request")
 		return
 	}
 
 	if err := json.Unmarshal(body, &payload); err != nil {
 		logger.Error("Failed to decode webhook payload", "component", "webhook", "error", err)
-		http.Error(w, "Bad request", http.StatusBadRequest)
+		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "bad request")
 		return
 	}
 
@@ -316,7 +316,7 @@ func (r *Receiver) handleWebhook(w http.ResponseWriter, req *http.Request) {
 	metrics.WebhookAlertPublishSyncProcessed.Add(1)
 	if err := r.ProcessAlerts(req.Context(), payload); err != nil {
 		logger.Error("Sync alert processing failed", "component", "webhook", "error", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		webhookError(w, platform.ErrorCodeInternal, "internal server error")
 		return
 	}
 

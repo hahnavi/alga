@@ -146,6 +146,18 @@ type Config struct {
 	// AgentSSEAllowedOrigins is a comma-separated list of allowed Origin headers for the agent SSE endpoint; empty allows all.
 	AgentSSEAllowedOrigins string `yaml:"agent_sse_allowed_origins"`
 
+	// WebhookAllowQueryToken re-enables the legacy `?token=` query-parameter
+	// authentication on POST /webhooks/alerts. Credentials in URLs leak via
+	// proxy/access logs, Referer headers, and browser history, so this defaults
+	// to false and only header authentication is accepted. Removal of the flag
+	// (and the fallback) is planned one minor release after introduction.
+	WebhookAllowQueryToken bool `yaml:"webhook_allow_query_token"`
+	// AgentSSEAllowQueryToken re-enables the legacy `?token=` fallback on the
+	// agent SSE endpoint for pure-EventSource consumers that cannot set an
+	// Authorization header. Defaults to false; fetch()-based SSE with a Bearer
+	// header is the blessed pattern.
+	AgentSSEAllowQueryToken bool `yaml:"agent_sse_allow_query_token"`
+
 	// StaleAlertThreshold is the minimum age a firing alert must reach before
 	// the scheduler considers it "stale" (no investigation). Alerts younger
 	// than this are assumed to still be in the correlator pipeline.
@@ -705,6 +717,16 @@ func Load() (*Config, error) {
 	if v := os.Getenv("AGENT_SSE_ALLOWED_ORIGINS"); v != "" {
 		cfg.AgentSSEAllowedOrigins = v
 	}
+	if v := os.Getenv("WEBHOOK_ALLOW_QUERY_TOKEN"); v != "" {
+		if parsed, err := strconv.ParseBool(v); err == nil {
+			cfg.WebhookAllowQueryToken = parsed
+		}
+	}
+	if v := os.Getenv("AGENT_SSE_ALLOW_QUERY_TOKEN"); v != "" {
+		if parsed, err := strconv.ParseBool(v); err == nil {
+			cfg.AgentSSEAllowQueryToken = parsed
+		}
+	}
 	if v := os.Getenv("STALE_ALERT_THRESHOLD"); v != "" {
 		if d, err := time.ParseDuration(v); err == nil {
 			cfg.StaleAlertThreshold = d
@@ -865,6 +887,15 @@ func (c *Config) Validate() error {
 	// MITM of outgoing email (ASVS V9.2, SPEC gap L6).
 	if c.SMTPSkipTLSVerify {
 		logger.Warn("SMTP_SKIP_TLS_VERIFY is true; SMTP TLS certificate verification is disabled (MITM risk for outgoing email)", "component", "config")
+	}
+
+	// Legacy query-token auth escape hatches must be loud: they weaken the
+	// default credential-handling posture and are slated for removal.
+	if c.WebhookAllowQueryToken {
+		logger.Warn("WEBHOOK_ALLOW_QUERY_TOKEN is true; webhook tokens are accepted via ?token= query parameter (logged in proxy/history trails). Migrate senders to Authorization: Bearer before the flag is removed", "component", "config")
+	}
+	if c.AgentSSEAllowQueryToken {
+		logger.Warn("AGENT_SSE_ALLOW_QUERY_TOKEN is true; agent SSE accepts ?token= query parameter (logged in proxy/access logs). Prefer fetch()-based SSE with Authorization header", "component", "config")
 	}
 
 	// Force the lazy keyring init now so we can surface a usable error here

@@ -78,6 +78,9 @@ type Receiver struct {
 	alertInvestigationLifecycle alertInvestigationLifecycle
 	idempotency                 *valkey.IdempotencyCache
 	idempotencyTTL              time.Duration
+	// allowQueryToken re-enables the legacy `?token=` ingestion fallback;
+	// deny-by-default (see webhookTokenFromRequest).
+	allowQueryToken bool
 }
 
 type alertInvestigationLifecycle interface {
@@ -89,7 +92,7 @@ type PendingNotifier interface {
 }
 
 // NewReceiver creates a new webhook receiver
-func NewReceiver(routingEngine *routing.Engine, mmClient *mattermost.Client, slackClient *slack.Client, alertStore store.Store, webhookTokenStore store.WebhookTokenStore, dedupCache DedupCache) *Receiver {
+func NewReceiver(routingEngine *routing.Engine, mmClient *mattermost.Client, slackClient *slack.Client, alertStore store.Store, webhookTokenStore store.WebhookTokenStore, dedupCache DedupCache, allowQueryToken bool) *Receiver {
 	var providers []ChatProvider
 	if mmClient != nil {
 		providers = append(providers, NewMattermostChatProvider(mmClient))
@@ -105,7 +108,13 @@ func NewReceiver(routingEngine *routing.Engine, mmClient *mattermost.Client, sla
 		store:             alertStore,
 		webhookTokenStore: webhookTokenStore,
 		dedupCache:        dedupCache,
+		allowQueryToken:   allowQueryToken,
 	}
+}
+
+// SetAllowQueryToken overrides the constructor flag (used by tests).
+func (r *Receiver) SetAllowQueryToken(v bool) {
+	r.allowQueryToken = v
 }
 
 // SetPublisher enables async processing via message queue.
@@ -224,7 +233,7 @@ func (r *Receiver) handleWebhook(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	token := webhookTokenFromRequest(req)
+	token := r.webhookTokenFromRequest(req)
 	if token == "" {
 		http.Error(w, "Unauthorized: missing token", http.StatusUnauthorized)
 		return
@@ -314,7 +323,12 @@ func (r *Receiver) handleWebhook(w http.ResponseWriter, req *http.Request) {
 	platform.WriteStatus(w, "ok")
 }
 
-func webhookTokenFromRequest(req *http.Request) string {
+// webhookTokenFromRequest extracts the ingestion token. The `?token=` query
+// fallback is deny-by-default (WP-B3): credentials in URLs leak via proxy and
+// access logs, Referer headers, and browser history. It survives only behind
+// the WEBHOOK_ALLOW_QUERY_TOKEN=true escape hatch. Denials never log the URL
+// or the token — that would reintroduce the leak into our own logs.
+func (r *Receiver) webhookTokenFromRequest(req *http.Request) string {
 	token := strings.TrimSpace(req.Header.Get("Authorization"))
 	if token != "" {
 		if len(token) > 7 && strings.EqualFold(token[:7], "Bearer ") {
@@ -322,7 +336,10 @@ func webhookTokenFromRequest(req *http.Request) string {
 		}
 		return token
 	}
-	return strings.TrimSpace(req.URL.Query().Get("token"))
+	if r.allowQueryToken {
+		return strings.TrimSpace(req.URL.Query().Get("token"))
+	}
+	return ""
 }
 
 // clientIPFromRequest returns a best-effort client IP for rate limiting.

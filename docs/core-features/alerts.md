@@ -98,19 +98,23 @@ Alga accepts Grafana-compatible alert payloads:
 
 ### Authentication
 
-Include the webhook token as either:
+Include the webhook token via the `Authorization: Bearer alga_...` header.
 
-- `Authorization: Bearer alga_...` header
-- `?token=alga_...` query parameter
+> The legacy `?token=alga_...` query parameter is **denied by default** since
+> 2026-08 (tokens in URLs leak into proxy/access logs, `Referer` headers and
+> browser history). If a legacy sender cannot set headers, temporarily enable
+> `WEBHOOK_ALLOW_QUERY_TOKEN=true` and migrate before that flag is removed.
 
 ## Grafana Setup
 
 1. In Alga, go to **Settings → Webhook Tokens** and create a token
 2. In Grafana, navigate to **Alerting → Contact points → Add contact point**
 3. Set type to **Webhook**
-4. Set URL to: `http://your-alga-host:8080/webhooks/alerts?token=alga_YOUR_TOKEN`
+4. Set URL to: `http://your-alga-host:8080/webhooks/alerts`
 5. Optional: Set HTTP method to `POST`
-6. Save and test the contact point
+6. Under **Optional Webhook settings → HTTP Headers**, add
+   `Authorization` = `Bearer alga_YOUR_TOKEN`
+7. Save and test the contact point
 
 ## Manual Alert Creation
 

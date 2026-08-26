@@ -250,7 +250,7 @@ func (a *App) wire() error {
 		dedupCache = valkey.NewDedupCache(a.valkeyClient)
 	}
 
-	whReceiver := webhook.NewReceiver(routingEngine, mmClient, slackClient, a.stores.Alert, a.stores.WebhookToken, dedupCache)
+	whReceiver := webhook.NewReceiver(routingEngine, mmClient, slackClient, a.stores.Alert, a.stores.WebhookToken, dedupCache, a.cfg.WebhookAllowQueryToken)
 	if a.idempotency != nil {
 		whReceiver.SetIdempotency(a.idempotency, a.cfg.IdempotencyTTL)
 	}
@@ -333,6 +333,7 @@ func (a *App) wire() error {
 	}
 
 	agentSSE := agent.NewAgentSSEHandler(a.sseBroker, a.valkeyClient, presence, a.stores.AgentToken, agentExecutor)
+	agentSSE.SetAllowQueryToken(a.cfg.AgentSSEAllowQueryToken)
 	if o := strings.TrimSpace(a.cfg.AgentSSEAllowedOrigins); o != "" {
 		var origins []string
 		for _, part := range strings.Split(o, ",") {

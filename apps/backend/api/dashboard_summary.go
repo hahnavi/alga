@@ -12,6 +12,7 @@ import (
 
 	"alga/logger"
 	"alga/memory"
+	"alga/rbac"
 	"alga/store"
 )
 
@@ -191,6 +192,12 @@ func (s *Server) handleDailySummary(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		s.handleGetDailySummary(w, r)
 	case http.MethodPost:
+		// POST forces an LLM regeneration: a cost-incurring mutation that must
+		// not be available to read-only principals just because the route gate
+		// is the shared DashboardRead.
+		if !s.checkPermission(w, r, rbac.SystemConfigWrite) {
+			return
+		}
 		s.handlePostDailySummary(w, r)
 	default:
 		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")

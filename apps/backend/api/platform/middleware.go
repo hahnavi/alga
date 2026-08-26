@@ -92,23 +92,36 @@ func AuthMiddleware(deps AuthDeps, next http.HandlerFunc, perms ...rbac.Permissi
 			}
 			effectivePerms := intersectPATPermissions(user.Role, patRecord.Permissions)
 			if len(perms) > 0 {
-				if !rbac.HasAnyPermission(user.Role, perms...) {
-					allowed := false
-					for _, p := range perms {
-						for _, ep := range effectivePerms {
-							if string(p) == ep {
-								allowed = true
-								break
-							}
-						}
-						if allowed {
+				// Authorization on the PAT path uses the role∩PAT intersection,
+				// NOT bare role membership: a scoped PAT must not inherit every
+				// permission its owner's role happens to carry. A legacy "*"
+				// PAT still means "all of the owner's role permissions".
+				wildcard := false
+				for _, p := range patRecord.Permissions {
+					if p == "*" {
+						wildcard = true
+						break
+					}
+				}
+				allowed := false
+				for _, p := range perms {
+					if wildcard && rbac.HasAnyPermission(user.Role, p) {
+						allowed = true
+						break
+					}
+					for _, ep := range effectivePerms {
+						if string(p) == ep {
+							allowed = true
 							break
 						}
 					}
-					if !allowed {
-						WriteError(w, ErrorCodeForbidden, "insufficient permissions")
-						return
+					if allowed {
+						break
 					}
+				}
+				if !allowed {
+					WriteError(w, ErrorCodeForbidden, "insufficient permissions")
+					return
 				}
 			}
 			ctx := WithUser(r.Context(), user)

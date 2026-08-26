@@ -220,7 +220,7 @@ Passwords are hashed with Argon2id (OWASP baseline: 64 MiB memory, 3 iterations,
 
 ### Webhook Tokens
 
-Bearer tokens for alert ingestion endpoints. Tokens are shown exactly once on creation and stored as HMAC-SHA-256 hashes with a non-secret `lookup_prefix` for efficient lookup:
+Bearer tokens for alert ingestion endpoints. Tokens are shown exactly once on creation and stored as HMAC-SHA-256 hashes with a non-secret `lookup_prefix` for efficient lookup. Send them via the `Authorization` header — **the `?token=` query parameter is denied by default** (`WEBHOOK_ALLOW_QUERY_TOKEN=true` is a temporary escape hatch slated for removal; credentials in URLs leak into proxy/access logs, `Referer` headers and browser history):
 
 ```sh
 curl -X POST http://localhost:8080/webhooks/alerts \
@@ -231,7 +231,7 @@ curl -X POST http://localhost:8080/webhooks/alerts \
 
 ### Agent Tokens
 
-Bearer tokens for AI agent API and SSE:
+Bearer tokens for AI agent API and SSE. The SSE endpoint also accepts `Authorization` headers (fetch-based SSE); a legacy `?token=` query fallback is denied by default (`AGENT_SSE_ALLOW_QUERY_TOKEN=true` escape hatch only):
 
 ```sh
 # SSE connection

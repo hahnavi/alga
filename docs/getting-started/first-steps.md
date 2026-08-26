@@ -44,8 +44,10 @@ You should see the alert appear on the **Alerts** page.
 1. In Alga, copy your webhook token
 2. In Grafana, go to **Alerting → Contact points → Add contact point**
 3. Set type to **Webhook**
-4. Set URL to `http://your-alga-host:8080/webhooks/alerts?token=alga_YOUR_TOKEN`
-5. Save and test
+4. Set URL to `http://your-alga-host:8080/webhooks/alerts`
+5. Add an HTTP header `Authorization` = `Bearer alga_YOUR_TOKEN` to the
+   contact point (Grafana: _Optional Webhook settings → HTTP Headers_)
+6. Save and test
 
 ## 5. Set Up Routing Rules
 

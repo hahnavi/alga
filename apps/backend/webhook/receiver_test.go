@@ -44,6 +44,7 @@ func TestHandleWebhookAuthMethods(t *testing.T) {
 		name          string
 		target        string
 		authHeader    string
+		allowQuery    bool
 		wantStatus    int
 		wantSeenToken string
 	}{
@@ -62,8 +63,15 @@ func TestHandleWebhookAuthMethods(t *testing.T) {
 			wantSeenToken: "test-token",
 		},
 		{
-			name:          "query token",
+			name:          "query token denied by default",
 			target:        "/webhooks/alerts?token=test-token",
+			wantStatus:    http.StatusUnauthorized,
+			wantSeenToken: "",
+		},
+		{
+			name:          "query token allowed with WEBHOOK_ALLOW_QUERY_TOKEN=true",
+			target:        "/webhooks/alerts?token=test-token",
+			allowQuery:    true,
 			wantStatus:    http.StatusOK,
 			wantSeenToken: "test-token",
 		},
@@ -77,7 +85,8 @@ func TestHandleWebhookAuthMethods(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tokenStore := &receiverWebhookTokenStore{validToken: "test-token"}
-			receiver := NewReceiver(nil, nil, nil, nil, tokenStore, nil)
+			receiver := NewReceiver(nil, nil, nil, nil, tokenStore, nil, false)
+			receiver.SetAllowQueryToken(tt.allowQuery)
 			req := httptest.NewRequest(http.MethodPost, tt.target, strings.NewReader(`{"alerts":[]}`))
 			if tt.authHeader != "" {
 				req.Header.Set("Authorization", tt.authHeader)

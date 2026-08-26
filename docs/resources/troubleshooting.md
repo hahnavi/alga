@@ -34,7 +34,7 @@ description: Common issues and solutions — health checks, logs, metrics, datab
 
 - Verify the bearer token is correct and not revoked
 - Check token format: `Authorization: Bearer alga_...`
-- Or use query parameter: `?token=alga_...`
+- Send the token as an `Authorization: Bearer alga_...` header. The legacy `?token=alga_...` query parameter is denied by default; only enable `WEBHOOK_ALLOW_QUERY_TOKEN=true` as a temporary escape hatch
 
 ### Mattermost Not Receiving Alerts
 

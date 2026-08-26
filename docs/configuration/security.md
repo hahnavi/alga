@@ -273,7 +273,7 @@ See [Personal Access Tokens](/operations/personal-access-tokens) for details.
 - **Constant-Time Comparison** — All secret checks use `crypto/subtle`
 - **Rate Limiting** — Per-IP fixed-window rate limiting (default 20/min, `RATE_LIMIT_GENERAL_PER_MINUTE`) for public endpoints; per-agent-token limiting (default 120/min, `RATE_LIMIT_AGENT_PER_MINUTE`) for agent endpoints — both backends enforce identical semantics; login attempts limited to 5 per 15 minutes
 - **Account Lockout** — Failed login tracking with time-based lockout
-- **Audit Logging** — Fire-and-forget audit trail for every create, update, delete, command, and state transition; must not block request success
+- **Audit Logging** — Fire-and-forget audit trail for every create, update, delete, command, and state transition; must not block request success (bursts may drop events under saturation — at-most-once delivery). Rows carry the middleware request ID so HTTP-triggered actions correlate with structured logs. Admins and operators can review the trail via `GET /api/v1/audit-events` (`audit:read` permission; paginated, filterable by `event`, `entity_type`, `entity_id`) — read-only, no API to mutate or delete audit rows. The `account_unlocked` and `suspicious_activity` event types are reserved for future features that do not exist yet.
 - **Idempotency-Key** — Optional replay protection for mutating requests (requires Valkey); first request executes, subsequent requests with the same key return the cached response
 - **Bearer Token Storage** — Tokens stored as HMAC-SHA-256 hashes with non-secret `lookup_prefix` for indexed lookup; never stored in plaintext
 - **Webhook Tokens** — Shown exactly once on creation; cannot be retrieved afterward

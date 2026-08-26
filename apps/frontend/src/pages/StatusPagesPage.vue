@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import { getErrorMessage } from "@/lib/error";
 import { onMounted, ref } from "vue";
-import { Activity, Pencil, Trash2, ExternalLink } from "@lucide/vue";
-import { api, type StatusPageRecord, type StatusPageVisibility } from "@/lib/api";
+import { Activity, Pencil, Trash2, ExternalLink, ChevronDown, ChevronRight } from "@lucide/vue";
+import {
+  api,
+  type StatusPageRecord,
+  type StatusPageVisibility,
+  type StatusPageComponentRecord,
+  type ComponentStatus,
+} from "@/lib/api";
 import Button from "@/components/ui/Button.vue";
 import Input from "@/components/ui/Input.vue";
 import Textarea from "@/components/ui/Textarea.vue";
@@ -144,6 +150,124 @@ function viewPage(p: StatusPageRecord) {
   router.push(`/status/${p.slug}`);
 }
 
+// ---- Component management (moved from the slug view page) ---------
+
+const COMPONENT_STATUS_OPTIONS: ComponentStatus[] = [
+  "operational",
+  "degraded",
+  "partial_outage",
+  "major_outage",
+  "maintenance",
+];
+
+const expandedComponents = ref<string | null>(null);
+const componentsByPage = ref<Record<string, StatusPageComponentRecord[]>>({});
+const loadingComponents = ref(false);
+const newComponentName = ref("");
+const newComponentStatus = ref<ComponentStatus>("operational");
+const addingComponent = ref(false);
+const removeComponentTarget = ref<StatusPageComponentRecord | null>(null);
+const removingComponent = ref(false);
+
+async function toggleComponents(p: StatusPageRecord) {
+  if (expandedComponents.value === p.id) {
+    expandedComponents.value = null;
+    return;
+  }
+  expandedComponents.value = p.id;
+  await loadComponents(p);
+}
+
+async function loadComponents(p: StatusPageRecord) {
+  loadingComponents.value = true;
+  try {
+    componentsByPage.value[p.id] = await api.getStatusPageComponents(p.id);
+  } catch (e: unknown) {
+    push(getErrorMessage(e, "Failed to load components"), "error");
+  } finally {
+    loadingComponents.value = false;
+  }
+}
+
+function statusDot(status: string): string {
+  switch (status) {
+    case "operational":
+      return "bg-green-500";
+    case "degraded":
+      return "bg-yellow-500";
+    case "partial_outage":
+      return "bg-orange-500";
+    case "major_outage":
+      return "bg-red-500";
+    case "maintenance":
+      return "bg-blue-500";
+    default:
+      return "bg-gray-500";
+  }
+}
+
+async function changeComponentStatus(
+  p: StatusPageRecord,
+  c: StatusPageComponentRecord,
+  status: ComponentStatus,
+) {
+  if (c.status === status) return;
+  try {
+    await api.updateStatusPageComponent(p.id, c.id, { status });
+    await loadComponents(p);
+    push("Component status updated", "success");
+  } catch (e: unknown) {
+    push(getErrorMessage(e, "Failed to update component"), "error");
+  }
+}
+
+async function addComponent(p: StatusPageRecord) {
+  if (!newComponentName.value.trim()) return;
+  addingComponent.value = true;
+  try {
+    const existing = componentsByPage.value[p.id] ?? [];
+    await api.createStatusPageComponent(p.id, {
+      name: newComponentName.value.trim(),
+      status: newComponentStatus.value,
+      display_order: existing.length,
+    });
+    newComponentName.value = "";
+    newComponentStatus.value = "operational";
+    await loadComponents(p);
+    push("Component added", "success");
+  } catch (e: unknown) {
+    push(getErrorMessage(e, "Failed to add component"), "error");
+  } finally {
+    addingComponent.value = false;
+  }
+}
+
+function requestRemoveComponent(c: StatusPageComponentRecord) {
+  removeComponentTarget.value = c;
+}
+
+async function confirmRemoveComponent() {
+  const target = removeComponentTarget.value;
+  if (!target) return;
+  removingComponent.value = true;
+  try {
+    await api.deleteStatusPageComponent(target.status_page_id, target.id);
+    const owner = pages.value.find((p) => p.id === target.status_page_id);
+    if (owner) await loadComponents(owner);
+    push("Component removed", "success");
+    removeComponentTarget.value = null;
+  } catch (e: unknown) {
+    push(getErrorMessage(e, "Failed to remove component"), "error");
+  } finally {
+    removingComponent.value = false;
+  }
+}
+
+function cancelRemoveComponent() {
+  if (removingComponent.value) return;
+  removeComponentTarget.value = null;
+}
+
 usePageHeaderActions({
   title: "Status Pages",
   titleIcon: Activity,
@@ -220,6 +344,97 @@ onMounted(() => {
             </Button>
           </div>
         </div>
+
+ <!-- Components panel (: management moved off the public-shaped
+             slug view; expand to list, add, re-status, or remove components) -->
+        <div class="mt-3 border-t border-[var(--border-primary)] pt-3">
+          <button
+            type="button"
+            class="flex items-center gap-1 text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+            @click="toggleComponents(p)"
+          >
+            <component
+              :is="expandedComponents === p.id ? ChevronDown : ChevronRight"
+              class="h-4 w-4"
+            />
+            Components
+          </button>
+
+          <div v-if="expandedComponents === p.id" class="mt-3 space-y-2">
+            <LoadingSpinner v-if="loadingComponents && !(componentsByPage[p.id] ?? []).length" />
+
+            <div
+              v-for="c in componentsByPage[p.id] ?? []"
+              :key="c.id"
+              class="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[var(--border-primary)] px-3 py-2"
+            >
+              <div class="flex min-w-0 flex-wrap items-center gap-2">
+                <span :class="['h-2.5 w-2.5 rounded-full', statusDot(c.status)]" />
+                <span class="text-sm font-medium">{{ c.name }}</span>
+                <span v-if="c.description" class="truncate text-xs text-[var(--text-muted)]">{{
+                  c.description
+                }}</span>
+              </div>
+              <div class="flex shrink-0 items-center gap-2">
+                <Select
+                  v-if="canWrite"
+                  :modelValue="c.status"
+                  class="rounded-md p-2 text-sm"
+                  @update:modelValue="
+                    (v: string) => changeComponentStatus(p, c, v as ComponentStatus)
+                  "
+                >
+                  <option v-for="s in COMPONENT_STATUS_OPTIONS" :key="s" :value="s">
+                    {{ s.replace("_", " ") }}
+                  </option>
+                </Select>
+                <Button
+                  v-if="canDelete"
+                  variant="outline"
+                  size="sm"
+                  @click="requestRemoveComponent(c)"
+                >
+                  <Trash2 class="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <p
+              v-if="(componentsByPage[p.id] ?? []).length === 0 && !loadingComponents"
+              class="text-xs text-[var(--text-muted)]"
+            >
+              No components yet.
+            </p>
+
+            <div v-if="canWrite" class="flex flex-wrap items-end gap-2 pt-1">
+              <label class="flex flex-col gap-1 text-xs font-medium text-[var(--text-muted)]">
+                New component
+                <Input
+                  v-model="newComponentName"
+                  type="text"
+                  class="w-full rounded-md border border-[var(--border-primary)] bg-[var(--bg-primary)] p-2 text-sm"
+                  placeholder="e.g. API"
+                  @keydown.enter="addComponent(p)"
+                />
+              </label>
+              <label class="flex flex-col gap-1 text-xs font-medium text-[var(--text-muted)]">
+                Status
+                <Select v-model="newComponentStatus" class="rounded-md p-2 text-sm">
+                  <option v-for="s in COMPONENT_STATUS_OPTIONS" :key="s" :value="s">
+                    {{ s.replace("_", " ") }}
+                  </option>
+                </Select>
+              </label>
+              <Button
+                size="sm"
+                :disabled="addingComponent || !newComponentName.trim()"
+                @click="addComponent(p)"
+              >
+                Add
+              </Button>
+            </div>
+          </div>
+        </div>
       </Card>
     </div>
 
@@ -287,6 +502,25 @@ onMounted(() => {
       confirm-label="Delete"
       :destructive="true"
       @confirm="doDelete"
+    />
+
+    <ConfirmDialog
+      :open="removeComponentTarget !== null"
+      :title="
+        removeComponentTarget
+          ? `Delete component ${removeComponentTarget.name}?`
+          : 'Delete component?'
+      "
+      :message="
+        removeComponentTarget
+          ? `This permanently removes ${removeComponentTarget.name} from the status page.`
+          : 'This permanently removes the selected component from the status page.'
+      "
+      destructive
+      :loading="removingComponent"
+      confirm-label="Delete"
+      @confirm="confirmRemoveComponent"
+      @cancel="cancelRemoveComponent"
     />
   </section>
 </template>

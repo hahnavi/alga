@@ -10,9 +10,12 @@ import (
 type ScheduleLayer struct {
 	bun.BaseModel `bun:"table:schedule_layers"`
 
-	ID               uuid.UUID  `bun:"id,pk"`
-	ScheduleID       uuid.UUID  `bun:"schedule_id,notnull"`
-	Name             string     `bun:"name,notnull,default:''"`
+	ID uuid.UUID `bun:"id,pk"`
+	// ScheduleID references the owning on_call_schedules row.
+	ScheduleID uuid.UUID `bun:"schedule_id,notnull"`
+	Name       string    `bun:"name,notnull,default:''"`
+	// RotationType is hourly|daily|weekly|monthly, enforced by the
+	// schedule_layers_rotation_type_check constraint since migration 00016.
 	RotationType     string     `bun:"rotation_type,notnull,default:'weekly'"`
 	RotationInterval int        `bun:"rotation_interval,notnull,default:1"`
 	StartDate        time.Time  `bun:"start_date,notnull"`

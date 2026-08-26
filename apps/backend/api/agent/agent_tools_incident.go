@@ -202,7 +202,7 @@ func (e *AgentToolExecutor) performTriggerEscalation(ctx context.Context, agentR
 			IncidentNumber: incidentNumber,
 			PolicyID:       policyID,
 			Level:          1,
-			MaxRetries:     3,
+			MaxRetries:     rabbitmq.MaxEscalationRetries,
 		}
 		if pubErr := e.escalationPublisher.PublishEscalation(ctx, escMsg); pubErr != nil {
 			return fmt.Errorf("publish escalation: %w", pubErr)

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"alga/escalation"
 	"alga/logger"
 	"alga/metrics"
 	"alga/rabbitmq"
@@ -377,6 +378,7 @@ func (s *Server) handleEscalateIncident(w http.ResponseWriter, r *http.Request, 
 		escMsg := rabbitmq.EscalationMessage{
 			IncidentNumber: record.IncidentNumber,
 			Level:          1,
+			MaxRetries:     rabbitmq.MaxEscalationRetries,
 		}
 
 		if record.ServiceID != nil {
@@ -395,24 +397,11 @@ func (s *Server) handleEscalateIncident(w http.ResponseWriter, r *http.Request, 
 	writeData(w, http.StatusOK, record)
 }
 
+// cancelEscalationForIncident delegates to the shared escalation-package
+// helper so every ack surface (API, phone callbacks, Slack buttons) cancels
+// through the same state keys and timeline contract.
 func (s *Server) cancelEscalationForIncident(ctx context.Context, incidentID, reason string) {
-	if s.vkClient == nil || incidentID == "" {
-		return
-	}
-	hashKey := "alga:esc:" + incidentID
-	_ = s.vkClient.HSet(ctx, hashKey, "acknowledged", "1")
-	_ = s.vkClient.ZRem(ctx, "alga:esc:pending", incidentID)
-	if s.incidentStore != nil {
-		incidentNumber := mustParseIncidentNumber(incidentID)
-		if incidentNumber > 0 {
-			_ = s.incidentStore.AddTimelineEntry(ctx, &store.IncidentTimelineEntryRecord{
-				IncidentNumber: incidentNumber,
-				EventType:      "escalation_cancelled",
-				ActorType:      "system",
-				Message:        "Escalation stopped — " + reason,
-			})
-		}
-	}
+	escalation.CancelForIncident(ctx, s.vkClient, s.incidentStore, incidentID, reason)
 }
 
 func (s *Server) addIncidentTimeline(r *http.Request, incidentID, eventType, message string) {

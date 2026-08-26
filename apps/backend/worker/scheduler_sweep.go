@@ -336,6 +336,75 @@ func (s *InvestigationScheduler) handoffTick(ctx context.Context) {
 			}
 		}
 	}
+
+	s.remindUpcomingOnCall(ctx)
+}
+
+// oncallReminderLead warns the next on-call user this far ahead of their shift
+// start.
+const oncallReminderLead = 15 * time.Minute
+
+// remindUpcomingOnCall publishes an `oncall_reminder` notification to whoever
+// takes over within the lead window, for schedules whose on-call changes at
+// that boundary. Runs over every schedule each handoff tick; the per-(schedule,
+// user) Valkey claim keeps it to one notification per upcoming shift. Without
+// a Valkey client the pass is skipped entirely — nothing could stop the same
+// reminder from firing on every tick. Resolution cost is two resolver calls
+// per schedule per tick (bounded by ListSchedules' 1000-schedule cap).
+func (s *InvestigationScheduler) remindUpcomingOnCall(ctx context.Context) {
+	if s.notifyPublisher == nil || s.handoffDetector == nil || s.valkeyClient == nil {
+		return
+	}
+
+	now := time.Now()
+	schedules, err := s.handoffDetector.Schedules(ctx)
+	if err != nil {
+		logger.WarnCtx(ctx, "On-call reminder sweep: failed to list schedules", "component", "scheduler-sweep", "error", err)
+		return
+	}
+	for _, sched := range schedules {
+		current, err := s.handoffDetector.WhoIsOnCallAt(ctx, sched.ID, now)
+		if err != nil {
+			logger.WarnCtx(ctx, "On-call reminder sweep: failed to resolve current on-call", "component", "scheduler-sweep", "schedule_id", sched.ID, "error", err)
+			continue
+		}
+		upcoming, err := s.handoffDetector.WhoIsOnCallAt(ctx, sched.ID, now.Add(oncallReminderLead))
+		if err != nil {
+			logger.WarnCtx(ctx, "On-call reminder sweep: failed to resolve upcoming on-call", "component", "scheduler-sweep", "schedule_id", sched.ID, "error", err)
+			continue
+		}
+		if current == nil || upcoming == nil || *upcoming == *current {
+			continue
+		}
+		claimKey := fmt.Sprintf("alga:oncall:reminder:%s:%s", sched.ID, upcoming)
+		ok, err := s.valkeyClient.SetNX(ctx, claimKey, "1", 2*time.Hour)
+		if err != nil {
+			// Fail closed: a missing reminder is far better than re-paging
+			// someone every 30 seconds because the dedup store is down.
+			logger.WarnCtx(ctx, "On-call reminder sweep: dedup claim failed, skipping", "component", "scheduler-sweep", "claim_key", claimKey, "error", err)
+			continue
+		}
+		if !ok {
+			continue
+		}
+
+		displayName := "On-Call"
+		if sched.TeamID != nil && s.teamStore != nil {
+			if name, err := s.teamStore.GetTeamName(ctx, *sched.TeamID); err == nil && name != "" {
+				displayName = name
+			}
+		}
+		if err := s.notifyPublisher.PublishNotificationDispatch(ctx, rabbitmq.NotificationDispatchMessage{
+			UserID:           upcoming.String(),
+			NotificationType: "oncall_reminder",
+			Title:            fmt.Sprintf("You are on call soon for %s", displayName),
+			Message:          fmt.Sprintf("Your on-call shift for %s starts in about %d minutes.", displayName, int(oncallReminderLead.Minutes())),
+			ResourceType:     "schedule",
+			ResourceID:       sched.ID.String(),
+		}); err != nil {
+			logger.WarnCtx(ctx, "On-call reminder sweep: failed to publish reminder notification", "component", "scheduler-sweep", "schedule_id", sched.ID, "error", err)
+		}
+	}
 }
 
 // runPrune periodically deletes alerts older than the retention cutoff

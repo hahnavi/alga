@@ -22,14 +22,6 @@ const view = ref<StatusPageView | null>(null);
 const loading = ref(false);
 const error = ref("");
 
-const COMPONENT_STATUS_OPTIONS: ComponentStatus[] = [
-  "operational",
-  "degraded",
-  "partial_outage",
-  "major_outage",
-  "maintenance",
-];
-
 const slug = computed(() => String(route.params.slug ?? ""));
 
 function statusMeta(status: string): { label: string; dot: string; banner: string; badge: string } {

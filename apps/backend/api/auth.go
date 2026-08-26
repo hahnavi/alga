@@ -106,7 +106,11 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 			"reason":       "rate_limited",
 			"locked_until": lockedUntil,
 		})
-		w.Header().Set("Retry-After", strconv.Itoa(int(time.Until(*lockedUntil).Seconds())))
+		// The limiter may deny without a lock expiry (e.g. Valkey outage fallback);
+		// omit Retry-After rather than dereference a nil pointer.
+		if lockedUntil != nil {
+			w.Header().Set("Retry-After", strconv.Itoa(int(time.Until(*lockedUntil).Seconds())))
+		}
 		writeError(w, ErrorCodeRateLimited, "too many login attempts. please try again later")
 		return
 	}

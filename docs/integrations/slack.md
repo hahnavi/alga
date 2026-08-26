@@ -94,7 +94,7 @@ The manifest deliberately omits `channels:join`, `commands`, and `app_mentions:r
 
 ## Message Formatting
 
-Alga uses Slack Block Kit for rich alert messages with action buttons for acknowledge, resolve, and investigate.
+Alga uses Slack Block Kit for rich alert messages with action buttons for acknowledge, resolve, and investigate. Acknowledging via the button does more than flip the alert's state — for alerts linked to incidents it also cancels any pending escalation (timeline entry `escalation_cancelled`), matching what a UI or API acknowledge does.
 
 ### Threading Strategy
 

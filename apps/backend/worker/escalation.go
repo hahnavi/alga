@@ -55,6 +55,16 @@ func (w *EscalationWorker) PrefetchCount() int {
 	return 5
 }
 
+// escalationRetryBudget clamps the message's MaxRetries to the retry ladder:
+// unset or out-of-range values fall back to the constant, so a publisher can
+// lower the budget for a message but never exceed the wired retry queues.
+func escalationRetryBudget(maxRetries int) int {
+	if maxRetries <= 0 || maxRetries > rabbitmq.MaxEscalationRetries {
+		return rabbitmq.MaxEscalationRetries
+	}
+	return maxRetries
+}
+
 func (w *EscalationWorker) Handle(ctx context.Context, d amqp.Delivery) {
 	var msg rabbitmq.EscalationMessage
 	if err := json.Unmarshal(d.Body, &msg); err != nil {
@@ -82,7 +92,7 @@ func (w *EscalationWorker) Handle(ctx context.Context, d amqp.Delivery) {
 		logger.Error("Failed to evaluate escalation policy", "component", "escalation-worker", "policy_id", msg.PolicyID, "error", err)
 		if w.publisher != nil {
 			msg.RetryCount++
-			if msg.RetryCount <= rabbitmq.MaxEscalationRetries {
+			if msg.RetryCount <= escalationRetryBudget(msg.MaxRetries) {
 				if pubErr := w.publisher.PublishEscalationRetry(ctx, msg); pubErr != nil {
 					logger.Error("Failed to publish escalation retry", "component", "escalation-worker", "error", pubErr)
 				} else {

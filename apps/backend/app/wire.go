@@ -296,6 +296,7 @@ func (a *App) wire() error {
 	slackWebhookHandler.SetSSEBroker(a.sseBroker, a.valkeyClient)
 	slackWebhookHandler.SetIncidentLookupStore(a.stores.Incident)
 	slackWebhookHandler.SetIncidentCoordinationStore(a.stores.IncidentCoordination)
+	slackWebhookHandler.SetEscalationTimeline(a.stores.Incident)
 	agentExecutor.SetSSEBroker(a.sseBroker, a.valkeyClient)
 	whReceiver.SetSSEBroker(a.sseBroker, a.valkeyClient)
 

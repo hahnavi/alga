@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"alga/escalation"
 	"alga/logger"
 	"alga/rabbitmq"
 	"alga/store"
@@ -15,8 +16,8 @@ import (
 )
 
 const (
-	escSortedSet  = "alga:esc:pending"
-	escHashPrefix = "alga:esc:"
+	escSortedSet  = escalation.PendingSetKey
+	escHashPrefix = escalation.StateHashPrefix
 	escSweepTick  = 10 * time.Second
 )
 
@@ -205,6 +206,7 @@ func (w *EscalationSweepWorker) publishAdvance(ctx context.Context, incidentID s
 		IncidentNumber: incidentNumber,
 		PolicyID:       policyID,
 		Level:          level,
+		MaxRetries:     rabbitmq.MaxEscalationRetries,
 	})
 }
 

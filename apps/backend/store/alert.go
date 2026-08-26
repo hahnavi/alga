@@ -1208,3 +1208,77 @@ func (s *pgAlertStore) GetIncidentsByAlertNumber(ctx context.Context, alertNumbe
 	}
 	return records, nil
 }
+
+// ShiftAlertMetrics computes one shift's alert counters over [start, end)
+// with a single aggregate query:
+//
+//   - received: alerts whose fired event falls inside the window
+//   - acknowledged / resolved: ack/resolve events recorded inside the window
+//   - missed: fired-in-window alerts without any acknowledge event by window end
+//   - avg_ack_seconds: mean seconds from fire to the alert's first-ever
+//     acknowledge for fired-in-window alerts that were acknowledged
+//
+// Soft-deleted alerts are excluded throughout. All parameters are bound; no
+// values are interpolated into SQL.
+func (s *pgAlertStore) ShiftAlertMetrics(ctx context.Context, start, end time.Time) (ShiftAlertMetrics, error) {
+	if !start.Before(end) {
+		return ShiftAlertMetrics{}, fmt.Errorf("invalid shift window: start %v is not before end %v", start, end)
+	}
+	ctx, cancel := pgctx(ctx)
+	defer cancel()
+
+	const liveAlert = "EXISTS (SELECT 1 FROM alerts al WHERE al.id = e.alert_id AND al.deleted_at IS NULL)"
+	row := struct {
+		Received      int64   `bun:"received"`
+		Acknowledged  int64   `bun:"acknowledged"`
+		Resolved      int64   `bun:"resolved"`
+		Missed        int64   `bun:"missed"`
+		AvgAckSeconds float64 `bun:"avg_ack_seconds"`
+	}{}
+	q := s.db.NewRaw(`
+WITH fired_in_shift AS (
+    SELECT e.alert_id, MIN(e.timestamp) AS first_fired_at
+    FROM alert_events AS e
+    WHERE e.type = 'fired' AND e.timestamp >= ? AND e.timestamp < ?
+      AND `+liveAlert+`
+    GROUP BY e.alert_id
+),
+first_ack AS (
+    SELECT e.alert_id, MIN(e.timestamp) AS acked_at
+    FROM alert_events AS e
+    WHERE e.type = 'acked'
+    GROUP BY e.alert_id
+)
+SELECT
+    (SELECT COUNT(*) FROM fired_in_shift) AS received,
+    COALESCE((SELECT COUNT(*) FROM alert_events AS e
+        WHERE e.type = 'acked' AND e.timestamp >= ? AND e.timestamp < ?
+          AND `+liveAlert+`), 0) AS acknowledged,
+    COALESCE((SELECT COUNT(*) FROM alert_events AS e
+        WHERE e.type = 'resolved' AND e.timestamp >= ? AND e.timestamp < ?
+          AND `+liveAlert+`), 0) AS resolved,
+    COALESCE((SELECT COUNT(*) FROM fired_in_shift f
+        WHERE NOT EXISTS (
+            SELECT 1 FROM alert_events AS ae
+            WHERE ae.alert_id = f.alert_id AND ae.type = 'acked' AND ae.timestamp <= ?
+        )), 0) AS missed,
+    COALESCE((
+        SELECT AVG(EXTRACT(EPOCH FROM (fa.acked_at - f.first_fired_at)))
+        FROM fired_in_shift f
+        JOIN first_ack fa ON fa.alert_id = f.alert_id AND fa.acked_at >= f.first_fired_at
+    ), 0) AS avg_ack_seconds`,
+		start, end,
+		start, end,
+		start, end,
+		end)
+	if err := q.Scan(ctx, &row); err != nil {
+		return ShiftAlertMetrics{}, fmt.Errorf("failed to compute shift alert metrics: %w", err)
+	}
+	return ShiftAlertMetrics{
+		Received:      row.Received,
+		Acknowledged:  row.Acknowledged,
+		Resolved:      row.Resolved,
+		Missed:        row.Missed,
+		AvgAckSeconds: row.AvgAckSeconds,
+	}, nil
+}

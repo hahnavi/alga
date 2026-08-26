@@ -1119,6 +1119,20 @@ export type OnCallCurrent = {
   until?: string;
 };
 
+export type OnCallSelfEntry = {
+  schedule_id: string;
+  schedule_name: string;
+  layer_name?: string;
+  user_id?: string;
+  start_at?: string;
+  end_at?: string;
+};
+
+export type OnCallSelfView = {
+  current: OnCallSelfEntry[];
+  pending: OnCallSelfEntry[];
+};
+
 export type HandoffRecord = {
   id: string;
   schedule_id: string;
@@ -2833,6 +2847,9 @@ export const api = {
   },
   getWhoIsOnCall() {
     return request<OnCallCurrent[]>("/api/v1/on-call/who-is-on-call");
+  },
+  getMyOnCall() {
+    return request<OnCallSelfView>("/api/v1/on-call/me");
   },
 
   // On-Call Handoffs

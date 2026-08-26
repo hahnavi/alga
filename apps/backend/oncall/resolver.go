@@ -97,6 +97,17 @@ func sortedLayers(layers []store.ScheduleLayerRecord) []store.ScheduleLayerRecor
 	return out
 }
 
+// ValidRotationType reports whether rt is a rotation type supported by the
+// resolver and accepted by the schedule_layers CHECK constraint (migration
+// 00016). The legacy `custom` value was folded to weekly by that migration.
+func ValidRotationType(rt string) bool {
+	switch rt {
+	case "hourly", "daily", "weekly", "monthly":
+		return true
+	}
+	return false
+}
+
 func locationFor(timezone string) *time.Location {
 	if timezone == "" {
 		return time.UTC

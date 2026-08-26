@@ -15,23 +15,25 @@ When an incident is created on a service, Alga loads that service's escalation p
 Incident created
       │
       ▼
- Level 1 notified (delay = 0s)
+ Level 1 pages immediately
       │
-      │  Not acknowledged within delay?
+      │  Still unacknowledged after delay_minutes[level 1]?
       ▼
- Level 2 notified (delay = 5m)
+ Level 2 pages immediately
       │
-      │  Not acknowledged within delay?
+      │  Still unacknowledged after delay_minutes[level 2]?
       ▼
- Level 3 notified (delay = 15m)
+ Level 3 pages immediately
       │
-      │  Still not acknowledged?
+      │  Still unacknowledged after delay_minutes[level 3]?
       ▼
  Loop back to Level 1 (up to repeat_count times)
       │
       ▼
  Policy exhausted — escalation stops
 ```
+
+Every level pages **immediately** when reached. `delay_minutes` is an **exit delay**: the quiet period _after_ level N pages during which nobody may acknowledge before Alga advances to level N+1. So `{level 1: 5}` does not mean "page level 1 after 5 minutes" — it means "if level 1 went unacknowledged for 5 minutes, page level 2."
 
 **Acknowledgement stops escalation immediately.** The moment any responder acknowledges the incident — via the UI, Slack, or the API — all pending escalations are cancelled.
 
@@ -40,13 +42,13 @@ Incident created
 Each escalation policy has multiple **levels** triggered sequentially, stored as a JSON array on the policy. Each level specifies:
 
 - **`level_number`** — the canonical ordering key (positive integer; levels are consumed in `level_number` order)
-- **`delay_minutes`** — wait time in minutes before escalating to this level (e.g., `0` for level 1, `5` for level 2)
+- **`delay_minutes`** — quiet period, in minutes, after this level pages before escalating to the next level (exit delay; see the ladder above). Sub-minute values are clamped to 1 minute.
 - **`targets`** — who gets notified at this level (users or teams)
 - **`notify_channels`** — which channels to use at this level (e.g., `["in_app", "email"]`, `["slack", "voice"]`)
 
 ### Example: Three-Tier Policy
 
-A common pattern — page the primary on-call immediately, escalate to the secondary after 5 minutes, then pull in the team lead after 15 minutes:
+A common pattern — page the primary on-call immediately, escalate to the secondary if nothing responds within 5 minutes, then pull in the team lead another 15 minutes after that:
 
 ```json
 {
@@ -55,25 +57,27 @@ A common pattern — page the primary on-call immediately, escalate to the secon
   "levels": [
     {
       "level_number": 1,
-      "delay_minutes": 0,
+      "delay_minutes": 5,
       "targets": [{ "target_type": "team", "target_team_id": "payments-team-id" }],
       "notify_channels": ["in_app", "slack"]
     },
     {
       "level_number": 2,
-      "delay_minutes": 5,
+      "delay_minutes": 15,
       "targets": [{ "target_type": "team", "target_team_id": "payments-secondary-team-id" }],
       "notify_channels": ["in_app", "slack", "email"]
     },
     {
       "level_number": 3,
-      "delay_minutes": 15,
+      "delay_minutes": 30,
       "targets": [{ "target_type": "user", "target_user_id": "team-lead-user-id" }],
       "notify_channels": ["in_app", "slack", "email", "voice"]
     }
   ]
 }
 ```
+
+With this policy: level 1 pages right away; if nobody acknowledges within 5 minutes, level 2 pages; if level 2 also goes unacknowledged for 15 minutes, level 3 pages; if level 3 stays unacknowledged for 30 minutes, the policy loops back to level 1 (up to `repeat_count` times).
 
 ## Target Types
 

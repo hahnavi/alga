@@ -176,7 +176,8 @@ func (h *userSlackHandler) handleCallback(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	h.auditStore.Log(store.AuditUserSlackLinked, &userID, "", "", "", false, map[string]any{
+	// successful links must record success=true (was a copy-paste false).
+	h.auditStore.Log(store.AuditUserSlackLinked, &userID, "", "", "", true, map[string]any{
 		"slack_user_id":   identity.User.ID,
 		"slack_user_name": identity.User.Name,
 		"slack_team_id":   identity.Team.ID,
@@ -205,7 +206,8 @@ func (h *userSlackHandler) handleDisconnect(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	h.auditStore.Log(store.AuditUserSlackUnlinked, &user.ID, user.Email, "", "", false, nil)
+	// successful unlinks must record success=true.
+	h.auditStore.Log(store.AuditUserSlackUnlinked, &user.ID, user.Email, "", "", true, nil)
 
 	writeStatus(w, "disconnected")
 }

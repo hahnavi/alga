@@ -56,7 +56,14 @@ func (a *b7AuditStore) LogEntity(event store.AuditEvent, userID *uuid.UUID, user
 	a.Log(event, userID, username, ip, ua, success, details)
 }
 
-func (a *b7AuditStore) Query(filter map[string]any) ([]store.AuditRecord, error) { return nil, nil }
+func (a *b7AuditStore) LogRecord(rec store.AuditRecord) {
+	a.events = append(a.events, rec.Event)
+	a.actors = append(a.actors, rec.Username)
+}
+
+func (a *b7AuditStore) Query(filter map[string]any) ([]store.AuditRecord, int64, error) {
+	return nil, 0, nil
+}
 
 func (a *b7AuditStore) GetRecentEvents(limit int) ([]store.AuditRecord, error) { return nil, nil }
 

@@ -44,8 +44,12 @@ func (s *recordingAuditStore) LogEntity(event store.AuditEvent, _ *uuid.UUID, _ 
 	s.events = append(s.events, event)
 }
 
-func (s *recordingAuditStore) Query(map[string]any) ([]store.AuditRecord, error) {
-	return nil, nil
+func (s *recordingAuditStore) LogRecord(rec store.AuditRecord) {
+	s.events = append(s.events, rec.Event)
+}
+
+func (s *recordingAuditStore) Query(map[string]any) ([]store.AuditRecord, int64, error) {
+	return nil, 0, nil
 }
 
 func (s *recordingAuditStore) GetRecentEvents(int) ([]store.AuditRecord, error) {

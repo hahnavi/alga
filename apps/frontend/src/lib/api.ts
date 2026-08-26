@@ -137,6 +137,23 @@ export type WebhookTokenRow = {
 
 export type AgentType = "alga" | "hermes" | "openclaw" | "other";
 
+// One audit-log row as served by GET /api/v1/audit-events (admin/operator,
+// audit:read gated).
+export type AuditEventRow = {
+  id: string;
+  timestamp: string;
+  event: string;
+  user_id?: string;
+  username: string;
+  ip?: string;
+  user_agent?: string;
+  success: boolean;
+  details?: Record<string, unknown>;
+  request_id?: string;
+  entity_type?: string;
+  entity_id?: string;
+};
+
 // Slim, list-friendly view of the current alert investigation that ships
 // inline with alert list/detail payloads so the assigned actor (agent),
 // status, and promotion link can be rendered without a separate round-trip.
@@ -1596,6 +1613,25 @@ export const api = {
   },
   deleteUser(id: string) {
     return request<StatusResponse>(`/api/v1/users/${e(id)}`, { method: "DELETE" });
+  },
+
+  // Audit (read-only admin review surface, requires audit:read)
+  getAuditEvents(params?: {
+    event?: string;
+    entity_type?: string;
+    entity_id?: string;
+    limit?: number;
+    skip?: number;
+  }) {
+    return request<{ items: AuditEventRow[]; total: number }>(
+      `/api/v1/audit-events${buildQuery({
+        event: params?.event,
+        entity_type: params?.entity_type,
+        entity_id: params?.entity_id,
+        limit: params?.limit,
+        skip: params?.skip,
+      })}`,
+    );
   },
 
   // Alerts

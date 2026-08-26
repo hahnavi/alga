@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"alga/capability"
 	"alga/logger"
 	"alga/rbac"
 	"alga/secretprovider"
@@ -78,6 +79,9 @@ func (s *Server) handleCredentialProviderByID(w http.ResponseWriter, r *http.Req
 			switch {
 			case errors.Is(err, store.ErrSystemCredentialProvider):
 				writeError(w, ErrorCodeConflict, "this provider is a system default and cannot be removed")
+				return
+			case errors.Is(err, store.ErrCredentialProviderInUse):
+				writeError(w, ErrorCodeConflict, "provider has dependent secrets")
 				return
 			case errors.Is(err, store.ErrCredentialProviderNotFound):
 				writeError(w, ErrorCodeNotFound, "credential provider not found")
@@ -448,6 +452,17 @@ func (s *Server) handleAgentSecretByID(w http.ResponseWriter, r *http.Request) {
 	}
 	agent, ok := requireAgent(w, r)
 	if !ok {
+		return
+	}
+	// Coarse capability gate BEFORE any store lookup (WP-B6): tokens without
+	// the `secrets` capability never touch the secret store. Deny with the
+	// same generic 404 as allow-list failures so the endpoint stays a
+	// no-existence-oracle; log agent identity for the ops trail (no secret
+	// material).
+	if !capability.Has(agent.Capabilities, capability.Secrets) {
+		logger.Warn("agent secret fetch denied: missing secrets capability",
+			"component", "api", "agent_id", agent.ID.String(), "agent_name", agent.Name)
+		writeError(w, ErrorCodeNotFound, "secret not found")
 		return
 	}
 	secretID := strings.TrimSuffix(pathID(r, "/api/v1/agent/secrets/"), "/")

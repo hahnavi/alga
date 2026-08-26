@@ -9,9 +9,13 @@ const (
 	Investigate = "investigate"
 	Communicate = "communicate"
 	Command     = "command"
+	// Secrets gates GET /api/v1/agent/secrets/{id} (WP-B6): fetching shared
+	// credentials requires an explicit grant on the token. Existing tokens
+	// were grandfathered in via migration 00015; new tokens must opt in.
+	Secrets = "secrets"
 )
 
-var All = []string{Investigate, Communicate, Command}
+var All = []string{Investigate, Communicate, Command, Secrets}
 
 var validMap = func() map[string]struct{} {
 	m := make(map[string]struct{}, len(All))

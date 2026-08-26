@@ -473,7 +473,7 @@ func (r *Receiver) handleFiring(ctx context.Context, alert types.Alert, existing
 	}
 
 	if result.Silenced {
-		logger.Info("Alert silenced, storing without notification", "component", "webhook", "alert_name", alert.Labels["alertname"])
+		logger.Info("Alert silenced, storing without notification or investigation", "component", "webhook", "alert_name", alert.Labels["alertname"], "fingerprint", alert.Fingerprint)
 		alertNum, err := r.store.Create(record)
 		if err != nil {
 			logger.Error("Failed to store silenced alert record", "component", "webhook", "fingerprint", alert.Fingerprint, "error", err)
@@ -486,7 +486,10 @@ func (r *Receiver) handleFiring(ctx context.Context, alert types.Alert, existing
 		if r.eventPublisher != nil {
 			r.eventPublisher.PublishAlertEvent("alert_created", record)
 		}
-		r.triggerCorrelator(ctx, alert, alertNum)
+		// Silenced means suppressed: no correlator message and therefore no
+		// LLM investigation. Note this is the silenced-ROUTING-rule mechanism
+		// and is deliberately independent of correlator.IsSuppressed
+		// (suppression rules) — keep them separate; do not unify.
 		return
 	}
 
@@ -865,7 +868,14 @@ func (r *Receiver) IngestManualAlert(ctx context.Context, alert types.Alert, act
 		r.eventPublisher.PublishAlertEvent("alert_created", *rec)
 	}
 
-	r.triggerCorrelator(ctx, alert, rec.AlertNumber)
+	// Silence means silence on every ingestion path: a silenced routing rule
+	// suppresses investigations as well as chat delivery. This is distinct
+	// from correlator.IsSuppressed (suppression rules) — keep them separate.
+	if !result.Silenced {
+		r.triggerCorrelator(ctx, alert, rec.AlertNumber)
+	} else {
+		logger.Info("Manual alert silenced, skipping correlation", "component", "webhook", "fingerprint", alert.Fingerprint)
+	}
 
 	return rec, nil
 }

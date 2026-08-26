@@ -92,6 +92,9 @@ func (d *Dispatcher) ResolveChannels(ctx context.Context, userID, notificationTy
 		if !ok {
 			continue
 		}
+		if enabled, ok := rule["enabled"].(bool); ok && !enabled {
+			continue
+		}
 		ruleType, _ := rule["notification_type"].(string)
 		if ruleType != notificationType && ruleType != "*" {
 			continue

@@ -1258,8 +1258,9 @@ export type ActionItemRecord = {
   updated_at: string;
 };
 
-type NotificationPreferences = {
+export type NotificationPreferences = {
   rules: NotificationPreferenceRule[];
+  default_channel?: string;
 };
 
 export type NotificationPreferenceRule = {

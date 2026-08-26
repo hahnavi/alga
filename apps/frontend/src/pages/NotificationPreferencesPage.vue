@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from "vue";
 import { Send } from "@lucide/vue";
-import { api, type NotificationPreferenceRule } from "@/lib/api";
+import { api, type NotificationPreferenceRule, type NotificationPreferences } from "@/lib/api";
 import Button from "@/components/ui/Button.vue";
 import Card from "@/components/ui/Card.vue";
 import ErrorBanner from "@/components/ui/ErrorBanner.vue";
@@ -14,22 +14,26 @@ import { usePageHeaderActions } from "@/composables/usePageHeaderActions";
 
 defineOptions({ name: "NotificationPreferencesPage" });
 
-// `useAsyncData` exposes `Ref<T | null>`; mirror the loaded list into a
-// dedicated `ref<T[]>([])` so add/update/remove can mutate it in place.
+// `useAsyncData` exposes `Ref<T | null>`; mirror the loaded payload into
+// dedicated refs so add/update/remove can mutate rules in place and the
+// default channel stays independently editable.
 const rules = ref<NotificationPreferenceRule[]>([]);
+const defaultChannel = ref("");
+const DEFAULT_CHANNELS = ["in_app", "email", "mattermost", "slack", "voice"] as const;
 const {
   data: rulesData,
   loading,
   error,
   reload: load,
-} = useAsyncData<NotificationPreferenceRule[]>(async () => {
-  const prefs = await api.getNotificationPreferences();
-  return prefs.rules ?? [];
-}, "Failed to load preferences");
+} = useAsyncData<NotificationPreferences>(
+  async () => api.getNotificationPreferences(),
+  "Failed to load preferences",
+);
 watch(
   rulesData,
   (next) => {
-    rules.value = next ?? [];
+    rules.value = next?.rules ?? [];
+    defaultChannel.value = next?.default_channel ?? "";
   },
   { immediate: true },
 );
@@ -39,7 +43,7 @@ const preferencesSearchInput = ref("");
 
 function addRule() {
   rules.value.push({
-    notification_type: "incident_status_change",
+    notification_type: "*",
     channels: ["in_app"],
     enabled: true,
   });
@@ -55,7 +59,9 @@ function removeRule(index: number) {
 
 async function handleSave() {
   await withSave(async () => {
-    await api.updateNotificationPreferences({ rules: rules.value });
+    const prefs: NotificationPreferences = { rules: rules.value };
+    if (defaultChannel.value) prefs.default_channel = defaultChannel.value;
+    await api.updateNotificationPreferences(prefs);
   }, "Preferences saved");
 }
 
@@ -91,12 +97,29 @@ onMounted(() => {
     <ErrorBanner :message="error" />
     <LoadingSpinner v-if="loading" centered />
 
-    <Card v-else-if="rules.length === 0 && !loading">
-      <EmptyState message="No notification rules configured." />
-    </Card>
-
     <template v-else>
       <Card>
+        <div class="flex flex-wrap items-center gap-3 px-3 py-2">
+          <label for="default-channel" class="text-xs font-medium text-[var(--text-secondary)]">
+            Default channel
+          </label>
+          <Select id="default-channel" v-model="defaultChannel" class="text-xs">
+            <option value="">none</option>
+            <option v-for="ch in DEFAULT_CHANNELS" :key="ch" :value="ch">
+              {{ ch.replace(/_/g, " ") }}
+            </option>
+          </Select>
+          <span class="text-xs text-[var(--text-muted)]">
+            Used when no rule matches a notification.
+          </span>
+        </div>
+      </Card>
+
+      <Card v-if="rules.length === 0">
+        <EmptyState message="No notification rules configured." />
+      </Card>
+
+      <Card v-else>
         <div class="overflow-x-auto">
           <table class="w-full text-left">
             <thead>

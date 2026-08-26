@@ -16,22 +16,18 @@ Alga provides a built-in notification system with per-user preferences, multi-ch
 
 ## Notification Triggers
 
-| Trigger                | Description                  |
-| ---------------------- | ---------------------------- |
-| Alert created          | New firing alert received    |
-| Alert acknowledged     | Alert marked as acknowledged |
-| Alert resolved         | Alert resolved               |
-| Investigation created  | New investigation dispatched |
-| Investigation updated  | Agent sends update           |
-| Investigation complete | Investigation finished       |
-| Incident created       | New incident detected        |
-| Incident acknowledged  | Incident acknowledged        |
-| Incident mitigated     | Incident mitigated           |
-| Incident resolved      | Incident resolved            |
-| Escalation triggered   | Escalation policy fires      |
-| On-call reminder       | Upcoming shift reminder      |
-| On-call handoff        | Shift change notification    |
-| `@mention`             | User mentioned in a comment  |
+Producers currently emit these notification types:
+
+| Trigger                      | Type value                     | Description                                                       |
+| ---------------------------- | ------------------------------ | ----------------------------------------------------------------- |
+| Escalation triggered         | `escalation`                   | Escalation policy fires                                           |
+| On-call handoff              | `oncall_handoff`               | Shift started / ended for the incoming and outgoing responder     |
+| Post-mortem review requested | `post_mortem_review_requested` | Post-mortem submitted for review (notifies the commander)         |
+| Action item assigned         | `action_item_assigned`         | Action item assigned to a user                                    |
+| Action item due reminder     | `info`                         | In-app reminder sweep for action items approaching their due date |
+| `@mention`                   | `mention`                      | User mentioned in an investigation thread comment                 |
+
+Alert and investigation lifecycle events, incident acknowledged/mitigated/resolved/reopened notifications, and shift-starting reminders are **planned**, not shipped: they need digest/rate-limit design first so high-volume events don't become a spam cannon.
 
 ## Multi-Channel Dispatch
 
@@ -49,11 +45,12 @@ The dispatcher resolves each user's preferences and dispatches to all enabled ch
 
 ## @Mentions
 
-Type `@` in investigation comments to mention users:
+Type `@` in investigation thread comments to mention users:
 
-- `@username` — Notifies the specific user
+- `@user` — creates an in-app `mention` notification for that user, delivered through their preference rules like any other type. Mentioning yourself does not notify you; mentioning the same user twice in one comment notifies them once.
+- `@agent` — activates the mentioned agent (investigation trigger `mention`); it does not create a notification for anyone.
 
-Mention handling resolves only users (and agents) — there is no concept of "groups" in Alga. To address multiple responders at once, use the on-call schedules and escalation policies configured for your teams. Mentions create in-app notifications and deliver to the user's preferred channels.
+Mention handling resolves only users (and agents) — there is no concept of "groups" in Alga. To address multiple responders at once, use the on-call schedules and escalation policies configured for your teams.
 
 ## Notification Bell
 

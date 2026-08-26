@@ -425,6 +425,94 @@ func TestDispatchChannels_IncidentBrief(t *testing.T) {
 	})
 }
 
+// TestResolveChannels pins rule-matching semantics: exact-type match with
+// "*" wildcard fallback, default_channel as last resort, and — critically —
+// disabled rules never matching (they were persisted by the UI but ignored
+// here until Finding C2, so "disabled" rules kept firing).
+func TestResolveChannels(t *testing.T) {
+	t.Parallel()
+
+	uid := uuid.New().String()
+	rule := func(notificationType string, channels []string, enabled any) map[string]any {
+		chs := make([]any, len(channels))
+		for i, ch := range channels {
+			chs[i] = ch
+		}
+		r := map[string]any{"notification_type": notificationType, "channels": chs}
+		if enabled != nil {
+			r["enabled"] = enabled
+		}
+		return r
+	}
+	prefs := func(rules ...map[string]any) map[string]any {
+		out := make([]any, len(rules))
+		for i, r := range rules {
+			out[i] = r
+		}
+		return map[string]any{"rules": out}
+	}
+
+	tests := []struct {
+		name  string
+		prefs map[string]any
+		want  []string
+	}{
+		{
+			name:  "enabled exact-type rule wins",
+			prefs: prefs(rule("escalation", []string{"email"}, true)),
+			want:  []string{"email"},
+		},
+		{
+			name:  "missing enabled flag treated as enabled",
+			prefs: prefs(rule("escalation", []string{"email"}, nil)),
+			want:  []string{"email"},
+		},
+		{
+			name:  "disabled exact-type rule skipped",
+			prefs: prefs(rule("escalation", []string{"voice"}, false)),
+			want:  []string{"in_app"},
+		},
+		{
+			name:  "disabled rule falls through to later enabled rule",
+			prefs: map[string]any{"rules": []any{rule("escalation", []string{"voice"}, false), rule("escalation", []string{"email"}, true)}},
+			want:  []string{"email"},
+		},
+		{
+			name: "disabled wildcard falls to default_channel",
+			prefs: func() map[string]any {
+				p := prefs(rule("*", []string{"slack"}, false))
+				p["default_channel"] = "email"
+				return p
+			}(),
+			want: []string{"email"},
+		},
+		{
+			name:  "wildcard matches when no exact rule exists",
+			prefs: prefs(rule("escalation", []string{"email"}, true), rule("*", []string{"slack"}, true)),
+			want:  []string{"email"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			d, _, _, usr := testDispatcher(false, nil)
+			usr.prefs = tc.prefs
+
+			got := d.ResolveChannels(context.Background(), uid, "escalation")
+			if len(got) != len(tc.want) {
+				t.Fatalf("ResolveChannels = %v, want %v", got, tc.want)
+			}
+			for i := range tc.want {
+				if got[i] != tc.want[i] {
+					t.Fatalf("ResolveChannels = %v, want %v", got, tc.want)
+				}
+			}
+		})
+	}
+}
+
 func contains(s, sub string) bool {
 	return len(s) >= len(sub) && (s == sub || indexOf(s, sub) >= 0)
 }

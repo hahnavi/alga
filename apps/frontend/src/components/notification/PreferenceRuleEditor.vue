@@ -15,21 +15,24 @@ const emit = defineEmits<{
   remove: [];
 }>();
 
+// Types emitted by real producers (plus "*" wildcard); must stay aligned with
+// the notification_type CHECK enum in migration 00010.
 const NOTIFICATION_TYPES = [
-  "incident_assigned_commander",
-  "incident_assigned_responder",
-  "incident_escalation",
-  "incident_sla_breach_response",
-  "incident_sla_breach_resolve",
-  "incident_status_change",
-  "incident_severity_change",
-  "on_call_shift_starting",
+  "escalation",
+  "oncall_handoff",
   "post_mortem_review_requested",
-  "post_mortem_action_item",
-  "service_status_change",
+  "action_item_assigned",
+  "mention",
+  "info",
+  "*",
 ] as const;
 
 const CHANNELS = ["in_app", "email", "mattermost", "slack", "voice"] as const;
+
+function typeLabel(t: string) {
+  if (t === "*") return "all events";
+  return t.replace(/_/g, " ");
+}
 
 function toggleChannel(channel: string) {
   const channels = [...(props.rule.channels ?? [])];
@@ -52,7 +55,7 @@ function toggleChannel(channel: string) {
         @update:model-value="emit('update', { notification_type: $event })"
       >
         <option v-for="t in NOTIFICATION_TYPES" :key="t" :value="t">
-          {{ t.replace(/_/g, " ") }}
+          {{ typeLabel(t) }}
         </option>
       </Select>
     </td>

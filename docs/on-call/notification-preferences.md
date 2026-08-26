@@ -70,18 +70,20 @@ Each user has a separate **voice opt-out** flag (`voice_opt_out`). When enabled,
 
 Only these types are emitted today; they match the options in the UI. Configuring other type names is possible via the API but such rules stay inert until producers emit those events.
 
-| Notification Type              | When It Fires                                    | Recommended Channels        |
-| ------------------------------ | ------------------------------------------------ | --------------------------- |
-| `escalation`                   | An escalation policy fires                       | In-app, Slack, Email, Voice |
-| `oncall_handoff`               | Your on-call shift starts or ends                | In-app, Email               |
-| `post_mortem_review_requested` | A post-mortem is submitted for review            | In-app, Email               |
-| `action_item_assigned`         | An action item is assigned to you                | In-app, Email               |
-| `mention`                      | Someone @mentions you in an investigation thread | In-app, Slack               |
-| `info`                         | Action-item due-date reminder sweep              | In-app                      |
-| `*`                            | Wildcard — matches any type                      | In-app                      |
+| Notification Type                                                  | When It Fires                                       | Recommended Channels           |
+| ------------------------------------------------------------------ | --------------------------------------------------- | ------------------------------ |
+| `escalation`                                                       | An escalation policy fires                          | In-app, Slack, Email, Voice    |
+| `oncall_handoff`                                                   | Your on-call shift starts or ends                   | In-app, Email                  |
+| `oncall_reminder`                                                  | Your shift starts soon (~15 min ahead of handover)  | In-app, Push-style in-app ping |
+| `post_mortem_review_requested`                                     | A post-mortem is submitted for review               | In-app, Email                  |
+| `action_item_assigned`                                             | An action item is assigned to you                   | In-app, Email                  |
+| `mention`                                                          | Someone @mentions you in an investigation thread    | In-app, Slack                  |
+| `info`                                                             | Action-item due-date reminder sweep                 | In-app                         |
+| `incident_acknowledged` / `_mitigated` / `_resolved` / `_reopened` | An incident you command or respond on changes state | In-app, Slack, Email           |
+| `*`                                                                | Wildcard — matches any type                         | In-app                         |
 
 ::: warning More triggers are on the roadmap
-Alert and investigation lifecycle events, incident acknowledged/mitigated/resolved/reopened notifications, and shift-starting reminders are **planned**, not shipped — they need digest/rate-limit design first. See [Notifications](/core-features/notifications#notification-triggers) for current status.
+Alert lifecycle events (created / acknowledged / resolved) and investigation updates are **planned**, not shipped — they need digest/rate-limit design first. See [Notifications](/core-features/notifications#notification-triggers) for current status.
 :::
 
 ## Managing Your Preferences

@@ -22,12 +22,17 @@ Producers currently emit these notification types:
 | ---------------------------- | ------------------------------ | ----------------------------------------------------------------- |
 | Escalation triggered         | `escalation`                   | Escalation policy fires                                           |
 | On-call handoff              | `oncall_handoff`               | Shift started / ended for the incoming and outgoing responder     |
+| Shift starting soon          | `oncall_reminder`              | Sent ~15 minutes before an upcoming handover on a schedule        |
 | Post-mortem review requested | `post_mortem_review_requested` | Post-mortem submitted for review (notifies the commander)         |
 | Action item assigned         | `action_item_assigned`         | Action item assigned to a user                                    |
 | Action item due reminder     | `info`                         | In-app reminder sweep for action items approaching their due date |
 | `@mention`                   | `mention`                      | User mentioned in an investigation thread comment                 |
+| Incident acknowledged        | `incident_acknowledged`        | Sent to the incident commander and responders                     |
+| Incident mitigated           | `incident_mitigated`           | Sent to the incident commander and responders                     |
+| Incident resolved            | `incident_resolved`            | Sent to the incident commander and responders                     |
+| Incident reopened            | `incident_reopened`            | Sent to the incident commander and responders                     |
 
-Alert and investigation lifecycle events, incident acknowledged/mitigated/resolved/reopened notifications, and shift-starting reminders are **planned**, not shipped: they need digest/rate-limit design first so high-volume events don't become a spam cannon.
+Alert-created/acknowledged/resolved and investigation created/updated/complete notifications are **planned**, not shipped: they are too chatty to deliver raw and need digest/rate-limit design first so they don't become a spam cannon.
 
 ## Multi-Channel Dispatch
 

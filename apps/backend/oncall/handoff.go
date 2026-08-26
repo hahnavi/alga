@@ -44,6 +44,20 @@ func cursorKey(scheduleID uuid.UUID) string {
 	return fmt.Sprintf("alga:oncall:cursor:%s", scheduleID.String())
 }
 
+// Schedules lists the tracked on-call schedules. Exposed so the scheduler
+// sweep can run its own per-schedule passes (shift-starting reminders) without
+// duplicating store wiring.
+func (d *HandoffDetector) Schedules(ctx context.Context) ([]store.OnCallScheduleRecord, error) {
+	schedules, _, err := d.onCallStore.ListSchedules(ctx, 1000, 0)
+	return schedules, err
+}
+
+// WhoIsOnCallAt resolves the on-call user of a schedule at an arbitrary
+// instant, so callers can look one reminder window into the future.
+func (d *HandoffDetector) WhoIsOnCallAt(ctx context.Context, scheduleID uuid.UUID, at time.Time) (*uuid.UUID, error) {
+	return d.resolver.ResolveWhoIsOnCall(ctx, scheduleID, at)
+}
+
 func (d *HandoffDetector) Tick(ctx context.Context, now time.Time) ([]store.OnCallScheduleRecord, map[string]*store.HandoffRecordRecord, error) {
 	schedules, _, err := d.onCallStore.ListSchedules(ctx, 1000, 0)
 	if err != nil {

@@ -16,13 +16,18 @@ const emit = defineEmits<{
 }>();
 
 // Types emitted by real producers (plus "*" wildcard); must stay aligned with
-// the notification_type CHECK enum in migration 00010.
+// the notification_type CHECK enums in migrations 00010 and 00017.
 const NOTIFICATION_TYPES = [
   "escalation",
   "oncall_handoff",
   "post_mortem_review_requested",
   "action_item_assigned",
   "mention",
+  "incident_acknowledged",
+  "incident_mitigated",
+  "incident_resolved",
+  "incident_reopened",
+  "oncall_reminder",
   "info",
   "*",
 ] as const;

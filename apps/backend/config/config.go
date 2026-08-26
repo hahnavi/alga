@@ -158,6 +158,15 @@ type Config struct {
 	// header is the blessed pattern.
 	AgentSSEAllowQueryToken bool `yaml:"agent_sse_allow_query_token"`
 
+	// RateLimitGeneralPerMinute caps public-surface requests per IP per
+	// minute (webhooks, discovery, callbacks). Both limiter backends (memory
+	// and Valkey) share this ceiling; default 20 matches the historical
+	// Valkey contract.
+	RateLimitGeneralPerMinute int `yaml:"rate_limit_general_per_minute"`
+	// RateLimitAgentPerMinute caps agent-bearer requests per token per
+	// minute across both limiter backends. Default 120.
+	RateLimitAgentPerMinute int `yaml:"rate_limit_agent_per_minute"`
+
 	// StaleAlertThreshold is the minimum age a firing alert must reach before
 	// the scheduler considers it "stale" (no investigation). Alerts younger
 	// than this are assumed to still be in the correlator pipeline.
@@ -727,6 +736,22 @@ func Load() (*Config, error) {
 			cfg.AgentSSEAllowQueryToken = parsed
 		}
 	}
+	if cfg.RateLimitGeneralPerMinute == 0 {
+		cfg.RateLimitGeneralPerMinute = 20
+	}
+	if cfg.RateLimitAgentPerMinute == 0 {
+		cfg.RateLimitAgentPerMinute = 120
+	}
+	if v := os.Getenv("RATE_LIMIT_GENERAL_PER_MINUTE"); v != "" {
+		if parsed, err := strconv.Atoi(v); err == nil && parsed > 0 {
+			cfg.RateLimitGeneralPerMinute = parsed
+		}
+	}
+	if v := os.Getenv("RATE_LIMIT_AGENT_PER_MINUTE"); v != "" {
+		if parsed, err := strconv.Atoi(v); err == nil && parsed > 0 {
+			cfg.RateLimitAgentPerMinute = parsed
+		}
+	}
 	if v := os.Getenv("STALE_ALERT_THRESHOLD"); v != "" {
 		if d, err := time.ParseDuration(v); err == nil {
 			cfg.StaleAlertThreshold = d
@@ -891,6 +916,10 @@ func (c *Config) Validate() error {
 
 	// Legacy query-token auth escape hatches must be loud: they weaken the
 	// default credential-handling posture and are slated for removal.
+	if c.RateLimitGeneralPerMinute > 10*20 {
+		logger.Warn("RATE_LIMIT_GENERAL_PER_MINUTE is more than 10x the default of 20; verify this is intentional for your webhook volume", "component", "config", "value", c.RateLimitGeneralPerMinute)
+	}
+
 	if c.WebhookAllowQueryToken {
 		logger.Warn("WEBHOOK_ALLOW_QUERY_TOKEN is true; webhook tokens are accepted via ?token= query parameter (logged in proxy/history trails). Migrate senders to Authorization: Bearer before the flag is removed", "component", "config")
 	}

@@ -64,6 +64,10 @@ const agentCapabilities: Record<AgentCapability, { label: string; color: string 
     label: "Command",
     color: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
   },
+  secrets: {
+    label: "Secrets",
+    color: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
+  },
 };
 const showAgentDialog = ref(false);
 

@@ -151,7 +151,7 @@ type AlertInvestigationListSummary = {
   promoted_incident_number?: number;
 };
 
-export type AgentCapability = "investigate" | "communicate" | "command";
+export type AgentCapability = "investigate" | "communicate" | "command" | "secrets";
 
 export type AgentTokenRow = {
   id: string;

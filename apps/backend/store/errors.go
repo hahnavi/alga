@@ -23,6 +23,10 @@ var (
 	ErrStatusPageComponentNotFound = errors.New("status page component not found")
 	ErrICSRoleNotFound             = errors.New("ICS role assignment not found")
 	ErrCredentialProviderNotFound  = errors.New("credential provider not found")
-	ErrSystemCredentialProvider    = errors.New("credential provider is a system default and cannot be removed or reconfigured")
-	ErrOpenAlertExists             = errors.New("an open alert already exists for this fingerprint")
+	// ErrCredentialProviderInUse maps the FK RESTRICT violation when a
+	// provider still owns shared secrets: handlers translate it to a
+	// 409 instead of a raw 500.
+	ErrCredentialProviderInUse  = errors.New("credential provider has dependent secrets and cannot be removed")
+	ErrSystemCredentialProvider = errors.New("credential provider is a system default and cannot be removed or reconfigured")
+	ErrOpenAlertExists          = errors.New("an open alert already exists for this fingerprint")
 )

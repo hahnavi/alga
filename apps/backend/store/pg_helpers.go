@@ -80,6 +80,24 @@ func IsDuplicateKey(err error) bool {
 	return pgIsDuplicateKey(err)
 }
 
+// pgIsForeignKeyViolation reports SQLSTATE 23503 (FK RESTRICT/NO ACTION).
+func pgIsForeignKeyViolation(err error) bool {
+	if err == nil {
+		return false
+	}
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23503" {
+		return true
+	}
+	return false
+}
+
+// IsForeignKeyViolation reports whether err is a PostgreSQL foreign-key
+// violation (e.g. deleting a row another table still references).
+func IsForeignKeyViolation(err error) bool {
+	return pgIsForeignKeyViolation(err)
+}
+
 func extractLimitSkip(filter map[string]any, defaultLimit int) (limit, skip int) {
 	limit = defaultLimit
 	if lv, ok := filter["$limit"]; ok {

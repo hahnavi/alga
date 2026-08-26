@@ -730,7 +730,7 @@ func (h *oidcHandler) callback(w http.ResponseWriter, r *http.Request, providerI
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   h.cfg.SecureCookies,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteStrictMode,
 		MaxAge:   int(h.sessionExpiry.Seconds()),
 	})
 	http.SetCookie(w, &http.Cookie{
@@ -739,7 +739,7 @@ func (h *oidcHandler) callback(w http.ResponseWriter, r *http.Request, providerI
 		Path:     "/",
 		HttpOnly: false,
 		Secure:   h.cfg.SecureCookies,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteStrictMode,
 		MaxAge:   int(h.sessionExpiry.Seconds()),
 	})
 

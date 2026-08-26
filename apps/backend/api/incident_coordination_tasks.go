@@ -197,6 +197,10 @@ func (s *Server) handlePatchIncidentCoordinationTask(w http.ResponseWriter, r *h
 			writeError(w, ErrorCodeNotFound, "coordination task not found")
 			return
 		}
+		if errors.Is(err, store.ErrCoordinationTaskStatusConflict) {
+			writeConflict(w, "coordination task is already in a terminal status")
+			return
+		}
 		writeInternalError(w, err, "failed to cancel coordination task")
 		return
 	}

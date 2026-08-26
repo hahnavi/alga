@@ -903,8 +903,10 @@ func (r *Receiver) isSuppressed(ctx context.Context, labels map[string]string) b
 }
 
 func matchLabels(matchers, labels map[string]string) bool {
+	// An empty matcher set is unconstrained and matches every alert (documented
+	// catch-all window semantics); only concrete matchers can fail a label.
 	if len(matchers) == 0 {
-		return false
+		return true
 	}
 	for k, v := range matchers {
 		if labels[k] != v {

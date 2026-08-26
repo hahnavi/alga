@@ -95,3 +95,48 @@ func TestHandleWebhookAuthMethods(t *testing.T) {
 		})
 	}
 }
+
+func TestMatchLabels(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		matchers map[string]string
+		labels   map[string]string
+		want     bool
+	}{
+		{
+			name:     "empty matchers match every label set (documented catch-all)",
+			matchers: map[string]string{},
+			labels:   map[string]string{"severity": "critical", "team": "db"},
+			want:     true,
+		},
+		{
+			name:     "empty matchers match empty labels",
+			matchers: map[string]string{},
+			labels:   nil,
+			want:     true,
+		},
+		{
+			name:     "concrete matcher hit",
+			matchers: map[string]string{"severity": "critical"},
+			labels:   map[string]string{"severity": "critical"},
+			want:     true,
+		},
+		{
+			name:     "concrete matcher miss",
+			matchers: map[string]string{"severity": "critical"},
+			labels:   map[string]string{"severity": "warning"},
+			want:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := matchLabels(tt.matchers, tt.labels); got != tt.want {
+				t.Fatalf("matchLabels(%v, %v) = %v, want %v", tt.matchers, tt.labels, got, tt.want)
+			}
+		})
+	}
+}

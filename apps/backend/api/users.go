@@ -49,6 +49,10 @@ func (s *Server) handleUsers(w http.ResponseWriter, r *http.Request) {
 
 		record, err := s.userStore.CreateUser(req.Email, req.Password, req.Role)
 		if err != nil {
+			if store.IsDuplicateKey(err) {
+				writeError(w, ErrorCodeConflict, "a user with that email already exists")
+				return
+			}
 			writeInternalError(w, err, "failed to create user")
 			return
 		}
@@ -187,6 +191,10 @@ func (s *Server) handleUserByID(w http.ResponseWriter, r *http.Request) {
 
 		if err := s.userStore.UpdateUser(id, updates); err != nil {
 			logger.ErrorCtx(r.Context(), "failed to update user", "component", "api", "user_id", id.String(), "error", err)
+			if store.IsDuplicateKey(err) {
+				writeError(w, ErrorCodeConflict, "a user with that email already exists")
+				return
+			}
 			writeInternalError(w, err, "failed to update user")
 			return
 		}

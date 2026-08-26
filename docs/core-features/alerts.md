@@ -119,20 +119,32 @@ Create alerts directly from the UI or API with extended fields:
 ```json
 POST /api/v1/alerts
 {
-  "summary": "Manual alert",
+  "alertname": "DiskFull",
+  "severity": "warning",
+  "message": "Manual alert",
+  "description": "Disk usage at 85% on staging-db-01",
   "source": "manual",
   "labels": {
-    "alertname": "DiskFull",
-    "severity": "warning",
     "namespace": "staging"
   },
   "annotations": {
-    "description": "Disk usage at 85% on staging-db-01"
+    "runbook": "https://runbooks.example.com/disk-full"
   }
 }
 ```
 
-The `source` field defaults to `grafana` for webhook alerts. Manual alerts use `manual` or a custom source string. Labels and annotations follow the same format as Grafana payloads and are used by routing rules and correlation.
+Request field limits:
+
+| Field         | Required | Cap                                       | Notes                                                                             |
+| ------------- | -------- | ----------------------------------------- | --------------------------------------------------------------------------------- |
+| `alertname`   | yes      | 256 chars                                 | Copied into `labels["alertname"]`; label keys must match `[A-Za-z_][A-Za-z0-9_]*` |
+| `message`     | no       | 4096 chars                                | Becomes `annotations["summary"]` unless an explicit summary annotation exists     |
+| `description` | no       | 4096 chars                                | Becomes `annotations["description"]` unless already present                       |
+| `source`      | no       | free text                                 | Defaults to `grafana`; manual alerts typically use `manual`                       |
+| `labels`      | no       | 32 entries; keys ≤256 chars; values ≤4096 | Values are trimmed and single-line                                                |
+| `annotations` | no       | 32 entries; keys ≤256 chars; values ≤4096 | Values may be multi-line                                                          |
+
+The whole body is capped at 16 KiB. The `source` field defaults to `grafana` for webhook alerts. Manual alerts use `manual` or a custom source string. Labels and annotations follow the same format as Grafana payloads and are used by routing rules and correlation.
 
 ## Alert Actions
 
@@ -154,13 +166,16 @@ Agent endpoints use fingerprint-based routing — see [Agent REST API](/api-refe
 
 Each alert tracks a timeline of events (acknowledge, resolve, reopen, investigate, etc.). Each event records:
 
-| Field        | Description                                                                        |
-| ------------ | ---------------------------------------------------------------------------------- |
-| `type`       | Event type (e.g., `acknowledged`, `resolved`, `reopened`, `investigation_started`) |
-| `timestamp`  | When the event occurred                                                            |
-| `actor_type` | Who performed the action (`user`, `agent`, `system`)                               |
-| `actor_id`   | Identifier of the actor                                                            |
-| `source`     | Origin of the event (e.g., `api`, `webhook`, `scheduler`)                          |
+| Field                | Description                                                                                 |
+| -------------------- | ------------------------------------------------------------------------------------------- |
+| `type`               | Event type (e.g., `fired`, `acked`, `resolved`, `reopened`)                                 |
+| `timestamp`          | When the event occurred                                                                     |
+| `actor_user_id`      | ID of the acting user (empty for system/agent-originated events)                            |
+| `actor_username`     | Username of the actor (e.g., `grafana:monitoring`, an agent name, or a username)            |
+| `actor_display_name` | Human-readable actor name shown in the UI                                                   |
+| `source`             | Origin of the event (e.g., `api`, `user`, `agent`, `system`, `webhook`, `incident_cascade`) |
+
+Actors are stored as user-or-system strings (`actor_user_id` / `actor_username` / `actor_display_name`) rather than a `type`/`id` pair; the separate free-text `source` column records where the event came from.
 
 ## Alert Search
 

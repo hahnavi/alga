@@ -65,8 +65,8 @@ type Presence struct {
 }
 
 // NewPresence builds a presence helper. ttl controls how long a session
-// registration survives without a renewal; the SSE handler should call
-// Renew on each heartbeat (default 30s cadence), so a 90s TTL is comfortable.
+// registration survives without a renewal; the SSE handler renews it via
+// its 15s keepalive cadence, so a 90s TTL is comfortable.
 // Replica is a free-form identifier (hostname/pod name) embedded in events.
 func NewPresence(client *Client, ttl time.Duration, replica string) *Presence {
 	if ttl <= 0 {

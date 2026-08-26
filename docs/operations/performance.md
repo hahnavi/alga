@@ -51,7 +51,7 @@ default_pool_size = 25
 
 ### Indexing
 
-Key indexes (auto-created by Ent):
+Key indexes (created by hand-written goose migrations in `apps/backend/db/migrations/`):
 
 - `alerts.fingerprint` — partial unique index (`WHERE status != 'resolved'`)
 - `alerts.status`, `alerts.severity` — query filters
@@ -91,7 +91,7 @@ For production:
 | Queue                                | Purpose                  | Prefetch                                    |
 | ------------------------------------ | ------------------------ | ------------------------------------------- |
 | `alga.alert.process`                 | Alert processing         | 10                                          |
-| `alga.investigate.process`           | Investigation dispatch   | `MAX_CONCURRENT_INVESTIGATIONS` (default 5) |
+| `alga.investigate.process`           | Investigation dispatch   | `MAX_CONCURRENT_INVESTIGATIONS` (default 3) |
 | `alga.triage.process`                | Triage decisions         | 5                                           |
 | `alga.incident.process`              | Incident management      | 1                                           |
 | `alga.escalation.process`            | Escalation processing    | 5                                           |

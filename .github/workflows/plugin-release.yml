@@ -5,8 +5,10 @@
 # The plugin is NOT bundled into any Docker image by default. Deployments that
 # need the in-cluster auto-install flow (GET /internal/mm-plugin serving this
 # tarball to the alga-plugin-ensure CronJob) download this asset and mount it
-# into the backend container at /app/plugins/, or bake it into a derived image
-# with: docker build --target with-mm-plugin -f apps/backend/Dockerfile .
+# into the backend container at /app/plugins/ — renaming it back to
+# com.alga.mattermost-plugin-0.0.1.tar.gz, the filename pinned by the backend
+# handler — or bake it into a derived image with:
+# docker build --target with-mm-plugin -f apps/backend/Dockerfile .
 name: Plugin Release
 
 on:
@@ -60,7 +62,9 @@ jobs:
           GOWORK: "off"
         run: make bundle
       # make bundle produces dist/com.alga.mattermost-plugin-0.0.1.tar.gz.
-      # Tag it with the release version so deployments can pin to it.
+      # Tag it with the release version so deployments can pin to it; note
+      # that /internal/mm-plugin keeps serving the pinned -0.0.1.tar.gz name
+      # (see apps/backend/api/chat_integration.go), so mounts must rename.
       - name: Version-stamp the bundle
         run: |
           mv "dist/com.alga.mattermost-plugin-0.0.1.tar.gz" \

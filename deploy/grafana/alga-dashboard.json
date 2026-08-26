@@ -27,7 +27,7 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
-          "expr": "alga_correlator_alerts_received_total",
+          "expr": "alga_correlator_alerts_total",
           "refId": "A",
           "legendFormat": ""
         }
@@ -64,7 +64,7 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
-          "expr": "alga_correlator_investigations_published_total",
+          "expr": "alga_correlator_published_total",
           "refId": "A",
           "legendFormat": ""
         }
@@ -139,7 +139,7 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
-          "expr": "rate(alga_correlator_alerts_received_total[5m])",
+          "expr": "rate(alga_correlator_alerts_total[5m])",
           "refId": "A",
           "legendFormat": "{{instance}}"
         }
@@ -186,12 +186,12 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
-          "expr": "rate(alga_correlator_windows_opened_total[5m])",
+          "expr": "rate(alga_correlator_window_open_total[5m])",
           "refId": "A",
           "legendFormat": "Windows Opened"
         },
         {
-          "expr": "rate(alga_correlator_flushes_total[5m])",
+          "expr": "rate(alga_correlator_flush_total[5m])",
           "refId": "B",
           "legendFormat": "Flushes"
         }
@@ -496,7 +496,7 @@
           {
             "matcher": { "id": "byName", "options": "Bind Failed" },
             "properties": [
-              { "id": "color", "value": {fixedColor": "orange", "mode": "fixed" } }
+              { "id": "color", "value": { "fixedColor": "orange", "mode": "fixed" } }
             ]
           }
         ]

@@ -262,11 +262,12 @@ pnpm --filter frontend build
 **Automated Checks:**
 
 - Go formatting (`gofmt`)
-- Go vet (`go vet`)
-- Go tests (`go test`)
 - Frontend linting (`oxlint`)
-- Frontend type checking (`tsc`)
 - Frontend formatting (`oxfmt`)
+- Markdown linting (`markdownlint-cli2`) + formatting (`oxfmt`)
+- Secret scanning (`betterleaks`)
+
+These are the contents of the pre-commit hook (`.githooks/pre-commit`); it runs fast format/lint/secret checks **on staged files only**. Slower checks — `go vet`, `go test`, frontend typecheck, golangci-lint — deliberately run in CI instead.
 
 **Run manually:**
 

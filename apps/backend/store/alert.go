@@ -423,12 +423,16 @@ func (s *pgAlertStore) UpdateStatus(fingerprint, status string, resolvedEvent *A
 		}
 	}
 
-	_, err = s.db.NewUpdate().Model((*models.Alert)(nil)).
+	update := s.db.NewUpdate().Model((*models.Alert)(nil)).
 		Set("status = ?", status).
 		Set("updated_at = ?", now).
-		Where("id = ?", a.ID).
-		Exec(ctx)
-	if err != nil {
+		Where("id = ?", a.ID)
+	if status == "resolved" {
+		// Stamp ends_at at resolution time unless the source already
+		// supplied one at ingest (e.g. Grafana resolve payloads carry endsAt).
+		update = update.Set("ends_at = COALESCE(ends_at, ?)", now)
+	}
+	if _, err := update.Exec(ctx); err != nil {
 		return fmt.Errorf("failed to update alert status: %w", err)
 	}
 	return nil
@@ -453,6 +457,8 @@ func (s *pgAlertStore) UpdateStatusSilenced(fingerprint string) error {
 		Set("status = ?", "resolved").
 		Set("silenced = ?", true).
 		Set("updated_at = ?", now).
+		// Preserve an ingest-supplied ends_at; stamp one only when NULL.
+		Set("ends_at = COALESCE(ends_at, ?)", now).
 		Where("id = ?", a.ID).
 		Exec(ctx)
 	if err != nil {

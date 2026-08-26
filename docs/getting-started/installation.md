@@ -141,7 +141,7 @@ cp apps/backend/.env.example apps/backend/.env
 Edit `apps/backend/.env` and set:
 
 - `POSTGRES_DSN` — your PostgreSQL connection string
-- `ENCRYPTION_KEY` — generate with `openssl rand -base64 32`
+- `ENCRYPTION_KEYS` — comma-separated `kid:base64(32B)` pairs (e.g. `1:$(openssl rand -base64 32)`); the highest `kid` is the active key
 - `SECRET_PEPPER` — generate with `openssl rand -base64 32`
 
 The admin account is not configured via `.env`. On first boot with no users in the database, open `http://localhost:3000` and complete the setup wizard to create the initial admin.
@@ -195,11 +195,11 @@ The admin account is not configured via environment. On first boot with no users
 Generate keys:
 
 ```sh
-# Single key (first deployment)
-export ENCRYPTION_KEY=$(openssl rand -base64 32)
-
-# Versioned keyring (recommended for rotation)
+# Format: comma-separated kid:base64(32B) pairs; the highest kid seals new ciphertexts
 export ENCRYPTION_KEYS="1:$(openssl rand -base64 32)"
+
+# Key rotation: retain old kids for decryption, raise the kid to seal new data
+# export ENCRYPTION_KEYS="1:<existing-key>,2:$(openssl rand -base64 32)"
 ```
 
 ### HTTPS

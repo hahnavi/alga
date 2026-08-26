@@ -635,16 +635,16 @@ Each delay is adjusted by ±20% jitter to avoid retry storms.
 
 ### Metrics
 
-- **expvar endpoint:** `/debug/vars`
+- **Metrics endpoint:** `/metrics` (Prometheus-format rendering of expvar gauges)
 - **Readiness endpoint:** `/api/v1/readiness` (JSON snapshot)
 - **Metrics:**
   - `alga_correlator_alerts_total`: Total alerts received
-  - `alga_correlator_alerts_merged_total`: Alerts merged into existing windows
+  - `alga_correlator_merged_total`: Alerts merged into existing windows
   - `alga_correlator_published_total`: Investigations published after correlation
   - `alga_correlator_dropped_total`: Alerts dropped
   - `alga_correlator_fail_closed_total`: Fail-closed events
-  - `alga_correlator_windows_opened_total`: New correlation windows opened
-  - `alga_correlator_flushes_total`: Windows flushed (expired)
+  - `alga_correlator_window_open_total`: New correlation windows opened
+  - `alga_correlator_flush_total`: Windows flushed (expired)
   - `alga_scheduler_*`: Scheduler and agent stats
   - `alga_scheduler_nudge_total`: Scheduler nudge events
   - `alga_webhook_alert_publish_queued_total`: Webhook alerts queued for publishing

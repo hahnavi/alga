@@ -15,8 +15,10 @@ import (
 )
 
 // defaultDisconnectGrace is the default delay before an agent's
-// "investigating" work is reset to pending after disconnect.
-const defaultDisconnectGrace = 30 * time.Second
+// "investigating" work is reset to pending after disconnect. Matches the
+// AGENT_DISCONNECT_GRACE config default (45s) so the fallback and the
+// configured default agree.
+const defaultDisconnectGrace = 45 * time.Second
 
 // disconnectGraceLockTTL is the TTL on the per-agent grace lock. Set
 // generously above the grace itself so concurrent retries don't race.

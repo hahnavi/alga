@@ -87,7 +87,7 @@ docker compose start valkey
 
 ### Encryption Keys
 
-**Critical:** Back up `ENCRYPTION_KEYS` (or `ENCRYPTION_KEY`) securely. Loss of these keys means:
+**Critical:** Back up `ENCRYPTION_KEYS` (comma-separated `kid:base64(32B)` pairs) securely. Loss of these keys means:
 
 - Integration credentials (Slack, Mattermost, Twilio) become unreadable
 - Stored secrets must be re-entered

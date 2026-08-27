@@ -163,10 +163,10 @@ Agent dispatch and SSE connections use bearer tokens created per-agent in the Al
 
 ## Alert Correlation
 
-| Variable                   | Default        | Required | Description                                                                                               |
-| -------------------------- | -------------- | -------- | --------------------------------------------------------------------------------------------------------- |
-| `CORRELATION_WINDOW`       | `0` (disabled) | No       | Time window during which alerts sharing a correlation key are merged into one investigation. `0` disables |
-| `CORRELATION_COOLDOWN_TTL` | `30m`          | No       | Cooldown after investigation publish (prevents duplicates)                                                |
+| Variable                   | Default | Required | Description                                                                                                                                                      |
+| -------------------------- | ------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CORRELATION_WINDOW`       | `15s`   | No       | Time window during which alerts sharing a correlation key are buffered and merged into one investigation. `0` flushes each alert immediately (no grouping delay) |
+| `CORRELATION_COOLDOWN_TTL` | `30m`   | No       | Cooldown after investigation publish (prevents duplicates)                                                                                                       |
 
 ## Investigation
 

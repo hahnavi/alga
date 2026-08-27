@@ -307,12 +307,15 @@ func Defaults() *Config {
 		// attacks; MaxHeaderBytes bounds header memory. SSE handlers clear
 		// their own write deadline via DisableWriteDeadline so the 30s value
 		// does not truncate long-lived streams.
-		ServerReadHeaderTimeout:                  10 * time.Second,
-		ServerReadTimeout:                        30 * time.Second,
-		ServerWriteTimeout:                       30 * time.Second,
-		ServerIdleTimeout:                        120 * time.Second,
-		ServerMaxHeaderBytes:                     1 << 20, // 1 MiB
-		CorrelationWindow:                        0,
+		ServerReadHeaderTimeout: 10 * time.Second,
+		ServerReadTimeout:       30 * time.Second,
+		ServerWriteTimeout:      30 * time.Second,
+		ServerIdleTimeout:       120 * time.Second,
+		ServerMaxHeaderBytes:    1 << 20, // 1 MiB
+		// CorrelationWindow buffers alerts sharing a correlation key before a
+		// single investigation is published; 0 disables buffering (immediate
+		// flush). 15s groups alert bursts on stock deployments.
+		CorrelationWindow:                        15 * time.Second,
 		CorrelationCooldownTTL:                   30 * time.Minute,
 		SchedulerLeaderTTL:                       15 * time.Second,
 		AgentPresenceTTL:                         90 * time.Second,

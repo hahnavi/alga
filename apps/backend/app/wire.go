@@ -436,7 +436,11 @@ func (a *App) wire() error {
 			var embedder memory.Embedder
 			var llm memory.LLM
 			if a.cfg.MemoryEmbeddingURL != "" {
-				embedder = memory.NewOpenAIEmbedder(a.cfg.MemoryEmbeddingURL, a.cfg.MemoryEmbeddingAPIKey, a.cfg.MemoryEmbeddingModel)
+				e, eerr := memory.NewOpenAIEmbedder(a.cfg.MemoryEmbeddingURL, a.cfg.MemoryEmbeddingAPIKey, a.cfg.MemoryEmbeddingModel)
+				if eerr != nil {
+					return fmt.Errorf("invalid MEMORY_EMBEDDING_MODEL: %w", eerr)
+				}
+				embedder = e
 			} else {
 				embedder = memory.NewNoopEmbedder()
 			}

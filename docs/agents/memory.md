@@ -56,7 +56,7 @@ Memory is **off by default**. To enable it, configure these environment variable
 | -------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | `MEMORY_EMBEDDING_URL`     |                          | OpenAI-compatible embeddings endpoint. **If empty, a no-op embedder produces zero vectors** — search falls back to PostgreSQL full-text search |
 | `MEMORY_EMBEDDING_API_KEY` |                          | Bearer token for the embedding service                                                                                                         |
-| `MEMORY_EMBEDDING_MODEL`   | `text-embedding-3-small` | Embedding model (dimension 1536; `large` models use 3072)                                                                                      |
+| `MEMORY_EMBEDDING_MODEL`   | `text-embedding-3-small` | Embedding model — MUST be a 1536-dimension model; startup fails closed on anything else (the `vector(1536)` column is pinned)           |
 
 ::: tip Works with any OpenAI-compatible API
 Both the LLM and embedding endpoints accept any OpenAI-compatible API — OpenAI, Ollama, vLLM, Azure OpenAI (with a compatible proxy), etc.

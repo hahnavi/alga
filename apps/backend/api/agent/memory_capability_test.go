@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -66,6 +67,8 @@ func (a *b7AuditStore) Query(filter map[string]any) ([]store.AuditRecord, int64,
 }
 
 func (a *b7AuditStore) GetRecentEvents(limit int) ([]store.AuditRecord, error) { return nil, nil }
+
+func (a *b7AuditStore) DeleteOlderThan(_ context.Context, _ time.Time) (int64, error) { return 0, nil }
 
 func b7Service(mem *b7MemoryStore, audit *b7AuditStore) *Service {
 	logger.Init("error", "")

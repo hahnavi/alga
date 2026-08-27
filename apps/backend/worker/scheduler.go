@@ -102,6 +102,14 @@ type InvestigationScheduler struct {
 	dataRetentionDays int
 	pruneInterval     time.Duration
 
+	// retention family: optional stores + the audit-specific window.
+	// auditStore is shared with the summary sweep (SetAuditStore); nil stores
+	// are skipped; auditRetentionDays <= 0 keeps audit rows forever.
+	triageStore        store.TriageResultStore
+	deliveryStore      store.NotificationDeliveryStore
+	passwordResetStore store.PasswordResetStore
+	auditRetentionDays int
+
 	teamStore store.TeamStore
 
 	backoffMu sync.Mutex
@@ -305,6 +313,22 @@ func (s *InvestigationScheduler) SetDataRetention(days int, interval time.Durati
 		interval = time.Hour
 	}
 	s.pruneInterval = interval
+}
+
+// SetAuditRetention configures the audit_logs prune window. Days <= 0
+// keeps audit rows forever.
+func (s *InvestigationScheduler) SetAuditRetention(days int) {
+	s.auditRetentionDays = days
+}
+
+// SetRetentionStores wires the optional stores pruned by the retention
+// family (triage results, notification delivery logs, password-reset tokens).
+// Audit logs reuse the shared SetAuditStore store. Nil entries are skipped by
+// pruneTick.
+func (s *InvestigationScheduler) SetRetentionStores(triage store.TriageResultStore, delivery store.NotificationDeliveryStore, passwords store.PasswordResetStore) {
+	s.triageStore = triage
+	s.deliveryStore = delivery
+	s.passwordResetStore = passwords
 }
 
 // SetSLAPublisher wires the RabbitMQ publisher used by the SLA sweep loop.

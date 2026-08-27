@@ -312,9 +312,10 @@ Auto-creates a Google Meet space per incident for war-room coordination. Require
 
 ## Data Retention
 
-| Variable              | Default | Required | Description                                                |
-| --------------------- | ------- | -------- | ---------------------------------------------------------- |
-| `DATA_RETENTION_DAYS` | `90`    | No       | Days to retain resolved alerts. Set to `0` to keep forever |
+| Variable               | Default | Required | Description                                                                                                                   |
+| ---------------------- | ------- | -------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `DATA_RETENTION_DAYS`  | `90`    | No       | Days to retain resolved alerts. Set to `0` to keep forever                                                                    |
+| `AUDIT_RETENTION_DAYS` | `365`   | No       | Days to retain audit logs; pruned by the hourly retention sweeper alongside `DATA_RETENTION_DAYS`. Set to `0` to keep forever |
 
 ## Observability (OpenTelemetry)
 

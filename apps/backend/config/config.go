@@ -196,6 +196,11 @@ type Config struct {
 
 	DataRetentionDays int `yaml:"data_retention_days"`
 
+	// AuditRetentionDays bounds the audit_logs trail. Compliance-grade
+	// data gets a longer window than DATA_RETENTION_DAYS; 0 disables audit
+	// pruning (keep forever).
+	AuditRetentionDays int `yaml:"audit_retention_days"`
+
 	// MemoryEnabled enables the shared agent memory system.
 	MemoryEnabled bool `yaml:"memory_enabled"`
 	// MemoryEmbeddingURL is the OpenAI-compatible embedding API URL.
@@ -328,6 +333,7 @@ func Defaults() *Config {
 		StuckInvestigationEscalationTickInterval: 30 * time.Second,
 		OpsTeamName:                              "ops-team",
 		DataRetentionDays:                        90,
+		AuditRetentionDays:                       365,
 		SMTPPort:                                 587,
 		TriageMaxConcurrent:                      3,
 		TriageConfidenceThreshold:                0.7,
@@ -790,6 +796,12 @@ func Load() (*Config, error) {
 	if v := os.Getenv("DATA_RETENTION_DAYS"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
 			cfg.DataRetentionDays = n
+		}
+	}
+
+	if v := os.Getenv("AUDIT_RETENTION_DAYS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			cfg.AuditRetentionDays = n
 		}
 	}
 

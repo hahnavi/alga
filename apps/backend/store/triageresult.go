@@ -81,6 +81,9 @@ type TriageResultStore interface {
 	AvgConfidence(ctx context.Context) (float64, error)
 	AvgDurationMs(ctx context.Context) (float64, error)
 	VolumeTrend(ctx context.Context, days int) ([]TriageVolumeDay, error)
+	// DeleteOlderThan purges triage results older than the cutoff in bounded
+	// batches (retention family).
+	DeleteOlderThan(ctx context.Context, cutoff time.Time) (int64, error)
 }
 
 type pgTriageResultStore struct {
@@ -565,4 +568,14 @@ func (s *pgTriageResultStore) VolumeTrend(ctx context.Context, days int) ([]Tria
 
 func (s *pgTriageResultStore) nextTriageNumber(ctx context.Context) (int64, error) {
 	return nextSeq(ctx, s.db, "triage_number_seq")
+}
+
+// DeleteOlderThan hard-deletes triage results older than the cutoff in bounded
+// batches (retention family; diagnostic append-only data riding
+// DATA_RETENTION_DAYS). Referencing rows keep working via ON DELETE SET NULL.
+func (s *pgTriageResultStore) DeleteOlderThan(ctx context.Context, cutoff time.Time) (int64, error) {
+	ctx, cancel := pgctx(ctx)
+	defer cancel()
+
+	return deleteOlderThanBatched[models.TriageResult](ctx, s.db, "created_at", cutoff)
 }

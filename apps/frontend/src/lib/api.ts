@@ -1032,7 +1032,6 @@ export type TeamRecord = {
   id: string;
   name: string;
   description: string;
-  escalation_policy_id?: string;
   created_at: string;
   updated_at: string;
   members?: TeamMemberRecord[];
@@ -2726,7 +2725,7 @@ export const api = {
       `/api/v1/teams${buildQuery({ q: params?.q, limit: params?.limit, skip: params?.skip })}`,
     );
   },
-  createTeam(input: { name: string; description?: string; escalation_policy_id?: string }) {
+  createTeam(input: { name: string; description?: string }) {
     return request<TeamRecord>("/api/v1/teams", {
       method: "POST",
       body: JSON.stringify(input),
@@ -2735,10 +2734,7 @@ export const api = {
   getTeam(teamId: string) {
     return request<TeamRecord>(`/api/v1/teams/${e(teamId)}`);
   },
-  updateTeam(
-    teamId: string,
-    input: { name?: string; description?: string; escalation_policy_id?: string },
-  ) {
+  updateTeam(teamId: string, input: { name?: string; description?: string }) {
     return request<TeamRecord>(`/api/v1/teams/${e(teamId)}`, {
       method: "PATCH",
       body: JSON.stringify(input),

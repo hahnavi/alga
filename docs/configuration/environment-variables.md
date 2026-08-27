@@ -257,18 +257,18 @@ Required for password reset emails and email notifications. If `SMTP_HOST` is em
 
 pgvector-backed shared agent memory for extracting and searching investigation memories.
 
-| Variable                       | Default | Required | Description                                                                    |
-| ------------------------------ | ------- | -------- | ------------------------------------------------------------------------------ |
-| `MEMORY_ENABLED`               | `false` | No       | Enable agent memory                                                            |
-| `MEMORY_EMBEDDING_URL`         |         | No       | OpenAI-compatible embedding API URL                                            |
-| `MEMORY_EMBEDDING_API_KEY`     |         | No       | API key for the embedding service                                              |
-| `MEMORY_EMBEDDING_MODEL`       |         | No       | Embedding model name — must be 1536-dimension (boot-time check rejects others) |
-| `MEMORY_LLM_URL`               |         | No       | OpenAI-compatible LLM API URL for memory extraction                            |
-| `MEMORY_LLM_API_KEY`           |         | No       | API key for the extraction LLM                                                 |
-| `MEMORY_LLM_MODEL`             |         | No       | LLM model for memory extraction                                                |
-| `MEMORY_AUTO_EXTRACT`          | `false` | No       | Auto-extract memories on investigation completion                              |
-| `MEMORY_MAX_PER_INVESTIGATION` |         | No       | Max memories extracted per investigation                                       |
-| `MEMORY_SIMILARITY_THRESHOLD`  |         | No       | Min cosine similarity (0–1) for search results                                 |
+| Variable                       | Default | Required | Description                                                                                                                                |
+| ------------------------------ | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `MEMORY_ENABLED`               | `false` | No       | Enable agent memory                                                                                                                        |
+| `MEMORY_EMBEDDING_URL`         |         | No       | OpenAI-compatible embedding API URL                                                                                                        |
+| `MEMORY_EMBEDDING_API_KEY`     |         | No       | API key for the embedding service                                                                                                          |
+| `MEMORY_EMBEDDING_MODEL`       |         | No       | Embedding model name — must be 1536-dimension (boot-time check rejects others)                                                             |
+| `MEMORY_LLM_URL`               |         | No       | OpenAI-compatible LLM API URL for memory extraction                                                                                        |
+| `MEMORY_LLM_API_KEY`           |         | No       | API key for the extraction LLM                                                                                                             |
+| `MEMORY_LLM_MODEL`             |         | No       | LLM model for memory extraction                                                                                                            |
+| `MEMORY_AUTO_EXTRACT`          | `false` | No       | Auto-extract memories on investigation completion                                                                                          |
+| `MEMORY_MAX_PER_INVESTIGATION` |         | No       | Hard cap on memories extracted per investigation; LLM results are truncated to this before embedding (default 10)                          |
+| `MEMORY_SIMILARITY_THRESHOLD`  |         | No       | Min search score (0–1) for results to be returned; applied as a post-filter on the vector and text search paths. `0` returns the raw top-K |
 
 ## Triage
 

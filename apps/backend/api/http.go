@@ -129,7 +129,6 @@ type Server struct {
 	// investigationForwarder is optional; delivers investigation thread text to the default agent (Hermes or OpenClaw).
 	investigationForwarder webhook.InvestigationAgentForwarder
 	chatSync               *agent.ChatSyncService
-	readiness              Readiness
 	systemConfigStore      store.SystemConfigStore
 	systemConfigUpdatedAt  time.Time
 	summaryConfigApplier   func(enabled bool, defaultInterval time.Duration, severityIntervals map[string]time.Duration)

@@ -6,7 +6,6 @@ import "time"
 const (
 	PrefixDashboardStats     = "alga:cache:dashboard:stats"
 	PrefixOnCallWho          = "alga:cache:oncall:who:"
-	PrefixOnCallSchedules    = "alga:cache:oncall:schedules"
 	PrefixServicesList       = "alga:cache:services:list"
 	PrefixRoutes             = "alga:cache:routes"
 	PrefixIntegrations       = "alga:cache:integrations"

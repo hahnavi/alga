@@ -30,13 +30,13 @@ Correlated Alerts → Triage Rules (ordered, deterministic) → Match? → Decis
 
 ### Triage Decisions
 
-| Decision       | Description                                                            |
-| -------------- | ---------------------------------------------------------------------- |
-| `investigate`  | Dispatch an agent investigation (no incident created by triage itself) |
-| `escalate`     | Dispatch an investigation and trigger immediate escalation             |
-| `suppress`     | Dismiss the alert group — no incident created                          |
-| `auto_resolve` | Automatically resolve the alerts without incident                      |
-| `enrich_only`  | Enrich alert metadata without creating an incident                     |
+| Decision       | Description                                                                                 |
+| -------------- | ------------------------------------------------------------------------------------------- |
+| `investigate`  | Dispatch an agent investigation (no incident created by triage itself)                      |
+| `escalate`     | Dispatch an investigation immediately (escalation-policy paging is not wired at this layer) |
+| `suppress`     | Dismiss the alert group — no incident created                                               |
+| `auto_resolve` | Automatically resolve the alerts without incident                                           |
+| `enrich_only`  | Enrich alert metadata without creating an incident                                          |
 
 > **Note (gated decisions):** The `auto_resolve` and `suppress` decisions are gated by the config flags `TRIAGE_AUTO_RESOLVE_ENABLED` and `TRIAGE_SUPPRESS_ENABLED` respectively. When a flag is disabled, that decision downgrades to `enrich_only`. Additionally, any decision whose confidence falls below `TRIAGE_CONFIDENCE_THRESHOLD` (default `0.7`) also downgrades to `enrich_only`.
 
@@ -148,6 +148,7 @@ Every triage evaluation produces a result record that captures the decision, rea
 | `context_used`        | Context sources referenced during evaluation                 |
 | `overridden_by`       | User ID who overrode the decision                            |
 | `overridden_at`       | Timestamp when the override occurred                         |
+| `override_reason`     | Free-text reason supplied with the override                  |
 | `trace_id`            | Correlation trace ID for debugging                           |
 
 ### Viewing Results
@@ -183,6 +184,8 @@ curl -X POST http://localhost:8080/api/v1/triage/results/{id} \
     "reason": "This alert group indicates a real outage"
   }'
 ```
+
+The `decision` must be one of the triage decisions above (otherwise `400`). The `reason` is persisted as `override_reason` together with `overridden_by`/`overridden_at`, and the override is recorded in the audit log. The stored reason is returned by `GET /api/v1/triage/results/{id}`.
 
 ### Triage Stats
 
@@ -236,7 +239,7 @@ Triage Stats:
 | `TRIAGE_CONTEXT_EPISODIC_LIMIT`       | `3`     | Max episodic memories injected into LLM context                                                                                                                                                    |
 | `TRIAGE_CONTEXT_NOTES_LIMIT`          | `3`     | Max knowledge notes injected into LLM context                                                                                                                                                      |
 | `TRIAGE_CONTEXT_MEMORIES_LIMIT`       | `5`     | Max agent memories injected into LLM context                                                                                                                                                       |
-| `TRIAGE_AUTO_PROMOTE_CONFIRMED_COUNT` | `3`     | After N confirmed decisions of the same type, auto-promote the triage pattern                                                                                                                      |
+| `TRIAGE_AUTO_PROMOTE_CONFIRMED_COUNT` | `3`     | Confirmed results of the same correlation key + decision before new triages for that key skip the LLM (0 disables)                                                                                 |
 | `MaxConcurrentTriage`                 | `5`     | Config-level concurrency cap for triage worker (config file default)                                                                                                                               |
 
 ### Context Injection
@@ -249,7 +252,7 @@ When the LLM stage runs, the triage engine injects contextual data to improve cl
 
 ### Auto-Promote
 
-When `TRIAGE_AUTO_PROMOTE_CONFIRMED_COUNT` (default 3) triage results of the same decision type are confirmed by operators for the same correlation pattern, the system auto-promotes the pattern — future matches skip the LLM stage and apply the confirmed decision directly.
+When `TRIAGE_AUTO_PROMOTE_CONFIRMED_COUNT` (default 3) triage results with outcome `confirmed` share the same correlation key and decision, the engine auto-promotes the pattern — the next triage for that key applies the confirmed decision directly (confidence 1.0) without any LLM call, and records the promotion in the result's reasoning. The lookup resolves the latest confirmed decision for the key; lookup failures fall through to the LLM.
 
 ## API Endpoints
 

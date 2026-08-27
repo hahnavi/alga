@@ -272,22 +272,22 @@ pgvector-backed shared agent memory for extracting and searching investigation m
 
 ## Triage
 
-| Variable                              | Default | Required | Description                                                                         |
-| ------------------------------------- | ------- | -------- | ----------------------------------------------------------------------------------- |
-| `TRIAGE_ENABLED`                      | `false` | No       | Enable the triage system                                                            |
-| `TRIAGE_LLM_URL`                      |         | No       | LLM API URL for triage decisions                                                    |
-| `TRIAGE_LLM_API_KEY`                  |         | No       | API key for the triage LLM                                                          |
-| `TRIAGE_LLM_MODEL`                    |         | No       | LLM model for triage                                                                |
-| `TRIAGE_MAX_CONCURRENT`               | `3`     | No       | Max concurrent triage operations                                                    |
-| `TRIAGE_TIMEOUT`                      | `2m`    | No       | Triage operation timeout                                                            |
-| `MAX_CONCURRENT_TRIAGE`               | `5`     | No       | Max concurrent triage workers                                                       |
-| `TRIAGE_CONFIDENCE_THRESHOLD`         | `0.7`   | No       | Min confidence for auto-decisions; below this, decisions downgrade to `enrich_only` |
-| `TRIAGE_AUTO_RESOLVE_ENABLED`         | `false` | No       | Allow `auto_resolve` decisions (otherwise downgrades to `enrich_only`)              |
-| `TRIAGE_SUPPRESS_ENABLED`             | `false` | No       | Allow `suppress` decisions (otherwise downgrades to `enrich_only`)                  |
-| `TRIAGE_CONTEXT_EPISODIC_LIMIT`       | `3`     | No       | Max episodic context entries                                                        |
-| `TRIAGE_CONTEXT_NOTES_LIMIT`          | `3`     | No       | Max knowledge notes for context                                                     |
-| `TRIAGE_CONTEXT_MEMORIES_LIMIT`       | `5`     | No       | Max agent memories for context                                                      |
-| `TRIAGE_AUTO_PROMOTE_CONFIRMED_COUNT` | `3`     | No       | Count of confirmed triages before auto-promotion                                    |
+| Variable                              | Default | Required | Description                                                                                                          |
+| ------------------------------------- | ------- | -------- | -------------------------------------------------------------------------------------------------------------------- |
+| `TRIAGE_ENABLED`                      | `false` | No       | Enable the triage system                                                                                             |
+| `TRIAGE_LLM_URL`                      |         | No       | LLM API URL for triage decisions                                                                                     |
+| `TRIAGE_LLM_API_KEY`                  |         | No       | API key for the triage LLM                                                                                           |
+| `TRIAGE_LLM_MODEL`                    |         | No       | LLM model for triage                                                                                                 |
+| `TRIAGE_MAX_CONCURRENT`               | `3`     | No       | Max concurrent triage operations                                                                                     |
+| `TRIAGE_TIMEOUT`                      | `2m`    | No       | Triage operation timeout                                                                                             |
+| `MAX_CONCURRENT_TRIAGE`               | `5`     | No       | Max concurrent triage workers                                                                                        |
+| `TRIAGE_CONFIDENCE_THRESHOLD`         | `0.7`   | No       | Min confidence for auto-decisions; below this, decisions downgrade to `enrich_only`                                  |
+| `TRIAGE_AUTO_RESOLVE_ENABLED`         | `false` | No       | Allow `auto_resolve` decisions (otherwise downgrades to `enrich_only`)                                               |
+| `TRIAGE_SUPPRESS_ENABLED`             | `false` | No       | Allow `suppress` decisions (otherwise downgrades to `enrich_only`)                                                   |
+| `TRIAGE_CONTEXT_EPISODIC_LIMIT`       | `3`     | No       | Max episodic context entries                                                                                         |
+| `TRIAGE_CONTEXT_NOTES_LIMIT`          | `3`     | No       | Max knowledge notes for context                                                                                      |
+| `TRIAGE_CONTEXT_MEMORIES_LIMIT`       | `5`     | No       | Max agent memories for context                                                                                       |
+| `TRIAGE_AUTO_PROMOTE_CONFIRMED_COUNT` | `3`     | No       | Confirmed results of the same correlation key + decision before new triages for that key skip the LLM (`0` disables) |
 
 ## Google OAuth
 

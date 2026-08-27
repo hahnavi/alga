@@ -787,26 +787,6 @@ func (a *App) wire() error {
 		a.apiServer.SetPendingNotifier(a.scheduler)
 	}
 
-	invWorkerEnabled := a.rabbitClient != nil && a.workerSet != nil
-	var readinessNotes []string
-	if a.rabbitClient == nil {
-		readinessNotes = append(readinessNotes, "rabbitmq not configured")
-	}
-	if a.valkeyClient == nil {
-		readinessNotes = append(readinessNotes, "valkey not configured")
-	}
-	if a.correlator == nil && a.rabbitClient != nil && a.valkeyClient != nil {
-		readinessNotes = append(readinessNotes, "correlator disabled (check worker set)")
-	}
-	a.apiServer.SetReadiness(api.Readiness{
-		CorrelatorEnabled:        a.correlator != nil,
-		InvestigateWorkerEnabled: invWorkerEnabled,
-		ValkeyConfigured:         a.valkeyClient != nil,
-		RabbitMQConfigured:       a.rabbitClient != nil,
-		HAMode:                   a.valkeyClient != nil,
-		Replica:                  replicaID,
-		Notes:                    readinessNotes,
-	})
 	if publisher != nil {
 		a.apiServer.SetRabbitMQPublisher(publisher)
 		agentExecutor.SetEscalationPublisher(publisher)

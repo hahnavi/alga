@@ -1013,6 +1013,5 @@ func (s *Server) handleOnCallMetrics(w http.ResponseWriter, r *http.Request) {
 func (s *Server) invalidateOnCallCache(r *http.Request) {
 	if s.cache != nil {
 		_ = s.cache.InvalidatePrefix(r.Context(), valkey.PrefixOnCallWho)
-		_ = s.cache.Invalidate(r.Context(), valkey.PrefixOnCallSchedules)
 	}
 }

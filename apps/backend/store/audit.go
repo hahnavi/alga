@@ -79,6 +79,7 @@ const (
 	AuditIncidentReopened                   AuditEvent = "incident_reopened"
 	AuditIncidentCancelled                  AuditEvent = "incident_cancelled"
 	AuditIncidentRoleAssigned               AuditEvent = "incident_role_assigned"
+	AuditIncidentRoleUpdated                AuditEvent = "incident_role_updated"
 	AuditIncidentRoleRemoved                AuditEvent = "incident_role_removed"
 	AuditIncidentEscalated                  AuditEvent = "incident_escalated"
 	AuditVoiceAck                           AuditEvent = "voice_ack"

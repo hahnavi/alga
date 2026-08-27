@@ -407,11 +407,23 @@ func (s *Server) handleUpdateICSRole(w http.ResponseWriter, r *http.Request, inc
 		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "cannot update agent-assigned role via this endpoint")
 		return
 	}
-	_, err = s.icsRoleStore.AssignRole(r.Context(), mustParseIncidentNumber(incidentID), ics.RoleType(found.RoleType), *found.UserID, found.ParentAssignmentID, &scope)
-	if err != nil {
+	// Scope updates edit the active assignment in place; re-assigning would
+	// insert a second active row and collide with the partial unique index on
+	// (incident_id, role_type) WHERE status='active'.
+	if err := s.icsRoleStore.UpdateRoleScope(r.Context(), found.ID, &scope); err != nil {
+		if errors.Is(err, store.ErrICSRoleNotFound) {
+			writeError(w, ErrorCodeNotFound, "role assignment not found")
+			return
+		}
 		writeInternalError(w, err, "failed to update ICS role scope")
 		return
 	}
+	s.audit(r, store.AuditIncidentRoleUpdated, map[string]any{
+		"incident_number":   incidentID,
+		"ics_role_id":       found.ID.String(),
+		"role_type":         found.RoleType,
+		"scope_description": scope,
+	})
 	s.addIncidentTimeline(r, incidentID, "ics_role_updated", "ICS role scope updated")
 	s.publishIncidentEvent("incident_updated", map[string]string{"incident_number": incidentID})
 	writeStatus(w, "updated")

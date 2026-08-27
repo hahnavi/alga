@@ -84,8 +84,9 @@ type Registry struct {
 }
 
 // NewRegistry returns a registry preloaded with the internal provider and the
-// external provider stubs. Callers can Register additional factories, though
-// in practice the built-in set is complete.
+// external provider stubs. The external stubs are the credential-provider
+// integration seam: a real vault implementation plugs in by replacing its
+// stub factory via Register.
 func NewRegistry() *Registry {
 	r := &Registry{factories: map[string]Factory{}}
 	r.Register(TypeInternal, newInternal)
@@ -137,6 +138,13 @@ func (internalProvider) GetSecret(_ context.Context, ref SecretRef) (string, err
 // the factory with a real implementation later requires no schema change.
 type externalStub struct{ pType string }
 
+// newExternalStub returns the placeholder factory for an external vault type.
+// This is a designed extension point, not forgotten work: provider rows of
+// these types stay selectable so schema/UI need no change when real
+// implementations land, while GetSecret fails loudly with ErrNotImplemented,
+// which the API edge maps to 501 instead of leaking a raw error. An
+// implementation replaces its stub via Register and must keep that sentinel
+// → mapped-error contract until every stub type is replaced.
 func newExternalStub(pType string) Factory {
 	return func(_ map[string]string) (Provider, error) { return externalStub{pType: pType}, nil }
 }

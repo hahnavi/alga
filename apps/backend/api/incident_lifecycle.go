@@ -16,6 +16,7 @@ import (
 	"github.com/google/uuid"
 
 	"alga/escalation"
+	"alga/ics"
 	"alga/logger"
 	"alga/metrics"
 	"alga/rabbitmq"
@@ -23,6 +24,7 @@ import (
 	"alga/sse"
 	"alga/store"
 	"alga/strutil"
+	"alga/worker"
 )
 
 func (s *Server) handleAcknowledgeIncident(w http.ResponseWriter, r *http.Request, incidentID string) {
@@ -212,6 +214,17 @@ func (s *Server) handleCloseIncident(w http.ResponseWriter, r *http.Request, inc
 
 	s.addIncidentTimeline(r, incidentID, "closed", "Incident closed")
 
+	// teardown-on-close: end any live ICS role assignments so a terminal
+	// incident stops surfacing active commanders/responders in ICS queries.
+	// Handler-explicit on purpose — a sweeper would race a reopen.
+	if s.icsRoleStore != nil {
+		if err := s.icsRoleStore.EndAllRolesForIncident(r.Context(), mustParseIncidentNumber(incidentID), ics.EndReasonIncidentClosed); err != nil {
+			logger.WarnCtx(r.Context(), "failed to end ICS roles on incident close", "component", "api", "incident_number", incidentID, "error", err)
+		} else {
+			s.addIncidentTimeline(r, incidentID, "ics_roles_ended", "ICS roles ended: incident closed")
+		}
+	}
+
 	metrics.IncidentsClosedTotal.Add(1)
 
 	updated, _ := s.incidentStore.GetIncident(r.Context(), mustParseIncidentNumber(incidentID))
@@ -265,6 +278,17 @@ func (s *Server) handleReopenIncident(w http.ResponseWriter, r *http.Request, in
 		writeInternalError(w, err, "failed to reopen incident")
 		return
 	}
+
+	// reopen reset: clear the SLA resolve stamp and the breach-dedup
+	// markers handler-explicitly so resolve-breach detection can re-fire on the
+	// reopened incident. Kept out of applyStatusTimestampsBun's "active" case,
+	// which also fires on detected→active promotion where wiping the stamp
+	// would corrupt legitimate clocks.
+	incidentNumber := mustParseIncidentNumber(incidentID)
+	if err := s.incidentStore.ClearSLAResolvedAt(r.Context(), incidentNumber); err != nil {
+		logger.WarnCtx(r.Context(), "failed to clear SLA resolve stamp on reopen", "component", "api", "incident_number", incidentID, "error", err)
+	}
+	worker.ClearBreachDedupKeys(r.Context(), s.vkClient, incidentNumber)
 
 	s.addIncidentTimeline(r, incidentID, "reopened", "Incident reopened")
 

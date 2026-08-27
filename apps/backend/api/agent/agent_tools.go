@@ -314,7 +314,10 @@ func (e *AgentToolExecutor) ExecuteInvTool(ctx context.Context, agentRec *store.
 			if e.allInvestigationAlertsResolved(inv) {
 				targetStatus := store.AlertInvestigationStatusComplete
 				if inv.PromotedIncidentID != nil {
-					targetStatus = "reviewing"
+					// A promoted alert investigation terminates as promoted;
+					// incident-side completion bookkeeping runs inside
+					// finalizeAlertInvestigation.
+					targetStatus = store.AlertInvestigationStatusPromoted
 				}
 				if err := e.finalizeAlertInvestigation(ctx, inv, investigationID, targetStatus, actor.Username, agentRec.ID); err != nil {
 					logger.WarnCtx(ctx, "inv_tool: resolve_alert finalization failed", "investigation_id", investigationID, "target", targetStatus, "error", err)

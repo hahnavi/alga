@@ -160,6 +160,11 @@ func (w *Worker) handleSuppress(ctx context.Context, msg rabbitmq.TriageMessage,
 	return nil
 }
 
+// handleEscalate dispatches a full investigation for the alert group. There is
+// no policy-resolution path at the triage layer — alerts carry no incident or
+// service linkage to resolve an escalation policy against — so escalation
+// currently means "investigate immediately with escalate provenance" rather
+// than paging on-call (see spec 03_alerting/04, open question on escalate).
 func (w *Worker) handleEscalate(ctx context.Context, msg rabbitmq.TriageMessage, result *TriageResultWrapper) error {
 	logger.InfoCtx(ctx, "Escalating alert group for correlation key", "component", "triage", "correlation_key", msg.CorrelationKey)
 	return w.handleInvestigate(ctx, msg, result)

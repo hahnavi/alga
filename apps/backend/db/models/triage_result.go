@@ -29,6 +29,7 @@ type TriageResult struct {
 	OverriddenTo       *string           `bun:"overridden_to"`
 	OverriddenBy       *uuid.UUID        `bun:"overridden_by"`
 	OverriddenAt       *time.Time        `bun:"overridden_at"`
+	OverrideReason     string            `bun:"override_reason,default:''"`
 	ModelUsed          string            `bun:"model_used,default:''"`
 	TriageDurationMs   int64             `bun:"triage_duration_ms,notnull,default:0"`
 	TraceID            string            `bun:"trace_id,default:''"`

@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
@@ -45,6 +46,7 @@ type TriageResultRecord struct {
 	OverriddenTo       string            `json:"overridden_to"`
 	OverriddenBy       *uuid.UUID        `json:"overridden_by,omitempty"`
 	OverriddenAt       *time.Time        `json:"overridden_at,omitempty"`
+	OverrideReason     string            `json:"override_reason"`
 	ModelUsed          string            `json:"model_used"`
 	TriageDurationMs   int64             `json:"triage_duration_ms"`
 	TraceID            string            `json:"trace_id"`
@@ -75,6 +77,11 @@ type TriageResultStore interface {
 	Get(ctx context.Context, id string) (*TriageResultRecord, error)
 	List(ctx context.Context, q TriageResultQuery) ([]TriageResultRecord, int64, error)
 	GetByCorrelationKey(ctx context.Context, key string, limit int) ([]TriageResultRecord, error)
+	// AutoPromoteCandidate returns the decision of the most recent confirmed
+	// result for the correlation key and how many confirmed results share that
+	// key+decision pair. The triage engine uses it to skip the LLM once a
+	// pattern has enough confirmations (WP-A15).
+	AutoPromoteCandidate(ctx context.Context, correlationKey string) (decision string, confirmations int64, err error)
 	CountByOutcome(ctx context.Context) (confirmed, overridden, pending int64, err error)
 	CountByDecision(ctx context.Context) (map[string]int64, error)
 	CountByCategory(ctx context.Context) (map[string]int64, error)
@@ -161,6 +168,7 @@ func pgTriageResultToRecord(e *models.TriageResult) *TriageResultRecord {
 		OverriddenTo:       overriddenTo,
 		OverriddenBy:       e.OverriddenBy,
 		OverriddenAt:       e.OverriddenAt,
+		OverrideReason:     e.OverrideReason,
 		ModelUsed:          e.ModelUsed,
 		TriageDurationMs:   e.TriageDurationMs,
 		TraceID:            e.TraceID,
@@ -244,6 +252,7 @@ func (s *pgTriageResultStore) Create(ctx context.Context, record *TriageResultRe
 		OverriddenTo:       overriddenTo,
 		OverriddenBy:       record.OverriddenBy,
 		OverriddenAt:       record.OverriddenAt,
+		OverrideReason:     record.OverrideReason,
 		ModelUsed:          record.ModelUsed,
 		TriageDurationMs:   record.TriageDurationMs,
 		TraceID:            record.TraceID,
@@ -298,6 +307,9 @@ func (s *pgTriageResultStore) Update(ctx context.Context, id string, patch *Tria
 	}
 	if patch.OverriddenAt != nil {
 		q = q.Set("overridden_at = ?", *patch.OverriddenAt)
+	}
+	if patch.OverrideReason != "" {
+		q = q.Set("override_reason = ?", patch.OverrideReason)
 	}
 	if patch.ModelUsed != "" {
 		q = q.Set("model_used = ?", patch.ModelUsed)
@@ -450,6 +462,32 @@ func (s *pgTriageResultStore) GetByCorrelationKey(ctx context.Context, key strin
 		out = []TriageResultRecord{}
 	}
 	return out, nil
+}
+
+func (s *pgTriageResultStore) AutoPromoteCandidate(ctx context.Context, correlationKey string) (string, int64, error) {
+	var latest models.TriageResult
+	err := s.db.NewSelect().Model(&latest).
+		Where("correlation_key = ?", correlationKey).
+		Where("outcome = ?", TriageResultOutcomeConfirmed).
+		Order("created_at DESC").
+		Limit(1).
+		Scan(ctx)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", 0, nil
+		}
+		return "", 0, fmt.Errorf("latest confirmed triage result: %w", err)
+	}
+
+	count, err := s.db.NewSelect().Model((*models.TriageResult)(nil)).
+		Where("correlation_key = ?", correlationKey).
+		Where("outcome = ?", TriageResultOutcomeConfirmed).
+		Where("decision = ?", latest.Decision).
+		Count(ctx)
+	if err != nil {
+		return "", 0, fmt.Errorf("count confirmed triage results for key: %w", err)
+	}
+	return latest.Decision, int64(count), nil
 }
 
 func (s *pgTriageResultStore) CountByOutcome(ctx context.Context) (confirmed, overridden, pending int64, err error) {

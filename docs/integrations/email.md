@@ -22,14 +22,14 @@ SMTP_FROM=noreply@example.com
 SMTP_SKIP_TLS_VERIFY=false
 ```
 
-| Variable               | Default          | Required | Description                                                                                                                                                                    |
-| ---------------------- | ---------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `SMTP_HOST`            |                  | No       | SMTP relay hostname. When empty, email delivery is log-only (messages are logged but not sent).                                                                                |
-| `SMTP_PORT`            | `587`            | No       | SMTP port (typically 587 for STARTTLS, 465 for SMTPS)                                                                                                                          |
-| `SMTP_USER`            |                  | No       | SMTP authentication username (PLAIN auth). Only needed when the relay requires authentication.                                                                                 |
-| `SMTP_PASSWORD`        |                  | No       | SMTP authentication password (PLAIN auth). Only needed when the relay requires authentication.                                                                                 |
-| `SMTP_FROM`            | `alga@localhost` | No       | From address for email notifications                                                                                                                                           |
-| `SMTP_SKIP_TLS_VERIFY` | `false`          | No       | When `true`, skips TLS certificate verification for SMTP (implicit-TLS handshake with `InsecureSkipVerify`). Enabling this is an MITM risk and logs a loud warning on startup. |
+| Variable               | Default  | Required | Description                                                                                                                                                                    |
+| ---------------------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `SMTP_HOST`            |          | No       | SMTP relay hostname. When empty, email delivery is log-only (messages are logged but not sent).                                                                                |
+| `SMTP_PORT`            | `587`    | No       | SMTP port (typically 587 for STARTTLS, 465 for SMTPS)                                                                                                                          |
+| `SMTP_USER`            |          | No       | SMTP authentication username (PLAIN auth). Only needed when the relay requires authentication.                                                                                 |
+| `SMTP_PASSWORD`        |          | No       | SMTP authentication password (PLAIN auth). Only needed when the relay requires authentication.                                                                                 |
+| `SMTP_FROM`            | _(none)_ | No       | From address for email notifications. No default is applied — set it explicitly or outgoing mail carries an empty From                                                         |
+| `SMTP_SKIP_TLS_VERIFY` | `false`  | No       | When `true`, skips TLS certificate verification for SMTP (implicit-TLS handshake with `InsecureSkipVerify`). Enabling this is an MITM risk and logs a loud warning on startup. |
 
 **Security Notes:**
 
@@ -44,35 +44,14 @@ See [Configuration](/configuration/environment-variables) for complete environme
 
 Alga constructs email content as plain strings via the notification dispatcher. There are no Go template files; the dispatcher builds subject and body text directly from the alert, investigation, or incident data.
 
-### Example Output Format
+### Actual Output Format
 
-#### Alert Notification Email
-
-**Subject:** `[critical] HighMemoryUsage — firing`
-
-**Body:**
+Notification emails are plain text: **Subject = notification title**, **Body = notification message**. There is no severity prefix, branding block, or deep-link footer — the notification title/message is dispatched verbatim. A templated layout (severity prefix, per-type formatting, deep links) is future design, not shipped behavior.
 
 ```
-Alert: HighMemoryUsage
-Status: firing
-Severity: critical
-Fingerprint: abc123def456
-
-View in Alga: https://alga.example.com/alerts/abc123def456
-```
-
-#### Investigation Update Email
-
-**Subject:** `Investigation Update: HighMemoryUsage`
-
-**Body:**
-
-```
-Investigation: HighMemoryUsage
-Status: investigating
-Agent: sre-agent-1
-
-View in Alga: https://alga.example.com/investigations/42
+Subject: HighMemoryUsage
+Body:
+  <the notification message text as produced by the notification producer>
 ```
 
 ## Notification Preferences
@@ -87,7 +66,6 @@ See [Notification Preferences](/on-call/notification-preferences) for complete p
 2. Configure email delivery rules:
    - Enable/disable email notifications
    - Set severity filters (info, warning, critical)
-   - Configure quiet hours
    - Set default notification channel
 
 ### Notification Types
@@ -155,9 +133,8 @@ Alga processes email notifications through the `EmailWorker` on the `alga.email.
 
 1. **Batch notifications:** Group similar alerts into digest emails
 2. **Deduplicate:** Use notification preferences to avoid duplicate emails
-3. **Quiet hours:** Configure off-hours to reduce overnight volume
-4. **Severity filtering:** Only email critical/warning alerts by default
-5. **Upgrade plans:** Use paid SMTP tiers for higher limits in production
+3. **Severity filtering:** Only email critical/warning alerts by default
+4. **Upgrade plans:** Use paid SMTP tiers for higher limits in production
 
 ## Bounce Handling
 
@@ -328,7 +305,7 @@ Review logs for detailed email delivery information:
 ### Content Security
 
 - Sanitize user-generated content in email bodies
-- Use template escaping to prevent email injection attacks
+- Email bodies are plain text today; keep it that way (or escape HTML) if a template layer is ever added, to prevent email injection attacks
 - Limit email size to avoid DoS via large payloads
 - Validate recipient email addresses format
 - Implement rate limiting per user to prevent abuse

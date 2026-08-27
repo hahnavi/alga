@@ -224,7 +224,6 @@ Alga supports two voice providers for phone-call escalation: **Twilio** (default
 | `TWILIO_ACCOUNT_SID` |         | No       | Twilio account SID. When set via env, the UI fields are locked and env takes precedence |
 | `TWILIO_AUTH_TOKEN`  |         | No       | Twilio auth token (required for callback validation)                                    |
 | `TWILIO_FROM_NUMBER` |         | No       | Twilio outbound phone number                                                            |
-| `TWILIO_TO_NUMBERS`  |         | No       | Comma-separated list of destination phone numbers                                       |
 | `TWILIO_DISABLED`    | `false` | No       | Disable Twilio entirely                                                                 |
 
 ### Telnyx

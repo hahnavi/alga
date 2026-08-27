@@ -60,6 +60,12 @@ func (s *stubSessionStoreForGate) GetSessionByRefreshToken(string) (*store.Sessi
 func (s *stubSessionStoreForGate) RefreshSession(string, string, string) (*store.SessionRecord, error) {
 	return nil, nil
 }
+func (s *stubSessionStoreForGate) RefreshSessionByRefreshToken(string, string, string) (*store.SessionRecord, error) {
+	return nil, nil
+}
+func (s *stubSessionStoreForGate) FindRotatedOutSession(string) (*store.SessionRecord, error) {
+	return nil, nil
+}
 func (s *stubSessionStoreForGate) DeleteSession(string) error                 { return nil }
 func (s *stubSessionStoreForGate) DeleteAllUserSessions(uuid.UUID) error      { return nil }
 func (s *stubSessionStoreForGate) DeleteExpired(context.Context) (int, error) { return 0, nil }

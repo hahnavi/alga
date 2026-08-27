@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -23,7 +24,15 @@ import (
 //	alga:session:rt:<HMAC(rt)>          -> "<HMAC(session_id)>" — refresh
 //	                                       token hash maps to session id hash
 //	                                       so we can find the session without
-//	                                       a secondary index.
+//	                                       a secondary index. Rotated-out
+//	                                       tokens keep their mapping for the
+//	                                       sliding window so replays resolve
+//	                                       to the live session and are
+//	                                       detectable.
+//	alga:session:prev:<HMAC(session_id)> -> "<userID>" — short-lived tombstone
+//	                                       for a rotated-out session ID;
+//	                                       hitting one is family replay and
+//	                                       triggers full revocation.
 //	alga:user_sessions:<userID>         -> set of <HMAC(session_id)> values
 //	                                       so DeleteAllUserSessions stays O(N).
 //
@@ -32,6 +41,7 @@ import (
 const (
 	sessionKeyPrefix = "alga:session:"
 	sessionRTPrefix  = "alga:session:rt:"
+	sessionPrevID    = "alga:session:prev:"
 	userSessionsKey  = "alga:user_sessions:"
 )
 
@@ -78,7 +88,9 @@ func NewSessionStore(client *Client, sessionExpiry, sessionMaxLifetime time.Dura
 //   - rotates the stored refresh-token hash to the new value,
 //   - moves the prior hash onto the bounded `prev_refresh_tokens` list,
 //   - re-extends the document TTL,
-//   - removes the old RT mapping key and writes the new one.
+//   - removes the old RT mapping key and writes the new one,
+//   - writes a tombstone for the rotated-out session ID so a replayed old
+//     cookie is recognizable for family replay detection.
 //
 // All of these steps must succeed together or fail together; otherwise a
 // half-applied rotation could leave a refresh token "live" in either Postgres
@@ -87,12 +99,14 @@ var refreshSessionScript = `
 local sessionKey = KEYS[1]
 local oldRTKey = KEYS[2]
 local newRTKey = KEYS[3]
+local prevIDKey = KEYS[4]
 local newExpiry = tonumber(ARGV[1])
 local newRTHash = ARGV[2]
 local now = ARGV[3]
 local ip = ARGV[4]
 local ua = ARGV[5]
 local maxPrev = tonumber(ARGV[6])
+local userID = ARGV[7]
 
 local data = redis.call("GET", sessionKey)
 if not data then
@@ -114,9 +128,10 @@ session.ip = ip
 session.user_agent = ua
 
 local encoded = cjson.encode(session)
-redis.call("SET", sessionKey, encoded, "PX", newExpiry)
+redis.call("SET", sessionKey, encoded, 'PX', newExpiry)
 redis.call("DEL", oldRTKey)
-redis.call("SET", newRTKey, sessionKey, "PX", newExpiry)
+redis.call("SET", newRTKey, sessionKey, 'PX', newExpiry)
+redis.call("SET", prevIDKey, userID, 'PX', newExpiry)
 return encoded
 `
 
@@ -268,7 +283,79 @@ func (s *SessionStore) RefreshSession(sessionID string, ip, userAgent string) (*
 	}
 	// GetSession already enforces the absolute-lifetime cap, so reaching here
 	// means the session is within its max window.
+	oldIDHash := algacrypto.Default().HMACString(sessionID)
+	return s.rotateByIDHash(oldIDHash, current, ip, userAgent)
+}
 
+// RefreshSessionByRefreshToken rotates the session identified by a presented
+// refresh token. A token matching a recorded prev_refresh_tokens entry of a
+// live session is replay: the owning session is returned together with
+// store.ErrRefreshTokenReused so the caller revokes the family.
+func (s *SessionStore) RefreshSessionByRefreshToken(token string, ip, userAgent string) (*store.SessionRecord, error) {
+	if token == "" {
+		return nil, nil
+	}
+	ctx := context.Background()
+	rtHash := algacrypto.Default().HMACString(token)
+	sessionKey, err := s.client.Do(ctx, s.client.Builder().Get().Key(sessionRTPrefix+rtHash).Build()).ToString()
+	if err != nil {
+		if isValkeyNil(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get session by refresh token: %w", err)
+	}
+	val, err := s.client.Do(ctx, s.client.Builder().Get().Key(sessionKey).Build()).ToString()
+	if err != nil {
+		if isValkeyNil(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to load session: %w", err)
+	}
+	rec, err := unmarshalSession(val)
+	if err != nil {
+		return nil, err
+	}
+	if !withinAbsoluteLifetime(rec, s.sessionMaxLifetime) {
+		_ = s.DeleteSession(rec.ID)
+		return nil, nil
+	}
+	if !algacrypto.ConstantTimeEqualString(rec.RefreshTokenHash, rtHash) {
+		// The mapping key resolved, but the presented token is a previously
+		// rotated-out hash: replay.
+		return rec, store.ErrRefreshTokenReused
+	}
+	return s.rotateByIDHash(strings.TrimPrefix(sessionKey, sessionKeyPrefix), rec, ip, userAgent)
+}
+
+// FindRotatedOutSession resolves a presented session ID against the
+// rotated-out ID tombstones written by the refresh script, returning the
+// owning session (UserID populated) while the tombstone lives. Unknown IDs
+// return (nil, nil).
+func (s *SessionStore) FindRotatedOutSession(id string) (*store.SessionRecord, error) {
+	if id == "" {
+		return nil, nil
+	}
+	ctx := context.Background()
+	idHash := algacrypto.Default().HMACString(id)
+	userIDStr, err := s.client.Do(ctx, s.client.Builder().Get().Key(sessionPrevID+idHash).Build()).ToString()
+	if err != nil {
+		if isValkeyNil(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to probe rotated-out session: %w", err)
+	}
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid rotated-session tombstone: %w", err)
+	}
+	return &store.SessionRecord{IDHash: idHash, UserID: userID}, nil
+}
+
+// rotateByIDHash performs the rotation for the session document stored under
+// sessionKeyPrefix+oldIDHash. The Lua script rotates the refresh token,
+// records the bounded prev history, and writes the rotated-out ID tombstone
+// atomically; the caller then rekeys the document to the new session-id hash.
+func (s *SessionStore) rotateByIDHash(oldIDHash string, current *store.SessionRecord, ip, userAgent string) (*store.SessionRecord, error) {
 	newRefreshToken, err := generateSecureToken(32)
 	if err != nil {
 		return nil, err
@@ -280,7 +367,6 @@ func (s *SessionStore) RefreshSession(sessionID string, ip, userAgent string) (*
 		return nil, err
 	}
 	newIDHash := algacrypto.Default().HMACString(newSessionID)
-	oldIDHash := algacrypto.Default().HMACString(sessionID)
 
 	ctx := context.Background()
 	expiryMs := int64(s.sessionExpiry / time.Millisecond)
@@ -292,6 +378,7 @@ func (s *SessionStore) RefreshSession(sessionID string, ip, userAgent string) (*
 		sessionKeyPrefix + oldIDHash,
 		sessionRTPrefix + current.RefreshTokenHash,
 		sessionRTPrefix + newRTHash,
+		sessionPrevID + oldIDHash,
 	}
 	args := []string{
 		strconv.FormatInt(expiryMs, 10),
@@ -300,6 +387,7 @@ func (s *SessionStore) RefreshSession(sessionID string, ip, userAgent string) (*
 		ip,
 		userAgent,
 		strconv.Itoa(store.MaxPrevRefreshTokens()),
+		current.UserID.String(),
 	}
 
 	result, err := s.refreshScript.Exec(ctx, s.client.client, keys, args).ToString()
@@ -324,13 +412,15 @@ func (s *SessionStore) RefreshSession(sessionID string, ip, userAgent string) (*
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal refreshed session: %w", err)
 	}
-	// Write the new key, then delete the old key + its RT mapping and repoint
-	// the new RT mapping at the new session key.
+	// Write the new key, then delete the old key, repoint the new RT mapping
+	// at the new session key, and keep the rotated-out RT mapping resolvable
+	// so a replayed token can be recognized against the prev history.
 	if err := s.client.Do(ctx, s.client.Builder().Set().Key(sessionKeyPrefix+newIDHash).Value(string(data)).PxMilliseconds(expiryMs).Build()).Error(); err != nil {
 		return nil, fmt.Errorf("failed to write rekeyed session: %w", err)
 	}
 	s.client.Do(ctx, s.client.Builder().Del().Key(sessionKeyPrefix+oldIDHash).Build())
 	s.client.Do(ctx, s.client.Builder().Set().Key(sessionRTPrefix+newRTHash).Value(sessionKeyPrefix+newIDHash).PxMilliseconds(expiryMs).Build())
+	s.client.Do(ctx, s.client.Builder().Set().Key(sessionRTPrefix+rec.RefreshTokenHash).Value(sessionKeyPrefix+newIDHash).PxMilliseconds(expiryMs).Build())
 
 	rec.ID = newSessionID
 	rec.IDHash = newIDHash
@@ -438,7 +528,9 @@ func (s *SessionStore) refreshSessionFallback(idHash string, current *store.Sess
 		return nil, fmt.Errorf("failed to update session: %w", err)
 	}
 	if len(prev) > 0 {
-		s.client.Do(ctx, s.client.Builder().Del().Key(sessionRTPrefix+prev[0]).Build())
+		// Keep the rotated-out token resolvable so a replayed token is
+		// recognizable against the prev history (replay detection).
+		s.client.Do(ctx, s.client.Builder().Set().Key(sessionRTPrefix+prev[0]).Value(sessionKeyPrefix+idHash).PxMilliseconds(expiryMs).Build())
 	}
 	s.client.Do(ctx, s.client.Builder().Set().Key(sessionRTPrefix+newRTHash).Value(sessionKeyPrefix+idHash).PxMilliseconds(expiryMs).Build())
 	return current, nil

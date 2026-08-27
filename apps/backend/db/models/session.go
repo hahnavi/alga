@@ -15,6 +15,7 @@ type Session struct {
 	IDHash                 string    `bun:"id_hash,notnull,unique"`
 	RefreshTokenHash       string    `bun:"refresh_token_hash"`
 	PrevRefreshTokenHashes []string  `bun:"prev_refresh_token_hashes,type:jsonb"`
+	PrevSessionIDHashes    []string  `bun:"prev_session_id_hashes,type:jsonb"`
 	FamilyID               string    `bun:"family_id,notnull"`
 	CreatedAt              time.Time `bun:"created_at,notnull,default:current_timestamp"`
 	ExpiresAt              time.Time `bun:"expires_at,notnull"`

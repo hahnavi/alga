@@ -29,4 +29,8 @@ var (
 	ErrCredentialProviderInUse  = errors.New("credential provider has dependent secrets and cannot be removed")
 	ErrSystemCredentialProvider = errors.New("credential provider is a system default and cannot be removed or reconfigured")
 	ErrOpenAlertExists          = errors.New("an open alert already exists for this fingerprint")
+	// ErrRefreshTokenReused signals that a presented refresh token matches a
+	// previously-rotated hash of a live session (replay). Callers revoke the
+	// session family; the resolved owning session accompanies the error.
+	ErrRefreshTokenReused = errors.New("refresh token reuse detected")
 )

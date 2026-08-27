@@ -22,7 +22,6 @@ type WebhookTokenRecord struct {
 	CreatedAt    time.Time  `json:"created_at"`
 	LastUsedAt   *time.Time `json:"last_used_at,omitempty"`
 	ExpiresAt    *time.Time `json:"expires_at,omitempty"`
-	Revoked      bool       `json:"revoked"`
 }
 
 func hashToken(token string) string {
@@ -72,7 +71,6 @@ func (s *pgWebhookTokenStore) CreateToken(name string, expiresAt *time.Time) (*W
 		TokenHash:    hashToken(tokenStr),
 		LookupPrefix: lookupPrefix(tokenStr),
 		CreatedAt:    time.Now().UTC(),
-		Revoked:      false,
 		ExpiresAt:    expiresAt,
 	}
 
@@ -88,7 +86,6 @@ func (s *pgWebhookTokenStore) CreateToken(name string, expiresAt *time.Time) (*W
 		LookupPrefix: m.LookupPrefix,
 		Token:        tokenStr,
 		CreatedAt:    m.CreatedAt,
-		Revoked:      false,
 		ExpiresAt:    expiresAt,
 	}
 	return record, nil
@@ -99,7 +96,7 @@ func (s *pgWebhookTokenStore) ListTokens() ([]WebhookTokenRecord, error) {
 	defer cancel()
 
 	var tokens []models.WebhookToken
-	err := s.db.NewSelect().Model(&tokens).Where("revoked = ?", false).Scan(ctx)
+	err := s.db.NewSelect().Model(&tokens).Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list tokens: %w", err)
 	}
@@ -116,7 +113,6 @@ func (s *pgWebhookTokenStore) ListTokens() ([]WebhookTokenRecord, error) {
 			CreatedAt:    t.CreatedAt,
 			LastUsedAt:   t.LastUsedAt,
 			ExpiresAt:    t.ExpiresAt,
-			Revoked:      t.Revoked,
 		})
 	}
 	return records, nil
@@ -153,7 +149,6 @@ func (s *pgWebhookTokenStore) ValidateToken(token string) (bool, error) {
 	var tokens []models.WebhookToken
 	err := s.db.NewSelect().Model(&tokens).
 		Where("lookup_prefix = ?", prefix).
-		Where("revoked = ?", false).
 		Scan(ctx)
 	if err != nil {
 		return false, fmt.Errorf("failed to validate token: %w", err)

@@ -53,7 +53,6 @@ type IncidentRecord struct {
 	ClosedAt                 *time.Time     `json:"closed_at,omitempty"`
 	TriagedAt                *time.Time     `json:"triaged_at,omitempty"`
 	TriageReport             map[string]any `json:"triage_report,omitempty"`
-	AutoConfirmed            bool           `json:"auto_confirmed"`
 	Tags                     []string       `json:"tags,omitempty"`
 	CustomFields             map[string]any `json:"custom_fields,omitempty"`
 	CreatedAt                time.Time      `json:"created_at"`
@@ -204,7 +203,6 @@ func (s *pgIncidentStore) CreateIncident(ctx context.Context, record *IncidentRe
 		ClosedAt:             record.ClosedAt,
 		TriagedAt:            record.TriagedAt,
 		TriageReport:         record.TriageReport,
-		AutoConfirmed:        record.AutoConfirmed,
 		Tags:                 record.Tags,
 		CustomFields:         record.CustomFields,
 	}
@@ -385,7 +383,6 @@ func (s *pgIncidentStore) UpdateIncident(ctx context.Context, incidentNumber int
 	if record.TriageReport != nil {
 		q = q.Set("triage_report = ?", record.TriageReport)
 	}
-	q = q.Set("auto_confirmed = ?", record.AutoConfirmed)
 	if record.Tags != nil {
 		q = q.Set("tags = ?", record.Tags)
 	}
@@ -997,7 +994,6 @@ func (s *pgIncidentStore) toIncidentRecord(inc *models.Incident) *IncidentRecord
 		ClosedAt:             inc.ClosedAt,
 		TriagedAt:            inc.TriagedAt,
 		TriageReport:         inc.TriageReport,
-		AutoConfirmed:        inc.AutoConfirmed,
 		Tags:                 inc.Tags,
 		CustomFields:         inc.CustomFields,
 		CreatedAt:            inc.CreatedAt,

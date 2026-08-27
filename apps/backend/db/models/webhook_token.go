@@ -17,5 +17,4 @@ type WebhookToken struct {
 	CreatedAt    time.Time  `bun:"created_at,notnull,default:current_timestamp"`
 	LastUsedAt   *time.Time `bun:"last_used_at"`
 	ExpiresAt    *time.Time `bun:"expires_at"`
-	Revoked      bool       `bun:"revoked,notnull,default:false"`
 }

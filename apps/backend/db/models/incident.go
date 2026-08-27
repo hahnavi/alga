@@ -44,7 +44,6 @@ type Incident struct {
 	ClosedAt                 *time.Time     `bun:"closed_at"`
 	TriagedAt                *time.Time     `bun:"triaged_at"`
 	TriageReport             map[string]any `bun:"triage_report,type:jsonb"`
-	AutoConfirmed            bool           `bun:"auto_confirmed,notnull,default:false"`
 	Tags                     []string       `bun:"tags,type:jsonb,notnull,default:'[]'"`
 	CustomFields             map[string]any `bun:"custom_fields,type:jsonb,notnull,default:'{}'"`
 }

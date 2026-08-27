@@ -16,6 +16,7 @@ import (
 var (
 	ErrAccountLocked      = errors.New("account is locked due to too many failed login attempts")
 	ErrInvalidCredentials = errors.New("invalid credentials")
+	ErrSlackIdentityTaken = errors.New("slack identity is already linked to another user")
 )
 
 type UserRecord struct {
@@ -486,6 +487,11 @@ func (s *pgUserStore) SetSlackIdentity(ctx context.Context, userID uuid.UUID, sl
 		Where("id = ?", userID).
 		Exec(ctx)
 	if err != nil {
+		// users_slack_user_id is a partial unique index over non-empty values,
+		// so a second user claiming an identity already bound elsewhere lands here.
+		if pgIsDuplicateKey(err) {
+			return ErrSlackIdentityTaken
+		}
 		return fmt.Errorf("failed to set slack identity: %w", err)
 	}
 	return nil

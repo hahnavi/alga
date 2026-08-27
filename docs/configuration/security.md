@@ -74,7 +74,7 @@ When `GOOGLE_CLIENT_ID` is set, the login page displays a "Sign in with Google" 
 2. Browser redirects to Google's authorization page
 3. User authorizes the application
 4. Google redirects back to Alga's callback URL
-5. Alga creates or finds the user account automatically and establishes a session
+5. Alga finds an existing account linked by Google ID or matching a verified email and establishes a session. Accounts are provisioned via setup or invite — sign-in never creates one.
 
 ## Slack Sign-In
 

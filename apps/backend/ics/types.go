@@ -75,7 +75,19 @@ const (
 	EndReasonIncidentResolved EndReason = "incident_resolved"
 	EndReasonAssigned         EndReason = "assigned"
 	EndReasonAgentOffline     EndReason = "agent_offline"
+	EndReasonIncidentClosed   EndReason = "incident_closed"
 )
+
+// ValidEndReason reports whether r is a persistable ended_reason; the DB CHECK
+// (migrations 00006 + 00020) rejects anything else, so handlers validate at the
+// edge to return 400 instead of a constraint-violation 500.
+func ValidEndReason(r EndReason) bool {
+	switch r {
+	case EndReasonReplaced, EndReasonIncidentResolved, EndReasonAssigned, EndReasonAgentOffline, EndReasonIncidentClosed:
+		return true
+	}
+	return false
+}
 
 type DocumentSection string
 

@@ -118,6 +118,11 @@ type IncidentStore interface {
 	ListActiveIncidentsForServices(ctx context.Context, serviceIDs []uuid.UUID) ([]IncidentRecord, error)
 	GetIncidentBySlackChannel(ctx context.Context, channelID string) (*IncidentRecord, error)
 	SetIncidentWarRoomMeet(ctx context.Context, incidentNumber int64, spaceName, conferenceURL string) error
+	// ClearSLAResolvedAt nulls the SLA resolve stamp as part of the
+	// handler-explicit reopen reset (DT-E8) so resolve-breach detection can
+	// fire again. Deliberately not part of applyStatusTimestampsBun, whose
+	// "active" case also serves detected→active promotion.
+	ClearSLAResolvedAt(ctx context.Context, incidentNumber int64) error
 }
 
 type pgIncidentStore struct {
@@ -610,6 +615,23 @@ func applyStatusTimestampsBun(q *bun.UpdateQuery, toStatus string, now time.Time
 		q = q.Set("closed_at = ?", now)
 	}
 	return q
+}
+
+// ClearSLAResolvedAt nulls the incident's SLA resolve stamp (DT-E8 reopen
+// reset) so resolve-breach detection can fire again after a reopen.
+func (s *pgIncidentStore) ClearSLAResolvedAt(ctx context.Context, incidentNumber int64) error {
+	ctx, cancel := pgctx(ctx)
+	defer cancel()
+
+	_, err := s.db.NewUpdate().Model((*models.Incident)(nil)).
+		Set("sla_resolved_at = ?", nil).
+		Where("incident_number = ?", incidentNumber).
+		Where("deleted_at IS NULL").
+		Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to clear sla_resolved_at: %w", err)
+	}
+	return nil
 }
 
 // SetIncidentWarRoomMeet persists the Google Meet war room for an incident.

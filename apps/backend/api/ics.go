@@ -434,7 +434,11 @@ func (s *Server) handleEndICSRole(w http.ResponseWriter, r *http.Request, incide
 		return
 	}
 	if req.EndedReason == "" {
-		req.EndedReason = "replaced"
+		req.EndedReason = string(ics.EndReasonReplaced)
+	}
+	if !ics.ValidEndReason(ics.EndReason(req.EndedReason)) {
+		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "unknown ended_reason")
+		return
 	}
 	if err := s.icsRoleStore.EndRole(r.Context(), roleID, ics.EndReason(req.EndedReason)); err != nil {
 		if errors.Is(err, store.ErrICSRoleNotFound) || errors.Is(err, store.ErrIncidentNotFound) {

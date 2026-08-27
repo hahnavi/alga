@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -54,6 +55,10 @@ func (s *recordingAuditStore) Query(map[string]any) ([]store.AuditRecord, int64,
 
 func (s *recordingAuditStore) GetRecentEvents(int) ([]store.AuditRecord, error) {
 	return nil, nil
+}
+
+func (s *recordingAuditStore) DeleteOlderThan(_ context.Context, _ time.Time) (int64, error) {
+	return 0, nil
 }
 
 func ptrTime(t time.Time) *time.Time { return &t }

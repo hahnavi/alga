@@ -27,6 +27,9 @@ type NotificationDeliveryStore interface {
 	ListByUser(ctx context.Context, userID uuid.UUID, limit, skip int64) ([]NotificationDeliveryRecord, error)
 	ListByIncident(ctx context.Context, incidentID uuid.UUID) ([]NotificationDeliveryRecord, error)
 	UpdateStatus(ctx context.Context, id uuid.UUID, status, errMsg string) error
+	// DeleteOlderThan purges delivery-log rows older than the cutoff in
+	// bounded batches (DT-E3 retention family).
+	DeleteOlderThan(ctx context.Context, cutoff time.Time) (int64, error)
 }
 
 type pgNotificationDeliveryStore struct {
@@ -125,4 +128,14 @@ func (s *pgNotificationDeliveryStore) toRecord(l *models.NotificationDeliveryLog
 		ErrorMessage:     l.ErrorMessage,
 		CreatedAt:        l.CreatedAt,
 	}
+}
+
+// DeleteOlderThan hard-deletes delivery-log rows older than the cutoff in
+// bounded batches (DT-E3 retention family; diagnostic append-only data riding
+// DATA_RETENTION_DAYS).
+func (s *pgNotificationDeliveryStore) DeleteOlderThan(ctx context.Context, cutoff time.Time) (int64, error) {
+	ctx, cancel := pgctx(ctx)
+	defer cancel()
+
+	return deleteOlderThanBatched[models.NotificationDeliveryLog](ctx, s.db, "created_at", cutoff)
 }

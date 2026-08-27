@@ -177,6 +177,9 @@ type AuditStore interface {
 	LogRecord(rec AuditRecord)
 	Query(filter map[string]any) ([]AuditRecord, int64, error)
 	GetRecentEvents(limit int) ([]AuditRecord, error)
+	// DeleteOlderThan purges audit rows older than the cutoff in bounded
+	// batches (DT-E3 retention family).
+	DeleteOlderThan(ctx context.Context, cutoff time.Time) (int64, error)
 }
 
 type pgAuditStore struct {
@@ -370,4 +373,15 @@ func (s *pgAuditStore) GetRecentEvents(limit int) ([]AuditRecord, error) {
 	}
 
 	return pgAuditLogsToRecords(logs), nil
+}
+
+// DeleteOlderThan hard-deletes audit rows older than the cutoff in bounded
+// batches (DT-E3 retention family). Audit rows are the compliance trail, so
+// the window is operator-controlled (AUDIT_RETENTION_DAYS) and defaults to
+// keep-forever when unset or non-positive at the call site.
+func (s *pgAuditStore) DeleteOlderThan(ctx context.Context, cutoff time.Time) (int64, error) {
+	ctx, cancel := pgctx(ctx)
+	defer cancel()
+
+	return deleteOlderThanBatched[models.AuditLog](ctx, s.db, "timestamp", cutoff)
 }

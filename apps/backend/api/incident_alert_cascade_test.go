@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -49,6 +50,9 @@ func (a *cascadeFakeAudit) Query(filter map[string]any) ([]store.AuditRecord, in
 	return nil, 0, nil
 }
 func (a *cascadeFakeAudit) GetRecentEvents(limit int) ([]store.AuditRecord, error) { return nil, nil }
+func (a *cascadeFakeAudit) DeleteOlderThan(_ context.Context, _ time.Time) (int64, error) {
+	return 0, nil
+}
 
 type cascadeFakeSSE struct {
 	events []sse.Event

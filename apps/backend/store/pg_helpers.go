@@ -191,3 +191,31 @@ func nextSeq(ctx context.Context, db bun.IDB, seq string) (int64, error) {
 	}
 	return n, nil
 }
+
+// retentionDeleteBatch caps each DELETE in DeleteOlderThan-style purges so a
+// large backlogged window releases locks between batches instead of holding a
+// single long transaction (DT-E3).
+const retentionDeleteBatch = 5000
+
+// deleteOlderThanBatched hard-deletes rows of model older than cutoff in
+// bounded batches, returning the total removed. col is the caller-supplied
+// timestamp column (a compile-time constant at each call site, never user
+// input). The batch loop stops on the first not-full batch.
+func deleteOlderThanBatched[T any](ctx context.Context, db bun.IDB, col string, cutoff time.Time) (int64, error) {
+	var total int64
+	for {
+		sub := db.NewSelect().Model((*T)(nil)).Column("id").Where(col+" < ?", cutoff).Limit(retentionDeleteBatch)
+		res, err := db.NewDelete().Model((*T)(nil)).Where("id IN (?)", sub).Exec(ctx)
+		if err != nil {
+			return total, fmt.Errorf("retention delete on %s: %w", col, err)
+		}
+		n, err := res.RowsAffected()
+		if err != nil {
+			return total, fmt.Errorf("retention delete rows affected: %w", err)
+		}
+		total += n
+		if n < retentionDeleteBatch {
+			return total, nil
+		}
+	}
+}

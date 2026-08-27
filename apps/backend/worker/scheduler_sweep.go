@@ -407,9 +407,11 @@ func (s *InvestigationScheduler) remindUpcomingOnCall(ctx context.Context) {
 	}
 }
 
-// runPrune periodically deletes alerts older than the retention cutoff
-// (DATA_RETENTION_DAYS, 0 = keep forever). Whether the underlying store
-// filters by status is implementation-defined.
+// runPrune periodically deletes data past its retention window (DT-E3):
+// resolved alerts, triage results, and notification delivery logs ride
+// DATA_RETENTION_DAYS (0 = keep forever); audit_logs uses its own longer
+// AUDIT_RETENTION_DAYS (0 = keep forever); password-reset tokens are purged
+// unconditionally once used or a week past expiry (security hygiene, no knob).
 func (s *InvestigationScheduler) runPrune() {
 	defer s.wg.Done()
 	ticker := time.NewTicker(s.pruneInterval)
@@ -435,14 +437,47 @@ func (s *InvestigationScheduler) pruneTick(ctx context.Context) {
 	if !s.acquireLeadership(ctx) {
 		return
 	}
-	cutoff := time.Now().UTC().AddDate(0, 0, -s.dataRetentionDays)
-	n, err := s.alertStore.DeleteOlderThan(ctx, cutoff)
-	if err != nil {
-		logger.Error("Data retention prune failed to delete old alerts", "component", "scheduler", "error", err)
-		return
+	now := time.Now().UTC()
+
+	if s.dataRetentionDays > 0 {
+		cutoff := now.AddDate(0, 0, -s.dataRetentionDays)
+		n, err := s.alertStore.DeleteOlderThan(ctx, cutoff)
+		if err != nil {
+			logger.Error("Data retention prune failed to delete old alerts", "component", "scheduler", "error", err)
+		} else if n > 0 {
+			logger.Info("Data retention prune deleted resolved alerts", "component", "scheduler", "count", n, "cutoff", cutoff.Format(time.RFC3339))
+		}
+		if s.triageStore != nil {
+			if n, err := s.triageStore.DeleteOlderThan(ctx, cutoff); err != nil {
+				logger.Error("Data retention prune failed to delete old triage results", "component", "scheduler", "error", err)
+			} else if n > 0 {
+				logger.Info("Data retention prune deleted triage results", "component", "scheduler", "count", n)
+			}
+		}
+		if s.deliveryStore != nil {
+			if n, err := s.deliveryStore.DeleteOlderThan(ctx, cutoff); err != nil {
+				logger.Error("Data retention prune failed to delete old notification delivery logs", "component", "scheduler", "error", err)
+			} else if n > 0 {
+				logger.Info("Data retention prune deleted notification delivery logs", "component", "scheduler", "count", n)
+			}
+		}
 	}
-	if n > 0 {
-		logger.Info("Data retention prune deleted resolved alerts", "component", "scheduler", "count", n, "cutoff", cutoff.Format(time.RFC3339))
+
+	if s.auditStore != nil && s.auditRetentionDays > 0 {
+		cutoff := now.AddDate(0, 0, -s.auditRetentionDays)
+		if n, err := s.auditStore.DeleteOlderThan(ctx, cutoff); err != nil {
+			logger.Error("Data retention prune failed to delete old audit logs", "component", "scheduler", "error", err)
+		} else if n > 0 {
+			logger.Info("Data retention prune deleted audit logs", "component", "scheduler", "count", n, "cutoff", cutoff.Format(time.RFC3339))
+		}
+	}
+
+	if s.passwordResetStore != nil {
+		if n, err := s.passwordResetStore.DeleteConsumedExpired(ctx, now.AddDate(0, 0, -7)); err != nil {
+			logger.Error("Data retention prune failed to delete consumed/expired password reset tokens", "component", "scheduler", "error", err)
+		} else if n > 0 {
+			logger.Info("Data retention prune deleted password reset tokens", "component", "scheduler", "count", n)
+		}
 	}
 }
 

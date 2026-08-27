@@ -121,9 +121,9 @@ The Mattermost integration exposes these internal methods:
 
 Thread replies from Mattermost are delivered to Alga via the inbound webhook handler (`webhook/mattermost.go`). The Mattermost plugin forwards post events to Alga, authenticated by the shared `MATTERMOST_WEBHOOK_SECRET`.
 
-## User-Level Binding
+## User-Level Binding (Not Yet Implemented)
 
-Individual users can link their personal Mattermost account to receive DM notifications. Go to **Profile → Connected Accounts** to link your Mattermost account. Once linked, [notification preferences](/on-call/notification-preferences) can route specific notification types to Mattermost DMs.
+Per-user Mattermost DMs are **not shipped**: there is no Mattermost account binding (no "Connected Accounts" entry for Mattermost), and the notification dispatcher currently marks the `mattermost` preference channel as `skipped`. Selecting Mattermost in [notification preferences](/on-call/notification-preferences) is accepted but does not deliver DMs yet. Team-channel delivery via routes/plugins works today (see above).
 
 ## Disabling
 

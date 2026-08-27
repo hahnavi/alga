@@ -119,7 +119,6 @@ type Config struct {
 	TwilioAccountSID         string                   `yaml:"twilio_account_sid"`
 	TwilioAuthToken          string                   `yaml:"twilio_auth_token"`
 	TwilioFromNumber         string                   `yaml:"twilio_from_number"`
-	TwilioToNumbers          []string                 `yaml:"twilio_to_numbers"`
 	TwilioDisabled           bool                     `yaml:"twilio_disabled"`
 	VoiceProvider            string                   `yaml:"voice_provider"` // empty means "twilio"
 	TelnyxAPIKey             string                   `yaml:"telnyx_api_key"`
@@ -645,9 +644,6 @@ func Load() (*Config, error) {
 	}
 	if v := os.Getenv("TWILIO_FROM_NUMBER"); v != "" {
 		cfg.TwilioFromNumber = v
-	}
-	if v := os.Getenv("TWILIO_TO_NUMBERS"); v != "" {
-		cfg.TwilioToNumbers = strings.Split(v, ",")
 	}
 	if v := os.Getenv("TWILIO_DISABLED"); v != "" {
 		if parsed, err := strconv.ParseBool(v); err == nil {

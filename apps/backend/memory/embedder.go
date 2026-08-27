@@ -41,13 +41,25 @@ type openAIEmbeddingResponse struct {
 	} `json:"usage"`
 }
 
-func NewOpenAIEmbedder(baseURL, apiKey, model string) Embedder {
+// SupportedEmbeddingDimension is the single vector dimension agent memory
+// persists: agent_memories.vec is typed vector(1536) (migration 00009), so any
+// embedder producing another dimension would fail at insert time. DT-E2 pinned
+// the supported dimension rather than widening storage speculatively.
+const SupportedEmbeddingDimension = 1536
+
+func NewOpenAIEmbedder(baseURL, apiKey, model string) (Embedder, error) {
 	if model == "" {
 		model = "text-embedding-3-small"
 	}
-	dim := 1536
+	dim := SupportedEmbeddingDimension
 	if strings.Contains(model, "large") {
 		dim = 3072
+	}
+	if dim != SupportedEmbeddingDimension {
+		return nil, fmt.Errorf(
+			"memory embedding model %q produces %d-dimensional vectors but agent memory stores vector(%d); configure a 1536-dimension model (DT-E2 pins the column dimension)",
+			model, dim, SupportedEmbeddingDimension,
+		)
 	}
 	return &openaiEmbedder{
 		baseURL:    strings.TrimRight(baseURL, "/"),
@@ -55,7 +67,7 @@ func NewOpenAIEmbedder(baseURL, apiKey, model string) Embedder {
 		model:      model,
 		dimension:  dim,
 		httpClient: &http.Client{Timeout: 30 * time.Second},
-	}
+	}, nil
 }
 
 func (e *openaiEmbedder) Embed(ctx context.Context, texts []string) ([][]float32, error) {
@@ -125,7 +137,7 @@ type noopEmbedder struct {
 }
 
 func NewNoopEmbedder() Embedder {
-	return &noopEmbedder{dim: 1536}
+	return &noopEmbedder{dim: SupportedEmbeddingDimension}
 }
 
 func (e *noopEmbedder) Embed(_ context.Context, texts []string) ([][]float32, error) {

@@ -92,8 +92,6 @@ Background processing is split between **queue-consuming workers** (driven by Ra
 | Worker                         | Queue                                | Prefetch                      | Responsibility                                                                                                                                                                               |
 | ------------------------------ | ------------------------------------ | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **AlertWorker**                | `alga.alert.process`                 | 10                            | Processes inbound webhook alerts; 4x retry with backoff                                                                                                                                      |
-| **AuditWorker**                | `alga.audit.log`                     | 10                            | Persists audit events                                                                                                                                                                        |
-| **NotificationWorker**         | `alga.notification.send`             | 10                            | Legacy stub; immediately acks (superseded by NotificationDispatchWorker)                                                                                                                     |
 | **InvestigateWorker**          | `alga.investigate.process`           | `MaxConcurrentInvestigations` | Creates investigation records, resolves threads, posts cross-provider links, publishes SSE. Two-layer idempotency (Valkey SETNX + PG unique index). Retry via `alga.investigate.retry.{1-4}` |
 | **IncidentWorker**             | `alga.incident.process`              | 1                             | Creates incidents from correlated alerts, reserves number, computes priority/SLA, links alerts, creates timeline, auto-assigns IC from on-call, triggers escalation                          |
 | **EscalationWorker**           | `alga.escalation.process`            | 5                             | Evaluates an escalation policy level, dispatches notifications, seeds Valkey state for the sweep                                                                                             |
@@ -382,8 +380,6 @@ RabbitMQ uses the following exchanges to route messages through the async pipeli
 | Exchange                     | Type   | Purpose                        |
 | ---------------------------- | ------ | ------------------------------ |
 | `alga.alerts`                | direct | Alert webhook processing       |
-| `alga.notifications`         | direct | Alert notification delivery    |
-| `alga.audit`                 | fanout | Audit log persistence          |
 | `alga.email`                 | direct | Email delivery                 |
 | `alga.investigate`           | direct | Investigation dispatch         |
 | `alga.triage`                | direct | Alert triage                   |
@@ -394,7 +390,9 @@ RabbitMQ uses the following exchanges to route messages through the async pipeli
 | `alga.ics-provision`         | direct | ICS war room provisioning      |
 | `alga.dlx`                   | direct | Dead letter collection         |
 
-Each exchange routes to a dedicated processing queue plus `alga.dead_letter`. Domains that support retries (alert, investigate, triage, incident, escalation, notification-dispatch) add four retry queues (`<domain>.retry.{1-4}`). Failed messages are dead-lettered into the appropriate retry queue with a per-message TTL; when the TTL expires they return to the main exchange for reprocessing. The retry schedule is 1m → 5m → 15m → 1h with ±20% jitter, after which messages land in `alga.dead_letter`.
+Each exchange routes to a dedicated processing queue plus `alga.dead_letter`.
+
+> **Legacy broker cleanup (optional):** RabbitMQ only deletes queues/exchanges when asked. After ALL replicas run a version from August 2026 or later, two retired topology objects may still exist on the broker as durable leftovers of removed legacy paths: queue `alga.audit.log`, its binding and exchange `alga.audit`, plus queue `alga.notification.send`, its binding and exchange `alga.notifications`. Removing them is cosmetic housekeeping (`rabbitmqctl delete_queue alga.audit.log`, `rabbitmqctl delete_exchange alga.audit`, etc.) and MUST NOT be done while an older replica could still redeclare them. Domains that support retries (alert, investigate, triage, incident, escalation, notification-dispatch) add four retry queues (`<domain>.retry.{1-4}`). Failed messages are dead-lettered into the appropriate retry queue with a per-message TTL; when the TTL expires they return to the main exchange for reprocessing. The retry schedule is 1m → 5m → 15m → 1h with ±20% jitter, after which messages land in `alga.dead_letter`.
 
 ## Technology Stack
 

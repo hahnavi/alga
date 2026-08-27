@@ -63,8 +63,6 @@ func TestEventTypesUseAggregateActionNaming(t *testing.T) {
 	t.Parallel()
 	types := []string{
 		EventTypeAlertReceived,
-		EventTypeNotificationRequested,
-		EventTypeAuditRecorded,
 		EventTypeTriageRequested,
 		EventTypeInvestigationRequested,
 		EventTypeEmailRequested,
@@ -91,8 +89,6 @@ func TestEveryMessageTypeCarriesEnvelope(t *testing.T) {
 	t.Parallel()
 	messages := []any{
 		&AlertMessage{},
-		&NotificationMessage{},
-		&AuditMessage{},
 		&InvestigateMessage{},
 		&EmailMessage{},
 		&TriageMessage{},

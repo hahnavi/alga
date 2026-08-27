@@ -10,23 +10,18 @@ import (
 )
 
 const (
-	ExchangeAlerts        = "alga.alerts"
-	ExchangeNotifications = "alga.notifications"
-	ExchangeAudit         = "alga.audit"
-	ExchangeDLX           = "alga.dlx"
+	ExchangeAlerts = "alga.alerts"
+	ExchangeDLX    = "alga.dlx"
 
-	QueueAlertProcess     = "alga.alert.process"
-	QueueNotificationSend = "alga.notification.send"
-	QueueAuditLog         = "alga.audit.log"
-	QueueDeadLetter       = "alga.dead_letter"
+	QueueAlertProcess = "alga.alert.process"
+	QueueDeadLetter   = "alga.dead_letter"
 
 	QueueAlertRetry1 = "alga.alert.retry.1"
 	QueueAlertRetry2 = "alga.alert.retry.2"
 	QueueAlertRetry3 = "alga.alert.retry.3"
 	QueueAlertRetry4 = "alga.alert.retry.4"
 
-	RoutingKeyAlertProcess     = "process"
-	RoutingKeyNotificationSend = "send"
+	RoutingKeyAlertProcess = "process"
 
 	ExchangeEmail       = "alga.email"
 	QueueEmailSend      = "alga.email.send"
@@ -98,9 +93,7 @@ func declareTopology(c *Client) error {
 
 	// Main exchanges
 	for name, kind := range map[string]string{
-		ExchangeAlerts:        "direct",
-		ExchangeNotifications: "direct",
-		ExchangeAudit:         "fanout",
+		ExchangeAlerts: "direct",
 	} {
 		if err := ch.ExchangeDeclare(name, kind, true, false, false, false, nil); err != nil {
 			logger.Error("failed to declare exchange", "component", "rabbitmq", "exchange", name, "error", err)
@@ -118,34 +111,16 @@ func declareTopology(c *Client) error {
 	}
 
 	// Main queues with DLX
-	mainQueues := map[string]struct {
-		exchange   string
-		routingKey string
-	}{
-		QueueAlertProcess:     {ExchangeAlerts, RoutingKeyAlertProcess},
-		QueueNotificationSend: {ExchangeNotifications, RoutingKeyNotificationSend},
-		QueueAuditLog:         {ExchangeAudit, ""},
+	alertArgs := amqp.Table{
+		"x-dead-letter-exchange": ExchangeDLX,
 	}
-
-	for name, cfg := range mainQueues {
-		args := amqp.Table{
-			"x-dead-letter-exchange": ExchangeDLX,
-		}
-		if _, err := ch.QueueDeclare(name, true, false, false, false, args); err != nil {
-			logger.Error("failed to declare queue", "component", "rabbitmq", "queue", name, "error", err)
-			return fmt.Errorf("declare queue %s: %w", name, err)
-		}
-		if cfg.routingKey != "" {
-			if err := ch.QueueBind(name, cfg.routingKey, cfg.exchange, false, nil); err != nil {
-				logger.Error("failed to bind queue", "component", "rabbitmq", "queue", name, "error", err)
-				return fmt.Errorf("bind queue %s: %w", name, err)
-			}
-		} else {
-			if err := ch.QueueBind(name, "", cfg.exchange, false, nil); err != nil {
-				logger.Error("failed to bind queue", "component", "rabbitmq", "queue", name, "error", err)
-				return fmt.Errorf("bind queue %s: %w", name, err)
-			}
-		}
+	if _, err := ch.QueueDeclare(QueueAlertProcess, true, false, false, false, alertArgs); err != nil {
+		logger.Error("failed to declare alert queue", "component", "rabbitmq", "error", err)
+		return fmt.Errorf("declare alert queue: %w", err)
+	}
+	if err := ch.QueueBind(QueueAlertProcess, RoutingKeyAlertProcess, ExchangeAlerts, false, nil); err != nil {
+		logger.Error("failed to bind alert queue", "component", "rabbitmq", "error", err)
+		return fmt.Errorf("bind alert queue: %w", err)
 	}
 
 	// Retry queues with TTL

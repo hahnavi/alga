@@ -390,8 +390,6 @@ func (a *App) wire() error {
 
 	if a.workerSet != nil {
 		a.workerSet.SetAlertWorker(worker.NewAlertWorker(whReceiver, a.stores.Alert, publisher))
-		a.workerSet.SetAuditWorker(worker.NewAuditWorker(a.stores.Audit))
-		a.workerSet.SetNotificationWorker(worker.NewNotificationWorker(whReceiver))
 	}
 
 	whReceiver.SetAlertInvestigationStore(a.stores.AlertInvestigation)

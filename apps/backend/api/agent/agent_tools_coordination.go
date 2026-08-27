@@ -658,9 +658,6 @@ func (e *AgentToolExecutor) agentCanActOnIncident(ctx context.Context, agentRec 
 		if i.AgentID == agentID && !store.IsTerminalInvestigationStatus(i.Status) {
 			return true
 		}
-		if i.AgentID == agentID && i.Status == "reviewing" {
-			return true
-		}
 	}
 	return false
 }

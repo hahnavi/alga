@@ -212,7 +212,8 @@ Passwords are hashed with Argon2id (OWASP baseline: 64 MiB memory, 3 iterations,
 - Sessions expire after `SESSION_EXPIRY_HOURS` (default: 24 hours, max: 720)
 - Refresh tokens enable seamless session renewal
 - Refresh tokens rotate on every use; the previous token hash is recorded (`prev_refresh_token_hashes`) within a session family (`family_id`)
-- Reuse of a previously-rotated refresh token is detected as replay and revokes the entire session family
+- Reuse of a previously-rotated refresh token — or presenting a rotated-out session cookie — is detected as replay and revokes all of the user's sessions (`session_replay_detected` / `refresh_token_reuse_detected` audit reasons)
+- API clients can drive refresh-token rotation via the optional HttpOnly `alga_rt` cookie issued alongside `alga_session`; browsers never need to present it
 - When `SECURE_COOKIES=true`, cookies are only sent over HTTPS
 - Cookie-side session IDs and refresh tokens are HMAC-SHA-256 hashed before persistence
 

@@ -2,6 +2,9 @@ package store
 
 import (
 	"context"
+	"database/sql"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -19,6 +22,7 @@ type SessionRecord struct {
 	RefreshToken           string    `json:"-"`
 	RefreshTokenHash       string    `json:"refresh_token,omitempty"`
 	PrevRefreshTokenHashes []string  `json:"prev_refresh_tokens,omitempty"`
+	PrevSessionIDHashes    []string  `json:"prev_session_ids,omitempty"`
 	FamilyID               string    `json:"family_id"`
 	CreatedAt              time.Time `json:"created_at"`
 	ExpiresAt              time.Time `json:"expires_at"`
@@ -36,6 +40,17 @@ type SessionStore interface {
 	GetSession(id string) (*SessionRecord, error)
 	GetSessionByRefreshToken(token string) (*SessionRecord, error)
 	RefreshSession(sessionID string, ip, userAgent string) (*SessionRecord, error)
+	// RefreshSessionByRefreshToken rotates the session identified by a
+	// presented refresh token (API clients that hold the token rather than the
+	// session cookie). When the token matches a previously-rotated hash of a
+	// live session it returns the owning session together with
+	// ErrRefreshTokenReused so the caller can revoke the family.
+	RefreshSessionByRefreshToken(token string, ip, userAgent string) (*SessionRecord, error)
+	// FindRotatedOutSession resolves a presented session ID against the
+	// bounded history of recently rotated-out ID hashes, returning the owning
+	// session (UserID populated) while its family is still live. Replayed
+	// cookies detect replay this way; unknown IDs return (nil, nil).
+	FindRotatedOutSession(id string) (*SessionRecord, error)
 	DeleteSession(id string) error
 	DeleteAllUserSessions(userID uuid.UUID) error
 	// DeleteExpired removes sessions past their idle or absolute-max lifetime.
@@ -78,6 +93,7 @@ func pgSessionToRecord(e *models.Session) *SessionRecord {
 		UserID:                 e.UserID,
 		RefreshTokenHash:       e.RefreshTokenHash,
 		PrevRefreshTokenHashes: e.PrevRefreshTokenHashes,
+		PrevSessionIDHashes:    e.PrevSessionIDHashes,
 		FamilyID:               e.FamilyID,
 		CreatedAt:              e.CreatedAt,
 		ExpiresAt:              e.ExpiresAt,
@@ -209,17 +225,95 @@ func (s *pgSessionStore) RefreshSession(sessionID string, ip, userAgent string) 
 		return handleQueryErr[*SessionRecord](err, "session")
 	}
 
-	// Absolute (max) lifetime cap: never refresh a session past its max age.
-	nowRec := pgSessionToRecord(current)
-	if !isWithinAbsoluteLifetime(nowRec, s.sessionMaxLifetime) {
-		_, _ = s.db.NewDelete().Model((*models.Session)(nil)).Where("id_hash = ?", idHash).Exec(ctx)
+	return s.rotateSessionRow(ctx, current, ip, userAgent)
+}
+
+func (s *pgSessionStore) RefreshSessionByRefreshToken(token string, ip, userAgent string) (*SessionRecord, error) {
+	if token == "" {
+		return nil, nil
+	}
+	ctx, cancel := pgctx(context.Background())
+	defer cancel()
+
+	rtHash := hashSessionToken(token)
+	current := new(models.Session)
+	err := s.db.NewSelect().Model(current).
+		Where("refresh_token_hash = ?", rtHash).
+		Where("expires_at > ?", time.Now()).
+		Scan(ctx)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("failed to query session by refresh token: %w", err)
+	}
+	if current.ID == uuid.Nil {
+		// Not the live token; a replay resolves against the bounded
+		// prev_refresh_token_hashes history of a still-live session.
+		current = new(models.Session)
+		err = s.db.NewSelect().Model(current).
+			Where("prev_refresh_token_hashes @> ?::jsonb", marshalHashes(rtHash)).
+			Where("expires_at > ?", time.Now()).
+			Limit(1).
+			Scan(ctx)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("failed to query session by previous refresh token: %w", err)
+		}
+		if current.ID == uuid.Nil {
+			return nil, nil
+		}
+		// Replay: return the owning session so the caller revokes the family.
+		return pgSessionToRecord(current), ErrRefreshTokenReused
+	}
+
+	return s.rotateSessionRow(ctx, current, ip, userAgent)
+}
+
+func (s *pgSessionStore) FindRotatedOutSession(id string) (*SessionRecord, error) {
+	if id == "" {
+		return nil, nil
+	}
+	ctx, cancel := pgctx(context.Background())
+	defer cancel()
+
+	current := new(models.Session)
+	err := s.db.NewSelect().Model(current).
+		Where("prev_session_id_hashes @> ?::jsonb", marshalHashes(hashSessionToken(id))).
+		Where("expires_at > ?", time.Now()).
+		Limit(1).
+		Scan(ctx)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("failed to query rotated-out session: %w", err)
+	}
+	if current.ID == uuid.Nil {
+		return nil, nil
+	}
+	return pgSessionToRecord(current), nil
+}
+
+func marshalHashes(hashes ...string) string {
+	data, err := json.Marshal(hashes)
+	if err != nil {
+		// Marshal of a []string cannot fail; kept total for the jsonb casts.
+		return "[]"
+	}
+	return string(data)
+}
+
+// rotateSessionRow rotates BOTH the session ID and the refresh token of a
+// loaded session row, preserving CreatedAt so the absolute lifetime cap keeps
+// counting from the original login. The rotated-out ID hash is remembered in a
+// bounded history so a replayed old cookie stays recognizable (family reuse
+// detection). The plaintext new IDs are returned to the caller to set as fresh
+// cookies; the old hashes only authenticate the replay-detection history.
+func (s *pgSessionStore) rotateSessionRow(ctx context.Context, current *models.Session, ip, userAgent string) (*SessionRecord, error) {
+	if current.ID == uuid.Nil {
 		return nil, nil
 	}
 
-	// Rotate the session ID itself (not just the refresh token) so a stolen
-	// cookie is invalidated at the next refresh (ASVS V3.3). The plaintext
-	// new ID is returned to the caller to set as a fresh cookie; the old hash
-	// is removed so the old cookie no longer authenticates.
+	// Absolute (max) lifetime cap: never refresh a session past its max age.
+	if !isWithinAbsoluteLifetime(pgSessionToRecord(current), s.sessionMaxLifetime) {
+		_, _ = s.db.NewDelete().Model((*models.Session)(nil)).Where("id_hash = ?", current.IDHash).Exec(ctx)
+		return nil, nil
+	}
+
 	newSessionID, err := generateSecureToken(32)
 	if err != nil {
 		return nil, err
@@ -232,21 +326,24 @@ func (s *pgSessionStore) RefreshSession(sessionID string, ip, userAgent string) 
 	}
 	newHash := hashSessionToken(newRefreshToken)
 
-	prev := append([]string{current.RefreshTokenHash}, current.PrevRefreshTokenHashes...)
-	if len(prev) > maxPrevRefreshTokens {
-		prev = prev[:maxPrevRefreshTokens]
+	prevRT := append([]string{current.RefreshTokenHash}, current.PrevRefreshTokenHashes...)
+	if len(prevRT) > maxPrevRefreshTokens {
+		prevRT = prevRT[:maxPrevRefreshTokens]
+	}
+	prevIDs := append([]string{current.IDHash}, current.PrevSessionIDHashes...)
+	if len(prevIDs) > maxPrevRefreshTokens {
+		prevIDs = prevIDs[:maxPrevRefreshTokens]
 	}
 
 	now := time.Now()
 	newExpiry := now.Add(s.sessionExpiry)
 
 	// Update the existing row in place to the new ID hash + rotated tokens.
-	// CreatedAt is intentionally preserved so the absolute lifetime cap keeps
-	// counting from the original login.
 	_, err = s.db.NewUpdate().Model((*models.Session)(nil)).
 		Set("id_hash = ?", newIDHash).
 		Set("refresh_token_hash = ?", newHash).
-		Set("prev_refresh_token_hashes = ?", prev).
+		Set("prev_refresh_token_hashes = ?", prevRT).
+		Set("prev_session_id_hashes = ?", prevIDs).
 		Set("expires_at = ?", newExpiry).
 		Set("last_used_at = ?", now).
 		Set("ip = ?", ip).
@@ -262,7 +359,8 @@ func (s *pgSessionStore) RefreshSession(sessionID string, ip, userAgent string) 
 	rec.IDHash = newIDHash
 	rec.RefreshToken = newRefreshToken
 	rec.RefreshTokenHash = newHash
-	rec.PrevRefreshTokenHashes = prev
+	rec.PrevRefreshTokenHashes = prevRT
+	rec.PrevSessionIDHashes = prevIDs
 	rec.ExpiresAt = newExpiry
 	rec.LastUsedAt = now
 	rec.IP = ip

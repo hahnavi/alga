@@ -113,24 +113,6 @@ func (p *Publisher) PublishAlert(ctx context.Context, payload types.GrafanaAlert
 	return p.publish(ctx, ExchangeAlerts, RoutingKeyAlertProcess, body)
 }
 
-func (p *Publisher) PublishNotification(ctx context.Context, msg NotificationMessage) error {
-	p.prepare(ctx, &msg, EventTypeNotificationRequested)
-	body, err := json.Marshal(msg)
-	if err != nil {
-		return fmt.Errorf("failed to marshal notification message: %w", err)
-	}
-	return p.publish(ctx, ExchangeNotifications, RoutingKeyNotificationSend, body)
-}
-
-func (p *Publisher) PublishAudit(ctx context.Context, msg AuditMessage) error {
-	p.prepare(ctx, &msg, EventTypeAuditRecorded)
-	body, err := json.Marshal(msg)
-	if err != nil {
-		return fmt.Errorf("failed to marshal audit message: %w", err)
-	}
-	return p.publish(ctx, ExchangeAudit, "", body)
-}
-
 func (p *Publisher) PublishEmail(ctx context.Context, msg EmailMessage) error {
 	p.prepare(ctx, &msg, EventTypeEmailRequested)
 	body, err := json.Marshal(msg)

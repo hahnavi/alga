@@ -98,8 +98,6 @@ For production:
 | `alga.sla.sweep`                     | SLA breach detection     | 1                                           |
 | `alga.email.send`                    | Email delivery           | 10                                          |
 | `alga.notification-dispatch.process` | Notification dispatching | 10                                          |
-| `alga.notification.send`             | Notification sending     | 10                                          |
-| `alga.audit.log`                     | Audit logging            | 10                                          |
 
 ### Retry Topology
 

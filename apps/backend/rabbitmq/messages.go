@@ -29,30 +29,6 @@ type AlertMessage struct {
 	RetryCount int                          `json:"retry_count"`
 }
 
-// NotificationMessage is published when an alert needs to be sent/updated.
-type NotificationMessage struct {
-	EventEnvelope
-	Type       string      `json:"type"` // "create" or "update"
-	Alert      types.Alert `json:"alert"`
-	Provider   string      `json:"provider"`
-	Channel    string      `json:"channel"`
-	IsSilenced bool        `json:"is_silenced"`
-	PostID     string      `json:"post_id,omitempty"`
-	RetryCount int         `json:"retry_count"`
-}
-
-// AuditMessage is published for async audit logging.
-type AuditMessage struct {
-	EventEnvelope
-	Event     string         `json:"event"`
-	UserID    string         `json:"user_id,omitempty"`
-	Username  string         `json:"username,omitempty"`
-	IP        string         `json:"ip,omitempty"`
-	UserAgent string         `json:"user_agent,omitempty"`
-	Success   bool           `json:"success"`
-	Details   map[string]any `json:"details,omitempty"`
-}
-
 // InvestigateMessage is published when correlated alerts need AI investigation.
 type InvestigateMessage struct {
 	EventEnvelope

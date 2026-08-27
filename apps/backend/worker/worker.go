@@ -75,9 +75,7 @@ func (ws *WorkerSet) RegisterWorker(w Worker) {
 	ws.workers = append(ws.workers, w)
 }
 
-func (ws *WorkerSet) SetAlertWorker(w *AlertWorker)               { ws.RegisterWorker(w) }
-func (ws *WorkerSet) SetNotificationWorker(w *NotificationWorker) { ws.RegisterWorker(w) }
-func (ws *WorkerSet) SetAuditWorker(w *AuditWorker)               { ws.RegisterWorker(w) }
+func (ws *WorkerSet) SetAlertWorker(w *AlertWorker) { ws.RegisterWorker(w) }
 func (ws *WorkerSet) SetInvestigateWorker(w *InvestigateWorker) {
 	ws.investigate = w
 	ws.RegisterWorker(w)

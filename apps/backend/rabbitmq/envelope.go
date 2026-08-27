@@ -89,11 +89,6 @@ const (
 	// EventTypeAlertReceived is emitted when a Grafana webhook payload is
 	// accepted for asynchronous processing.
 	EventTypeAlertReceived = "alert.received"
-	// EventTypeNotificationRequested is emitted when an alert notification
-	// needs to be created or updated on a chat provider.
-	EventTypeNotificationRequested = "notification.requested"
-	// EventTypeAuditRecorded is emitted for asynchronous audit logging.
-	EventTypeAuditRecorded = "audit.recorded"
 	// EventTypeTriageRequested is emitted when a correlated alert group needs
 	// enrichment before investigation.
 	EventTypeTriageRequested = "triage.requested"

@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -171,6 +172,12 @@ func (h *userSlackHandler) handleCallback(w http.ResponseWriter, r *http.Request
 	defer cancel()
 
 	if err := h.userStore.SetSlackIdentity(ctx, userID, identity.User.ID, displayName); err != nil {
+		// WP-C8: a duplicate binding is a client-fixable conflict, not a save
+		// failure — surface it as 409 instead of the generic save_failed redirect.
+		if errors.Is(err, store.ErrSlackIdentityTaken) {
+			writeError(w, ErrorCodeConflict, "Slack identity is already linked to another user")
+			return
+		}
 		logger.Error("user slack oauth: failed to set slack identity", "error", err)
 		h.redirectResult(w, r, "error", "save_failed")
 		return

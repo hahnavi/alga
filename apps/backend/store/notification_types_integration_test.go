@@ -15,7 +15,8 @@ import (
 )
 
 // emittedNotificationTypes mirrors every NotificationType string shipped
-// producers publish.
+// producers publish, including
+// the test endpoint's "test" type.
 var emittedNotificationTypes = []string{
 	"escalation",
 	"oncall_handoff",
@@ -28,6 +29,7 @@ var emittedNotificationTypes = []string{
 	"incident_resolved",
 	"incident_reopened",
 	"oncall_reminder",
+	"test",
 }
 
 // TestNotificationChecksAcceptEmittedTypes verifies the migration-00017 CHECK
@@ -65,7 +67,7 @@ func TestNotificationChecksAcceptEmittedTypes(t *testing.T) {
 		}
 	}
 
-	resourceTypes := []string{"incident", "investigation", "post_mortem", "action_item", "alert", "handoff", "schedule"}
+	resourceTypes := []string{"incident", "investigation", "post_mortem", "action_item", "alert", "handoff", "schedule", "system"}
 	for i, rt := range resourceTypes {
 		rec := &NotificationRecord{
 			UserID:       userID,

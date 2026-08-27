@@ -453,11 +453,16 @@ func (a *App) wire() error {
 			}
 			var extractor *memory.Extractor
 			if llm != nil {
-				extractor = memory.NewExtractor(llm, embedder, a.stores.AgentMemory)
+				extractor = memory.NewExtractor(llm, embedder, a.stores.AgentMemory, a.cfg.MemoryMaxPerInvestigation)
 			}
-			memorySvc = memory.NewService(a.stores.AgentMemory, extractor, embedder, a.cfg.MemoryMaxPerInvestigation, autoExtract)
+			memorySvc = memory.NewService(a.stores.AgentMemory, extractor, embedder, memory.ServiceOptions{
+				MaxPerInv:           a.cfg.MemoryMaxPerInvestigation,
+				SimilarityThreshold: a.cfg.MemorySimilarityThreshold,
+				AutoExtract:         autoExtract,
+			})
 			knowledgeAggregator = knowledgeAggregator.WithMemory(knowledge.NewMemoryFinder(memorySvc))
-			logger.Info("Shared agent memory enabled", "auto_extract", autoExtract, "embedding_model", a.cfg.MemoryEmbeddingModel)
+			logger.Info("Shared agent memory enabled", "auto_extract", autoExtract, "embedding_model", a.cfg.MemoryEmbeddingModel,
+				"max_per_investigation", a.cfg.MemoryMaxPerInvestigation, "similarity_threshold", a.cfg.MemorySimilarityThreshold)
 		}
 
 		channelManager = incidentchannel.NewManager(slackClient, a.stores.Incident, a.stores.User, a.cfg.AlgaBaseURL)

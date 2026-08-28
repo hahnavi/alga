@@ -177,7 +177,7 @@ jobs:
             go tool cover -func=coverage.out | tail -1
             echo "=== Per-package coverage (sorted) ==="
             go test -cover ./... | grep -E '^(ok|FAIL|---)' | sort -t'	' -k2 -n || true
- echo "Coverage targets (goals, not enforced): domain >=90%, app >=80%"
+            echo "Coverage targets (goals, not enforced): domain >=90%, app >=80%"
           else
             echo "coverage.out not produced; skipping report"
           fi
@@ -292,6 +292,11 @@ jobs:
           file: apps/backend/Dockerfile
           tags: alga-backend:ci
           load: true
+          # The runtime-base apk-upgrade layer must never be served from a
+          # stale cache: a cached layer pins base packages to its build date,
+          # so a new advisory against them fails the Trivy gate even though
+          # fixed packages are already in the Alpine repo.
+          no-cache-filters: runtime-base
           cache-from: type=gha,scope=backend
           cache-to: type=gha,mode=max,scope=backend
       - name: Build frontend image
@@ -302,6 +307,9 @@ jobs:
           file: apps/frontend/Dockerfile
           tags: alga-frontend:ci
           load: true
+          # Same rationale as the backend: keep the runtime apk-upgrade layer
+          # out of the layer cache (stage named `runtime` in the Dockerfile).
+          no-cache-filters: runtime
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
 

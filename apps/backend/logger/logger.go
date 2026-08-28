@@ -8,12 +8,18 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"sync"
+	"sync/atomic"
 )
 
 var (
-	globalLogger *slog.Logger
+	// globalLogger is swapped by Init; atomic so logging from one goroutine
+	// never races a concurrent re-init (e.g. parallel tests calling Init).
+	globalLogger atomic.Pointer[slog.Logger]
 	globalLevel  = new(slog.LevelVar)
-	logFile      *os.File
+
+	fileMu  sync.Mutex
+	logFile *os.File
 )
 
 func Init(levelStr string, logFile string) {
@@ -21,8 +27,13 @@ func Init(levelStr string, logFile string) {
 }
 
 func InitWithFormat(levelStr string, format string, logFilePath string) {
+	fileMu.Lock()
+	defer fileMu.Unlock()
+
 	if logFile != nil {
-		_ = logFile.Close()
+		if err := logFile.Close(); err != nil {
+			slog.Warn("failed to close previous log file", "error", err)
+		}
 		logFile = nil
 	}
 
@@ -68,8 +79,9 @@ func InitWithFormat(levelStr string, format string, logFilePath string) {
 	// into every log line (W8).
 	handler = &contextHandler{inner: handler}
 
-	globalLogger = slog.New(handler)
-	slog.SetDefault(globalLogger)
+	l := slog.New(handler)
+	globalLogger.Store(l)
+	slog.SetDefault(l)
 }
 
 func parseLevel(s string) slog.Level {
@@ -86,70 +98,74 @@ func parseLevel(s string) slog.Level {
 }
 
 func Close() {
+	fileMu.Lock()
+	defer fileMu.Unlock()
 	if logFile != nil {
-		_ = logFile.Close()
+		if err := logFile.Close(); err != nil {
+			slog.Warn("failed to close log file", "error", err)
+		}
 		logFile = nil
 	}
 }
 
 func With(args ...any) *slog.Logger {
-	if globalLogger == nil {
-		return slog.Default()
+	if l := globalLogger.Load(); l != nil {
+		return l.With(args...)
 	}
-	return globalLogger.With(args...)
+	return slog.Default()
 }
 
 func Debug(msg string, args ...any) {
-	if globalLogger != nil {
-		globalLogger.Debug(msg, args...)
+	if l := globalLogger.Load(); l != nil {
+		l.Debug(msg, args...)
 	}
 }
 
 func DebugCtx(ctx context.Context, msg string, args ...any) {
-	if globalLogger != nil {
-		globalLogger.DebugContext(ctx, msg, args...)
+	if l := globalLogger.Load(); l != nil {
+		l.DebugContext(ctx, msg, args...)
 	}
 }
 
 func Info(msg string, args ...any) {
-	if globalLogger != nil {
-		globalLogger.Info(msg, args...)
+	if l := globalLogger.Load(); l != nil {
+		l.Info(msg, args...)
 	}
 }
 
 func InfoCtx(ctx context.Context, msg string, args ...any) {
-	if globalLogger != nil {
-		globalLogger.InfoContext(ctx, msg, args...)
+	if l := globalLogger.Load(); l != nil {
+		l.InfoContext(ctx, msg, args...)
 	}
 }
 
 func Warn(msg string, args ...any) {
-	if globalLogger != nil {
-		globalLogger.Warn(msg, args...)
+	if l := globalLogger.Load(); l != nil {
+		l.Warn(msg, args...)
 	}
 }
 
 func WarnCtx(ctx context.Context, msg string, args ...any) {
-	if globalLogger != nil {
-		globalLogger.WarnContext(ctx, msg, args...)
+	if l := globalLogger.Load(); l != nil {
+		l.WarnContext(ctx, msg, args...)
 	}
 }
 
 func Error(msg string, args ...any) {
-	if globalLogger != nil {
-		globalLogger.Error(msg, args...)
+	if l := globalLogger.Load(); l != nil {
+		l.Error(msg, args...)
 	}
 }
 
 func ErrorCtx(ctx context.Context, msg string, args ...any) {
-	if globalLogger != nil {
-		globalLogger.ErrorContext(ctx, msg, args...)
+	if l := globalLogger.Load(); l != nil {
+		l.ErrorContext(ctx, msg, args...)
 	}
 }
 
 func Fatal(msg string, args ...any) {
-	if globalLogger != nil {
-		globalLogger.Error(msg, args...)
+	if l := globalLogger.Load(); l != nil {
+		l.Error(msg, args...)
 	} else {
 		fmt.Fprintf(os.Stderr, "FATAL: "+msg+"\n", args...)
 	}

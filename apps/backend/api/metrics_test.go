@@ -8,9 +8,15 @@ import (
 	"testing"
 )
 
+// expvars must be published once per process; -cpu lists rerun every test in
+// the same process, so in-test expvar.NewInt panics with a duplicate name.
+var (
+	testPromFormatVar = expvar.NewInt("test_prom_format_var")
+	testSanitizeVar   = expvar.NewInt("test.sanitize-check/name")
+)
+
 func TestMetricsHandler_ReturnsPrometheusFormat(t *testing.T) {
-	testVar := expvar.NewInt("test_prom_format_var")
-	testVar.Set(42)
+	testPromFormatVar.Set(42)
 
 	h := NewMetricsHandler()
 	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
@@ -37,8 +43,7 @@ func TestMetricsHandler_ReturnsPrometheusFormat(t *testing.T) {
 }
 
 func TestMetricsHandler_SanitizesNames(t *testing.T) {
-	testVar := expvar.NewInt("test.sanitize-check/name")
-	testVar.Set(1)
+	testSanitizeVar.Set(1)
 
 	h := NewMetricsHandler()
 	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)

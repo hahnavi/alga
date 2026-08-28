@@ -345,7 +345,7 @@ onMounted(() => {
           </div>
         </div>
 
- <!-- Components panel (: management moved off the public-shaped
+        <!-- Components panel (: management moved off the public-shaped
              slug view; expand to list, add, re-status, or remove components) -->
         <div class="mt-3 border-t border-[var(--border-primary)] pt-3">
           <button

@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 
@@ -29,6 +29,34 @@ func (s *stubSSEAgentTokenStore) ValidateToken(token string) (*store.AgentTokenR
 		return &store.AgentTokenRecord{ID: uuid.New(), Name: "sse-test"}, nil
 	}
 	return nil, nil
+}
+
+// firstWriteRecorder forwards to the recorder and signals the first write so
+// the stream-start watcher can cancel without racing on the recorder's body.
+type firstWriteRecorder struct {
+	http.ResponseWriter
+	wrote chan struct{}
+	once  sync.Once
+}
+
+func (f *firstWriteRecorder) signal() {
+	f.once.Do(func() { close(f.wrote) })
+}
+
+func (f *firstWriteRecorder) WriteHeader(code int) {
+	f.signal()
+	f.ResponseWriter.WriteHeader(code)
+}
+
+func (f *firstWriteRecorder) Write(p []byte) (int, error) {
+	f.signal()
+	return f.ResponseWriter.Write(p)
+}
+
+func (f *firstWriteRecorder) Flush() {
+	if fl, ok := f.ResponseWriter.(http.Flusher); ok {
+		fl.Flush()
+	}
 }
 
 // newSSETestHandler builds a handler with a real broker and no-op presence/
@@ -98,14 +126,18 @@ func TestAgentSSEQueryTokenDeniedByDefault(t *testing.T) {
 			ctx, cancel := context.WithCancel(req.Context())
 			req = req.WithContext(ctx)
 			rec := httptest.NewRecorder()
+			sig := &firstWriteRecorder{ResponseWriter: rec, wrote: make(chan struct{})}
+			// Only the handler goroutine touches rec; the watcher waits on the
+			// signal channel, so recorder access stays single-threaded.
 			go func() {
-				for rec.Body.Len() == 0 && ctx.Err() == nil {
-					time.Sleep(time.Millisecond)
+				select {
+				case <-sig.wrote:
+				case <-ctx.Done():
 				}
 				cancel()
 			}()
 
-			h.Handler()(rec, req)
+			h.Handler()(sig, req)
 			cancel()
 
 			if rec.Code != tt.wantStatus {

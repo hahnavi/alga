@@ -177,7 +177,7 @@ jobs:
             go tool cover -func=coverage.out | tail -1
             echo "=== Per-package coverage (sorted) ==="
             go test -cover ./... | grep -E '^(ok|FAIL|---)' | sort -t'	' -k2 -n || true
- echo "Coverage targets (goals, not enforced): domain >=90%, app >=80%"
+            echo "Coverage targets (goals, not enforced): domain >=90%, app >=80%"
           else
             echo "coverage.out not produced; skipping report"
           fi

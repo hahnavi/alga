@@ -28,6 +28,12 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o alga .
 # runtime-base: the shared final image. CI and local `docker build` (no
 # --target) stop here by default — the plugin COPY is in a later stage only.
 FROM alpine:3.24 AS runtime-base
+# Upgrade base packages to pick up security fixes that the pinned alpine:3.24
+# image lags behind (e.g. CVE-2026-14456: DoS via unbounded memory growth in
+# the OpenSSL QUIC server, shipped as libcrypto3/libssl3 3.5.7-r0, fixed in
+# 3.5.8-r0). `apk add` does not upgrade installed packages, so without this
+# the Trivy HIGH/CRITICAL gate flaps on every new openssl advisory.
+RUN apk --no-cache upgrade
 RUN apk --no-cache add ca-certificates tzdata
 
 WORKDIR /app

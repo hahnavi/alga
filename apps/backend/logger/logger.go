@@ -31,7 +31,9 @@ func InitWithFormat(levelStr string, format string, logFilePath string) {
 	defer fileMu.Unlock()
 
 	if logFile != nil {
-		_ = logFile.Close()
+		if err := logFile.Close(); err != nil {
+			slog.Warn("failed to close previous log file", "error", err)
+		}
 		logFile = nil
 	}
 
@@ -99,7 +101,9 @@ func Close() {
 	fileMu.Lock()
 	defer fileMu.Unlock()
 	if logFile != nil {
-		_ = logFile.Close()
+		if err := logFile.Close(); err != nil {
+			slog.Warn("failed to close log file", "error", err)
+		}
 		logFile = nil
 	}
 }

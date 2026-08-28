@@ -16,7 +16,7 @@ COPY apps/frontend/ apps/frontend/
 WORKDIR /app/apps/frontend
 RUN pnpm build
 
-FROM nginx:1.31.4-alpine3.24-slim
+FROM nginx:1.31.4-alpine3.24-slim AS runtime
 # Upgrade base packages to pick up security fixes that the pinned nginx image
 # lags behind (e.g. CVE-2026-14456: DoS via unbounded memory growth in the
 # OpenSSL QUIC server, shipped as libcrypto3/libssl3 3.5.7-r0 in the older

@@ -163,7 +163,7 @@ func (f *fakeValkeyRateLimiter) Allow(ip string) bool {
 }
 
 // TestRateLimiterParity drives both implementations through identical request
-// sequences and asserts identical allow/deny decisions — the WP-B2 contract
+// sequences and asserts identical allow/deny decisions — the contract
 // that memory and Valkey modes cannot diverge.
 func TestRateLimiterParity(t *testing.T) {
 	t.Parallel()

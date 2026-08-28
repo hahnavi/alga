@@ -150,7 +150,7 @@ function viewPage(p: StatusPageRecord) {
   router.push(`/status/${p.slug}`);
 }
 
-// ---- Component management (moved from the slug view page in WP-B1) ---------
+// ---- Component management (moved from the slug view page) ---------
 
 const COMPONENT_STATUS_OPTIONS: ComponentStatus[] = [
   "operational",
@@ -345,7 +345,7 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Components panel (WP-B1: management moved off the public-shaped
+        <!-- Components panel (: management moved off the public-shaped
              slug view; expand to list, add, re-status, or remove components) -->
         <div class="mt-3 border-t border-[var(--border-primary)] pt-3">
           <button

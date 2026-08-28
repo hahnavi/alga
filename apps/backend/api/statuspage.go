@@ -161,7 +161,7 @@ func (s *Server) handleCreateStatusPage(w http.ResponseWriter, r *http.Request) 
 	writeData(w, http.StatusCreated, out)
 }
 
-// View-models for the slug view (WP-B1). Field allow-list is exactly what a
+// View-models for the slug view. Field allow-list is exactly what a
 // public renderer could show, so an unauthenticated route can later become a
 // thin wrapper over this serializer without re-litigating the payload.
 
@@ -196,7 +196,7 @@ type statusPageViewResponse struct {
 // description, its components (ordered), the derived overall status, and
 // active incidents scoped to the services the page's components map to.
 //
-// Hardening per WP-B1: disabled pages 404 uniformly with missing slugs; the
+// Hardening: disabled pages 404 uniformly with missing slugs; the
 // payload is an allow-listed view model — no internal ids, owner team,
 // Slack/war-room linkage, SLA or responder fields. The route stays behind
 // authMiddleware(rbac.StatusPagesRead); this shape doubles as the contract

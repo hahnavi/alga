@@ -1,5 +1,5 @@
 -- +goose Up
--- WP-D1: remove vestigial 'pagerduty' enum value from delivery_targets.provider.
+-- remove vestigial 'pagerduty' enum value from delivery_targets.provider.
 -- No producer or consumer exists anywhere in the codebase; zero rows can carry
 -- the value (defensive DELETE guards against hand-inserted data).
 DELETE FROM delivery_targets WHERE provider = 'pagerduty';

@@ -74,10 +74,10 @@ func mustEncryptB6(t *testing.T, plaintext string) string {
 
 // ---- tests -----------------------------------------------------------------
 
-// TestB6CapabilityCatalogIncludesSecrets asserts the fixed catalog grew to
+// TestCapabilityCatalogIncludesSecrets asserts the fixed catalog grew to
 // four entries and normalization still dedupes/sorts (GET /agent/capabilities
 // iterates capability.All and picks the new entry up automatically).
-func TestB6CapabilityCatalogIncludesSecrets(t *testing.T) {
+func TestCapabilityCatalogIncludesSecrets(t *testing.T) {
 	t.Parallel()
 
 	if !capability.Has(capability.All, capability.Secrets) {
@@ -96,12 +96,12 @@ func TestB6CapabilityCatalogIncludesSecrets(t *testing.T) {
 	}
 }
 
-// TestB6AgentSecretRequiresCapability covers WP-B6 acceptance:
+// TestAgentSecretRequiresCapability covers acceptance:
 //
 //   - token WITHOUT `secrets` never reaches the store; denial body is byte-
 //     identical to an unknown-secret denial (no existence oracle)
 //   - token WITH `secrets` + allow-listed fetches plaintext + audit row
-func TestB6AgentSecretRequiresCapability(t *testing.T) {
+func TestAgentSecretRequiresCapability(t *testing.T) {
 	logger.Init("error", "")
 
 	agentAllowed := uuid.New()
@@ -180,9 +180,9 @@ func TestB6AgentSecretRequiresCapability(t *testing.T) {
 	}
 }
 
-// TestB6AllowListStillDeniesUnlistedAgent: capability alone is not enough —
+// TestAllowListStillDeniesUnlistedAgent: capability alone is not enough —
 // the per-secret allow-list remains authoritative.
-func TestB6AllowListStillDeniesUnlistedAgent(t *testing.T) {
+func TestAllowListStillDeniesUnlistedAgent(t *testing.T) {
 	t.Parallel()
 
 	logger.Init("error", "")

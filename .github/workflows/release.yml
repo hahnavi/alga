@@ -70,9 +70,11 @@ jobs:
           - target: backend
             context: .
             dockerfile: apps/backend/Dockerfile
+            no_cache_filters: runtime-base
           - target: frontend
             context: .
             dockerfile: apps/frontend/Dockerfile
+            no_cache_filters: runtime
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -103,6 +105,10 @@ jobs:
             ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}/alga-${{ matrix.target }}:${{ needs.meta.outputs.version }}
             ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}/alga-${{ matrix.target }}:${{ github.sha }}
           push: true
+          # Keep the runtime apk-upgrade layer out of the layer cache so a new
+          # base-package advisory can't fail the scan against packages pinned
+          # to a stale layer's build date (stage names: see matrix above).
+          no-cache-filters: ${{ matrix.no_cache_filters }}
           cache-from: type=gha,scope=${{ matrix.target }}
           cache-to: type=gha,mode=max,scope=${{ matrix.target }}
           provenance: true

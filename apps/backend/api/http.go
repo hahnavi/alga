@@ -294,7 +294,7 @@ func (s *Server) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/admin/tokens", s.authMiddleware(s.handleAdminTokens, rbac.TokensManage))
 	mux.HandleFunc("/api/v1/admin/tokens/", s.authMiddleware(s.handleAdminTokenByID, rbac.TokensManage))
 	mux.HandleFunc("/api/v1/routes", s.authMiddleware(s.handleRoutes, rbac.RoutesRead))
-	// Read-only admin audit review surface (WP-C9): the audit:read permission
+	// Read-only admin audit review surface: the audit:read permission
 	// finally gates a route. Rate limiting inherits from authMiddleware.
 	mux.HandleFunc("GET /api/v1/audit-events", s.authMiddleware(s.handleListAuditEvents, rbac.AuditRead))
 	mux.HandleFunc("/api/v1/knowledge", s.authMiddleware(s.handleKnowledge, rbac.KnowledgeRead))

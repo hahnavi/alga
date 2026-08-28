@@ -25,7 +25,7 @@ type PasswordResetStore interface {
 	GetByTokenHash(ctx context.Context, tokenHash string) (*PasswordResetToken, error)
 	MarkUsed(ctx context.Context, id uuid.UUID) error
 	// DeleteConsumedExpired purges used tokens and tokens expired before the
-	// cutoff (DT-E3 retention family; security hygiene on a tiny table).
+	// cutoff (retention family; security hygiene on a tiny table).
 	DeleteConsumedExpired(ctx context.Context, expiredBefore time.Time) (int64, error)
 }
 

@@ -1,8 +1,8 @@
 -- +goose Up
--- WP-D2: drop vestigial columns whose values are provably default-only
+-- drop vestigial columns whose values are provably default-only
 -- because no writer exists anywhere in the codebase.
 --
--- audit_logs.request_id deliberately stays: WP-C9 wired request-ID
+-- audit_logs.request_id deliberately stays: wired request-ID
 -- correlation into the audit LogRecord path, so that column carries live
 -- data as of the 2026-08 remediation (the finding predates that work).
 

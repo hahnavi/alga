@@ -15,8 +15,8 @@ import (
 )
 
 // emittedNotificationTypes mirrors every NotificationType string shipped
-// producers publish (see spec 07_notifications/01 §Creation points), including
-// the test endpoint's "test" type (07_notifications/03 R16).
+// producers publish, including
+// the test endpoint's "test" type.
 var emittedNotificationTypes = []string{
 	"escalation",
 	"oncall_handoff",

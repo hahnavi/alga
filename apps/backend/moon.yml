@@ -21,4 +21,4 @@ tasks:
 
   test-cover:
     command: "bash"
-    args: ["-c", "go test -race -coverprofile=coverage.out -covermode=atomic ./... && go tool cover -func=coverage.out | tail -1 && echo 'Coverage targets (goals, not enforced): domain >=90%, app >=80% — see sdd/specs/16_quality/02_testing_strategy.md'"]
+    args: ["-c", "go test -race -coverprofile=coverage.out -covermode=atomic ./... && go tool cover -func=coverage.out | tail -1 && echo 'Coverage targets (goals, not enforced): domain >=90%, app >=80%'"]

@@ -14,7 +14,7 @@ import (
 // TestAlertInvestigationTransitionLegality pins the migrated alert_investigations
 // status CHECK (migration 00008) behind the two targets the agent resolve-alert
 // finalization path may write: an active investigation must be finalizable to
-// `promoted` (WP-D4), while the stray `reviewing` value that the DB always
+// `promoted`, while the stray `reviewing` value that the DB always
 // rejected must keep failing so it can never silently reappear as a writable
 // status.
 func TestAlertInvestigationTransitionLegality(t *testing.T) {
@@ -43,7 +43,7 @@ func TestAlertInvestigationTransitionLegality(t *testing.T) {
 		[]string{AlertInvestigationStatusAssigned, AlertInvestigationStatusInvestigating},
 		AlertInvestigationStatusPromoted,
 	); err != nil {
-		t.Fatalf("transition investigating -> promoted must succeed on a migrated DB (WP-D4 writes this value): %v", err)
+		t.Fatalf("transition investigating -> promoted must succeed on a migrated DB (writes this value): %v", err)
 	}
 
 	got, err := alertInvStore.GetAlertInvestigation(ctx, rec.AlertInvestigationID)

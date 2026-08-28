@@ -21,7 +21,7 @@ func (f *fakeICSRoleStore) GetActiveRoles(_ context.Context, _ int64) ([]store.I
 	return f.roles, f.err
 }
 
-// TestIncidentNotificationRecipients pins the WP-C4 recipient rule: every
+// TestIncidentNotificationRecipients pins the recipient rule: every
 // active human ICS role holder plus commander/on-call-responder fallbacks,
 // deduplicated, with agents (nil UserID) excluded.
 func TestIncidentNotificationRecipients(t *testing.T) {

@@ -688,7 +688,7 @@ export type StatusPageViewIncident = {
   started_at?: string;
 };
 
-// Allow-listed payload of GET /status-pages/slug/{slug} (WP-B1): no internal
+// Allow-listed payload of GET /status-pages/slug/{slug}: no internal
 // ids, owner team, Slack/war-room linkage or SLA fields.
 export type StatusPageView = {
   page: StatusPageViewPage;

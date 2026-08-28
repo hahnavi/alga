@@ -73,7 +73,7 @@ func newSlackCallbackRequest(userID uuid.UUID) *http.Request {
 		"/api/v1/users/me/slack/callback?code=c&state="+url.QueryEscape(state), nil)
 }
 
-// TestHandleSlackCallbackDuplicateIdentityConflict pins the WP-C8 mapping: a
+// TestHandleSlackCallbackDuplicateIdentityConflict pins the mapping: a
 // duplicate Slack binding is a 409 conflict, not the generic save_failed
 // redirect, and no linked audit event fires for the rejected bind.
 func TestHandleSlackCallbackDuplicateIdentityConflict(t *testing.T) {

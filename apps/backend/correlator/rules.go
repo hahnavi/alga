@@ -10,7 +10,7 @@ type CorrelationRule struct {
 	GroupByLabels []string
 	// Window overrides the global correlation window for this rule's
 	// alertname, in seconds. > 0 buffers alerts for that name for this long
-	// before flushing; <= 0 falls back to the global window (WP-A12).
+	// before flushing; <= 0 falls back to the global window.
 	Window int64
 }
 

@@ -30,7 +30,7 @@ func (s *stubOverrideTriageStore) Update(_ context.Context, id string, patch *st
 	return &out, nil
 }
 
-// TestHandleTriageResultOverridePersistsReason pins WP-A15: the override
+// TestHandleTriageResultOverridePersistsReason pins the override
 // endpoint persists the reason it accepts (previously dropped), records who
 // and when overrode, and audits the state transition. An unknown decision is
 // rejected with 400 before touching the store.

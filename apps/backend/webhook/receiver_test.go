@@ -63,7 +63,7 @@ func TestHandleWebhookAuthMethods(t *testing.T) {
 			wantSeenToken: "test-token",
 		},
 		{
-			name:          "query token denied by default (WP-B3)",
+			name:          "query token denied by default",
 			target:        "/webhooks/alerts?token=test-token",
 			wantStatus:    http.StatusUnauthorized,
 			wantSeenToken: "",

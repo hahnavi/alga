@@ -51,7 +51,7 @@ const (
 	AuditKnowledgeCreated           AuditEvent = "knowledge_created"
 	AuditKnowledgeUpdated           AuditEvent = "knowledge_updated"
 	AuditKnowledgeDeleted           AuditEvent = "knowledge_deleted"
-	// AuditMemoryDeleted covers agent-initiated memory hard-deletes (WP-B7);
+	// AuditMemoryDeleted covers agent-initiated memory hard-deletes;
 	// attributed to "agent:<name>" so destructive shared-learning removals
 	// leave a trail.
 	AuditMemoryDeleted                      AuditEvent = "memory_deleted"
@@ -179,7 +179,7 @@ type AuditStore interface {
 	Query(filter map[string]any) ([]AuditRecord, int64, error)
 	GetRecentEvents(limit int) ([]AuditRecord, error)
 	// DeleteOlderThan purges audit rows older than the cutoff in bounded
-	// batches (DT-E3 retention family).
+	// batches (retention family).
 	DeleteOlderThan(ctx context.Context, cutoff time.Time) (int64, error)
 }
 
@@ -377,7 +377,7 @@ func (s *pgAuditStore) GetRecentEvents(limit int) ([]AuditRecord, error) {
 }
 
 // DeleteOlderThan hard-deletes audit rows older than the cutoff in bounded
-// batches (DT-E3 retention family). Audit rows are the compliance trail, so
+// batches (retention family). Audit rows are the compliance trail, so
 // the window is operator-controlled (AUDIT_RETENTION_DAYS) and defaults to
 // keep-forever when unset or non-positive at the call site.
 func (s *pgAuditStore) DeleteOlderThan(ctx context.Context, cutoff time.Time) (int64, error) {

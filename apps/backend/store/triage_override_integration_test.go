@@ -13,7 +13,7 @@ import (
 	"alga/db/models"
 )
 
-// TestTriageOverrideReasonRoundTrip pins the WP-A15 override contract: the
+// TestTriageOverrideReasonRoundTrip pins the override contract: the
 // patch sent by the override endpoint (outcome, decision, who, when, why)
 // survives a store Update + Get cycle, including the override_reason column
 // added by migration 00022.
@@ -90,7 +90,7 @@ func TestTriageOverrideReasonRoundTrip(t *testing.T) {
 	}
 }
 
-// TestAutoPromoteCandidate pins the WP-A15 auto-promote lookup: the candidate
+// TestAutoPromoteCandidate pins the auto-promote lookup: the candidate
 // decision is the latest confirmed decision for the key, and confirmations
 // counts confirmed rows sharing that key+decision pair.
 func TestAutoPromoteCandidate(t *testing.T) {

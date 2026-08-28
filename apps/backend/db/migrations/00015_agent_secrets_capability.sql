@@ -1,5 +1,5 @@
 -- +goose Up
--- WP-B6: gate agent secret fetches behind a `secrets` capability.
+-- gate agent secret fetches behind a `secrets` capability.
 -- Grandfather clause: every non-revoked agent token that lacks the new
 -- capability gets it appended once, preserving today's de-facto access.
 -- Without this, every production agent would lose secret access at deploy

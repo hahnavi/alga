@@ -14,7 +14,7 @@ import (
 	"alga/db/models"
 )
 
-// TestRetentionDeleteFamily pins the DT-E3 store contract: audit logs,
+// TestRetentionDeleteFamily pins the store contract: audit logs,
 // triage results, and notification delivery logs purge strictly older than
 // the cutoff (in bounded batches) while fresh rows survive; password-reset
 // tokens purge when used OR more than a week past expiry.

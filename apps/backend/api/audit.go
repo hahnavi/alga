@@ -1,6 +1,6 @@
 // Package api: audit.go exposes the read-only audit-events review endpoint
-// described by spec 09_identity_access/05 (finding C9: `audit:read` was granted
-// to admin/operator yet gated no route). The route is classified as an
+// `audit:read` was granted
+// to admin/operator yet gated no route. The route is classified as an
 // RBAC-protected operator/frontend GET: registered through authMiddleware with
 // rbac.AuditRead, no request body, no mutation, and therefore nothing to audit.
 // Audit data is global system data; cross-tenant scoping is not applicable —

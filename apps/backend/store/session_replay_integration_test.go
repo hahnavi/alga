@@ -15,7 +15,7 @@ import (
 	"alga/db/models"
 )
 
-// TestSessionFamilyReplayDetection pins the WP-A7 store contract: rotation
+// TestSessionFamilyReplayDetection pins the store contract: rotation
 // remembers rotated-out session IDs and refresh tokens for the sliding window,
 // a replayed cookie resolves via FindRotatedOutSession, a replayed refresh
 // token surfaces ErrRefreshTokenReused with the owning session, and unknown

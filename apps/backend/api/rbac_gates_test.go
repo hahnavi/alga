@@ -126,7 +126,7 @@ func gatePATRequest(method, target string) *http.Request {
 	return req
 }
 
-func TestB5GatedRoutesRequirePermission(t *testing.T) {
+func TestGatedRoutesRequirePermission(t *testing.T) {
 	t.Parallel()
 
 	viewer := gateTestUser("viewer")
@@ -168,7 +168,7 @@ func TestB5GatedRoutesRequirePermission(t *testing.T) {
 	}
 }
 
-func TestB5DailySummaryPostRequiresSystemConfigWrite(t *testing.T) {
+func TestDailySummaryPostRequiresSystemConfigWrite(t *testing.T) {
 	t.Parallel()
 
 	// Viewer holds DashboardRead but NOT SystemConfigWrite: GET passes, POST
@@ -218,7 +218,7 @@ func TestB5DailySummaryPostRequiresSystemConfigWrite(t *testing.T) {
 	}
 }
 
-func TestB5PATIntersectionEnforcedAtGate(t *testing.T) {
+func TestPATIntersectionEnforcedAtGate(t *testing.T) {
 	t.Parallel()
 
 	// A PAT scoped to exactly alerts:read on an admin user must reach alerts
@@ -246,7 +246,7 @@ func TestB5PATIntersectionEnforcedAtGate(t *testing.T) {
 	}
 }
 
-func TestB5SystemConfigMatchesFrontendGates(t *testing.T) {
+func TestSystemConfigMatchesFrontendGates(t *testing.T) {
 	t.Parallel()
 
 	// /api/v1/system/config is consumed only by admin-only settings pages
@@ -274,7 +274,7 @@ func TestB5SystemConfigMatchesFrontendGates(t *testing.T) {
 	}
 }
 
-func TestB5AnonymousStillUnauthorized(t *testing.T) {
+func TestAnonymousStillUnauthorized(t *testing.T) {
 	t.Parallel()
 
 	deps := gateTestDeps(nil, gateTestUser("viewer"))

@@ -40,7 +40,7 @@ func (s *stubTimelineIncidentStore) AddTimelineEntry(_ context.Context, _ *store
 	return nil
 }
 
-// TestHandleEndICSRoleValidatesEndedReason pins the DT-E8 edge validation:
+// TestHandleEndICSRoleValidatesEndedReason pins the edge validation:
 // an unknown ended_reason returns 400 before reaching the store (previously it
 // surfaced as a CHECK-constraint 500), while the empty default and the enum
 // values still pass through.

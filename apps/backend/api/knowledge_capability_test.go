@@ -34,12 +34,12 @@ func (k *b7KnowledgeStore) Get(ctx context.Context, id string) (*store.Knowledge
 
 // ---- tests -----------------------------------------------------------------
 
-// TestB7AgentKnowledgeCapabilityGates covers the WP-B7 matrix for knowledge:
+// TestAgentKnowledgeCapabilityGates covers the matrix for knowledge:
 //
 //   - GET list + GET by id require `investigate` OR `command`
 //   - POST requires `investigate` (prompt-poisoning guard: a communicate-only
 //     token must not author content other agents ingest)
-func TestB7AgentKnowledgeCapabilityGates(t *testing.T) {
+func TestAgentKnowledgeCapabilityGates(t *testing.T) {
 	t.Parallel()
 	logger.Init("error", "")
 

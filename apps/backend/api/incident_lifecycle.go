@@ -214,7 +214,7 @@ func (s *Server) handleCloseIncident(w http.ResponseWriter, r *http.Request, inc
 
 	s.addIncidentTimeline(r, incidentID, "closed", "Incident closed")
 
-	// DT-E8 teardown-on-close: end any live ICS role assignments so a terminal
+	// teardown-on-close: end any live ICS role assignments so a terminal
 	// incident stops surfacing active commanders/responders in ICS queries.
 	// Handler-explicit on purpose — a sweeper would race a reopen.
 	if s.icsRoleStore != nil {
@@ -279,7 +279,7 @@ func (s *Server) handleReopenIncident(w http.ResponseWriter, r *http.Request, in
 		return
 	}
 
-	// DT-E8 reopen reset: clear the SLA resolve stamp and the breach-dedup
+	// reopen reset: clear the SLA resolve stamp and the breach-dedup
 	// markers handler-explicitly so resolve-breach detection can re-fire on the
 	// reopened incident. Kept out of applyStatusTimestampsBun's "active" case,
 	// which also fires on detected→active promotion where wiping the stamp

@@ -1,5 +1,5 @@
 -- +goose Up
--- WP-C4: phase-1 notification producers ship with real, distinct types instead
+-- phase-1 notification producers ship with real, distinct types instead
 -- of collapsing into `info`. Four incident lifecycle transitions aimed at the
 -- commander/responders plus an ahead-of-handoff shift reminder join the enum;
 -- resource_type gains the values shipped producers actually set (`alert` for

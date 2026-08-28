@@ -16,7 +16,7 @@ import (
 	"alga/logger"
 )
 
-// TestWebhookErrorsUseJSONEnvelope covers WP-B4: public webhook 4xx/5xx
+// TestWebhookErrorsUseJSONEnvelope covers public webhook 4xx/5xx
 // responses use the standard {"error":{code,message}} envelope instead of
 // plain-text bodies that fed log-forgement channels.
 func TestWebhookErrorsUseJSONEnvelope(t *testing.T) {

@@ -16,7 +16,7 @@ import (
 	"alga/ics"
 )
 
-// TestUpdateRoleScopeInPlace pins the WP-A4 contract: PATCH-scope edits the
+// TestUpdateRoleScopeInPlace pins the contract: PATCH-scope edits the
 // ACTIVE assignment in place — exactly one active row remains for the role
 // type (no insert collision with the partial unique index), the scope sticks,
 // and ended or unknown assignments resolve to ErrICSRoleNotFound.
@@ -38,7 +38,7 @@ func TestUpdateRoleScopeInPlace(t *testing.T) {
 		t.Fatalf("create fixture user: %v", err)
 	}
 	inc, err := stores.Incident.CreateIncident(ctx, &IncidentRecord{
-		Title:   "WP-A4 scope fixture",
+		Title:   "scope fixture",
 		Summary: "in-place ICS role scope update",
 	})
 	if err != nil {

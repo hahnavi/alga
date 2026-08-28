@@ -37,7 +37,7 @@ type ICSRoleStore interface {
 	AssignRole(ctx context.Context, incidentNumber int64, roleType ics.RoleType, userID uuid.UUID, parentAssignmentID *uuid.UUID, scope *string) (*ICSRoleRecord, error)
 	AssignAgentRole(ctx context.Context, incidentNumber int64, roleType ics.RoleType, agentTokenID uuid.UUID, parentAssignmentID *uuid.UUID, scope *string) (*ICSRoleRecord, error)
 	// UpdateRoleScope edits the scope of the ACTIVE assignment in place
-	// (WP-A4); re-inserting would collide with the partial unique index on
+	// re-inserting would collide with the partial unique index on
 	// (incident_id, role_type) WHERE status='active'. Zero rows updated ⇒
 	// ErrICSRoleNotFound.
 	UpdateRoleScope(ctx context.Context, assignmentID uuid.UUID, scope *string) error

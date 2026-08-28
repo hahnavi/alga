@@ -125,9 +125,9 @@ func decodeB1View(t *testing.T, body []byte) statusPageViewResponse {
 
 // ---- tests -----------------------------------------------------------------
 
-// TestB1SlugViewScopesIncidents covers WP-B1: the slug view returns only
+// TestSlugViewScopesIncidents covers the slug view returns only
 // active incidents whose service_id belongs to one of the page's components.
-func TestB1SlugViewScopesIncidents(t *testing.T) {
+func TestSlugViewScopesIncidents(t *testing.T) {
 	t.Parallel()
 
 	serviceA := uuid.New()
@@ -167,10 +167,10 @@ func TestB1SlugViewScopesIncidents(t *testing.T) {
 	}
 }
 
-// TestB1SlugViewEmptyComponentsNoIncidents: a page with zero service-linked
+// TestSlugViewEmptyComponentsNoIncidents: a page with zero service-linked
 // components returns "incidents": [] without querying the incident store —
 // even while other incidents are active elsewhere (acceptance criterion 2).
-func TestB1SlugViewEmptyComponentsNoIncidents(t *testing.T) {
+func TestSlugViewEmptyComponentsNoIncidents(t *testing.T) {
 	t.Parallel()
 
 	incidents := &b1IncidentStore{
@@ -195,9 +195,9 @@ func TestB1SlugViewEmptyComponentsNoIncidents(t *testing.T) {
 	}
 }
 
-// TestB1SlugViewDisabledPage404s: enabled=false pages return the same 404 as
+// TestSlugViewDisabledPage404s: enabled=false pages return the same 404 as
 // missing slugs for every caller (acceptance criterion 3).
-func TestB1SlugViewDisabledPage404s(t *testing.T) {
+func TestSlugViewDisabledPage404s(t *testing.T) {
 	t.Parallel()
 
 	for _, role := range []string{"viewer", "admin"} {
@@ -226,10 +226,10 @@ func TestB1SlugViewDisabledPage404s(t *testing.T) {
 	}
 }
 
-// TestB1SlugViewModelAllowList asserts the payload contains none of the
+// TestSlugViewModelAllowList asserts the payload contains none of the
 // MUST-NOT-LEAK fields (spec S2): internal ids, owner team, Slack/war-room
 // linkage, SLA/responder/timestamp extras (acceptance criterion 4).
-func TestB1SlugViewModelAllowList(t *testing.T) {
+func TestSlugViewModelAllowList(t *testing.T) {
 	t.Parallel()
 
 	serviceA := uuid.New()
@@ -297,10 +297,10 @@ func TestB1SlugViewModelAllowList(t *testing.T) {
 	}
 }
 
-// TestB1SlugViewScopedListFailureDegradesEmpty preserves the documented
+// TestSlugViewScopedListFailureDegradesEmpty preserves the documented
 // degradation: a failed scoped listing warns and yields [] instead of failing
 // the whole view (spec R4.4 successor).
-func TestB1SlugViewScopedListFailureDegradesEmpty(t *testing.T) {
+func TestSlugViewScopedListFailureDegradesEmpty(t *testing.T) {
 	t.Parallel()
 
 	serviceA := uuid.New()

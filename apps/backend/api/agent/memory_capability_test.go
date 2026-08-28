@@ -90,14 +90,14 @@ func b7Request(method, target string, agentID uuid.UUID, caps []string) *http.Re
 
 // ---- tests -----------------------------------------------------------------
 
-// TestB7AgentMemoryCapabilityGates covers the WP-B7 matrix:
+// TestAgentMemoryCapabilityGates covers the matrix:
 //
 //   - GET requires investigate OR command
 //   - POST/DELETE require investigate
 //   - DELETE of a memory owned by another agent → 403
 //   - DELETE of an owner-less (nil AgentID) memory → ALWAYS 403
 //   - permitted delete writes an audit row attributed to the agent
-func TestB7AgentMemoryCapabilityGates(t *testing.T) {
+func TestAgentMemoryCapabilityGates(t *testing.T) {
 	t.Parallel()
 
 	ownerID := uuid.New()

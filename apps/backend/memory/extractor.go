@@ -67,7 +67,7 @@ func (e *Extractor) Extract(ctx context.Context, inv *store.AlertInvestigationRe
 	}
 
 	// Hard-cap the extraction list BEFORE embedding: nothing over the cap is
-	// embedded or persisted (WP-A11; also bounds embedding cost).
+	// embedded or persisted (also bounds embedding cost).
 	if len(result.Memories) > e.maxPerInv {
 		logger.Debug("truncating extracted memories to per-investigation cap",
 			"returned", len(result.Memories), "cap", e.maxPerInv)

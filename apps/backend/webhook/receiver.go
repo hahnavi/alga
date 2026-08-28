@@ -324,7 +324,7 @@ func (r *Receiver) handleWebhook(w http.ResponseWriter, req *http.Request) {
 }
 
 // webhookTokenFromRequest extracts the ingestion token. The `?token=` query
-// fallback is deny-by-default (WP-B3): credentials in URLs leak via proxy and
+// fallback is deny-by-default: credentials in URLs leak via proxy and
 // access logs, Referer headers, and browser history. It survives only behind
 // the WEBHOOK_ALLOW_QUERY_TOKEN=true escape hatch. Denials never log the URL
 // or the token — that would reintroduce the leak into our own logs.

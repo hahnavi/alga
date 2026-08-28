@@ -222,8 +222,8 @@ func (s *InvestigationScheduler) staleSweepTick(ctx context.Context) {
 
 // runSLASweep is the long-running goroutine that periodically publishes an
 // SLA sweep request tick to RabbitMQ so the SLAWorker can detect breaches.
-// It exists because nothing else produces SLASweepMessage (finding A3; the
-// DT-E1 decision assigned publication to the scheduler leader rather than an
+// It exists because nothing else produces SLASweepMessage (the
+// decision assigned publication to the scheduler leader rather than an
 // external cron, whose silence was the original failure mode).
 func (s *InvestigationScheduler) runSLASweep() {
 	defer s.wg.Done()
@@ -407,7 +407,7 @@ func (s *InvestigationScheduler) remindUpcomingOnCall(ctx context.Context) {
 	}
 }
 
-// runPrune periodically deletes data past its retention window (DT-E3):
+// runPrune periodically deletes data past its retention window:
 // resolved alerts, triage results, and notification delivery logs ride
 // DATA_RETENTION_DAYS (0 = keep forever); audit_logs uses its own longer
 // AUDIT_RETENTION_DAYS (0 = keep forever); password-reset tokens are purged

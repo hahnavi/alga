@@ -15,7 +15,7 @@ import (
 	"alga/db/models"
 )
 
-// TestSetSlackIdentityDuplicateBinding pins the WP-C8 uniqueness contract:
+// TestSetSlackIdentityDuplicateBinding pins the uniqueness contract:
 // binding a Slack identity that another user already owns fails with the
 // typed ErrSlackIdentityTaken (the users_slack_user_id partial unique index
 // from migration 00002) rather than a raw driver error, re-binding by the

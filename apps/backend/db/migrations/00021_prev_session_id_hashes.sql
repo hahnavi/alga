@@ -1,4 +1,4 @@
--- WP-A7: refresh-token family reuse detection needs rotated-out session IDs
+-- refresh-token family reuse detection needs rotated-out session IDs
 -- to stay recognizable for the sliding-expiry window, so a replayed old cookie
 -- can be detected and the whole session family revoked. Sessions already track
 -- previous refresh-token hashes; this adds the symmetric history for session-ID

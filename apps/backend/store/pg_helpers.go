@@ -194,7 +194,7 @@ func nextSeq(ctx context.Context, db bun.IDB, seq string) (int64, error) {
 
 // retentionDeleteBatch caps each DELETE in DeleteOlderThan-style purges so a
 // large backlogged window releases locks between batches instead of holding a
-// single long transaction (DT-E3).
+// single long transaction.
 const retentionDeleteBatch = 5000
 
 // deleteOlderThanBatched hard-deletes rows of model older than cutoff in

@@ -43,7 +43,7 @@ type openAIEmbeddingResponse struct {
 
 // SupportedEmbeddingDimension is the single vector dimension agent memory
 // persists: agent_memories.vec is typed vector(1536) (migration 00009), so any
-// embedder producing another dimension would fail at insert time. DT-E2 pinned
+// embedder producing another dimension would fail at insert time. Pinned
 // the supported dimension rather than widening storage speculatively.
 const SupportedEmbeddingDimension = 1536
 
@@ -57,7 +57,7 @@ func NewOpenAIEmbedder(baseURL, apiKey, model string) (Embedder, error) {
 	}
 	if dim != SupportedEmbeddingDimension {
 		return nil, fmt.Errorf(
-			"memory embedding model %q produces %d-dimensional vectors but agent memory stores vector(%d); configure a 1536-dimension model (DT-E2 pins the column dimension)",
+			"memory embedding model %q produces %d-dimensional vectors but agent memory stores vector(%d); configure a 1536-dimension model (pins the column dimension)",
 			model, dim, SupportedEmbeddingDimension,
 		)
 	}

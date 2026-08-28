@@ -102,7 +102,7 @@ type InvestigationScheduler struct {
 	dataRetentionDays int
 	pruneInterval     time.Duration
 
-	// DT-E3 retention family: optional stores + the audit-specific window.
+	// retention family: optional stores + the audit-specific window.
 	// auditStore is shared with the summary sweep (SetAuditStore); nil stores
 	// are skipped; auditRetentionDays <= 0 keeps audit rows forever.
 	triageStore        store.TriageResultStore
@@ -151,7 +151,7 @@ type staleInvestigatePublisher interface {
 }
 
 // slaSweepPublisher is the subset of rabbitmq.Publisher used by the SLA sweep
-// loop to publish SLA sweep request ticks (decided DT-E1: scheduler-owned).
+// loop to publish SLA sweep request ticks (decided: scheduler-owned).
 type slaSweepPublisher interface {
 	PublishSLASweep(ctx context.Context, msg rabbitmq.SLASweepMessage) error
 }
@@ -315,13 +315,13 @@ func (s *InvestigationScheduler) SetDataRetention(days int, interval time.Durati
 	s.pruneInterval = interval
 }
 
-// SetAuditRetention configures the audit_logs prune window (DT-E3). Days <= 0
+// SetAuditRetention configures the audit_logs prune window. Days <= 0
 // keeps audit rows forever.
 func (s *InvestigationScheduler) SetAuditRetention(days int) {
 	s.auditRetentionDays = days
 }
 
-// SetRetentionStores wires the optional stores pruned by the DT-E3 retention
+// SetRetentionStores wires the optional stores pruned by the retention
 // family (triage results, notification delivery logs, password-reset tokens).
 // Audit logs reuse the shared SetAuditStore store. Nil entries are skipped by
 // pruneTick.
@@ -333,7 +333,7 @@ func (s *InvestigationScheduler) SetRetentionStores(triage store.TriageResultSto
 
 // SetSLAPublisher wires the RabbitMQ publisher used by the SLA sweep loop.
 // Without a publisher the sweep never starts (no external producer is
-// assumed — see the DT-E1 decision in spec 05_incidents/04).
+// assumed).
 func (s *InvestigationScheduler) SetSLAPublisher(p slaSweepPublisher) {
 	s.slaSweepPublisher = p
 }

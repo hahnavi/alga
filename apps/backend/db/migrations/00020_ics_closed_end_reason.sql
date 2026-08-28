@@ -1,5 +1,5 @@
 -- +goose Up
--- WP-DT-E8: closing an incident tears down its live ICS role assignments with
+-- closing an incident tears down its live ICS role assignments with
 -- the dedicated 'incident_closed' end reason (invoked handler-explicitly from
 -- handleCloseIncident), so terminal incidents stop surfacing active
 -- commanders/responders in ICS queries. Widening the CHECK keeps the manual

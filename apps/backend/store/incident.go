@@ -113,13 +113,13 @@ type IncidentStore interface {
 	ListActiveSummarizableIncidents(ctx context.Context) ([]IncidentRecord, error)
 	ListActiveIncidents(ctx context.Context) ([]IncidentRecord, error)
 	// ListActiveIncidentsForServices returns active incidents whose
-	// service_id is in the given set (WP-B1 status-page scoping). An empty
+	// service_id is in the given set (status-page scoping). An empty
 	// input yields an empty slice without querying.
 	ListActiveIncidentsForServices(ctx context.Context, serviceIDs []uuid.UUID) ([]IncidentRecord, error)
 	GetIncidentBySlackChannel(ctx context.Context, channelID string) (*IncidentRecord, error)
 	SetIncidentWarRoomMeet(ctx context.Context, incidentNumber int64, spaceName, conferenceURL string) error
 	// ClearSLAResolvedAt nulls the SLA resolve stamp as part of the
-	// handler-explicit reopen reset (DT-E8) so resolve-breach detection can
+	// handler-explicit reopen reset so resolve-breach detection can
 	// fire again. Deliberately not part of applyStatusTimestampsBun, whose
 	// "active" case also serves detected→active promotion.
 	ClearSLAResolvedAt(ctx context.Context, incidentNumber int64) error
@@ -617,7 +617,7 @@ func applyStatusTimestampsBun(q *bun.UpdateQuery, toStatus string, now time.Time
 	return q
 }
 
-// ClearSLAResolvedAt nulls the incident's SLA resolve stamp (DT-E8 reopen
+// ClearSLAResolvedAt nulls the incident's SLA resolve stamp (reopen
 // reset) so resolve-breach detection can fire again after a reopen.
 func (s *pgIncidentStore) ClearSLAResolvedAt(ctx context.Context, incidentNumber int64) error {
 	ctx, cancel := pgctx(ctx)
@@ -922,7 +922,7 @@ func (s *pgIncidentStore) ListActiveIncidents(ctx context.Context) ([]IncidentRe
 }
 
 // ListActiveIncidentsForServices returns active, non-deleted incidents whose
-// service_id is in serviceIDs (WP-B1: status-page slug views must only see
+// service_id is in serviceIDs (: status-page slug views must only see
 // impact for services the page actually maps). Empty input short-circuits to
 // an empty slice — a page with no service-linked components has no incident
 // surface.

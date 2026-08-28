@@ -1,5 +1,5 @@
 -- +goose Up
--- WP-A2: the test-notification endpoint (07_notifications/03 R16) inserts
+-- the test-notification endpoint inserts
 -- type='test' / resource_type='system', which every prior CHECK generation
 -- rejects, so POST /users/me/notification-preferences/test always failed with
 -- a 500 on conforming schemas. Widen the enums to the shipped endpoint

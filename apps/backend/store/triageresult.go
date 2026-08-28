@@ -80,7 +80,7 @@ type TriageResultStore interface {
 	// AutoPromoteCandidate returns the decision of the most recent confirmed
 	// result for the correlation key and how many confirmed results share that
 	// key+decision pair. The triage engine uses it to skip the LLM once a
-	// pattern has enough confirmations (WP-A15).
+	// pattern has enough confirmations.
 	AutoPromoteCandidate(ctx context.Context, correlationKey string) (decision string, confirmations int64, err error)
 	CountByOutcome(ctx context.Context) (confirmed, overridden, pending int64, err error)
 	CountByDecision(ctx context.Context) (map[string]int64, error)
@@ -89,7 +89,7 @@ type TriageResultStore interface {
 	AvgDurationMs(ctx context.Context) (float64, error)
 	VolumeTrend(ctx context.Context, days int) ([]TriageVolumeDay, error)
 	// DeleteOlderThan purges triage results older than the cutoff in bounded
-	// batches (DT-E3 retention family).
+	// batches (retention family).
 	DeleteOlderThan(ctx context.Context, cutoff time.Time) (int64, error)
 }
 
@@ -609,7 +609,7 @@ func (s *pgTriageResultStore) nextTriageNumber(ctx context.Context) (int64, erro
 }
 
 // DeleteOlderThan hard-deletes triage results older than the cutoff in bounded
-// batches (DT-E3 retention family; diagnostic append-only data riding
+// batches (retention family; diagnostic append-only data riding
 // DATA_RETENTION_DAYS). Referencing rows keep working via ON DELETE SET NULL.
 func (s *pgTriageResultStore) DeleteOlderThan(ctx context.Context, cutoff time.Time) (int64, error) {
 	ctx, cancel := pgctx(ctx)

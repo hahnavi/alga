@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// TestMemoryEnvPlumbing pins the WP-A11 contract: the memory knobs are parsed
+// TestMemoryEnvPlumbing pins the contract: the memory knobs are parsed
 // from env into the config fields the memory service consumes.
 func TestMemoryEnvPlumbing(t *testing.T) {
 	t.Setenv("MEMORY_MAX_PER_INVESTIGATION", "25")
@@ -24,7 +24,7 @@ func TestMemoryEnvPlumbing(t *testing.T) {
 	}
 }
 
-// TestCorrelationWindowDefaultAndOverride pins the WP-A12 semantics: the
+// TestCorrelationWindowDefaultAndOverride pins the semantics: the
 // built-in default buffers bursts for 15s, an explicit value overrides it, and
 // CORRELATION_WINDOW=0 restores immediate flush (legacy escape hatch).
 func TestCorrelationWindowDefaultAndOverride(t *testing.T) {

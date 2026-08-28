@@ -136,7 +136,7 @@ func (ex *ipExtractor) clientIP(r *http.Request) string {
 }
 
 // memoryRateLimiter implements per-IP fixed-window counting, matching the
-// Valkey implementation's semantics exactly (WP-B2): each key gets `limit`
+// Valkey implementation's semantics exactly: each key gets `limit`
 // requests per `window`, resetting on window rollover. Previously this was a
 // token bucket whose effective allowance diverged ~30x from the Valkey path
 // depending on deployment mode. `nowFn` is a seam for tests that double the

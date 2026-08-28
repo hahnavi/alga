@@ -8,7 +8,7 @@ import (
 )
 
 // webhookError writes the standard JSON error envelope for public webhook
-// surfaces (WP-B4). Plain-text http.Error responses previously fed
+// surfaces. Plain-text http.Error responses previously fed
 // log-forgement and noise channels into operator dashboards; vendors and
 // ingestors do not parse error bodies, so the format change is safe.
 func webhookError(w http.ResponseWriter, code platform.ErrorCode, message string) {

@@ -24,7 +24,7 @@ var (
 	ErrICSRoleNotFound             = errors.New("ICS role assignment not found")
 	ErrCredentialProviderNotFound  = errors.New("credential provider not found")
 	// ErrCredentialProviderInUse maps the FK RESTRICT violation when a
-	// provider still owns shared secrets (WP-B6): handlers translate it to a
+	// provider still owns shared secrets: handlers translate it to a
 	// 409 instead of a raw 500.
 	ErrCredentialProviderInUse  = errors.New("credential provider has dependent secrets and cannot be removed")
 	ErrSystemCredentialProvider = errors.New("credential provider is a system default and cannot be removed or reconfigured")

@@ -494,7 +494,7 @@ func (a *App) wire() error {
 			a.scheduler.SetStalePublisher(publisher)
 			a.scheduler.SetStaleConfig(a.cfg.StaleAlertThreshold, a.cfg.StaleAlertSweepInterval)
 			a.scheduler.SetDataRetention(a.cfg.DataRetentionDays, time.Hour)
-			// DT-E3 retention family rides the same hourly leader-gated loop
+			// retention family rides the same hourly leader-gated loop
 			// (audit logs reuse the SetAuditStore store below).
 			a.scheduler.SetAuditRetention(a.cfg.AuditRetentionDays)
 			a.scheduler.SetRetentionStores(a.stores.TriageResult, a.stores.Delivery, a.stores.PasswordReset)
@@ -523,7 +523,7 @@ func (a *App) wire() error {
 		a.scheduler.SetCoordinationTaskStore(a.stores.CoordinationTask)
 		a.scheduler.SetCoordinationTaskSweepInterval(5 * time.Minute)
 
-		// DT-E1 / WP-A3: the scheduler leader owns SLA sweep tick publication;
+		// the scheduler leader owns SLA sweep tick publication;
 		// interval <= 0 disables publication entirely.
 		if publisher != nil {
 			a.scheduler.SetSLAPublisher(publisher)

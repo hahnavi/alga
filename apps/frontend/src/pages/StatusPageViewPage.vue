@@ -167,7 +167,7 @@ watch(slug, loadView);
         </h2>
 
         <!--
-          Read-only by design (WP-B1): the slug view payload is an allow-listed,
+ Read-only by design: the slug view payload is an allow-listed,
           public-safe contract without internal ids, so component management
           (add / status / delete) lives on the Status Pages settings page.
         -->

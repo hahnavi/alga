@@ -15,7 +15,7 @@ import (
 	"alga/ics"
 )
 
-// TestICSCloseTeardownAndReopenReset pins the DT-E8 store contract: the
+// TestICSCloseTeardownAndReopenReset pins the store contract: the
 // close-time teardown persists roles with the migration-00020 'incident_closed'
 // end reason (CHECK-accepted), and the reopen reset nulls sla_resolved_at so
 // resolve-breach detection can fire again.
@@ -39,7 +39,7 @@ func TestICSCloseTeardownAndReopenReset(t *testing.T) {
 	userID := user.ID
 
 	inc, err := stores.Incident.CreateIncident(ctx, &IncidentRecord{
-		Title:   "DT-E8 teardown fixture",
+		Title:   "teardown fixture",
 		Summary: "close-time ICS role teardown",
 	})
 	if err != nil {

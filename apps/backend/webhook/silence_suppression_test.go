@@ -82,7 +82,7 @@ func noiseAlert() types.Alert {
 
 // TestHandleFiringSilencedSkipsCorrelator asserts silence means silence: a
 // firing alert matched by a silenced routing rule is stored but never forwarded
-// to the correlator, so no LLM investigation can be opened for it (WP-C6).
+// to the correlator, so no LLM investigation can be opened for it.
 func TestHandleFiringSilencedSkipsCorrelator(t *testing.T) {
 	engine, _ := silencedEngine()
 	correlator := &correlatorSpy{}
@@ -96,7 +96,7 @@ func TestHandleFiringSilencedSkipsCorrelator(t *testing.T) {
 	}
 }
 
-// TestHandleFiringNonSilencedStillCorrelates proves the WP-C6 change did not
+// TestHandleFiringNonSilencedStillCorrelates proves the change did not
 // mute the normal path: non-silenced firing alerts must still reach the
 // correlator with their assigned alert number.
 func TestHandleFiringNonSilencedStillCorrelates(t *testing.T) {

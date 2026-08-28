@@ -28,7 +28,7 @@ type AgentSSEHandler struct {
 	allowedOrigins []string
 
 	// allowQueryToken re-enables the legacy `?token=` fallback for pure-
-	// EventSource consumers; deny-by-default (WP-B3).
+	// EventSource consumers; deny-by-default.
 	allowQueryToken bool
 }
 

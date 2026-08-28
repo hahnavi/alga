@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// TestEffectiveWindow pins the WP-A12 window-resolution contract: a matched
+// TestEffectiveWindow pins the window-resolution contract: a matched
 // rule with Window > 0 overrides the global window (seconds); the global
 // window is the fallback, including 0 = immediate flush.
 func TestEffectiveWindow(t *testing.T) {

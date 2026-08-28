@@ -38,7 +38,7 @@ func (s *Service) handleAgentMemories(w http.ResponseWriter, r *http.Request) {
 	}
 	switch r.Method {
 	case http.MethodGet:
-		// WP-B7: reads need investigate OR command.
+		// reads need investigate OR command.
 		if !capability.HasAny(agent.Capabilities, capability.Investigate, capability.Command) {
 			platform.WriteError(w, platform.ErrorCodeForbidden,
 				fmt.Sprintf("agent %q lacks required capability (one of: %s, %s)",
@@ -47,7 +47,7 @@ func (s *Service) handleAgentMemories(w http.ResponseWriter, r *http.Request) {
 		}
 		s.listMemories(w, r)
 	case http.MethodPost:
-		// WP-B7: memories are investigation artifacts; authoring requires
+		// memories are investigation artifacts; authoring requires
 		// investigate (extraction output lands here from the runtime).
 		if !capability.Has(agent.Capabilities, capability.Investigate) {
 			platform.WriteError(w, platform.ErrorCodeForbidden,
@@ -96,7 +96,7 @@ func (s *Service) handleAgentMemoryByID(w http.ResponseWriter, r *http.Request) 
 		}
 		platform.WriteData(w, http.StatusOK, rec)
 	case http.MethodDelete:
-		// WP-B7: deletion is destructive and shared — require investigate on
+		// deletion is destructive and shared — require investigate on
 		// top of strict ownership. Records with a nil AgentID (extraction
 		// output) are NEVER deletable by agents; only an operator via the
 		// RBAC-gated /api/v1/memories/{id} may remove those.

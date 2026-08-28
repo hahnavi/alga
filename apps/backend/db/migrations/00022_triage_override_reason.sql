@@ -1,4 +1,4 @@
--- WP-A15: the triage override endpoint accepts a reason but had nowhere to
+-- the triage override endpoint accepts a reason but had nowhere to
 -- persist it. Track why a human overrode the LLM/rule decision alongside the
 -- existing overridden_to/by/at columns.
 

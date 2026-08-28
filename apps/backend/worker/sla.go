@@ -133,7 +133,7 @@ func breachDedupKey(incidentID, breachType string) string {
 }
 
 // ClearBreachDedupKeys deletes the per-incident SLA breach dedup markers so a
-// reopened incident can re-breach within the marker TTL. Part of the DT-E8
+// reopened incident can re-breach within the marker TTL. Part of the
 // reopen reset; safe to call with a nil client (no Valkey, no dedup either).
 func ClearBreachDedupKeys(ctx context.Context, vk *valkey.Client, incidentNumber int64) {
 	if vk == nil {

@@ -17,7 +17,7 @@ import (
 // stubScopeICSStore serves a scripted GetAllRoles list and captures the
 // UpdateRoleScope call; AssignRole and every other method panic via the nil
 // embedded interface — reaching them would mean the handler re-inserts
-// instead of updating in place (the WP-A4 bug).
+// instead of updating in place (the bug).
 type stubScopeICSStore struct {
 	store.ICSRoleStore
 	roles        []store.ICSRoleRecord
@@ -38,7 +38,7 @@ func (s *stubScopeICSStore) UpdateRoleScope(_ context.Context, assignmentID uuid
 	return s.updateErr
 }
 
-// TestHandleUpdateICSRoleUpdatesScopeInPlace pins WP-A4: PATCH scope updates
+// TestHandleUpdateICSRoleUpdatesScopeInPlace pins PATCH scope updates
 // the active assignment in place (never re-inserts), audits the transition,
 // and maps a missing/ended assignment to 404.
 func TestHandleUpdateICSRoleUpdatesScopeInPlace(t *testing.T) {

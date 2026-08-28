@@ -155,7 +155,7 @@ func (s *Server) createKnowledge(w http.ResponseWriter, r *http.Request) {
 // write back a new note (used in Phase 4 / agent-authored KB); the agent
 // must supply a source_investigation_id and confidence.
 //
-// Capability gates per WP-B7: reads need `investigate` OR `command`
+// Capability gates: reads need `investigate` OR `command`
 // (commanders legitimately consult runbooks); authoring needs `investigate`
 // — KB notes are ingested into other agents' prompts, so a minimal
 // communicate-only token must not be able to plant content.
@@ -193,7 +193,7 @@ func (s *Server) handleAgentKnowledge(w http.ResponseWriter, r *http.Request) {
 // The list/search endpoint returns truncated previews; this route gives
 // agents the full note body so they can read complete runbooks without a
 // human paste. Read-only and bearer-authenticated via the route middleware;
-// requires `investigate` OR `command` (WP-B7).
+// requires `investigate` OR `command`.
 func (s *Server) handleAgentKnowledgeByID(w http.ResponseWriter, r *http.Request) {
 	if !s.requireStore(w, s.knowledgeStore, "knowledge store") {
 		return

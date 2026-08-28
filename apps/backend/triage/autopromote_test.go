@@ -68,7 +68,7 @@ func autoPromoteMsg() rabbitmq.TriageMessage {
 	}
 }
 
-// TestAutoPromoteSkipsLLM pins the WP-A15 behavior: once the confirmed
+// TestAutoPromoteSkipsLLM pins the behavior: once the confirmed
 // key+decision count reaches TRIAGE_AUTO_PROMOTE_CONFIRMED_COUNT, triage
 // completes without an LLM call and records the promotion in reasoning.
 func TestAutoPromoteSkipsLLM(t *testing.T) {

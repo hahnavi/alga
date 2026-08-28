@@ -409,7 +409,7 @@ func (s *Server) handleUpdateICSRole(w http.ResponseWriter, r *http.Request, inc
 	}
 	// Scope updates edit the active assignment in place; re-assigning would
 	// insert a second active row and collide with the partial unique index on
-	// (incident_id, role_type) WHERE status='active' (WP-A4).
+	// (incident_id, role_type) WHERE status='active'.
 	if err := s.icsRoleStore.UpdateRoleScope(r.Context(), found.ID, &scope); err != nil {
 		if errors.Is(err, store.ErrICSRoleNotFound) {
 			writeError(w, ErrorCodeNotFound, "role assignment not found")

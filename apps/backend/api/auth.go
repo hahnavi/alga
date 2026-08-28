@@ -842,7 +842,7 @@ func (s *Server) clearSessionCookie(w http.ResponseWriter) {
 }
 
 // setRefreshTokenCookie issues the HttpOnly alga_rt refresh-token cookie that
-// accompanies the session cookie (WP-A7). Browsers never need to present it;
+// accompanies the session cookie. Browsers never need to present it;
 // it exists so API clients can drive the documented refresh-token rotation and
 // so replays of rotated-out tokens are detectable and revocable.
 func setRefreshTokenCookie(w http.ResponseWriter, secure bool, sessionExpiry time.Duration, refreshToken string) {

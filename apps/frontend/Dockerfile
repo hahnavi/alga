@@ -16,12 +16,13 @@ COPY apps/frontend/ apps/frontend/
 WORKDIR /app/apps/frontend
 RUN pnpm build
 
-FROM nginx:1.31.2-alpine3.23-slim
+FROM nginx:1.31.4-alpine3.24-slim AS runtime
 # Upgrade base packages to pick up security fixes that the pinned nginx image
-# lags behind (e.g. CVE-2026-45447: heap UAF in OpenSSL PKCS7_verify(), shipped
-# as libcrypto3/libssl3 3.5.6-r0 in this image, fixed in 3.5.7-r0). The nginx
-# base image is republished far less often than Alpine's package repo, so the
-# Trivy HIGH/CRITICAL gate would otherwise flap on every new openssl advisory.
+# lags behind (e.g. CVE-2026-14456: DoS via unbounded memory growth in the
+# OpenSSL QUIC server, shipped as libcrypto3/libssl3 3.5.7-r0 in the older
+# alpine3.23 base, fixed in 3.5.8-r0). The nginx base image is republished far
+# less often than Alpine's package repo, so the Trivy HIGH/CRITICAL gate would
+# otherwise flap on every new openssl advisory.
 RUN apk --no-cache upgrade
 RUN rm /etc/nginx/conf.d/default.conf
 COPY apps/frontend/nginx.conf /etc/nginx/conf.d/default.conf

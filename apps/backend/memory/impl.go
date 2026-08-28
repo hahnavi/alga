@@ -22,7 +22,7 @@ type service struct {
 }
 
 // ServiceOptions carries the memory-knob plumbing from config into the
-// service (WP-A11): MaxPerInv hard-caps extraction, SimilarityThreshold
+// service: MaxPerInv hard-caps extraction, SimilarityThreshold
 // post-filters search results, AutoExtract gates LLM extraction.
 type ServiceOptions struct {
 	// MaxPerInv caps the memories persisted per investigation; <= 0 uses the
@@ -68,7 +68,7 @@ func (s *service) ExtractFromInvestigation(ctx context.Context, inv *store.Alert
 }
 
 // filterByThreshold drops results below the configured similarity threshold
-// (WP-A11). A threshold <= 0 disables filtering, preserving the raw top-K.
+// . A threshold <= 0 disables filtering, preserving the raw top-K.
 func (s *service) filterByThreshold(results []store.ScoredMemory) []store.ScoredMemory {
 	if s.similarityThreshold <= 0 {
 		return results

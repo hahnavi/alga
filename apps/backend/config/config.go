@@ -175,7 +175,7 @@ type Config struct {
 	StaleAlertSweepInterval time.Duration `yaml:"stale_alert_sweep_interval"`
 
 	// SLASweepInterval is how often the scheduler's leader publishes an SLA
-	// sweep request to RabbitMQ, driving SLA breach detection (DT-E1 decided:
+	// sweep request to RabbitMQ, driving SLA breach detection (decided:
 	// scheduler-owned publication). Values <= 0 disable publication entirely.
 	SLASweepInterval time.Duration `yaml:"sla_sweep_interval"`
 
@@ -195,7 +195,7 @@ type Config struct {
 
 	DataRetentionDays int `yaml:"data_retention_days"`
 
-	// AuditRetentionDays bounds the audit_logs trail (DT-E3). Compliance-grade
+	// AuditRetentionDays bounds the audit_logs trail. Compliance-grade
 	// data gets a longer window than DATA_RETENTION_DAYS; 0 disables audit
 	// pruning (keep forever).
 	AuditRetentionDays int `yaml:"audit_retention_days"`

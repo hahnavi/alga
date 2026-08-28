@@ -454,7 +454,7 @@ func (s *Server) handleAgentSecretByID(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	// Coarse capability gate BEFORE any store lookup (WP-B6): tokens without
+	// Coarse capability gate BEFORE any store lookup: tokens without
 	// the `secrets` capability never touch the secret store. Deny with the
 	// same generic 404 as allow-list failures so the endpoint stays a
 	// no-existence-oracle; log agent identity for the ops trail (no secret

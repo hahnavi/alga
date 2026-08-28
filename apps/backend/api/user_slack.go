@@ -172,7 +172,7 @@ func (h *userSlackHandler) handleCallback(w http.ResponseWriter, r *http.Request
 	defer cancel()
 
 	if err := h.userStore.SetSlackIdentity(ctx, userID, identity.User.ID, displayName); err != nil {
-		// WP-C8: a duplicate binding is a client-fixable conflict, not a save
+		// a duplicate binding is a client-fixable conflict, not a save
 		// failure — surface it as 409 instead of the generic save_failed redirect.
 		if errors.Is(err, store.ErrSlackIdentityTaken) {
 			writeError(w, ErrorCodeConflict, "Slack identity is already linked to another user")
@@ -183,7 +183,7 @@ func (h *userSlackHandler) handleCallback(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// WP-C9: successful links must record success=true (was a copy-paste false).
+	// successful links must record success=true (was a copy-paste false).
 	h.auditStore.Log(store.AuditUserSlackLinked, &userID, "", "", "", true, map[string]any{
 		"slack_user_id":   identity.User.ID,
 		"slack_user_name": identity.User.Name,
@@ -213,7 +213,7 @@ func (h *userSlackHandler) handleDisconnect(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// WP-C9: successful unlinks must record success=true.
+	// successful unlinks must record success=true.
 	h.auditStore.Log(store.AuditUserSlackUnlinked, &user.ID, user.Email, "", "", true, nil)
 
 	writeStatus(w, "disconnected")

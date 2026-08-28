@@ -53,7 +53,6 @@ type IncidentRecord struct {
 	ClosedAt                 *time.Time     `json:"closed_at,omitempty"`
 	TriagedAt                *time.Time     `json:"triaged_at,omitempty"`
 	TriageReport             map[string]any `json:"triage_report,omitempty"`
-	AutoConfirmed            bool           `json:"auto_confirmed"`
 	Tags                     []string       `json:"tags,omitempty"`
 	CustomFields             map[string]any `json:"custom_fields,omitempty"`
 	CreatedAt                time.Time      `json:"created_at"`
@@ -113,8 +112,17 @@ type IncidentStore interface {
 	CountActiveByPriority(ctx context.Context, serviceID string) (map[string]int, error)
 	ListActiveSummarizableIncidents(ctx context.Context) ([]IncidentRecord, error)
 	ListActiveIncidents(ctx context.Context) ([]IncidentRecord, error)
+	// ListActiveIncidentsForServices returns active incidents whose
+	// service_id is in the given set (status-page scoping). An empty
+	// input yields an empty slice without querying.
+	ListActiveIncidentsForServices(ctx context.Context, serviceIDs []uuid.UUID) ([]IncidentRecord, error)
 	GetIncidentBySlackChannel(ctx context.Context, channelID string) (*IncidentRecord, error)
 	SetIncidentWarRoomMeet(ctx context.Context, incidentNumber int64, spaceName, conferenceURL string) error
+	// ClearSLAResolvedAt nulls the SLA resolve stamp as part of the
+	// handler-explicit reopen reset so resolve-breach detection can
+	// fire again. Deliberately not part of applyStatusTimestampsBun, whose
+	// "active" case also serves detected→active promotion.
+	ClearSLAResolvedAt(ctx context.Context, incidentNumber int64) error
 }
 
 type pgIncidentStore struct {
@@ -200,7 +208,6 @@ func (s *pgIncidentStore) CreateIncident(ctx context.Context, record *IncidentRe
 		ClosedAt:             record.ClosedAt,
 		TriagedAt:            record.TriagedAt,
 		TriageReport:         record.TriageReport,
-		AutoConfirmed:        record.AutoConfirmed,
 		Tags:                 record.Tags,
 		CustomFields:         record.CustomFields,
 	}
@@ -381,7 +388,6 @@ func (s *pgIncidentStore) UpdateIncident(ctx context.Context, incidentNumber int
 	if record.TriageReport != nil {
 		q = q.Set("triage_report = ?", record.TriageReport)
 	}
-	q = q.Set("auto_confirmed = ?", record.AutoConfirmed)
 	if record.Tags != nil {
 		q = q.Set("tags = ?", record.Tags)
 	}
@@ -609,6 +615,23 @@ func applyStatusTimestampsBun(q *bun.UpdateQuery, toStatus string, now time.Time
 		q = q.Set("closed_at = ?", now)
 	}
 	return q
+}
+
+// ClearSLAResolvedAt nulls the incident's SLA resolve stamp (reopen
+// reset) so resolve-breach detection can fire again after a reopen.
+func (s *pgIncidentStore) ClearSLAResolvedAt(ctx context.Context, incidentNumber int64) error {
+	ctx, cancel := pgctx(ctx)
+	defer cancel()
+
+	_, err := s.db.NewUpdate().Model((*models.Incident)(nil)).
+		Set("sla_resolved_at = ?", nil).
+		Where("incident_number = ?", incidentNumber).
+		Where("deleted_at IS NULL").
+		Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to clear sla_resolved_at: %w", err)
+	}
+	return nil
 }
 
 // SetIncidentWarRoomMeet persists the Google Meet war room for an incident.
@@ -898,6 +921,35 @@ func (s *pgIncidentStore) ListActiveIncidents(ctx context.Context) ([]IncidentRe
 	return out, nil
 }
 
+// ListActiveIncidentsForServices returns active, non-deleted incidents whose
+// service_id is in serviceIDs (: status-page slug views must only see
+// impact for services the page actually maps). Empty input short-circuits to
+// an empty slice — a page with no service-linked components has no incident
+// surface.
+func (s *pgIncidentStore) ListActiveIncidentsForServices(ctx context.Context, serviceIDs []uuid.UUID) ([]IncidentRecord, error) {
+	if len(serviceIDs) == 0 {
+		return []IncidentRecord{}, nil
+	}
+	ctx, cancel := pgctx(ctx)
+	defer cancel()
+
+	var rows []models.Incident
+	err := s.db.NewSelect().Model(&rows).
+		Where("status NOT IN (?)", bun.List([]string{"resolved", "closed", "cancelled"})).
+		Where("deleted_at IS NULL").
+		Where("service_id IN (?)", bun.List(serviceIDs)).
+		Order("created_at ASC").
+		Scan(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("query active incidents for services: %w", err)
+	}
+	out := make([]IncidentRecord, 0, len(rows))
+	for i := range rows {
+		out = append(out, *s.toIncidentRecord(&rows[i]))
+	}
+	return out, nil
+}
+
 func (s *pgIncidentStore) GetIncidentBySlackChannel(ctx context.Context, channelID string) (*IncidentRecord, error) {
 	var item models.Incident
 	err := s.db.NewSelect().Model(&item).Where("slack_channel_id = ?", channelID).Scan(ctx)
@@ -964,7 +1016,6 @@ func (s *pgIncidentStore) toIncidentRecord(inc *models.Incident) *IncidentRecord
 		ClosedAt:             inc.ClosedAt,
 		TriagedAt:            inc.TriagedAt,
 		TriageReport:         inc.TriageReport,
-		AutoConfirmed:        inc.AutoConfirmed,
 		Tags:                 inc.Tags,
 		CustomFields:         inc.CustomFields,
 		CreatedAt:            inc.CreatedAt,

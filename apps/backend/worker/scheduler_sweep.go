@@ -220,6 +220,50 @@ func (s *InvestigationScheduler) staleSweepTick(ctx context.Context) {
 	}
 }
 
+// runSLASweep is the long-running goroutine that periodically publishes an
+// SLA sweep request tick to RabbitMQ so the SLAWorker can detect breaches.
+// It exists because nothing else produces SLASweepMessage (the
+// decision assigned publication to the scheduler leader rather than an
+// external cron, whose silence was the original failure mode).
+func (s *InvestigationScheduler) runSLASweep() {
+	defer s.wg.Done()
+	interval := s.slaSweepInterval
+	if interval <= 0 {
+		interval = time.Minute
+	}
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-s.stopCh:
+			return
+		case <-ticker.C:
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						logger.Error("scheduler tick panicked", "component", "scheduler", "tick", "sla_sweep", "panic", r, "stack", string(debug.Stack()))
+					}
+				}()
+				s.slaSweepTick(context.Background())
+			}()
+		}
+	}
+}
+
+// slaSweepTick runs one pass of the SLA sweep publisher. Only the leader
+// publishes ticks; non-leader replicas skip silently. Publish failures log a
+// warning and never stop the loop — the next interval retries.
+func (s *InvestigationScheduler) slaSweepTick(ctx context.Context) {
+	if !s.acquireLeadership(ctx) {
+		return
+	}
+	if err := s.slaSweepPublisher.PublishSLASweep(ctx, rabbitmq.SLASweepMessage{}); err != nil {
+		logger.Warn("SLA sweep failed to publish request tick", "component", "scheduler", "error", err)
+		return
+	}
+	logger.Info("SLA sweep published request tick", "component", "scheduler", "interval", s.slaSweepInterval)
+}
+
 func (s *InvestigationScheduler) runHandoffTick() {
 	defer s.wg.Done()
 	ticker := time.NewTicker(30 * time.Second)
@@ -292,11 +336,82 @@ func (s *InvestigationScheduler) handoffTick(ctx context.Context) {
 			}
 		}
 	}
+
+	s.remindUpcomingOnCall(ctx)
 }
 
-// runPrune periodically deletes alerts older than the retention cutoff
-// (DATA_RETENTION_DAYS, 0 = keep forever). Whether the underlying store
-// filters by status is implementation-defined.
+// oncallReminderLead warns the next on-call user this far ahead of their shift
+// start.
+const oncallReminderLead = 15 * time.Minute
+
+// remindUpcomingOnCall publishes an `oncall_reminder` notification to whoever
+// takes over within the lead window, for schedules whose on-call changes at
+// that boundary. Runs over every schedule each handoff tick; the per-(schedule,
+// user) Valkey claim keeps it to one notification per upcoming shift. Without
+// a Valkey client the pass is skipped entirely — nothing could stop the same
+// reminder from firing on every tick. Resolution cost is two resolver calls
+// per schedule per tick (bounded by ListSchedules' 1000-schedule cap).
+func (s *InvestigationScheduler) remindUpcomingOnCall(ctx context.Context) {
+	if s.notifyPublisher == nil || s.handoffDetector == nil || s.valkeyClient == nil {
+		return
+	}
+
+	now := time.Now()
+	schedules, err := s.handoffDetector.Schedules(ctx)
+	if err != nil {
+		logger.WarnCtx(ctx, "On-call reminder sweep: failed to list schedules", "component", "scheduler-sweep", "error", err)
+		return
+	}
+	for _, sched := range schedules {
+		current, err := s.handoffDetector.WhoIsOnCallAt(ctx, sched.ID, now)
+		if err != nil {
+			logger.WarnCtx(ctx, "On-call reminder sweep: failed to resolve current on-call", "component", "scheduler-sweep", "schedule_id", sched.ID, "error", err)
+			continue
+		}
+		upcoming, err := s.handoffDetector.WhoIsOnCallAt(ctx, sched.ID, now.Add(oncallReminderLead))
+		if err != nil {
+			logger.WarnCtx(ctx, "On-call reminder sweep: failed to resolve upcoming on-call", "component", "scheduler-sweep", "schedule_id", sched.ID, "error", err)
+			continue
+		}
+		if current == nil || upcoming == nil || *upcoming == *current {
+			continue
+		}
+		claimKey := fmt.Sprintf("alga:oncall:reminder:%s:%s", sched.ID, upcoming)
+		ok, err := s.valkeyClient.SetNX(ctx, claimKey, "1", 2*time.Hour)
+		if err != nil {
+			// Fail closed: a missing reminder is far better than re-paging
+			// someone every 30 seconds because the dedup store is down.
+			logger.WarnCtx(ctx, "On-call reminder sweep: dedup claim failed, skipping", "component", "scheduler-sweep", "claim_key", claimKey, "error", err)
+			continue
+		}
+		if !ok {
+			continue
+		}
+
+		displayName := "On-Call"
+		if sched.TeamID != nil && s.teamStore != nil {
+			if name, err := s.teamStore.GetTeamName(ctx, *sched.TeamID); err == nil && name != "" {
+				displayName = name
+			}
+		}
+		if err := s.notifyPublisher.PublishNotificationDispatch(ctx, rabbitmq.NotificationDispatchMessage{
+			UserID:           upcoming.String(),
+			NotificationType: "oncall_reminder",
+			Title:            fmt.Sprintf("You are on call soon for %s", displayName),
+			Message:          fmt.Sprintf("Your on-call shift for %s starts in about %d minutes.", displayName, int(oncallReminderLead.Minutes())),
+			ResourceType:     "schedule",
+			ResourceID:       sched.ID.String(),
+		}); err != nil {
+			logger.WarnCtx(ctx, "On-call reminder sweep: failed to publish reminder notification", "component", "scheduler-sweep", "schedule_id", sched.ID, "error", err)
+		}
+	}
+}
+
+// runPrune periodically deletes data past its retention window:
+// resolved alerts, triage results, and notification delivery logs ride
+// DATA_RETENTION_DAYS (0 = keep forever); audit_logs uses its own longer
+// AUDIT_RETENTION_DAYS (0 = keep forever); password-reset tokens are purged
+// unconditionally once used or a week past expiry (security hygiene, no knob).
 func (s *InvestigationScheduler) runPrune() {
 	defer s.wg.Done()
 	ticker := time.NewTicker(s.pruneInterval)
@@ -322,14 +437,47 @@ func (s *InvestigationScheduler) pruneTick(ctx context.Context) {
 	if !s.acquireLeadership(ctx) {
 		return
 	}
-	cutoff := time.Now().UTC().AddDate(0, 0, -s.dataRetentionDays)
-	n, err := s.alertStore.DeleteOlderThan(ctx, cutoff)
-	if err != nil {
-		logger.Error("Data retention prune failed to delete old alerts", "component", "scheduler", "error", err)
-		return
+	now := time.Now().UTC()
+
+	if s.dataRetentionDays > 0 {
+		cutoff := now.AddDate(0, 0, -s.dataRetentionDays)
+		n, err := s.alertStore.DeleteOlderThan(ctx, cutoff)
+		if err != nil {
+			logger.Error("Data retention prune failed to delete old alerts", "component", "scheduler", "error", err)
+		} else if n > 0 {
+			logger.Info("Data retention prune deleted resolved alerts", "component", "scheduler", "count", n, "cutoff", cutoff.Format(time.RFC3339))
+		}
+		if s.triageStore != nil {
+			if n, err := s.triageStore.DeleteOlderThan(ctx, cutoff); err != nil {
+				logger.Error("Data retention prune failed to delete old triage results", "component", "scheduler", "error", err)
+			} else if n > 0 {
+				logger.Info("Data retention prune deleted triage results", "component", "scheduler", "count", n)
+			}
+		}
+		if s.deliveryStore != nil {
+			if n, err := s.deliveryStore.DeleteOlderThan(ctx, cutoff); err != nil {
+				logger.Error("Data retention prune failed to delete old notification delivery logs", "component", "scheduler", "error", err)
+			} else if n > 0 {
+				logger.Info("Data retention prune deleted notification delivery logs", "component", "scheduler", "count", n)
+			}
+		}
 	}
-	if n > 0 {
-		logger.Info("Data retention prune deleted resolved alerts", "component", "scheduler", "count", n, "cutoff", cutoff.Format(time.RFC3339))
+
+	if s.auditStore != nil && s.auditRetentionDays > 0 {
+		cutoff := now.AddDate(0, 0, -s.auditRetentionDays)
+		if n, err := s.auditStore.DeleteOlderThan(ctx, cutoff); err != nil {
+			logger.Error("Data retention prune failed to delete old audit logs", "component", "scheduler", "error", err)
+		} else if n > 0 {
+			logger.Info("Data retention prune deleted audit logs", "component", "scheduler", "count", n, "cutoff", cutoff.Format(time.RFC3339))
+		}
+	}
+
+	if s.passwordResetStore != nil {
+		if n, err := s.passwordResetStore.DeleteConsumedExpired(ctx, now.AddDate(0, 0, -7)); err != nil {
+			logger.Error("Data retention prune failed to delete consumed/expired password reset tokens", "component", "scheduler", "error", err)
+		} else if n > 0 {
+			logger.Info("Data retention prune deleted password reset tokens", "component", "scheduler", "count", n)
+		}
 	}
 }
 

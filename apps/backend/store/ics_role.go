@@ -36,6 +36,11 @@ type ICSRoleRecord struct {
 type ICSRoleStore interface {
 	AssignRole(ctx context.Context, incidentNumber int64, roleType ics.RoleType, userID uuid.UUID, parentAssignmentID *uuid.UUID, scope *string) (*ICSRoleRecord, error)
 	AssignAgentRole(ctx context.Context, incidentNumber int64, roleType ics.RoleType, agentTokenID uuid.UUID, parentAssignmentID *uuid.UUID, scope *string) (*ICSRoleRecord, error)
+	// UpdateRoleScope edits the scope of the ACTIVE assignment in place
+	// re-inserting would collide with the partial unique index on
+	// (incident_id, role_type) WHERE status='active'. Zero rows updated ⇒
+	// ErrICSRoleNotFound.
+	UpdateRoleScope(ctx context.Context, assignmentID uuid.UUID, scope *string) error
 	EndRole(ctx context.Context, assignmentID uuid.UUID, reason ics.EndReason) error
 	GetActiveRoles(ctx context.Context, incidentNumber int64) ([]ICSRoleRecord, error)
 	GetActiveIC(ctx context.Context, incidentNumber int64) (*ICSRoleRecord, error)
@@ -107,6 +112,28 @@ func (s *pgICSRoleStore) AssignRole(ctx context.Context, incidentNumber int64, r
 		Status:             m.Status,
 		StartedAt:          m.StartedAt,
 	}, nil
+}
+
+func (s *pgICSRoleStore) UpdateRoleScope(ctx context.Context, assignmentID uuid.UUID, scope *string) error {
+	ctx, cancel := pgctx(ctx)
+	defer cancel()
+
+	res, err := s.db.NewUpdate().Model((*models.ICSRoleAssignment)(nil)).
+		Set("scope_description = ?", scope).
+		Where("id = ?", assignmentID).
+		Where("status = ?", "active").
+		Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to update ICS role scope: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to update ICS role scope: %w", err)
+	}
+	if n == 0 {
+		return ErrICSRoleNotFound
+	}
+	return nil
 }
 
 func (s *pgICSRoleStore) EndRole(ctx context.Context, assignmentID uuid.UUID, reason ics.EndReason) error {

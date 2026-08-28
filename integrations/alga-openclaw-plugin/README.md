@@ -79,7 +79,6 @@ Or add to `~/.openclaw/openclaw.json`:
       "alga_set_incident_priority",
       "alga_set_incident_severity",
       "alga_trigger_escalation",
-      "alga_request_status_update",
       "alga_mitigate_incident",
       "alga_resolve_incident",
       "alga_begin_triage",
@@ -87,7 +86,12 @@ Or add to `~/.openclaw/openclaw.json`:
       "alga_assign_incident_role",
       "alga_post_handoff",
       "alga_publish_status_update",
-      "alga_set_incident_resolution_docs"
+      "alga_set_incident_resolution_docs",
+      "alga_dispatch_task",
+      "alga_claim_task",
+      "alga_complete_task",
+      "alga_list_tasks",
+      "alga_synthesize_findings"
     ]
   }
 }
@@ -101,29 +105,32 @@ Trigger a test alert in Alga. The agent should receive the investigation, post f
 
 ## Agent Tools
 
-The plugin registers 32 agent tools:
+The plugin registers 36 agent tools (generated from `src/agent-tools.ts` — update the registry first, then this table):
 
-| Category | Tools |
-|----------|-------|
-| **Alert actions** | `alga_resolve_alert`, `alga_reopen_alert` |
-| **Investigation lifecycle** | `alga_cancel_investigation`, `alga_pause_investigation`, `alga_set_outcome`, `alga_assign_investigation` |
-| **Query** | `alga_list_alerts` |
-| **Knowledge** | `alga_search_knowledge`, `alga_get_knowledge`, `alga_create_knowledge` |
-| **Triage** | `alga_triage_feedback` |
-| **Incident (commander)** | `alga_set_incident_priority`, `alga_set_incident_severity`, `alga_trigger_escalation`, `alga_request_status_update`, `alga_mitigate_incident`, `alga_resolve_incident`, `alga_begin_triage`, `alga_promote_incident`, `alga_assign_incident_role`, `alga_post_handoff`, `alga_publish_status_update`, `alga_set_incident_resolution_docs` |
-| **Incident (general)** | `alga_get_incident_context`, `alga_get_incident_timeline`, `alga_add_incident_timeline`, `alga_promote_to_incident` |
-| **On-call** | `alga_who_is_on_call`, `alga_list_services` |
-| **Memory** | `alga_search_memories`, `alga_create_memory` |
-| **Peer** | `alga_peer_ask` |
+| Category                    | Tools                                                                                                                                                                                                                                                                                                                                                         |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Alert actions**           | `alga_resolve_alert`, `alga_reopen_alert`                                                                                                                                                                                                                                                                                                                     |
+| **Investigation lifecycle** | `alga_cancel_investigation`, `alga_pause_investigation`, `alga_set_outcome`, `alga_assign_investigation`                                                                                                                                                                                                                                                      |
+| **Query**                   | `alga_list_alerts`                                                                                                                                                                                                                                                                                                                                            |
+| **Knowledge**               | `alga_search_knowledge`, `alga_get_knowledge`, `alga_create_knowledge`                                                                                                                                                                                                                                                                                        |
+| **Triage**                  | `alga_triage_feedback`                                                                                                                                                                                                                                                                                                                                        |
+| **Incident (commander)**    | `alga_set_incident_priority`, `alga_set_incident_severity`, `alga_trigger_escalation`, `alga_mitigate_incident`, `alga_resolve_incident`, `alga_begin_triage`, `alga_promote_incident`, `alga_assign_incident_role`, `alga_post_handoff`, `alga_publish_status_update`, `alga_set_incident_resolution_docs`, `alga_dispatch_task`, `alga_synthesize_findings` |
+| **Coordination tasks**      | `alga_claim_task`, `alga_complete_task`, `alga_list_tasks`                                                                                                                                                                                                                                                                                                    |
+| **Incident (general)**      | `alga_get_incident_context`, `alga_get_incident_timeline`, `alga_add_incident_timeline`, `alga_promote_to_incident`                                                                                                                                                                                                                                           |
+| **On-call**                 | `alga_who_is_on_call`, `alga_list_services`                                                                                                                                                                                                                                                                                                                   |
+| **Memory**                  | `alga_search_memories`, `alga_create_memory`                                                                                                                                                                                                                                                                                                                  |
+| **Peer**                    | `alga_peer_ask`                                                                                                                                                                                                                                                                                                                                               |
 
+> The removed `alga_request_status_update` tool has been replaced by `alga_dispatch_task` with `kind=communicate` (or any other task kind) — status-update requests are coordination tasks now.
+>
 > **Investigation addressing.** Alga addresses alert investigation threads as `alert_<number>` (e.g. `alert_42`) and incident threads as `incident_coord_<number>` / `incident_inv_<number>`. Pass these chat ids as the `investigation_id` argument. A bare number is treated as an alert number. There is no separate investigations REST endpoint; investigation state is driven through the `inv_tool` commands on `POST /api/v1/agent/messages`.
 
 ## Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `ALGA_SERVER_URL` | Base URL of the Alga backend (no trailing slash) |
-| `ALGA_AGENT_TOKEN` | Agent bot token from the Alga UI |
+| Variable             | Description                                                  |
+| -------------------- | ------------------------------------------------------------ |
+| `ALGA_SERVER_URL`    | Base URL of the Alga backend (no trailing slash)             |
+| `ALGA_AGENT_TOKEN`   | Agent bot token from the Alga UI                             |
 | `ALGA_ALLOWED_USERS` | Comma-separated OpenClaw user IDs allowed to use the channel |
 
 ## Architecture

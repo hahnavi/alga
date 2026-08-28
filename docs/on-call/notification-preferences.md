@@ -12,14 +12,14 @@ Notification preferences let each user control **which channels** they receive a
 Each user has a set of rules that map notification types to channels, plus a default channel for anything not explicitly covered:
 
 ```
-  Incident escalated ──► Rule: [slack, email, voice]
-                                │
-  Incident acknowledged ──► Rule: [in_app, email]
-                                │
-  Alert resolved ──► (no rule) ──► Default: [in_app]
+  Escalation triggered ────► Rule: escalation ──────────► [slack, email, voice]
+                                        │
+  Action item assigned ────► Rule: action_item_assigned ► [in_app, email]
+                                        │
+  Anything else ───────────► (no rule) ────────────────► Default: [in_app]
 ```
 
-When an event triggers a notification, Alga checks the user's preference rules for a matching `notification_type`. If a rule matches, the notification goes to that rule's channels. If no rule matches, it goes to the `default_channel`.
+When an event triggers a notification, Alga checks your preference rules **in order** for one whose `notification_type` matches the event's type exactly or via the `*` wildcard — the first match wins. Rules whose `enabled` toggle is off are skipped entirely: a disabled rule behaves as if it did not exist. If no enabled rule matches, the notification goes to your `default_channel`.
 
 ## Available Channels
 
@@ -45,43 +45,55 @@ Each user has a separate **voice opt-out** flag (`voice_opt_out`). When enabled,
 {
   "rules": [
     {
-      "notification_type": "incident_acknowledged",
-      "channels": ["in_app", "email"]
+      "notification_type": "escalation",
+      "channels": ["in_app", "email", "slack", "voice"],
+      "enabled": true
     },
     {
-      "notification_type": "incident_escalated",
-      "channels": ["in_app", "email", "slack", "voice"]
+      "notification_type": "mention",
+      "channels": ["in_app", "slack"],
+      "enabled": true
     },
     {
-      "notification_type": "alert_triggered",
-      "channels": ["in_app"]
+      "notification_type": "*",
+      "channels": ["in_app"],
+      "enabled": true
     }
   ],
   "default_channel": "in_app"
 }
 ```
 
-## Common Notification Types
+`default_channel` is optional; when unset (or set to `none` in the UI), unmatched notifications fall back to in-app delivery.
 
-These are the most commonly configured notification types. The full list is available in the UI.
+## Notification Types
 
-| Notification Type         | When It Fires                      | Recommended Channels        |
-| ------------------------- | ---------------------------------- | --------------------------- |
-| `incident_created`        | A new incident is opened           | In-app, Slack               |
-| `incident_escalated`      | Escalation moved to the next level | In-app, Slack, Email, Voice |
-| `incident_acknowledged`   | Someone acknowledged the incident  | In-app, Email               |
-| `incident_resolved`       | The incident is marked resolved    | In-app                      |
-| `alert_triggered`         | A new alert fired                  | In-app                      |
-| `investigation_completed` | An AI investigation finished       | In-app                      |
+Only these types are emitted today; they match the options in the UI. Configuring other type names is possible via the API but such rules stay inert until producers emit those events.
+
+| Notification Type                                                  | When It Fires                                       | Recommended Channels           |
+| ------------------------------------------------------------------ | --------------------------------------------------- | ------------------------------ |
+| `escalation`                                                       | An escalation policy fires                          | In-app, Slack, Email, Voice    |
+| `oncall_handoff`                                                   | Your on-call shift starts or ends                   | In-app, Email                  |
+| `oncall_reminder`                                                  | Your shift starts soon (~15 min ahead of handover)  | In-app, Push-style in-app ping |
+| `post_mortem_review_requested`                                     | A post-mortem is submitted for review               | In-app, Email                  |
+| `action_item_assigned`                                             | An action item is assigned to you                   | In-app, Email                  |
+| `mention`                                                          | Someone @mentions you in an investigation thread    | In-app, Slack                  |
+| `info`                                                             | Action-item due-date reminder sweep                 | In-app                         |
+| `incident_acknowledged` / `_mitigated` / `_resolved` / `_reopened` | An incident you command or respond on changes state | In-app, Slack, Email           |
+| `*`                                                                | Wildcard — matches any type                         | In-app                         |
+
+::: warning More triggers are on the roadmap
+Alert lifecycle events (created / acknowledged / resolved) and investigation updates are **planned**, not shipped — they need digest/rate-limit design first. See [Notifications](/core-features/notifications#notification-triggers) for current status.
+:::
 
 ## Managing Your Preferences
 
 1. Click your **profile avatar** in the top-right corner
 2. Select **Notification Preferences**
-3. Add or edit rules — pick a notification type and the channels you want
-4. Set your **default channel** (used when no rule matches)
-5. Click **Save Preferences**
-6. Use **Send Test** to verify in-app delivery works
+3. Set your **default channel** (used when no rule matches)
+4. Add or edit rules — pick a notification type, toggle the channels you want, and switch each rule on or off
+5. Click **Save**
+6. Use **Test** to verify in-app delivery works
 
 ::: warning Test notifications are in-app only
 The **Send Test** button (`POST /api/v1/users/me/notification-preferences/test`) is idempotent and creates an in-app test notification — it does not exercise the email, Slack, or voice pipelines. To verify those channels are working, trigger a real notification (e.g., create a test incident assigned to yourself).
@@ -89,10 +101,14 @@ The **Send Test** button (`POST /api/v1/users/me/notification-preferences/test`)
 
 ## Best Practices
 
-- **Reserve voice for escalations** — phone calls are disruptive. Only enable voice for `incident_escalated` at higher levels, not for every alert
-- **Use Slack for real-time awareness** — keep your primary incident notifications in Slack so your team has shared visibility
-- **Keep a default channel** — always set `default_channel` to `in_app` so you never miss a notification type you forgot to configure
-- **Different rules for different severities** — route critical incidents (P1) to more channels than routine updates
+- **Reserve voice for escalations** — phone calls are disruptive. Only enable voice on your `escalation` rule, not on `*`
+- **Use Slack for real-time awareness** — keep mentions and escalations mirrored to Slack so you see them where you already work
+- **Keep a default channel** — set `default_channel` so you never miss a type you forgot to configure
+- **Disable instead of delete** — turning a rule's enabled toggle off silences it without losing the configuration; re-enable it later
+
+::: tip Severity and time-window filters are not evaluated yet
+Rule fields for severity filters and active time windows (`severity_filter`, `start_time`, `end_time`) exist in the payload but are ignored by the dispatcher today — planned for phase 2 alongside digest-style triggers.
+:::
 
 ## API Endpoints
 

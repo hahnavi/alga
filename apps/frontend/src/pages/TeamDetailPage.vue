@@ -2,7 +2,7 @@
 import { onMounted, ref, computed, h, nextTick, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { Plus, X, Save, Trash2, ChevronDown, Search } from "@lucide/vue";
-import { api, type TeamMemberRecord, type UserInfo, type EscalationPolicyRecord } from "@/lib/api";
+import { api, type TeamMemberRecord, type UserInfo } from "@/lib/api";
 import { usePageHeader } from "@/composables/usePageHeader";
 import Button from "@/components/ui/Button.vue";
 import Input from "@/components/ui/Input.vue";
@@ -28,12 +28,10 @@ defineOptions({ name: "TeamDetailPage" });
 
 const route = useRoute();
 const router = useRouter();
-const escalationPerms = useEntityPermissions("escalation");
 
 const teamId = computed(() => (route.params.id as string) ?? "");
 const members = ref<TeamMemberRecord[]>([]);
 const allUsers = ref<UserInfo[]>([]);
-const policies = ref<EscalationPolicyRecord[]>([]);
 const { users: permittedUsers, loadUsers: loadPermittedUsers } =
   useUsersIfPermitted("users:manage");
 const {
@@ -42,27 +40,18 @@ const {
   error,
   reload: loadTeam,
 } = useAsyncData(async () => {
-  const [t, m, p] = await Promise.all([
-    api.getTeam(teamId.value),
-    api.getTeamMembers(teamId.value),
-    escalationPerms.canRead.value
-      ? api.getEscalationPolicies()
-      : Promise.resolve({ items: [] as EscalationPolicyRecord[] }),
-  ]);
+  const [t, m] = await Promise.all([api.getTeam(teamId.value), api.getTeamMembers(teamId.value)]);
   await loadPermittedUsers();
   members.value = m;
   allUsers.value = permittedUsers.value;
-  policies.value = "items" in p ? p.items : [];
   editName.value = t.name;
   editDescription.value = t.description;
-  editPolicyId.value = t.escalation_policy_id ?? "";
   return t;
 }, "Failed to load team");
 
 const showEditModal = ref(false);
 const editName = ref("");
 const editDescription = ref("");
-const editPolicyId = ref("");
 const { submitting: saving, withSubmit: withSave } = useFormSubmit();
 
 const showAddMember = ref(false);
@@ -125,7 +114,6 @@ function startEdit() {
   if (!team.value) return;
   editName.value = team.value.name;
   editDescription.value = team.value.description;
-  editPolicyId.value = team.value.escalation_policy_id ?? "";
   showEditModal.value = true;
 }
 
@@ -135,7 +123,6 @@ async function saveTeam() {
     const updated = await api.updateTeam(teamId.value, {
       name: editName.value.trim(),
       description: editDescription.value.trim(),
-      escalation_policy_id: editPolicyId.value,
     });
     team.value = updated;
     showEditModal.value = false;
@@ -320,12 +307,9 @@ watch(teamId, (id) => {
     <LoadingSpinner v-if="loading" centered />
 
     <template v-if="team && !loading">
-      <Card v-if="team.description || team.escalation_policy_id" class="space-y-3">
+      <Card v-if="team.description" class="space-y-3">
         <p v-if="team.description" class="text-sm text-[var(--text-muted)]">
           {{ team.description }}
-        </p>
-        <p v-if="team.escalation_policy_id" class="text-xs text-[var(--text-muted)]">
-          Escalation policy linked
         </p>
       </Card>
 
@@ -398,18 +382,6 @@ watch(teamId, (id) => {
         <div>
           <FormLabel for="edit-team-desc">Description</FormLabel>
           <Input id="edit-team-desc" v-model="editDescription" />
-        </div>
-        <div v-if="policies.length > 0">
-          <FormLabel for="edit-team-policy">Escalation Policy</FormLabel>
-          <Select
-            id="edit-team-policy"
-            :model-value="editPolicyId"
-            class="w-full"
-            @update:model-value="editPolicyId = $event"
-          >
-            <option value="">None</option>
-            <option v-for="p in policies" :key="p.id" :value="p.id">{{ p.name }}</option>
-          </Select>
         </div>
       </div>
     </Modal>

@@ -15,7 +15,6 @@ func serializeWebhookTokenOpts(t store.WebhookTokenRecord, showExpired, includeT
 		"name":       t.Name,
 		"created_at": t.CreatedAt,
 		"last_used":  t.LastUsedAt,
-		"revoked":    t.Revoked,
 	}
 	if includeToken {
 		row["token"] = t.Token

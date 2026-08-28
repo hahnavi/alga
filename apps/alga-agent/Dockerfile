@@ -44,5 +44,8 @@ COPY --from=builder /out/alga-agent /app/alga-agent
 COPY apps/alga-agent/config.yaml.example /app/config.yaml.example
 
 USER appuser
-EXPOSE 8443 9101
+# Metrics listener (metrics.enabled + addr, default 127.0.0.1:9101). The MCP
+# server (127.0.0.1:8085) and metrics are both disabled by default; 9101 is
+# declared as the only port a containerized deployment typically enables.
+EXPOSE 9101
 ENTRYPOINT ["/app/alga-agent"]

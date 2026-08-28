@@ -462,11 +462,11 @@ function isRelevantOwnerThreadEvent(data: unknown, kind: OwnerThreadKind): boole
 const sse = useSSE(
   "/api/v1/events",
   {
+    // Incident status transitions (triaging/promoted/etc.) arrive via the
+    // single incident_updated event; dedicated per-status events don't exist.
     incident_updated: (data: unknown) => onIncidentSSE(data, scheduleReload),
-    incident_status_changed: (data: unknown) => onIncidentSSE(data, scheduleReload),
+    // Emitted by ICSWorker after provisioning completes.
     war_room_created: (data: unknown) => onIncidentSSE(data, scheduleReload),
-    incident_triaging: (data: unknown) => onIncidentSSE(data, scheduleReload),
-    incident_promoted: (data: unknown) => onIncidentSSE(data, scheduleReload),
     ics_role_assigned: (payload: unknown) => onIncidentSSE(payload, data.loadICSRoles),
     incident_coordination_message_created: (data: unknown) => {
       onIncidentSSE(data, async () => {

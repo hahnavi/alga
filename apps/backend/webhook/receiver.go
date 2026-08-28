@@ -78,6 +78,9 @@ type Receiver struct {
 	alertInvestigationLifecycle alertInvestigationLifecycle
 	idempotency                 *valkey.IdempotencyCache
 	idempotencyTTL              time.Duration
+	// allowQueryToken re-enables the legacy `?token=` ingestion fallback;
+	// deny-by-default (see webhookTokenFromRequest).
+	allowQueryToken bool
 }
 
 type alertInvestigationLifecycle interface {
@@ -89,7 +92,7 @@ type PendingNotifier interface {
 }
 
 // NewReceiver creates a new webhook receiver
-func NewReceiver(routingEngine *routing.Engine, mmClient *mattermost.Client, slackClient *slack.Client, alertStore store.Store, webhookTokenStore store.WebhookTokenStore, dedupCache DedupCache) *Receiver {
+func NewReceiver(routingEngine *routing.Engine, mmClient *mattermost.Client, slackClient *slack.Client, alertStore store.Store, webhookTokenStore store.WebhookTokenStore, dedupCache DedupCache, allowQueryToken bool) *Receiver {
 	var providers []ChatProvider
 	if mmClient != nil {
 		providers = append(providers, NewMattermostChatProvider(mmClient))
@@ -105,7 +108,13 @@ func NewReceiver(routingEngine *routing.Engine, mmClient *mattermost.Client, sla
 		store:             alertStore,
 		webhookTokenStore: webhookTokenStore,
 		dedupCache:        dedupCache,
+		allowQueryToken:   allowQueryToken,
 	}
+}
+
+// SetAllowQueryToken overrides the constructor flag (used by tests).
+func (r *Receiver) SetAllowQueryToken(v bool) {
+	r.allowQueryToken = v
 }
 
 // SetPublisher enables async processing via message queue.
@@ -215,7 +224,7 @@ func (r *Receiver) Router() *http.ServeMux {
 // handleWebhook processes incoming webhook alerts
 func (r *Receiver) handleWebhook(w http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
 		return
 	}
 
@@ -224,20 +233,20 @@ func (r *Receiver) handleWebhook(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	token := webhookTokenFromRequest(req)
+	token := r.webhookTokenFromRequest(req)
 	if token == "" {
-		http.Error(w, "Unauthorized: missing token", http.StatusUnauthorized)
+		webhookError(w, platform.ErrorCodeUnauthorized, "unauthorized: missing token")
 		return
 	}
 
 	valid, err := r.webhookTokenStore.ValidateToken(token)
 	if err != nil {
 		logger.Error("Failed to validate webhook token", "component", "webhook", "error", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		webhookError(w, platform.ErrorCodeInternal, "internal server error")
 		return
 	}
 	if !valid {
-		http.Error(w, "Unauthorized: invalid token", http.StatusUnauthorized)
+		webhookError(w, platform.ErrorCodeUnauthorized, "unauthorized: invalid token")
 		return
 	}
 
@@ -249,13 +258,13 @@ func (r *Receiver) handleWebhook(w http.ResponseWriter, req *http.Request) {
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
 		logger.Error("Failed to read webhook request body", "component", "webhook", "error", err)
-		http.Error(w, "Bad request", http.StatusBadRequest)
+		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "bad request")
 		return
 	}
 
 	if err := json.Unmarshal(body, &payload); err != nil {
 		logger.Error("Failed to decode webhook payload", "component", "webhook", "error", err)
-		http.Error(w, "Bad request", http.StatusBadRequest)
+		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "bad request")
 		return
 	}
 
@@ -307,14 +316,19 @@ func (r *Receiver) handleWebhook(w http.ResponseWriter, req *http.Request) {
 	metrics.WebhookAlertPublishSyncProcessed.Add(1)
 	if err := r.ProcessAlerts(req.Context(), payload); err != nil {
 		logger.Error("Sync alert processing failed", "component", "webhook", "error", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		webhookError(w, platform.ErrorCodeInternal, "internal server error")
 		return
 	}
 
 	platform.WriteStatus(w, "ok")
 }
 
-func webhookTokenFromRequest(req *http.Request) string {
+// webhookTokenFromRequest extracts the ingestion token. The `?token=` query
+// fallback is deny-by-default: credentials in URLs leak via proxy and
+// access logs, Referer headers, and browser history. It survives only behind
+// the WEBHOOK_ALLOW_QUERY_TOKEN=true escape hatch. Denials never log the URL
+// or the token — that would reintroduce the leak into our own logs.
+func (r *Receiver) webhookTokenFromRequest(req *http.Request) string {
 	token := strings.TrimSpace(req.Header.Get("Authorization"))
 	if token != "" {
 		if len(token) > 7 && strings.EqualFold(token[:7], "Bearer ") {
@@ -322,7 +336,10 @@ func webhookTokenFromRequest(req *http.Request) string {
 		}
 		return token
 	}
-	return strings.TrimSpace(req.URL.Query().Get("token"))
+	if r.allowQueryToken {
+		return strings.TrimSpace(req.URL.Query().Get("token"))
+	}
+	return ""
 }
 
 // clientIPFromRequest returns a best-effort client IP for rate limiting.
@@ -456,7 +473,7 @@ func (r *Receiver) handleFiring(ctx context.Context, alert types.Alert, existing
 	}
 
 	if result.Silenced {
-		logger.Info("Alert silenced, storing without notification", "component", "webhook", "alert_name", alert.Labels["alertname"])
+		logger.Info("Alert silenced, storing without notification or investigation", "component", "webhook", "alert_name", alert.Labels["alertname"], "fingerprint", alert.Fingerprint)
 		alertNum, err := r.store.Create(record)
 		if err != nil {
 			logger.Error("Failed to store silenced alert record", "component", "webhook", "fingerprint", alert.Fingerprint, "error", err)
@@ -469,7 +486,10 @@ func (r *Receiver) handleFiring(ctx context.Context, alert types.Alert, existing
 		if r.eventPublisher != nil {
 			r.eventPublisher.PublishAlertEvent("alert_created", record)
 		}
-		r.triggerCorrelator(ctx, alert, alertNum)
+		// Silenced means suppressed: no correlator message and therefore no
+		// LLM investigation. Note this is the silenced-ROUTING-rule mechanism
+		// and is deliberately independent of correlator.IsSuppressed
+		// (suppression rules) — keep them separate; do not unify.
 		return
 	}
 
@@ -848,7 +868,14 @@ func (r *Receiver) IngestManualAlert(ctx context.Context, alert types.Alert, act
 		r.eventPublisher.PublishAlertEvent("alert_created", *rec)
 	}
 
-	r.triggerCorrelator(ctx, alert, rec.AlertNumber)
+	// Silence means silence on every ingestion path: a silenced routing rule
+	// suppresses investigations as well as chat delivery. This is distinct
+	// from correlator.IsSuppressed (suppression rules) — keep them separate.
+	if !result.Silenced {
+		r.triggerCorrelator(ctx, alert, rec.AlertNumber)
+	} else {
+		logger.Info("Manual alert silenced, skipping correlation", "component", "webhook", "fingerprint", alert.Fingerprint)
+	}
 
 	return rec, nil
 }
@@ -903,8 +930,10 @@ func (r *Receiver) isSuppressed(ctx context.Context, labels map[string]string) b
 }
 
 func matchLabels(matchers, labels map[string]string) bool {
+	// An empty matcher set is unconstrained and matches every alert (documented
+	// catch-all window semantics); only concrete matchers can fail a label.
 	if len(matchers) == 0 {
-		return false
+		return true
 	}
 	for k, v := range matchers {
 		if labels[k] != v {

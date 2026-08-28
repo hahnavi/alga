@@ -94,6 +94,7 @@ func (s *Server) handleSetup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.setSessionCookie(w, session.ID)
+	setRefreshTokenCookie(w, s.cfg.SecureCookies, s.sessionExpiry, session.RefreshToken)
 	s.setCSRFCookie(w, csrfToken)
 
 	// Audit

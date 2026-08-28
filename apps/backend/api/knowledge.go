@@ -1,11 +1,13 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
 	"alga/api/platform"
+	"alga/capability"
 	"alga/config"
 	"alga/logger"
 	"alga/rbac"
@@ -152,14 +154,35 @@ func (s *Server) createKnowledge(w http.ResponseWriter, r *http.Request) {
 // listing (same shape as admin list). POST lets an authenticated agent
 // write back a new note (used in Phase 4 / agent-authored KB); the agent
 // must supply a source_investigation_id and confidence.
+//
+// Capability gates: reads need `investigate` OR `command`
+// (commanders legitimately consult runbooks); authoring needs `investigate`
+// — KB notes are ingested into other agents' prompts, so a minimal
+// communicate-only token must not be able to plant content.
 func (s *Server) handleAgentKnowledge(w http.ResponseWriter, r *http.Request) {
 	if !s.requireStore(w, s.knowledgeStore, "knowledge store") {
 		return
 	}
+	agent := platform.AgentFromContext(r.Context())
+	if agent == nil {
+		writeError(w, ErrorCodeUnauthorized, "missing agent context")
+		return
+	}
 	switch r.Method {
 	case http.MethodGet:
+		if !capability.HasAny(agent.Capabilities, capability.Investigate, capability.Command) {
+			writeErrorStatus(w, http.StatusForbidden, ErrorCodeForbidden,
+				fmt.Sprintf("agent %q lacks required capability (one of: %s, %s)",
+					agent.Name, capability.Investigate, capability.Command))
+			return
+		}
 		s.listKnowledge(w, r)
 	case http.MethodPost:
+		if !capability.Has(agent.Capabilities, capability.Investigate) {
+			writeErrorStatus(w, http.StatusForbidden, ErrorCodeForbidden,
+				fmt.Sprintf("agent %q lacks required capability %q", agent.Name, capability.Investigate))
+			return
+		}
 		s.createAgentKnowledge(w, r)
 	default:
 		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
@@ -169,13 +192,25 @@ func (s *Server) handleAgentKnowledge(w http.ResponseWriter, r *http.Request) {
 // handleAgentKnowledgeByID handles /api/v1/agent/knowledge/{id} (GET only).
 // The list/search endpoint returns truncated previews; this route gives
 // agents the full note body so they can read complete runbooks without a
-// human paste. Read-only and bearer-authenticated via the route middleware.
+// human paste. Read-only and bearer-authenticated via the route middleware;
+// requires `investigate` OR `command`.
 func (s *Server) handleAgentKnowledgeByID(w http.ResponseWriter, r *http.Request) {
 	if !s.requireStore(w, s.knowledgeStore, "knowledge store") {
 		return
 	}
 	if r.Method != http.MethodGet {
 		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		return
+	}
+	agent := platform.AgentFromContext(r.Context())
+	if agent == nil {
+		writeError(w, ErrorCodeUnauthorized, "missing agent context")
+		return
+	}
+	if !capability.HasAny(agent.Capabilities, capability.Investigate, capability.Command) {
+		writeErrorStatus(w, http.StatusForbidden, ErrorCodeForbidden,
+			fmt.Sprintf("agent %q lacks required capability (one of: %s, %s)",
+				agent.Name, capability.Investigate, capability.Command))
 		return
 	}
 	id := pathID(r, "/api/v1/agent/knowledge/")

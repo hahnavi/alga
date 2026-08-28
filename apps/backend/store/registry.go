@@ -50,6 +50,7 @@ type Stores struct {
 	CredentialProvider    CredentialProviderStore
 	SharedSecret          SharedSecretStore
 	Outbox                OutboxStore
+	PasswordReset         PasswordResetStore
 }
 
 func NewStores(cli *db.Client, sessionExpiry, sessionMaxLifetime time.Duration) (*Stores, error) {
@@ -104,5 +105,6 @@ func NewStores(cli *db.Client, sessionExpiry, sessionMaxLifetime time.Duration) 
 		CredentialProvider:    newPGCredentialProviderStore(bunDB),
 		SharedSecret:          newPGSharedSecretStore(bunDB),
 		Outbox:                newPGOutboxStore(bunDB),
+		PasswordReset:         newPGPasswordResetStore(bunDB),
 	}, nil
 }

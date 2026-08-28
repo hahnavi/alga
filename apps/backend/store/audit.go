@@ -16,41 +16,45 @@ import (
 type AuditEvent string
 
 const (
-	AuditLoginSuccess                       AuditEvent = "login_success"
-	AuditLoginFailed                        AuditEvent = "login_failed"
-	AuditLogout                             AuditEvent = "logout"
-	AuditPasswordChanged                    AuditEvent = "password_changed"
-	AuditAccountLocked                      AuditEvent = "account_locked"
-	AuditAccountUnlocked                    AuditEvent = "account_unlocked"
-	AuditUserCreated                        AuditEvent = "user_created"
-	AuditUserUpdated                        AuditEvent = "user_updated"
-	AuditUserDeleted                        AuditEvent = "user_deleted"
-	AuditTokenCreated                       AuditEvent = "token_created"
-	AuditTokenRevoked                       AuditEvent = "token_revoked"
-	AuditTokenRegenerated                   AuditEvent = "token_regenerated"
-	AuditPATCreated                         AuditEvent = "pat_created"
-	AuditPATRevoked                         AuditEvent = "pat_revoked"
-	AuditRoutesUpdated                      AuditEvent = "routes_updated"
-	AuditSessionRefreshed                   AuditEvent = "session_refreshed"
-	AuditSuspiciousActivity                 AuditEvent = "suspicious_activity"
-	AuditAlertCreated                       AuditEvent = "alert_created"
-	AuditAlertAcknowledged                  AuditEvent = "alert_acknowledged"
-	AuditAlertResolved                      AuditEvent = "alert_resolved"
-	AuditAlertReopened                      AuditEvent = "alert_reopened"
-	AuditAlertDeleted                       AuditEvent = "alert_deleted"
-	AuditAlertInvestigated                  AuditEvent = "alert_investigated"
-	AuditEmailChanged                       AuditEvent = "email_changed"
-	AuditIntegrationsUpdated                AuditEvent = "integrations_updated"
-	AuditInvestigationCreated               AuditEvent = "investigation_created"
-	AuditInvestigationUpdated               AuditEvent = "investigation_updated"
-	AuditInvestigationDeleted               AuditEvent = "investigation_deleted"
-	AuditInvestigationAlertLinked           AuditEvent = "investigation_alert_linked"
-	AuditInvestigationAlertUnlinked         AuditEvent = "investigation_alert_unlinked"
-	AuditAgentEnabled                       AuditEvent = "agent_enabled"
-	AuditAgentDisabled                      AuditEvent = "agent_disabled"
-	AuditKnowledgeCreated                   AuditEvent = "knowledge_created"
-	AuditKnowledgeUpdated                   AuditEvent = "knowledge_updated"
-	AuditKnowledgeDeleted                   AuditEvent = "knowledge_deleted"
+	AuditLoginSuccess               AuditEvent = "login_success"
+	AuditLoginFailed                AuditEvent = "login_failed"
+	AuditLogout                     AuditEvent = "logout"
+	AuditPasswordChanged            AuditEvent = "password_changed"
+	AuditAccountLocked              AuditEvent = "account_locked"
+	AuditAccountUnlocked            AuditEvent = "account_unlocked"
+	AuditUserCreated                AuditEvent = "user_created"
+	AuditUserUpdated                AuditEvent = "user_updated"
+	AuditUserDeleted                AuditEvent = "user_deleted"
+	AuditTokenCreated               AuditEvent = "token_created"
+	AuditTokenRevoked               AuditEvent = "token_revoked"
+	AuditTokenRegenerated           AuditEvent = "token_regenerated"
+	AuditPATCreated                 AuditEvent = "pat_created"
+	AuditPATRevoked                 AuditEvent = "pat_revoked"
+	AuditRoutesUpdated              AuditEvent = "routes_updated"
+	AuditSessionRefreshed           AuditEvent = "session_refreshed"
+	AuditSuspiciousActivity         AuditEvent = "suspicious_activity"
+	AuditAlertCreated               AuditEvent = "alert_created"
+	AuditAlertAcknowledged          AuditEvent = "alert_acknowledged"
+	AuditAlertResolved              AuditEvent = "alert_resolved"
+	AuditAlertReopened              AuditEvent = "alert_reopened"
+	AuditAlertDeleted               AuditEvent = "alert_deleted"
+	AuditAlertInvestigated          AuditEvent = "alert_investigated"
+	AuditEmailChanged               AuditEvent = "email_changed"
+	AuditIntegrationsUpdated        AuditEvent = "integrations_updated"
+	AuditInvestigationCreated       AuditEvent = "investigation_created"
+	AuditInvestigationUpdated       AuditEvent = "investigation_updated"
+	AuditInvestigationDeleted       AuditEvent = "investigation_deleted"
+	AuditInvestigationAlertLinked   AuditEvent = "investigation_alert_linked"
+	AuditInvestigationAlertUnlinked AuditEvent = "investigation_alert_unlinked"
+	AuditAgentEnabled               AuditEvent = "agent_enabled"
+	AuditAgentDisabled              AuditEvent = "agent_disabled"
+	AuditKnowledgeCreated           AuditEvent = "knowledge_created"
+	AuditKnowledgeUpdated           AuditEvent = "knowledge_updated"
+	AuditKnowledgeDeleted           AuditEvent = "knowledge_deleted"
+	// AuditMemoryDeleted covers agent-initiated memory hard-deletes;
+	// attributed to "agent:<name>" so destructive shared-learning removals
+	// leave a trail.
+	AuditMemoryDeleted                      AuditEvent = "memory_deleted"
 	AuditPeerAskCreated                     AuditEvent = "peer_ask_created"
 	AuditPeerAskReplied                     AuditEvent = "peer_ask_replied"
 	AuditPeerAskCancelled                   AuditEvent = "peer_ask_cancelled"
@@ -75,6 +79,7 @@ const (
 	AuditIncidentReopened                   AuditEvent = "incident_reopened"
 	AuditIncidentCancelled                  AuditEvent = "incident_cancelled"
 	AuditIncidentRoleAssigned               AuditEvent = "incident_role_assigned"
+	AuditIncidentRoleUpdated                AuditEvent = "incident_role_updated"
 	AuditIncidentRoleRemoved                AuditEvent = "incident_role_removed"
 	AuditIncidentEscalated                  AuditEvent = "incident_escalated"
 	AuditVoiceAck                           AuditEvent = "voice_ack"
@@ -168,8 +173,14 @@ type AuditRecord struct {
 type AuditStore interface {
 	Log(event AuditEvent, userID *uuid.UUID, username, ip, userAgent string, success bool, details map[string]any)
 	LogEntity(event AuditEvent, userID *uuid.UUID, username, ip, userAgent string, success bool, details map[string]any, entityType string, entityID *uuid.UUID)
-	Query(filter map[string]any) ([]AuditRecord, error)
+	// LogRecord queues a fully populated record (used by callers that carry
+	// extra correlation data such as RequestID). Still fire-and-forget.
+	LogRecord(rec AuditRecord)
+	Query(filter map[string]any) ([]AuditRecord, int64, error)
 	GetRecentEvents(limit int) ([]AuditRecord, error)
+	// DeleteOlderThan purges audit rows older than the cutoff in bounded
+	// batches (retention family).
+	DeleteOlderThan(ctx context.Context, cutoff time.Time) (int64, error)
 }
 
 type pgAuditStore struct {
@@ -193,7 +204,7 @@ func (s *pgAuditStore) Log(event AuditEvent, userID *uuid.UUID, username, ip, us
 }
 
 func (s *pgAuditStore) LogEntity(event AuditEvent, userID *uuid.UUID, username, ip, userAgent string, success bool, details map[string]any, entityType string, entityID *uuid.UUID) {
-	record := AuditRecord{
+	s.LogRecord(AuditRecord{
 		Timestamp:  time.Now().UTC(),
 		Event:      event,
 		UserID:     userID,
@@ -204,14 +215,21 @@ func (s *pgAuditStore) LogEntity(event AuditEvent, userID *uuid.UUID, username, 
 		Details:    details,
 		EntityType: entityType,
 		EntityID:   entityID,
-	}
+	})
+}
 
+// LogRecord queues a fully populated audit record; the fire-and-forget
+// contract is unchanged (bounded queue, drop-with-warning when full).
+func (s *pgAuditStore) LogRecord(rec AuditRecord) {
+	if rec.Timestamp.IsZero() {
+		rec.Timestamp = time.Now().UTC()
+	}
 	s.startConsumers()
 
 	select {
-	case s.queue <- record:
+	case s.queue <- rec:
 	default:
-		logger.Warn("audit queue full, dropping event", "event", record.Event)
+		logger.Warn("audit queue full, dropping event", "event", rec.Event)
 	}
 }
 
@@ -229,6 +247,7 @@ func (s *pgAuditStore) persist(rec AuditRecord) {
 		UserAgent:  rec.UserAgent,
 		Success:    rec.Success,
 		Details:    rec.Details,
+		RequestID:  rec.RequestID,
 		EntityType: rec.EntityType,
 		EntityID:   rec.EntityID,
 	}
@@ -291,13 +310,21 @@ func pgAuditLogsToRecords(logs []models.AuditLog) []AuditRecord {
 	return records
 }
 
-func (s *pgAuditStore) Query(filter map[string]any) ([]AuditRecord, error) {
+// Query returns audit records newest-first, filtered by the optional keys
+// "event", "entity_type", and "entity_id" (UUID string), paged via "$limit"
+// and "$skip". It also returns the total count of matching rows so callers
+// can render honest pagination.
+func (s *pgAuditStore) Query(filter map[string]any) ([]AuditRecord, int64, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
+	if filter == nil {
+		filter = map[string]any{}
+	}
+
 	q := s.db.NewSelect().Model((*models.AuditLog)(nil)).Order("timestamp DESC")
 
-	if ev, ok := filter["event"].(string); ok {
+	if ev, ok := filter["event"].(string); ok && ev != "" {
 		q = q.Where("event = ?", ev)
 	}
 
@@ -311,16 +338,19 @@ func (s *pgAuditStore) Query(filter map[string]any) ([]AuditRecord, error) {
 		}
 	}
 
-	limit, _ := extractLimitSkip(filter, 500)
-	q = q.Limit(limit)
-
-	var logs []models.AuditLog
-	err := q.Scan(ctx, &logs)
+	total, err := q.Count(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query audit logs: %w", err)
+		return nil, 0, fmt.Errorf("failed to count audit logs: %w", err)
 	}
 
-	return pgAuditLogsToRecords(logs), nil
+	limit, skip := extractLimitSkip(filter, 500)
+	var logs []models.AuditLog
+	err = q.Limit(limit).Offset(skip).Scan(ctx, &logs)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to query audit logs: %w", err)
+	}
+
+	return pgAuditLogsToRecords(logs), int64(total), nil
 }
 
 func (s *pgAuditStore) GetRecentEvents(limit int) ([]AuditRecord, error) {
@@ -344,4 +374,15 @@ func (s *pgAuditStore) GetRecentEvents(limit int) ([]AuditRecord, error) {
 	}
 
 	return pgAuditLogsToRecords(logs), nil
+}
+
+// DeleteOlderThan hard-deletes audit rows older than the cutoff in bounded
+// batches (retention family). Audit rows are the compliance trail, so
+// the window is operator-controlled (AUDIT_RETENTION_DAYS) and defaults to
+// keep-forever when unset or non-positive at the call site.
+func (s *pgAuditStore) DeleteOlderThan(ctx context.Context, cutoff time.Time) (int64, error) {
+	ctx, cancel := pgctx(ctx)
+	defer cancel()
+
+	return deleteOlderThanBatched[models.AuditLog](ctx, s.db, "timestamp", cutoff)
 }

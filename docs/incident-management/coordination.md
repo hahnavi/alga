@@ -81,6 +81,12 @@ pending → assigned → in_progress → complete
 | `failed`      | Failed (with `failure_reason`) |
 | `cancelled`   | Cancelled                      |
 
+Transitions are validated centrally by the store (`CanTransitionCoordinationTask`);
+illegal jumps — for example `pending → complete`, or any move out of a terminal
+status — fail with a status-conflict error. Reverting an in-flight task back to
+`pending` (agent disconnect, dispatch retry) and cancel/fail from any
+non-terminal status are the supported side edges.
+
 ### Task Fields
 
 | Field                                       | Description                           |
@@ -99,11 +105,11 @@ pending → assigned → in_progress → complete
 
 ### API Endpoints
 
-| Method  | Path                                        | Permission        | Description                                                   |
-| ------- | ------------------------------------------- | ----------------- | ------------------------------------------------------------- |
-| `GET`   | `/api/v1/incidents/{id}/coordination/tasks` | `incidents:read`  | List coordination tasks (filter by `status`, `assignee_role`) |
-| `POST`  | `/api/v1/incidents/{id}/coordination/tasks` | `incidents:write` | Create a coordination task                                    |
-| `PATCH` | `/api/v1/incidents/{id}/coordination/tasks` | `incidents:write` | Update a task's status                                        |
+| Method  | Path                                        | Permission          | Description                                                   |
+| ------- | ------------------------------------------- | ------------------- | ------------------------------------------------------------- |
+| `GET`   | `/api/v1/incidents/{id}/coordination/tasks` | `incidents:read`    | List coordination tasks (filter by `status`, `assignee_role`) |
+| `POST`  | `/api/v1/incidents/{id}/coordination/tasks` | `incidents:command` | Create a coordination task                                    |
+| `PATCH` | `/api/v1/incidents/{id}/coordination/tasks` | `incidents:command` | Update a task's status (cancel)                               |
 
 ```sh
 curl -X POST http://localhost:8080/api/v1/incidents/{id}/coordination/tasks \

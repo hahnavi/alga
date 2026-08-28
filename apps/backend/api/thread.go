@@ -11,8 +11,10 @@ import (
 
 	"alga/api/platform"
 	"alga/logger"
+	"alga/rabbitmq"
 	"alga/sse"
 	"alga/store"
+	"alga/strutil"
 )
 
 type createThreadMessageRequest struct {
@@ -172,12 +174,88 @@ func (s *Server) createOwnerThreadMessage(w http.ResponseWriter, r *http.Request
 
 	s.forwardOwnerThreadMessageToAgent(ownerType, ownerID, messageText, userFromContext(r.Context()), req.Mentions, msgRec.ReplyToMessageID, replyToText, replyToAuthor)
 
+	s.publishMentionNotifications(r.Context(), ownerType, ownerID, userFromContext(r.Context()), messageText, req.Mentions)
+
 	s.audit(r, store.AuditInvestigationUpdated, map[string]any{
 		"owner_type": ownerType,
 		"owner_id":   ownerID,
 		"action":     "thread_message_created",
 	})
 	return true
+}
+
+// mentionMessageMaxLen caps the message excerpt carried in mention
+// notifications so bell entries stay scannable.
+const mentionMessageMaxLen = 200
+
+// publishMentionNotifications fans a just-created thread message out to every
+// mentioned human user. Mentions arrive as "user:<uuid>" or "agent:<uuid>"
+// ids; agent mentions drive agent activation (forwardOwnerThreadMessageToAgent)
+// and are skipped here. Fire-and-forget per house style: publish failures are
+// logged and never fail the message write.
+// mentionedUserIDs reduces raw mention ids to distinct user UUID strings:
+// "user:<uuid>" entries are kept (sender excluded), "agent:<uuid>" mentions
+// are activation-only, and anything else is a malformed id to ignore.
+func mentionedUserIDs(mentions []string, senderID string) []string {
+	var ids []string
+	seen := make(map[string]bool)
+	for _, m := range mentions {
+		userID, ok := strings.CutPrefix(m, "user:")
+		if !ok || userID == "" || userID == senderID || seen[userID] {
+			continue
+		}
+		if _, err := uuid.Parse(userID); err != nil {
+			continue
+		}
+		seen[userID] = true
+		ids = append(ids, userID)
+	}
+	return ids
+}
+
+func (s *Server) publishMentionNotifications(ctx context.Context, ownerType, ownerID string, sender *store.UserRecord, messageText string, mentions []string) {
+	if s.rabbitmqPublisher == nil || len(mentions) == 0 {
+		return
+	}
+
+	var resourceType string
+	var incidentNumber int64
+	switch ownerType {
+	case store.ThreadOwnerAlert:
+		resourceType = "alert"
+	case store.ThreadOwnerIncidentInvestigation:
+		resourceType = "incident"
+		if n, err := strconv.ParseInt(ownerID, 10, 64); err == nil {
+			incidentNumber = n
+		}
+	default:
+		return
+	}
+
+	senderID := ""
+	senderName := "Someone"
+	if sender != nil {
+		senderID = sender.ID.String()
+		senderName = sender.DisplayName()
+		if senderName == "" {
+			senderName = sender.Email
+		}
+	}
+
+	excerpt := strutil.TruncateOneLine(messageText, mentionMessageMaxLen)
+	for _, userID := range mentionedUserIDs(mentions, senderID) {
+		if err := s.rabbitmqPublisher.PublishNotificationDispatch(ctx, rabbitmq.NotificationDispatchMessage{
+			UserID:           userID,
+			IncidentNumber:   incidentNumber,
+			NotificationType: "mention",
+			Title:            senderName + " mentioned you",
+			Message:          excerpt,
+			ResourceType:     resourceType,
+			ResourceID:       ownerID,
+		}); err != nil {
+			logger.WarnCtx(ctx, "failed to publish mention notification", "component", "api", "owner_type", ownerType, "owner_id", ownerID, "user_id", userID, "error", err)
+		}
+	}
 }
 
 func alertNumberFromThreadPath(w http.ResponseWriter, r *http.Request, routeSuffix string) (string, bool) {

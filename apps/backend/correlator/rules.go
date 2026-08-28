@@ -8,7 +8,10 @@ import (
 type CorrelationRule struct {
 	Strategy      string
 	GroupByLabels []string
-	Window        int64
+	// Window overrides the global correlation window for this rule's
+	// alertname, in seconds. > 0 buffers alerts for that name for this long
+	// before flushing; <= 0 falls back to the global window.
+	Window int64
 }
 
 type SuppressionRule struct {

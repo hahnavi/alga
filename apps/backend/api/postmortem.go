@@ -646,7 +646,6 @@ func (s *Server) createActionItem(w http.ResponseWriter, r *http.Request, incide
 	record := &store.ActionItemRecord{
 		PostMortemID: pmID,
 		Description:  req.Description,
-		Status:       "detected",
 		Priority:     req.Priority,
 	}
 	record.Type = req.Type

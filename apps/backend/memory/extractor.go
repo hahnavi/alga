@@ -15,13 +15,17 @@ import (
 )
 
 type Extractor struct {
-	llm      LLM
-	embed    Embedder
-	memStore store.AgentMemoryStore
+	llm       LLM
+	embed     Embedder
+	memStore  store.AgentMemoryStore
+	maxPerInv int
 }
 
-func NewExtractor(llm LLM, embed Embedder, memStore store.AgentMemoryStore) *Extractor {
-	return &Extractor{llm: llm, embed: embed, memStore: memStore}
+func NewExtractor(llm LLM, embed Embedder, memStore store.AgentMemoryStore, maxPerInv int) *Extractor {
+	if maxPerInv <= 0 {
+		maxPerInv = 10
+	}
+	return &Extractor{llm: llm, embed: embed, memStore: memStore, maxPerInv: maxPerInv}
 }
 
 func (e *Extractor) Extract(ctx context.Context, inv *store.AlertInvestigationRecord, updates []store.InvestigationUpdate) error {
@@ -60,6 +64,14 @@ func (e *Extractor) Extract(ctx context.Context, inv *store.AlertInvestigationRe
 
 	if len(result.Memories) == 0 {
 		return nil
+	}
+
+	// Hard-cap the extraction list BEFORE embedding: nothing over the cap is
+	// embedded or persisted (also bounds embedding cost).
+	if len(result.Memories) > e.maxPerInv {
+		logger.Debug("truncating extracted memories to per-investigation cap",
+			"returned", len(result.Memories), "cap", e.maxPerInv)
+		result.Memories = result.Memories[:e.maxPerInv]
 	}
 
 	texts := make([]string, 0, len(result.Memories))

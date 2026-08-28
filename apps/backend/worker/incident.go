@@ -359,7 +359,7 @@ func (w *IncidentWorker) autoAssignIC(ctx context.Context, inc *store.IncidentRe
 			IncidentNumber: inc.IncidentNumber,
 			PolicyID:       policyID,
 			Level:          1,
-			MaxRetries:     3,
+			MaxRetries:     rabbitmq.MaxEscalationRetries,
 		}
 		if pubErr := w.escalationPublisher.PublishEscalation(ctx, escMsg); pubErr != nil {
 			logger.Warn("Failed to publish initial escalation", "component", "incident-worker", "incident_number", inc.IncidentNumber, "error", pubErr)

@@ -208,6 +208,11 @@ func (s *pgCredentialProviderStore) DeleteProvider(ctx context.Context, id uuid.
 	}
 	res, err := s.db.NewDelete().Model((*models.CredentialProvider)(nil)).Where("id = ?", id).Exec(ctx)
 	if err != nil {
+		if IsForeignKeyViolation(err) {
+			// shared_secrets.provider_id is ON DELETE RESTRICT: the provider
+			// still owns secrets. Surface as an actionable sentinel.
+			return ErrCredentialProviderInUse
+		}
 		return fmt.Errorf("failed to delete credential provider: %w", err)
 	}
 	n, err := res.RowsAffected()

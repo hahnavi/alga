@@ -106,7 +106,11 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 			"reason":       "rate_limited",
 			"locked_until": lockedUntil,
 		})
-		w.Header().Set("Retry-After", strconv.Itoa(int(time.Until(*lockedUntil).Seconds())))
+		// The limiter may deny without a lock expiry (e.g. Valkey outage fallback);
+		// omit Retry-After rather than dereference a nil pointer.
+		if lockedUntil != nil {
+			w.Header().Set("Retry-After", strconv.Itoa(int(time.Until(*lockedUntil).Seconds())))
+		}
 		writeError(w, ErrorCodeRateLimited, "too many login attempts. please try again later")
 		return
 	}
@@ -182,6 +186,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	// Set session cookie with secure settings
 	s.setSessionCookie(w, session.ID)
+	setRefreshTokenCookie(w, s.cfg.SecureCookies, s.sessionExpiry, session.RefreshToken)
 	s.setCSRFCookie(w, csrfToken)
 
 	// Log successful login
@@ -235,6 +240,7 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 
 	// Clear cookies
 	s.clearSessionCookie(w)
+	clearRefreshTokenCookie(w, s.cfg.SecureCookies)
 	s.clearCSRFCookie(w)
 
 	writeStatus(w, "logged out")
@@ -299,32 +305,77 @@ func (s *Server) handleRefreshSession(w http.ResponseWriter, r *http.Request) {
 
 	clientIP := s.ipExtractor.clientIP(r)
 
-	cookie, err := r.Cookie("alga_session")
-	if err != nil {
-		writeError(w, ErrorCodeUnauthorized, "not authenticated")
-		return
-	}
+	sessionCookie, err := r.Cookie("alga_session")
+	if err == nil {
+		session, err := s.sessionStore.RefreshSession(sessionCookie.Value, clientIP, r.UserAgent())
+		if err == nil && session != nil {
+			s.finishSessionRefresh(w, r, session, clientIP)
+			return
+		}
 
-	session, err := s.sessionStore.RefreshSession(cookie.Value, clientIP, r.UserAgent())
-	if err != nil || session == nil {
+		// The presented cookie no longer authenticates. If it matches the
+		// rotated-out ID history of a still-live session, this is a replayed
+		// (stolen) cookie: revoke the user's whole session family.
+		if replayed, perr := s.sessionStore.FindRotatedOutSession(sessionCookie.Value); perr == nil && replayed != nil {
+			if derr := s.sessionStore.DeleteAllUserSessions(replayed.UserID); derr != nil {
+				logger.Warn("failed to revoke sessions after replayed cookie", "component", "api", "error", derr)
+			}
+			s.auditStore.Log(store.AuditLoginFailed, &replayed.UserID, "", clientIP, r.UserAgent(), false, map[string]any{
+				"reason": "session_replay_detected",
+			})
+			writeError(w, ErrorCodeUnauthorized, "session expired")
+			return
+		}
+
 		s.auditStore.Log(store.AuditLoginFailed, nil, "", clientIP, r.UserAgent(), false, map[string]any{
 			"reason": "session_refresh_failed",
 		})
-		writeError(w, ErrorCodeUnauthorized, "session expired")
-		return
 	}
 
-	// Get user for audit log
+	// No (or no longer valid) session cookie: honor the optional refresh-token
+	// presentation path before rejecting. Only consulted here so a benign
+	// dual-cookie browser never re-presents a token the cookie rotation just
+	// retired.
+	if rtCookie, rerr := r.Cookie("alga_rt"); rerr == nil && rtCookie.Value != "" {
+		rtRec, rterr := s.sessionStore.RefreshSessionByRefreshToken(rtCookie.Value, clientIP, r.UserAgent())
+		switch {
+		case errors.Is(rterr, store.ErrRefreshTokenReused):
+			if rtRec != nil {
+				if derr := s.sessionStore.DeleteAllUserSessions(rtRec.UserID); derr != nil {
+					logger.Warn("failed to revoke sessions after refresh token replay", "component", "api", "error", derr)
+				}
+				s.auditStore.Log(store.AuditLoginFailed, &rtRec.UserID, "", clientIP, r.UserAgent(), false, map[string]any{
+					"reason": "refresh_token_reuse_detected",
+				})
+			}
+			writeError(w, ErrorCodeUnauthorized, "session expired")
+			return
+		case rterr == nil && rtRec != nil:
+			s.finishSessionRefresh(w, r, rtRec, clientIP)
+			return
+		}
+	}
+
+	if sessionCookie == nil {
+		writeError(w, ErrorCodeUnauthorized, "not authenticated")
+		return
+	}
+	writeError(w, ErrorCodeUnauthorized, "session expired")
+}
+
+// finishSessionRefresh completes a successful rotation: audit, fresh session +
+// refresh-token cookies, and the re-issued CSRF cookie (same value so its
+// Max-Age stays aligned with the sliding session).
+func (s *Server) finishSessionRefresh(w http.ResponseWriter, r *http.Request, session *store.SessionRecord, clientIP string) {
 	user, _ := s.userStore.GetByID(session.UserID)
 	if user != nil {
 		s.auditStore.Log(store.AuditSessionRefreshed, &user.ID, user.Email, clientIP, r.UserAgent(), true, nil)
 	}
 
-	// Set new session cookie
 	s.setSessionCookie(w, session.ID)
-
-	// Re-issue CSRF cookie with the same value so its Max-Age stays aligned with the
-	// sliding session (otherwise POSTs start failing while the session cookie is still valid).
+	if session.RefreshToken != "" {
+		setRefreshTokenCookie(w, s.cfg.SecureCookies, s.sessionExpiry, session.RefreshToken)
+	}
 	if csrfCookie, err := r.Cookie("alga_csrf"); err == nil && csrfCookie.Value != "" {
 		s.setCSRFCookie(w, csrfCookie.Value)
 	}
@@ -788,6 +839,36 @@ func (s *Server) clearSessionCookie(w http.ResponseWriter) {
 		MaxAge:   -1,
 	}
 	http.SetCookie(w, cookie)
+}
+
+// setRefreshTokenCookie issues the HttpOnly alga_rt refresh-token cookie that
+// accompanies the session cookie. Browsers never need to present it;
+// it exists so API clients can drive the documented refresh-token rotation and
+// so replays of rotated-out tokens are detectable and revocable.
+func setRefreshTokenCookie(w http.ResponseWriter, secure bool, sessionExpiry time.Duration, refreshToken string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "alga_rt",
+		Value:    refreshToken,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: http.SameSiteStrictMode,
+		MaxAge:   int(sessionExpiry.Seconds()),
+	})
+}
+
+// clearRefreshTokenCookie clears the refresh-token cookie alongside the
+// session cookie on logout.
+func clearRefreshTokenCookie(w http.ResponseWriter, secure bool) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "alga_rt",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: http.SameSiteStrictMode,
+		MaxAge:   -1,
+	})
 }
 
 // setCSRFCookie sets the CSRF cookie

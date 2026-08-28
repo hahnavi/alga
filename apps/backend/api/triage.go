@@ -3,11 +3,26 @@ package api
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"alga/logger"
 	"alga/rbac"
 	"alga/store"
 )
+
+// validTriageDecision reports whether decision is one of the decisions the
+// triage engine can emit (mirrors the store constants).
+func validTriageDecision(decision string) bool {
+	switch decision {
+	case store.TriageDecisionInvestigate,
+		store.TriageDecisionAutoResolve,
+		store.TriageDecisionSuppress,
+		store.TriageDecisionEscalate,
+		store.TriageDecisionEnrichOnly:
+		return true
+	}
+	return false
+}
 
 type triageRuleRequest struct {
 	Name        string           `json:"name,omitempty"`
@@ -180,15 +195,31 @@ func (s *Server) handleTriageResultByID(w http.ResponseWriter, r *http.Request) 
 		if !decodeJSON(w, r, &req) {
 			return
 		}
+		if !validTriageDecision(req.Decision) {
+			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "decision must be one of: investigate, auto_resolve, suppress, escalate, enrich_only")
+			return
+		}
+		now := time.Now().UTC()
 		patch := &store.TriageResultRecord{
-			Outcome:      store.TriageResultOutcomeOverridden,
-			OverriddenTo: req.Decision,
+			Outcome:        store.TriageResultOutcomeOverridden,
+			OverriddenTo:   req.Decision,
+			OverriddenAt:   &now,
+			OverrideReason: req.Reason,
+		}
+		if user := userFromContext(r.Context()); user != nil {
+			id := user.ID
+			patch.OverriddenBy = &id
 		}
 		out, err := s.triageResultStore.Update(r.Context(), id, patch)
 		if err != nil {
 			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, err.Error())
 			return
 		}
+		s.audit(r, store.AuditTriageOverridden, map[string]any{
+			"triage_result_id": id,
+			"decision":         req.Decision,
+			"reason":           req.Reason,
+		})
 		logger.InfoCtx(r.Context(), "triage result overridden", "component", "api", "result_id", id, "decision", req.Decision)
 		writeData(w, http.StatusOK, out)
 	default:

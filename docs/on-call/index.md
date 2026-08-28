@@ -12,7 +12,7 @@ Teams group users together and serve as the organizational backbone for incident
 Teams connect several Alga concepts together:
 
 ```
-  Team ──────── Members (users with admin/member roles)
+  Team ──────── Members (users with lead/member roles)
     │
     ├── On-Call Schedule ── one auto-provisioned schedule per team
     │       (rotating coverage: who's on call right now)
@@ -27,8 +27,11 @@ Escalation policies are configured separately and **target** teams (or individua
 A team has a unique **name** and an optional **description**, plus:
 
 - **Members** — users assigned to the team (`user_id` + `role`), each with a role:
-  - **Admin** — can add/remove members, manage the schedule and members
-  - **Member** — appears in the team's roster and can be targeted by escalation
+  - **Lead** — the team's lead. The creator of the auto-provisioned schedule is designated lead by default; other members can be promoted via the member-role update endpoint.
+  - **Member** — the default role; appears in the team's roster and can be targeted by escalation.
+
+  Member roles are descriptive designations, not permission levels — all team management actions are gated by the same `oncall:write` permission.
+
 - **On-Call Schedule** — exactly one schedule, auto-provisioned when the team is created. Its display name is derived from the team, and its rotating coverage is defined by [layers](/on-call/schedules)
 
 ## Creating a Team

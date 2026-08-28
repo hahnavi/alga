@@ -16,7 +16,7 @@ Each schedule has one or more **layers** that define rotating on-call coverage. 
 | Field                     | Description                                                                                   |
 | ------------------------- | --------------------------------------------------------------------------------------------- |
 | `name`                    | Display name for the layer (e.g., "Primary", "Secondary")                                     |
-| `rotation_type`           | `weekly`, `daily`, or `custom`                                                                |
+| `rotation_type`           | `hourly`, `daily`, `weekly`, or `monthly` (rejected values are refused with HTTP 400)         |
 | `rotation_interval`       | How many units of `rotation_type` per shift (e.g., `2` for bi-weekly)                         |
 | `start_date`              | When the rotation begins (RFC3339)                                                            |
 | `end_date`                | Optional end; the layer stops resolving after this                                            |
@@ -41,8 +41,8 @@ Temporary schedule changes can be created via **overrides**. An override records
 ### Who is On-Call Now?
 
 - **Global**: `GET /api/v1/on-call/who-is-on-call` — All schedules' current on-call
-- **Per Schedule**: `GET /api/v1/on-call/schedules/{id}/current` — Specific schedule
-- **My Shifts**: `GET /api/v1/on-call/me` — Current/pending shifts for the logged-in user
+- **Per Schedule**: `GET /api/v1/on-call/schedules/{id}/current` — Specific schedule; includes `until`, the RFC3339 end of the active shift
+- **My Shifts**: `GET /api/v1/on-call/me` — `{current: [...], pending: [...]}` for the logged-in user. `current` lists every schedule where the caller is on call right now (with the matching layer names); `pending` lists the next upcoming shift per schedule within a two-week horizon (`start_at`/`end_at` included).
 
 ### Timeline
 
@@ -65,8 +65,10 @@ Handoffs ensure continuity of on-call coverage and reduce the risk of dropped co
 
 Track on-call burden per shift to identify overloaded responders and optimize rotation design. `GET /api/v1/on-call/metrics` requires `schedule_id`, `start_date`, and `end_date` (RFC3339) query parameters and returns per-shift statistics:
 
-- **Alerts received / acknowledged / resolved / missed** — alert volume and outcomes during each shift
-- **Average ack time** (`avg_ack_time_seconds`) — mean time to acknowledge during the shift
+- **Alerts received** — alerts that fired while the shift holder was on call
+- **Alerts acknowledged / resolved** — acknowledge/resolve events recorded during the shift window
+- **Alerts missed** — alerts that fired during the shift but had no acknowledge event recorded by the shift's end
+- **Average ack time** (`avg_ack_time_seconds`) — mean seconds from an alert's fire time to its first acknowledgement, averaged over alerts fired during the shift
 - **Summary** — `total_shifts`, `avg_ack_rate`, and `avg_ack_time_seconds` across the range
 
 Pass `group_by=user` to aggregate shifts per responder instead of per shift.

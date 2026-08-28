@@ -201,6 +201,7 @@ func (h *googleOAuthHandler) handleCallback(w http.ResponseWriter, r *http.Reque
 		SameSite: http.SameSiteStrictMode,
 		MaxAge:   int(h.sessionExpiry.Seconds()),
 	})
+	setRefreshTokenCookie(w, h.cfg.SecureCookies, h.sessionExpiry, session.RefreshToken)
 	http.SetCookie(w, &http.Cookie{
 		Name:     "alga_csrf",
 		Value:    csrfToken,

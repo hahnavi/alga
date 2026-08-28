@@ -166,9 +166,19 @@ func (c *Correlator) SetSuppressionRules(rules []SuppressionRule) { c.suppressio
 // Window returns the configured window duration (0 = immediate flush).
 func (c *Correlator) Window() time.Duration { return c.cfg.Window }
 
+// effectiveWindow resolves the buffering window for an alert: a matched rule
+// with Window > 0 (seconds) overrides the global window for its alertname;
+// the global window (possibly 0 = immediate flush) is the fallback.
+func (c *Correlator) effectiveWindow(rule *CorrelationRule) time.Duration {
+	if rule != nil && rule.Window > 0 {
+		return time.Duration(rule.Window) * time.Second
+	}
+	return c.cfg.Window
+}
+
 // ProcessAlert handles a single alert. It either appends to an existing
 // investigation (cooldown hit), buffers in the window, or publishes a new
-// investigation immediately when Window == 0.
+// investigation immediately when the effective window is 0.
 func (c *Correlator) ProcessAlert(ctx context.Context, alert rabbitmq.CorrelatedAlert) error {
 	if c.vkClient == nil {
 		return errors.New("valkey client not available for correlation")
@@ -188,6 +198,7 @@ func (c *Correlator) ProcessAlert(ctx context.Context, alert rabbitmq.Correlated
 		}
 	}
 	key, _ := CorrelationKeyWithRules(alert.Labels, rule)
+	window := c.effectiveWindow(rule)
 
 	if invID, hit, err := c.checkCooldown(ctx, key); err != nil {
 		metrics.CorrelatorFailClosedTotal.Add(1)
@@ -195,10 +206,10 @@ func (c *Correlator) ProcessAlert(ctx context.Context, alert rabbitmq.Correlated
 	} else if hit {
 		if err := c.appendToInvestigation(ctx, key, invID, alert); err != nil {
 			if errors.Is(err, errCooldownStale) {
-				if c.cfg.Window <= 0 {
+				if window <= 0 {
 					return c.flushInvestigation(ctx, key, []rabbitmq.CorrelatedAlert{alert}, alert)
 				}
-				return c.bufferAlert(ctx, key, alert)
+				return c.bufferAlert(ctx, key, alert, window)
 			}
 			logger.ErrorCtx(ctx, "Correlator: failed to append alert to investigation", "component", "correlator", "fingerprint", alert.Fingerprint, "investigation_id", invID, "error", err)
 			return err
@@ -206,11 +217,11 @@ func (c *Correlator) ProcessAlert(ctx context.Context, alert rabbitmq.Correlated
 		return nil
 	}
 
-	if c.cfg.Window <= 0 {
+	if window <= 0 {
 		return c.flushInvestigation(ctx, key, []rabbitmq.CorrelatedAlert{alert}, alert)
 	}
 
-	return c.bufferAlert(ctx, key, alert)
+	return c.bufferAlert(ctx, key, alert, window)
 }
 
 func (c *Correlator) checkCooldown(ctx context.Context, key string) (string, bool, error) {
@@ -321,12 +332,12 @@ func (c *Correlator) notifyAgentOfMergedAlert(ctx context.Context, investigation
 	}
 }
 
-func (c *Correlator) bufferAlert(ctx context.Context, key string, alert rabbitmq.CorrelatedAlert) error {
+func (c *Correlator) bufferAlert(ctx context.Context, key string, alert rabbitmq.CorrelatedAlert, window time.Duration) error {
 	payload, err := json.Marshal(alert)
 	if err != nil {
 		return fmt.Errorf("marshal alert: %w", err)
 	}
-	winSecs := int64(c.cfg.Window.Seconds())
+	winSecs := int64(window.Seconds())
 	if winSecs <= 0 {
 		winSecs = 1
 	}
@@ -345,19 +356,19 @@ func (c *Correlator) bufferAlert(ctx context.Context, key string, alert rabbitmq
 		// First alert in this window — open the timer.
 		metrics.CorrelatorWindowOpenTotal.Add(1)
 		metrics.CorrelatorWindowDepth.Add(1)
-		c.scheduleFlush(key)
+		c.scheduleFlush(key, window)
 	}
 	return nil
 }
 
-func (c *Correlator) scheduleFlush(key string) {
+func (c *Correlator) scheduleFlush(key string, window time.Duration) {
 	c.mu.Lock()
 	if _, exists := c.flushTimers[key]; exists {
 		c.mu.Unlock()
 		return
 	}
 	c.wg.Add(1)
-	t := time.AfterFunc(c.cfg.Window, func() {
+	t := time.AfterFunc(window, func() {
 		defer c.wg.Done()
 		defer func() {
 			if r := recover(); r != nil {

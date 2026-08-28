@@ -80,6 +80,24 @@ func IsDuplicateKey(err error) bool {
 	return pgIsDuplicateKey(err)
 }
 
+// pgIsForeignKeyViolation reports SQLSTATE 23503 (FK RESTRICT/NO ACTION).
+func pgIsForeignKeyViolation(err error) bool {
+	if err == nil {
+		return false
+	}
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23503" {
+		return true
+	}
+	return false
+}
+
+// IsForeignKeyViolation reports whether err is a PostgreSQL foreign-key
+// violation (e.g. deleting a row another table still references).
+func IsForeignKeyViolation(err error) bool {
+	return pgIsForeignKeyViolation(err)
+}
+
 func extractLimitSkip(filter map[string]any, defaultLimit int) (limit, skip int) {
 	limit = defaultLimit
 	if lv, ok := filter["$limit"]; ok {
@@ -172,4 +190,32 @@ func nextSeq(ctx context.Context, db bun.IDB, seq string) (int64, error) {
 		return 0, fmt.Errorf("nextval %s: %w", seq, err)
 	}
 	return n, nil
+}
+
+// retentionDeleteBatch caps each DELETE in DeleteOlderThan-style purges so a
+// large backlogged window releases locks between batches instead of holding a
+// single long transaction.
+const retentionDeleteBatch = 5000
+
+// deleteOlderThanBatched hard-deletes rows of model older than cutoff in
+// bounded batches, returning the total removed. col is the caller-supplied
+// timestamp column (a compile-time constant at each call site, never user
+// input). The batch loop stops on the first not-full batch.
+func deleteOlderThanBatched[T any](ctx context.Context, db bun.IDB, col string, cutoff time.Time) (int64, error) {
+	var total int64
+	for {
+		sub := db.NewSelect().Model((*T)(nil)).Column("id").Where(col+" < ?", cutoff).Limit(retentionDeleteBatch)
+		res, err := db.NewDelete().Model((*T)(nil)).Where("id IN (?)", sub).Exec(ctx)
+		if err != nil {
+			return total, fmt.Errorf("retention delete on %s: %w", col, err)
+		}
+		n, err := res.RowsAffected()
+		if err != nil {
+			return total, fmt.Errorf("retention delete rows affected: %w", err)
+		}
+		total += n
+		if n < retentionDeleteBatch {
+			return total, nil
+		}
+	}
 }

@@ -119,7 +119,6 @@ type Config struct {
 	TwilioAccountSID         string                   `yaml:"twilio_account_sid"`
 	TwilioAuthToken          string                   `yaml:"twilio_auth_token"`
 	TwilioFromNumber         string                   `yaml:"twilio_from_number"`
-	TwilioToNumbers          []string                 `yaml:"twilio_to_numbers"`
 	TwilioDisabled           bool                     `yaml:"twilio_disabled"`
 	VoiceProvider            string                   `yaml:"voice_provider"` // empty means "twilio"
 	TelnyxAPIKey             string                   `yaml:"telnyx_api_key"`
@@ -146,6 +145,27 @@ type Config struct {
 	// AgentSSEAllowedOrigins is a comma-separated list of allowed Origin headers for the agent SSE endpoint; empty allows all.
 	AgentSSEAllowedOrigins string `yaml:"agent_sse_allowed_origins"`
 
+	// WebhookAllowQueryToken re-enables the legacy `?token=` query-parameter
+	// authentication on POST /webhooks/alerts. Credentials in URLs leak via
+	// proxy/access logs, Referer headers, and browser history, so this defaults
+	// to false and only header authentication is accepted. Removal of the flag
+	// (and the fallback) is planned one minor release after introduction.
+	WebhookAllowQueryToken bool `yaml:"webhook_allow_query_token"`
+	// AgentSSEAllowQueryToken re-enables the legacy `?token=` fallback on the
+	// agent SSE endpoint for pure-EventSource consumers that cannot set an
+	// Authorization header. Defaults to false; fetch()-based SSE with a Bearer
+	// header is the blessed pattern.
+	AgentSSEAllowQueryToken bool `yaml:"agent_sse_allow_query_token"`
+
+	// RateLimitGeneralPerMinute caps public-surface requests per IP per
+	// minute (webhooks, discovery, callbacks). Both limiter backends (memory
+	// and Valkey) share this ceiling; default 20 matches the historical
+	// Valkey contract.
+	RateLimitGeneralPerMinute int `yaml:"rate_limit_general_per_minute"`
+	// RateLimitAgentPerMinute caps agent-bearer requests per token per
+	// minute across both limiter backends. Default 120.
+	RateLimitAgentPerMinute int `yaml:"rate_limit_agent_per_minute"`
+
 	// StaleAlertThreshold is the minimum age a firing alert must reach before
 	// the scheduler considers it "stale" (no investigation). Alerts younger
 	// than this are assumed to still be in the correlator pipeline.
@@ -153,6 +173,11 @@ type Config struct {
 	// StaleAlertSweepInterval is how often the scheduler sweeps for stale
 	// alerts and publishes investigation jobs for them.
 	StaleAlertSweepInterval time.Duration `yaml:"stale_alert_sweep_interval"`
+
+	// SLASweepInterval is how often the scheduler's leader publishes an SLA
+	// sweep request to RabbitMQ, driving SLA breach detection (decided:
+	// scheduler-owned publication). Values <= 0 disable publication entirely.
+	SLASweepInterval time.Duration `yaml:"sla_sweep_interval"`
 
 	// StuckInvestigationEscalationMultiplier is the multiple of
 	// InvestigationTimeout after which an in-progress alert investigation is
@@ -169,6 +194,11 @@ type Config struct {
 	OpsTeamName string `yaml:"ops_team_name"`
 
 	DataRetentionDays int `yaml:"data_retention_days"`
+
+	// AuditRetentionDays bounds the audit_logs trail. Compliance-grade
+	// data gets a longer window than DATA_RETENTION_DAYS; 0 disables audit
+	// pruning (keep forever).
+	AuditRetentionDays int `yaml:"audit_retention_days"`
 
 	// MemoryEnabled enables the shared agent memory system.
 	MemoryEnabled bool `yaml:"memory_enabled"`
@@ -276,12 +306,15 @@ func Defaults() *Config {
 		// attacks; MaxHeaderBytes bounds header memory. SSE handlers clear
 		// their own write deadline via DisableWriteDeadline so the 30s value
 		// does not truncate long-lived streams.
-		ServerReadHeaderTimeout:                  10 * time.Second,
-		ServerReadTimeout:                        30 * time.Second,
-		ServerWriteTimeout:                       30 * time.Second,
-		ServerIdleTimeout:                        120 * time.Second,
-		ServerMaxHeaderBytes:                     1 << 20, // 1 MiB
-		CorrelationWindow:                        0,
+		ServerReadHeaderTimeout: 10 * time.Second,
+		ServerReadTimeout:       30 * time.Second,
+		ServerWriteTimeout:      30 * time.Second,
+		ServerIdleTimeout:       120 * time.Second,
+		ServerMaxHeaderBytes:    1 << 20, // 1 MiB
+		// CorrelationWindow buffers alerts sharing a correlation key before a
+		// single investigation is published; 0 disables buffering (immediate
+		// flush). 15s groups alert bursts on stock deployments.
+		CorrelationWindow:                        15 * time.Second,
 		CorrelationCooldownTTL:                   30 * time.Minute,
 		SchedulerLeaderTTL:                       15 * time.Second,
 		AgentPresenceTTL:                         90 * time.Second,
@@ -297,10 +330,12 @@ func Defaults() *Config {
 		StatusUpdateInterval:                     15 * time.Minute,
 		StaleAlertThreshold:                      15 * time.Minute,
 		StaleAlertSweepInterval:                  5 * time.Minute,
+		SLASweepInterval:                         60 * time.Second,
 		StuckInvestigationEscalationMultiplier:   2,
 		StuckInvestigationEscalationTickInterval: 30 * time.Second,
 		OpsTeamName:                              "ops-team",
 		DataRetentionDays:                        90,
+		AuditRetentionDays:                       365,
 		SMTPPort:                                 587,
 		TriageMaxConcurrent:                      3,
 		TriageConfidenceThreshold:                0.7,
@@ -610,9 +645,6 @@ func Load() (*Config, error) {
 	if v := os.Getenv("TWILIO_FROM_NUMBER"); v != "" {
 		cfg.TwilioFromNumber = v
 	}
-	if v := os.Getenv("TWILIO_TO_NUMBERS"); v != "" {
-		cfg.TwilioToNumbers = strings.Split(v, ",")
-	}
 	if v := os.Getenv("TWILIO_DISABLED"); v != "" {
 		if parsed, err := strconv.ParseBool(v); err == nil {
 			cfg.TwilioDisabled = parsed
@@ -705,6 +737,32 @@ func Load() (*Config, error) {
 	if v := os.Getenv("AGENT_SSE_ALLOWED_ORIGINS"); v != "" {
 		cfg.AgentSSEAllowedOrigins = v
 	}
+	if v := os.Getenv("WEBHOOK_ALLOW_QUERY_TOKEN"); v != "" {
+		if parsed, err := strconv.ParseBool(v); err == nil {
+			cfg.WebhookAllowQueryToken = parsed
+		}
+	}
+	if v := os.Getenv("AGENT_SSE_ALLOW_QUERY_TOKEN"); v != "" {
+		if parsed, err := strconv.ParseBool(v); err == nil {
+			cfg.AgentSSEAllowQueryToken = parsed
+		}
+	}
+	if cfg.RateLimitGeneralPerMinute == 0 {
+		cfg.RateLimitGeneralPerMinute = 20
+	}
+	if cfg.RateLimitAgentPerMinute == 0 {
+		cfg.RateLimitAgentPerMinute = 120
+	}
+	if v := os.Getenv("RATE_LIMIT_GENERAL_PER_MINUTE"); v != "" {
+		if parsed, err := strconv.Atoi(v); err == nil && parsed > 0 {
+			cfg.RateLimitGeneralPerMinute = parsed
+		}
+	}
+	if v := os.Getenv("RATE_LIMIT_AGENT_PER_MINUTE"); v != "" {
+		if parsed, err := strconv.Atoi(v); err == nil && parsed > 0 {
+			cfg.RateLimitAgentPerMinute = parsed
+		}
+	}
 	if v := os.Getenv("STALE_ALERT_THRESHOLD"); v != "" {
 		if d, err := time.ParseDuration(v); err == nil {
 			cfg.StaleAlertThreshold = d
@@ -713,6 +771,11 @@ func Load() (*Config, error) {
 	if v := os.Getenv("STALE_ALERT_SWEEP_INTERVAL"); v != "" {
 		if d, err := time.ParseDuration(v); err == nil {
 			cfg.StaleAlertSweepInterval = d
+		}
+	}
+	if v := os.Getenv("SLA_SWEEP_INTERVAL"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			cfg.SLASweepInterval = d
 		}
 	}
 	if v := os.Getenv("STUCK_INVESTIGATION_ESCALATION_MULTIPLIER"); v != "" {
@@ -732,6 +795,12 @@ func Load() (*Config, error) {
 	if v := os.Getenv("DATA_RETENTION_DAYS"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
 			cfg.DataRetentionDays = n
+		}
+	}
+
+	if v := os.Getenv("AUDIT_RETENTION_DAYS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			cfg.AuditRetentionDays = n
 		}
 	}
 
@@ -865,6 +934,19 @@ func (c *Config) Validate() error {
 	// MITM of outgoing email (ASVS V9.2, SPEC gap L6).
 	if c.SMTPSkipTLSVerify {
 		logger.Warn("SMTP_SKIP_TLS_VERIFY is true; SMTP TLS certificate verification is disabled (MITM risk for outgoing email)", "component", "config")
+	}
+
+	// Legacy query-token auth escape hatches must be loud: they weaken the
+	// default credential-handling posture and are slated for removal.
+	if c.RateLimitGeneralPerMinute > 10*20 {
+		logger.Warn("RATE_LIMIT_GENERAL_PER_MINUTE is more than 10x the default of 20; verify this is intentional for your webhook volume", "component", "config", "value", c.RateLimitGeneralPerMinute)
+	}
+
+	if c.WebhookAllowQueryToken {
+		logger.Warn("WEBHOOK_ALLOW_QUERY_TOKEN is true; webhook tokens are accepted via ?token= query parameter (logged in proxy/history trails). Migrate senders to Authorization: Bearer before the flag is removed", "component", "config")
+	}
+	if c.AgentSSEAllowQueryToken {
+		logger.Warn("AGENT_SSE_ALLOW_QUERY_TOKEN is true; agent SSE accepts ?token= query parameter (logged in proxy/access logs). Prefer fetch()-based SSE with Authorization header", "component", "config")
 	}
 
 	// Force the lazy keyring init now so we can surface a usable error here

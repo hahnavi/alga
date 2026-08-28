@@ -476,7 +476,7 @@ go run .  # Check for startup errors
 
 1. **Database connection failed:** Check `POSTGRES_DSN`
 2. **Port already in use:** Change `PORT` or stop conflicting service
-3. **Missing encryption keys:** Set `ENCRYPTION_KEY` for production
+3. **Missing encryption keys:** Set `ENCRYPTION_KEYS` (e.g. `1:$(openssl rand -base64 32)`) for production
 
 ### Alerts aren't arriving - why?
 

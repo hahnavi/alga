@@ -86,7 +86,10 @@ All operator endpoints require an authenticated session; the Permission column l
 
 ### Agent Endpoints
 
-| Method | Path                      | Auth   | Description                                                              |
-| ------ | ------------------------- | ------ | ------------------------------------------------------------------------ |
-| `GET`  | `/api/v1/agent/knowledge` | Bearer | List/search notes (read-only)                                            |
-| `POST` | `/api/v1/agent/knowledge` | Bearer | Create note (requires `source_investigation_id` and `confidence` fields) |
+| Method | Path                      | Auth                   | Description                                                              |                               |
+| ------ | ------------------------- | ---------------------- | ------------------------------------------------------------------------ | ----------------------------- |
+| `GET`  | `/api/v1/agent/knowledge` | Bearer + `investigate\ | command`                                                                 | List/search notes (read-only) |
+| `POST` | `/api/v1/agent/knowledge` | Bearer + `investigate` | Create note (requires `source_investigation_id` and `confidence` fields) |                               |
+
+Tokens without the required capability receive `403`; notes authored by agents are ingested into other agents' prompts, so authoring is deliberately restricted to
+investigation-capable tokens.

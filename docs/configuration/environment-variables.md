@@ -15,6 +15,12 @@ Alga is configured via environment variables. The canonical reference is `apps/b
 
 The default values below come from `Defaults()` in `apps/backend/config/config.go`. Duration values use Go duration syntax (`30s`, `10m`, `12h`, `168h`). Boolean values accept `true`/`false` (and other `strconv.ParseBool` forms).
 
+## Precedence: `.env` Overrides the Inherited Environment
+
+The backend loads `.env` files with **godotenv.Overload** semantics: for every key present in `apps/backend/.env` (or the repo-root `.env`), the file value **replaces** any same-named variable inherited from your shell, container environment, or secret provider. This is the reverse of common dotenv conventions — exporting a variable has no effect while the same key exists in a loaded `.env`. To let an environment-provided value win (container `environment:` blocks, systemd units, secret managers), delete or comment out that key in `.env`.
+
+Full resolution order (lowest to highest): built-in defaults → YAML config file (`CONFIG_PATH`) → environment variables (with `.env` overriding inherited environment per above) → [System Configuration API](/configuration/system-config) for its supported keys.
+
 ## General
 
 | Variable        | Default                | Required | Description                                                                                                                                           |
@@ -71,8 +77,8 @@ All have safe defaults; override only to tune for your deployment.
 | `ENCRYPTION_KEYS` |         | Yes      | Comma-separated `kid:base64(32B)` pairs for AES-256-GCM envelope encryption. The highest `kid` seals new ciphertexts; lower kids decrypt historical data. Generate keys with `openssl rand -base64 32` (e.g. `1:<base64>,2:<base64>`) |
 | `SECRET_PEPPER`   |         | Yes      | Base64-encoded HMAC pepper (must decode to >= 32 bytes) for password pre-hashing and token hashing. Generate with `openssl rand -base64 32`                                                                                           |
 
-::: tip `setup.sh` and `ENCRYPTION_KEY`
-`setup.sh` appends a single `ENCRYPTION_KEY` value to `apps/backend/.env` for local convenience. The backend keyring reads `ENCRYPTION_KEYS` (the `kid:base64` form above); for any real deployment set `ENCRYPTION_KEYS` explicitly.
+::: tip `setup.sh` generates keys
+`setup.sh` appends a generated `ENCRYPTION_KEYS` value in the `1:<base64>` form above, plus `SECRET_PEPPER`, to `apps/backend/.env`.
 :::
 
 ### Argon2id Tuning
@@ -140,13 +146,10 @@ Defaults follow OWASP 2026 (m=64 MiB, t=3, p=2). Tune so a single hash takes ~25
 
 ## Hermes / SRE Agent
 
-| Variable                             | Default | Required | Description                                                                  |
-| ------------------------------------ | ------- | -------- | ---------------------------------------------------------------------------- |
-| `HERMES_PLATFORM_URL`                |         | No       | Hermes platform base URL (stored in the integrations table, encrypted token) |
-| `HERMES_PLATFORM_TOKEN`              |         | No       | Hermes platform bearer token (encrypted at rest)                             |
-| `HERMES_DELEGATION_POLL_INTERVAL`    | `3s`    | No       | Delegation polling interval (declared in `apps/backend/.env.example`)        |
-| `HERMES_DELEGATION_WAIT_PER_ATTEMPT` | `2m`    | No       | Wait per delegation attempt (declared in `apps/backend/.env.example`)        |
-| `HERMES_DELEGATION_MAX_ATTEMPTS`     | `30`    | No       | Max delegation attempts (declared in `apps/backend/.env.example`)            |
+| Variable                | Default | Required | Description                                                                  |
+| ----------------------- | ------- | -------- | ---------------------------------------------------------------------------- |
+| `HERMES_PLATFORM_URL`   |         | No       | Hermes platform base URL (stored in the integrations table, encrypted token) |
+| `HERMES_PLATFORM_TOKEN` |         | No       | Hermes platform bearer token (encrypted at rest)                             |
 
 ::: tip Agent connections use per-agent tokens
 Agent dispatch and SSE connections use bearer tokens created per-agent in the Alga UI (`alga_agent_...`), not `HERMES_PLATFORM_TOKEN`. The platform URL/token fields are stored encrypted in the integrations table and surfaced via the integration config API.
@@ -160,10 +163,10 @@ Agent dispatch and SSE connections use bearer tokens created per-agent in the Al
 
 ## Alert Correlation
 
-| Variable                   | Default        | Required | Description                                                                                               |
-| -------------------------- | -------------- | -------- | --------------------------------------------------------------------------------------------------------- |
-| `CORRELATION_WINDOW`       | `0` (disabled) | No       | Time window during which alerts sharing a correlation key are merged into one investigation. `0` disables |
-| `CORRELATION_COOLDOWN_TTL` | `30m`          | No       | Cooldown after investigation publish (prevents duplicates)                                                |
+| Variable                   | Default | Required | Description                                                                                                                                                      |
+| -------------------------- | ------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CORRELATION_WINDOW`       | `15s`   | No       | Time window during which alerts sharing a correlation key are buffered and merged into one investigation. `0` flushes each alert immediately (no grouping delay) |
+| `CORRELATION_COOLDOWN_TTL` | `30m`   | No       | Cooldown after investigation publish (prevents duplicates)                                                                                                       |
 
 ## Investigation
 
@@ -192,6 +195,12 @@ Agent dispatch and SSE connections use bearer tokens created per-agent in the Al
 | `STALE_ALERT_THRESHOLD`      | `15m`   | No       | Minimum age before a firing alert with no investigation is considered stale. `0` disables |
 | `STALE_ALERT_SWEEP_INTERVAL` | `5m`    | No       | How often the scheduler scans for stale alerts                                            |
 
+## SLA Sweep
+
+| Variable             | Default | Required | Description                                                                                                          |
+| -------------------- | ------- | -------- | -------------------------------------------------------------------------------------------------------------------- |
+| `SLA_SWEEP_INTERVAL` | `60s`   | No       | How often the scheduler leader publishes an SLA breach-detection sweep tick. Values ≤ 0 disable publication entirely |
+
 ## Stuck-Investigation Escalation
 
 | Variable                                       | Default    | Required | Description                                                                                                                           |
@@ -215,7 +224,6 @@ Alga supports two voice providers for phone-call escalation: **Twilio** (default
 | `TWILIO_ACCOUNT_SID` |         | No       | Twilio account SID. When set via env, the UI fields are locked and env takes precedence |
 | `TWILIO_AUTH_TOKEN`  |         | No       | Twilio auth token (required for callback validation)                                    |
 | `TWILIO_FROM_NUMBER` |         | No       | Twilio outbound phone number                                                            |
-| `TWILIO_TO_NUMBERS`  |         | No       | Comma-separated list of destination phone numbers                                       |
 | `TWILIO_DISABLED`    | `false` | No       | Disable Twilio entirely                                                                 |
 
 ### Telnyx
@@ -248,37 +256,37 @@ Required for password reset emails and email notifications. If `SMTP_HOST` is em
 
 pgvector-backed shared agent memory for extracting and searching investigation memories.
 
-| Variable                       | Default | Required | Description                                         |
-| ------------------------------ | ------- | -------- | --------------------------------------------------- |
-| `MEMORY_ENABLED`               | `false` | No       | Enable agent memory                                 |
-| `MEMORY_EMBEDDING_URL`         |         | No       | OpenAI-compatible embedding API URL                 |
-| `MEMORY_EMBEDDING_API_KEY`     |         | No       | API key for the embedding service                   |
-| `MEMORY_EMBEDDING_MODEL`       |         | No       | Embedding model name                                |
-| `MEMORY_LLM_URL`               |         | No       | OpenAI-compatible LLM API URL for memory extraction |
-| `MEMORY_LLM_API_KEY`           |         | No       | API key for the extraction LLM                      |
-| `MEMORY_LLM_MODEL`             |         | No       | LLM model for memory extraction                     |
-| `MEMORY_AUTO_EXTRACT`          | `false` | No       | Auto-extract memories on investigation completion   |
-| `MEMORY_MAX_PER_INVESTIGATION` |         | No       | Max memories extracted per investigation            |
-| `MEMORY_SIMILARITY_THRESHOLD`  |         | No       | Min cosine similarity (0–1) for search results      |
+| Variable                       | Default | Required | Description                                                                                                                                |
+| ------------------------------ | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `MEMORY_ENABLED`               | `false` | No       | Enable agent memory                                                                                                                        |
+| `MEMORY_EMBEDDING_URL`         |         | No       | OpenAI-compatible embedding API URL                                                                                                        |
+| `MEMORY_EMBEDDING_API_KEY`     |         | No       | API key for the embedding service                                                                                                          |
+| `MEMORY_EMBEDDING_MODEL`       |         | No       | Embedding model name — must be 1536-dimension (boot-time check rejects others)                                                             |
+| `MEMORY_LLM_URL`               |         | No       | OpenAI-compatible LLM API URL for memory extraction                                                                                        |
+| `MEMORY_LLM_API_KEY`           |         | No       | API key for the extraction LLM                                                                                                             |
+| `MEMORY_LLM_MODEL`             |         | No       | LLM model for memory extraction                                                                                                            |
+| `MEMORY_AUTO_EXTRACT`          | `false` | No       | Auto-extract memories on investigation completion                                                                                          |
+| `MEMORY_MAX_PER_INVESTIGATION` |         | No       | Hard cap on memories extracted per investigation; LLM results are truncated to this before embedding (default 10)                          |
+| `MEMORY_SIMILARITY_THRESHOLD`  |         | No       | Min search score (0–1) for results to be returned; applied as a post-filter on the vector and text search paths. `0` returns the raw top-K |
 
 ## Triage
 
-| Variable                              | Default | Required | Description                                                                         |
-| ------------------------------------- | ------- | -------- | ----------------------------------------------------------------------------------- |
-| `TRIAGE_ENABLED`                      | `false` | No       | Enable the triage system                                                            |
-| `TRIAGE_LLM_URL`                      |         | No       | LLM API URL for triage decisions                                                    |
-| `TRIAGE_LLM_API_KEY`                  |         | No       | API key for the triage LLM                                                          |
-| `TRIAGE_LLM_MODEL`                    |         | No       | LLM model for triage                                                                |
-| `TRIAGE_MAX_CONCURRENT`               | `3`     | No       | Max concurrent triage operations                                                    |
-| `TRIAGE_TIMEOUT`                      | `2m`    | No       | Triage operation timeout                                                            |
-| `MAX_CONCURRENT_TRIAGE`               | `5`     | No       | Max concurrent triage workers                                                       |
-| `TRIAGE_CONFIDENCE_THRESHOLD`         | `0.7`   | No       | Min confidence for auto-decisions; below this, decisions downgrade to `enrich_only` |
-| `TRIAGE_AUTO_RESOLVE_ENABLED`         | `false` | No       | Allow `auto_resolve` decisions (otherwise downgrades to `enrich_only`)              |
-| `TRIAGE_SUPPRESS_ENABLED`             | `false` | No       | Allow `suppress` decisions (otherwise downgrades to `enrich_only`)                  |
-| `TRIAGE_CONTEXT_EPISODIC_LIMIT`       | `3`     | No       | Max episodic context entries                                                        |
-| `TRIAGE_CONTEXT_NOTES_LIMIT`          | `3`     | No       | Max knowledge notes for context                                                     |
-| `TRIAGE_CONTEXT_MEMORIES_LIMIT`       | `5`     | No       | Max agent memories for context                                                      |
-| `TRIAGE_AUTO_PROMOTE_CONFIRMED_COUNT` | `3`     | No       | Count of confirmed triages before auto-promotion                                    |
+| Variable                              | Default | Required | Description                                                                                                          |
+| ------------------------------------- | ------- | -------- | -------------------------------------------------------------------------------------------------------------------- |
+| `TRIAGE_ENABLED`                      | `false` | No       | Enable the triage system                                                                                             |
+| `TRIAGE_LLM_URL`                      |         | No       | LLM API URL for triage decisions                                                                                     |
+| `TRIAGE_LLM_API_KEY`                  |         | No       | API key for the triage LLM                                                                                           |
+| `TRIAGE_LLM_MODEL`                    |         | No       | LLM model for triage                                                                                                 |
+| `TRIAGE_MAX_CONCURRENT`               | `3`     | No       | Max concurrent triage operations                                                                                     |
+| `TRIAGE_TIMEOUT`                      | `2m`    | No       | Triage operation timeout                                                                                             |
+| `MAX_CONCURRENT_TRIAGE`               | `5`     | No       | Max concurrent triage workers                                                                                        |
+| `TRIAGE_CONFIDENCE_THRESHOLD`         | `0.7`   | No       | Min confidence for auto-decisions; below this, decisions downgrade to `enrich_only`                                  |
+| `TRIAGE_AUTO_RESOLVE_ENABLED`         | `false` | No       | Allow `auto_resolve` decisions (otherwise downgrades to `enrich_only`)                                               |
+| `TRIAGE_SUPPRESS_ENABLED`             | `false` | No       | Allow `suppress` decisions (otherwise downgrades to `enrich_only`)                                                   |
+| `TRIAGE_CONTEXT_EPISODIC_LIMIT`       | `3`     | No       | Max episodic context entries                                                                                         |
+| `TRIAGE_CONTEXT_NOTES_LIMIT`          | `3`     | No       | Max knowledge notes for context                                                                                      |
+| `TRIAGE_CONTEXT_MEMORIES_LIMIT`       | `5`     | No       | Max agent memories for context                                                                                       |
+| `TRIAGE_AUTO_PROMOTE_CONFIRMED_COUNT` | `3`     | No       | Confirmed results of the same correlation key + decision before new triages for that key skip the LLM (`0` disables) |
 
 ## Google OAuth
 
@@ -303,9 +311,10 @@ Auto-creates a Google Meet space per incident for war-room coordination. Require
 
 ## Data Retention
 
-| Variable              | Default | Required | Description                                                |
-| --------------------- | ------- | -------- | ---------------------------------------------------------- |
-| `DATA_RETENTION_DAYS` | `90`    | No       | Days to retain resolved alerts. Set to `0` to keep forever |
+| Variable               | Default | Required | Description                                                                                                                   |
+| ---------------------- | ------- | -------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `DATA_RETENTION_DAYS`  | `90`    | No       | Days to retain resolved alerts. Set to `0` to keep forever                                                                    |
+| `AUDIT_RETENTION_DAYS` | `365`   | No       | Days to retain audit logs; pruned by the hourly retention sweeper alongside `DATA_RETENTION_DAYS`. Set to `0` to keep forever |
 
 ## Observability (OpenTelemetry)
 

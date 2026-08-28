@@ -7,17 +7,24 @@ package api
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
+
+	"alga/escalation"
+	"alga/ics"
 	"alga/logger"
 	"alga/metrics"
 	"alga/rabbitmq"
 	"alga/rbac"
 	"alga/sse"
 	"alga/store"
+	"alga/strutil"
+	"alga/worker"
 )
 
 func (s *Server) handleAcknowledgeIncident(w http.ResponseWriter, r *http.Request, incidentID string) {
@@ -54,6 +61,7 @@ func (s *Server) handleAcknowledgeIncident(w http.ResponseWriter, r *http.Reques
 
 	updated, _ := s.incidentStore.GetIncident(r.Context(), mustParseIncidentNumber(incidentID))
 	s.publishIncidentEvent("incident_updated", updated)
+	s.publishIncidentLifecycleNotifications(r.Context(), updated, "incident_acknowledged", "acknowledged")
 	s.audit(r, store.AuditIncidentAcknowledged, map[string]any{
 		"incident_number": incidentID,
 	})
@@ -86,6 +94,7 @@ func (s *Server) handleMitigateIncident(w http.ResponseWriter, r *http.Request, 
 
 	updated, _ := s.incidentStore.GetIncident(r.Context(), mustParseIncidentNumber(incidentID))
 	s.publishIncidentEvent("incident_updated", updated)
+	s.publishIncidentLifecycleNotifications(r.Context(), updated, "incident_mitigated", "mitigated")
 	s.audit(r, store.AuditIncidentMitigated, map[string]any{
 		"incident_number": incidentID,
 	})
@@ -169,6 +178,7 @@ func (s *Server) handleResolveIncident(w http.ResponseWriter, r *http.Request, i
 
 	updated, _ := s.incidentStore.GetIncident(r.Context(), mustParseIncidentNumber(incidentID))
 	s.publishIncidentEvent("incident_updated", updated)
+	s.publishIncidentLifecycleNotifications(r.Context(), updated, "incident_resolved", "resolved")
 	s.audit(r, store.AuditIncidentResolved, map[string]any{
 		"incident_number": incidentID,
 	})
@@ -203,6 +213,17 @@ func (s *Server) handleCloseIncident(w http.ResponseWriter, r *http.Request, inc
 	}
 
 	s.addIncidentTimeline(r, incidentID, "closed", "Incident closed")
+
+	// teardown-on-close: end any live ICS role assignments so a terminal
+	// incident stops surfacing active commanders/responders in ICS queries.
+	// Handler-explicit on purpose — a sweeper would race a reopen.
+	if s.icsRoleStore != nil {
+		if err := s.icsRoleStore.EndAllRolesForIncident(r.Context(), mustParseIncidentNumber(incidentID), ics.EndReasonIncidentClosed); err != nil {
+			logger.WarnCtx(r.Context(), "failed to end ICS roles on incident close", "component", "api", "incident_number", incidentID, "error", err)
+		} else {
+			s.addIncidentTimeline(r, incidentID, "ics_roles_ended", "ICS roles ended: incident closed")
+		}
+	}
 
 	metrics.IncidentsClosedTotal.Add(1)
 
@@ -258,6 +279,17 @@ func (s *Server) handleReopenIncident(w http.ResponseWriter, r *http.Request, in
 		return
 	}
 
+	// reopen reset: clear the SLA resolve stamp and the breach-dedup
+	// markers handler-explicitly so resolve-breach detection can re-fire on the
+	// reopened incident. Kept out of applyStatusTimestampsBun's "active" case,
+	// which also fires on detected→active promotion where wiping the stamp
+	// would corrupt legitimate clocks.
+	incidentNumber := mustParseIncidentNumber(incidentID)
+	if err := s.incidentStore.ClearSLAResolvedAt(r.Context(), incidentNumber); err != nil {
+		logger.WarnCtx(r.Context(), "failed to clear SLA resolve stamp on reopen", "component", "api", "incident_number", incidentID, "error", err)
+	}
+	worker.ClearBreachDedupKeys(r.Context(), s.vkClient, incidentNumber)
+
 	s.addIncidentTimeline(r, incidentID, "reopened", "Incident reopened")
 
 	metrics.IncidentsReopenedTotal.Add(1)
@@ -265,6 +297,7 @@ func (s *Server) handleReopenIncident(w http.ResponseWriter, r *http.Request, in
 
 	updated, _ := s.incidentStore.GetIncident(r.Context(), mustParseIncidentNumber(incidentID))
 	s.publishIncidentEvent("incident_updated", updated)
+	s.publishIncidentLifecycleNotifications(r.Context(), updated, "incident_reopened", "reopened")
 	s.audit(r, store.AuditIncidentReopened, map[string]any{
 		"incident_number": incidentID,
 	})
@@ -377,6 +410,7 @@ func (s *Server) handleEscalateIncident(w http.ResponseWriter, r *http.Request, 
 		escMsg := rabbitmq.EscalationMessage{
 			IncidentNumber: record.IncidentNumber,
 			Level:          1,
+			MaxRetries:     rabbitmq.MaxEscalationRetries,
 		}
 
 		if record.ServiceID != nil {
@@ -395,24 +429,11 @@ func (s *Server) handleEscalateIncident(w http.ResponseWriter, r *http.Request, 
 	writeData(w, http.StatusOK, record)
 }
 
+// cancelEscalationForIncident delegates to the shared escalation-package
+// helper so every ack surface (API, phone callbacks, Slack buttons) cancels
+// through the same state keys and timeline contract.
 func (s *Server) cancelEscalationForIncident(ctx context.Context, incidentID, reason string) {
-	if s.vkClient == nil || incidentID == "" {
-		return
-	}
-	hashKey := "alga:esc:" + incidentID
-	_ = s.vkClient.HSet(ctx, hashKey, "acknowledged", "1")
-	_ = s.vkClient.ZRem(ctx, "alga:esc:pending", incidentID)
-	if s.incidentStore != nil {
-		incidentNumber := mustParseIncidentNumber(incidentID)
-		if incidentNumber > 0 {
-			_ = s.incidentStore.AddTimelineEntry(ctx, &store.IncidentTimelineEntryRecord{
-				IncidentNumber: incidentNumber,
-				EventType:      "escalation_cancelled",
-				ActorType:      "system",
-				Message:        "Escalation stopped — " + reason,
-			})
-		}
-	}
+	escalation.CancelForIncident(ctx, s.vkClient, s.incidentStore, incidentID, reason)
 }
 
 func (s *Server) addIncidentTimeline(r *http.Request, incidentID, eventType, message string) {
@@ -441,6 +462,71 @@ func (s *Server) publishIncidentEvent(eventType string, data any) {
 		return
 	}
 	s.ssePublisher.Publish(sse.Event{Type: eventType, Data: data})
+}
+
+// incidentLifecycleTitleMaxLen caps the incident title carried in lifecycle
+// notification bodies.
+const incidentLifecycleTitleMaxLen = 200
+
+// incidentNotificationRecipients resolves who should hear about an incident's
+// lifecycle transitions: every active human ICS role holder, plus the record's
+// commander and on-call responder fields as fallbacks when no roles are
+// assigned. Recipients are always derived from stored incident state — never
+// from request bodies.
+func (s *Server) incidentNotificationRecipients(ctx context.Context, inc *store.IncidentRecord) []uuid.UUID {
+	if inc == nil {
+		return nil
+	}
+	seen := make(map[uuid.UUID]bool)
+	var out []uuid.UUID
+	add := func(id *uuid.UUID) {
+		if id == nil || seen[*id] {
+			return
+		}
+		seen[*id] = true
+		out = append(out, *id)
+	}
+	if s.icsRoleStore != nil {
+		roles, err := s.icsRoleStore.GetActiveRoles(ctx, inc.IncidentNumber)
+		if err != nil {
+			logger.WarnCtx(ctx, "failed to load ICS roles for notification fan-out", "component", "api", "incident_number", inc.IncidentNumber, "error", err)
+		}
+		for _, role := range roles {
+			add(role.UserID)
+		}
+	}
+	add(inc.CommanderID)
+	add(inc.OnCallResponderID)
+	return out
+}
+
+// publishIncidentLifecycleNotifications fans one lifecycle transition out to
+// the incident's participants. Fire-and-forget per house style: publish
+// failures are logged and never fail the triggering request.
+func (s *Server) publishIncidentLifecycleNotifications(ctx context.Context, inc *store.IncidentRecord, notificationType, verb string) {
+	if inc == nil || s.rabbitmqPublisher == nil {
+		return
+	}
+	recipients := s.incidentNotificationRecipients(ctx, inc)
+	if len(recipients) == 0 {
+		return
+	}
+	title := fmt.Sprintf("Incident %d %s", inc.IncidentNumber, verb)
+	message := strutil.TruncateOneLine(inc.Title, incidentLifecycleTitleMaxLen)
+	resourceID := strconv.FormatInt(inc.IncidentNumber, 10)
+	for _, userID := range recipients {
+		if err := s.rabbitmqPublisher.PublishNotificationDispatch(ctx, rabbitmq.NotificationDispatchMessage{
+			UserID:           userID.String(),
+			IncidentNumber:   inc.IncidentNumber,
+			NotificationType: notificationType,
+			Title:            title,
+			Message:          message,
+			ResourceType:     "incident",
+			ResourceID:       resourceID,
+		}); err != nil {
+			logger.WarnCtx(ctx, "failed to publish incident lifecycle notification", "component", "api", "incident_number", inc.IncidentNumber, "notification_type", notificationType, "user_id", userID, "error", err)
+		}
+	}
 }
 
 func (s *Server) propagateServiceStatus(incident *store.IncidentRecord) {

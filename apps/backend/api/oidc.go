@@ -730,16 +730,17 @@ func (h *oidcHandler) callback(w http.ResponseWriter, r *http.Request, providerI
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   h.cfg.SecureCookies,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteStrictMode,
 		MaxAge:   int(h.sessionExpiry.Seconds()),
 	})
+	setRefreshTokenCookie(w, h.cfg.SecureCookies, h.sessionExpiry, session.RefreshToken)
 	http.SetCookie(w, &http.Cookie{
 		Name:     "alga_csrf",
 		Value:    csrfToken,
 		Path:     "/",
 		HttpOnly: false,
 		Secure:   h.cfg.SecureCookies,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteStrictMode,
 		MaxAge:   int(h.sessionExpiry.Seconds()),
 	})
 

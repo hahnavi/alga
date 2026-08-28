@@ -23,6 +23,12 @@ func WithRequestID(ctx context.Context, id string) context.Context {
 	return context.WithValue(ctx, requestIDKey{}, id)
 }
 
+// RequestIDFrom returns the request id carried in ctx (set by
+// RequestIDMiddleware via WithRequestID), or "" when absent.
+func RequestIDFrom(ctx context.Context) string {
+	return ctxString(ctx, requestIDKey{})
+}
+
 // WithUser returns a context carrying the authenticated user id, auto-injected
 // into logs as user_id.
 func WithUser(ctx context.Context, id string) context.Context {

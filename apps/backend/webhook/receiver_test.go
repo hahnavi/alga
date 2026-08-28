@@ -44,6 +44,7 @@ func TestHandleWebhookAuthMethods(t *testing.T) {
 		name          string
 		target        string
 		authHeader    string
+		allowQuery    bool
 		wantStatus    int
 		wantSeenToken string
 	}{
@@ -62,8 +63,15 @@ func TestHandleWebhookAuthMethods(t *testing.T) {
 			wantSeenToken: "test-token",
 		},
 		{
-			name:          "query token",
+			name:          "query token denied by default",
 			target:        "/webhooks/alerts?token=test-token",
+			wantStatus:    http.StatusUnauthorized,
+			wantSeenToken: "",
+		},
+		{
+			name:          "query token allowed with WEBHOOK_ALLOW_QUERY_TOKEN=true",
+			target:        "/webhooks/alerts?token=test-token",
+			allowQuery:    true,
 			wantStatus:    http.StatusOK,
 			wantSeenToken: "test-token",
 		},
@@ -77,7 +85,8 @@ func TestHandleWebhookAuthMethods(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tokenStore := &receiverWebhookTokenStore{validToken: "test-token"}
-			receiver := NewReceiver(nil, nil, nil, nil, tokenStore, nil)
+			receiver := NewReceiver(nil, nil, nil, nil, tokenStore, nil, false)
+			receiver.SetAllowQueryToken(tt.allowQuery)
 			req := httptest.NewRequest(http.MethodPost, tt.target, strings.NewReader(`{"alerts":[]}`))
 			if tt.authHeader != "" {
 				req.Header.Set("Authorization", tt.authHeader)
@@ -91,6 +100,51 @@ func TestHandleWebhookAuthMethods(t *testing.T) {
 			}
 			if tokenStore.seenToken != tt.wantSeenToken {
 				t.Fatalf("validated token = %q, want %q", tokenStore.seenToken, tt.wantSeenToken)
+			}
+		})
+	}
+}
+
+func TestMatchLabels(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		matchers map[string]string
+		labels   map[string]string
+		want     bool
+	}{
+		{
+			name:     "empty matchers match every label set (documented catch-all)",
+			matchers: map[string]string{},
+			labels:   map[string]string{"severity": "critical", "team": "db"},
+			want:     true,
+		},
+		{
+			name:     "empty matchers match empty labels",
+			matchers: map[string]string{},
+			labels:   nil,
+			want:     true,
+		},
+		{
+			name:     "concrete matcher hit",
+			matchers: map[string]string{"severity": "critical"},
+			labels:   map[string]string{"severity": "critical"},
+			want:     true,
+		},
+		{
+			name:     "concrete matcher miss",
+			matchers: map[string]string{"severity": "critical"},
+			labels:   map[string]string{"severity": "warning"},
+			want:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := matchLabels(tt.matchers, tt.labels); got != tt.want {
+				t.Fatalf("matchLabels(%v, %v) = %v, want %v", tt.matchers, tt.labels, got, tt.want)
 			}
 		})
 	}

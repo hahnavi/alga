@@ -96,6 +96,22 @@ func (e *Engine) Process(ctx context.Context, msg rabbitmq.TriageMessage) (*Tria
 		return &TriageResultWrapper{Record: saved, Response: &TriageResponse{Decision: ruleMatch.Decision}}, nil
 	}
 
+	if e.cfg.TriageAutoPromoteConfirmedCount > 0 && msg.CorrelationKey != "" {
+		decision, confirmations, err := e.triageResultStore.AutoPromoteCandidate(ctx, msg.CorrelationKey)
+		if err != nil {
+			logger.WarnCtx(ctx, "Auto-promote lookup failed, continuing to LLM", "component", "triage", "correlation_key", msg.CorrelationKey, "error", err)
+		} else if decision != "" && confirmations >= int64(e.cfg.TriageAutoPromoteConfirmedCount) {
+			record := e.buildRecord(msg, commonLabels, decision, 1.0, "", "",
+				fmt.Sprintf("auto-promoted from %d prior confirmations (LLM skipped)", confirmations), nil, "", start)
+			saved, err := e.triageResultStore.Create(ctx, record)
+			if err != nil {
+				return nil, fmt.Errorf("save auto-promoted triage result: %w", err)
+			}
+			logger.InfoCtx(ctx, "Auto-promoted triage from prior confirmations", "component", "triage", "correlation_key", msg.CorrelationKey, "decision", decision, "confirmations", confirmations)
+			return &TriageResultWrapper{Record: saved, Response: &TriageResponse{Decision: decision}}, nil
+		}
+	}
+
 	if e.llmClient != nil && e.cfg.TriageLLMURL != "" {
 		input := e.gatherContext(ctx, msg, commonLabels)
 		sysPrompt, userPrompt := BuildTriagePrompt(input)

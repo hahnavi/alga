@@ -31,6 +31,10 @@ Every agent runtime — the native [Alga Agent](/agents/alga-agent), the [Hermes
 
 The agent authenticates with `Authorization: Bearer alga_agent_...` on every call. See [Agents Overview](/agents/) for creating tokens, capabilities, and scope.
 
+> **SSE authentication:** every SDK uses fetch-based SSE with the `Authorization` header. A legacy `?token=` query-parameter fallback exists only behind
+> `AGENT_SSE_ALLOW_QUERY_TOKEN=true` (denied by default — tokens in URLs leak into proxy/access logs) and is slated for removal; use it solely as a migration
+> escape hatch for pure-`EventSource` consumers, which cannot set headers and should switch to `fetch()` + `ReadableStream` parsing.
+
 ## Owner-Scoped Threads
 
 Alga dispatches work using owner-scoped chat IDs that each runtime maps to its own sessions:

@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -8,6 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	"alga/api/platform"
+	"alga/capability"
 	"alga/memory"
 	"alga/store"
 )
@@ -29,14 +31,29 @@ func (s *Service) handleAgentMemories(w http.ResponseWriter, r *http.Request) {
 		platform.WriteErrorStatus(w, http.StatusServiceUnavailable, platform.ErrorCodeInternal, "memory service not configured")
 		return
 	}
-	if agentFromContext(r.Context()) == nil {
+	agent := agentFromContext(r.Context())
+	if agent == nil {
 		platform.WriteError(w, platform.ErrorCodeUnauthorized, "missing agent context")
 		return
 	}
 	switch r.Method {
 	case http.MethodGet:
+		// reads need investigate OR command.
+		if !capability.HasAny(agent.Capabilities, capability.Investigate, capability.Command) {
+			platform.WriteError(w, platform.ErrorCodeForbidden,
+				fmt.Sprintf("agent %q lacks required capability (one of: %s, %s)",
+					agent.Name, capability.Investigate, capability.Command))
+			return
+		}
 		s.listMemories(w, r)
 	case http.MethodPost:
+		// memories are investigation artifacts; authoring requires
+		// investigate (extraction output lands here from the runtime).
+		if !capability.Has(agent.Capabilities, capability.Investigate) {
+			platform.WriteError(w, platform.ErrorCodeForbidden,
+				fmt.Sprintf("agent %q lacks required capability %q", agent.Name, capability.Investigate))
+			return
+		}
 		s.createAgentMemory(w, r)
 	default:
 		platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
@@ -62,6 +79,12 @@ func (s *Service) handleAgentMemoryByID(w http.ResponseWriter, r *http.Request) 
 	}
 	switch r.Method {
 	case http.MethodGet:
+		if !capability.HasAny(agent.Capabilities, capability.Investigate, capability.Command) {
+			platform.WriteError(w, platform.ErrorCodeForbidden,
+				fmt.Sprintf("agent %q lacks required capability (one of: %s, %s)",
+					agent.Name, capability.Investigate, capability.Command))
+			return
+		}
 		rec, err := s.memorySvc.Get(r.Context(), id)
 		if err != nil {
 			platform.WriteInternalError(w, err, "failed to get memory")
@@ -73,12 +96,21 @@ func (s *Service) handleAgentMemoryByID(w http.ResponseWriter, r *http.Request) 
 		}
 		platform.WriteData(w, http.StatusOK, rec)
 	case http.MethodDelete:
+		// deletion is destructive and shared — require investigate on
+		// top of strict ownership. Records with a nil AgentID (extraction
+		// output) are NEVER deletable by agents; only an operator via the
+		// RBAC-gated /api/v1/memories/{id} may remove those.
+		if !capability.Has(agent.Capabilities, capability.Investigate) {
+			platform.WriteError(w, platform.ErrorCodeForbidden,
+				fmt.Sprintf("agent %q lacks required capability %q", agent.Name, capability.Investigate))
+			return
+		}
 		rec, err := s.memorySvc.Get(r.Context(), id)
 		if err != nil || rec == nil {
 			platform.WriteError(w, platform.ErrorCodeNotFound, "memory not found")
 			return
 		}
-		if rec.AgentID != nil && *rec.AgentID != agent.ID {
+		if rec.AgentID == nil || *rec.AgentID != agent.ID {
 			platform.WriteError(w, platform.ErrorCodeForbidden, "can only delete own memories")
 			return
 		}
@@ -86,6 +118,9 @@ func (s *Service) handleAgentMemoryByID(w http.ResponseWriter, r *http.Request) 
 			platform.WriteInternalError(w, err, "failed to delete memory")
 			return
 		}
+		s.auditAgent(r, store.AuditMemoryDeleted, agent.Name, map[string]any{
+			"memory_id": id.String(),
+		})
 		platform.WriteStatus(w, "deleted")
 	default:
 		platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")

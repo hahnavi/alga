@@ -34,7 +34,7 @@ description: Common issues and solutions — health checks, logs, metrics, datab
 
 - Verify the bearer token is correct and not revoked
 - Check token format: `Authorization: Bearer alga_...`
-- Or use query parameter: `?token=alga_...`
+- Send the token as an `Authorization: Bearer alga_...` header. The legacy `?token=alga_...` query parameter is denied by default; only enable `WEBHOOK_ALLOW_QUERY_TOKEN=true` as a temporary escape hatch
 
 ### Mattermost Not Receiving Alerts
 
@@ -102,6 +102,22 @@ description: Common issues and solutions — health checks, logs, metrics, datab
 - If retries keep failing, check agent health and connectivity
 - Increase retry TTL in the RabbitMQ retry topology if transient failures need more recovery time
 - Review `INVESTIGATION_TIMEOUT` — if agents are consistently timing out, increase the value
+
+#### Broker Dead-Letter Queue (`alga.dead_letter`)
+
+Messages that exhaust all four retries across every domain land here. There is intentionally no built-in replay tooling (steady-state depth SHOULD be near zero); inspect and drain with the RabbitMQ management plugin or CLI:
+
+```sh
+# Inspect depth and sample messages
+rabbitmqctl list_queues name messages | grep alga.dead_letter
+rabbitmqadmin get queue=alga.dead_letter count=10 requeue=true
+
+# Requeue (publish back to origin exchange/routing key from x-death headers),
+# or purge once the cause is fixed
+rabbitmqadmin purge queue name=alga.dead_letter
+```
+
+Fix the underlying consumer first (check worker logs for the repeated decode/process error); purging without fixing only silences the signal.
 
 ### Playbook Not Matching
 

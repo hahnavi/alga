@@ -26,6 +26,10 @@ type AgentSSEHandler struct {
 	executor   *AgentToolExecutor
 
 	allowedOrigins []string
+
+	// allowQueryToken re-enables the legacy `?token=` fallback for pure-
+	// EventSource consumers; deny-by-default.
+	allowQueryToken bool
 }
 
 func NewAgentSSEHandler(
@@ -48,6 +52,12 @@ func (h *AgentSSEHandler) SetAllowedOrigins(origins []string) {
 	h.allowedOrigins = slices.Clone(origins)
 }
 
+// SetAllowQueryToken re-enables the legacy `?token=` SSE fallback (escape
+// hatch for EventSource-only consumers; deny-by-default).
+func (h *AgentSSEHandler) SetAllowQueryToken(v bool) {
+	h.allowQueryToken = v
+}
+
 func (h *AgentSSEHandler) Handler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -62,7 +72,10 @@ func (h *AgentSSEHandler) Handler() http.HandlerFunc {
 
 		token := r.Header.Get("Authorization")
 		token = strings.TrimPrefix(token, "Bearer ")
-		if token == "" {
+		if token == "" && h.allowQueryToken {
+			// Legacy escape hatch only (AGENT_SSE_ALLOW_QUERY_TOKEN=true):
+			// never log the URL or token here — query strings land in proxy
+			// and access logs.
 			token = r.URL.Query().Get("token")
 		}
 		if token == "" {

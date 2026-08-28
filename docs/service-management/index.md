@@ -34,17 +34,17 @@ Status is recalculated automatically as incidents are created, mitigated, or res
 
 ## Service Fields
 
-| Field                  | Description                                                                           |
-| ---------------------- | ------------------------------------------------------------------------------------- |
-| `name`                 | Service name (unique)                                                                 |
-| `display_name`         | Human-friendly display name                                                           |
-| `description`          | Service description                                                                   |
-| `owner_team_id`        | Team responsible for the service                                                      |
-| `escalation_policy_id` | Escalation policy for incidents on this service                                       |
-| `label_matchers`       | JSON array of label conditions for matching alerts to this service                    |
-| `sla_response_minutes` | Custom SLA response target in minutes                                                 |
-| `sla_resolve_minutes`  | Custom SLA resolution target in minutes                                               |
-| `status`               | Current computed status (`operational`, `degraded`, `partial_outage`, `major_outage`) |
+| Field                  | Description                                                                                          |
+| ---------------------- | ---------------------------------------------------------------------------------------------------- |
+| `name`                 | Service name (unique)                                                                                |
+| `display_name`         | Human-friendly display name                                                                          |
+| `description`          | Service description                                                                                  |
+| `owner_team_id`        | Team responsible for the service                                                                     |
+| `escalation_policy_id` | Escalation policy for incidents on this service                                                      |
+| `label_matchers`       | Stored metadata only — reserved for future auto-matching; NOT evaluated during alert ingestion today |
+| `sla_response_minutes` | Custom SLA response target in minutes                                                                |
+| `sla_resolve_minutes`  | Custom SLA resolution target in minutes                                                              |
+| `status`               | Current computed status (`operational`, `degraded`, `partial_outage`, `major_outage`)                |
 
 ## Dependencies
 
@@ -57,9 +57,13 @@ When an incident transitions state, the affected service's status is recomputed 
 1. `PropagateAndCascade()` starts at the affected service
 2. It recomputes the weighted status for the current service and persists any change
 3. It then enqueues every service that depends on the current service (`GetDependents`)
-4. The cascade continues transitively — if A depends on B and B depends on C, a C incident recomputes status for both B and A
+4. Each dependent recomputes its status **from its own linked incidents only** and the walk continues transitively
 
-Each status change publishes a `service_status_changed` SSE event so the UI updates live. This ensures teams responsible for downstream services see upstream degradation reflected in their own service status without manual notification.
+> **No inherited impact today:** a downstream service's status only changes if an incident is linked to _that_ service (via its `service_id`). The cascade re-evaluates dependents but does not roll upstream impact into their scores — an incident on C does not degrade B or A merely because B depends on C. Link incidents to each affected service explicitly to reflect impact there.
+
+Alert→service linkage is **manual**: attach `service_id` to an incident (at creation or afterward). Service `label_matchers` are stored metadata and are not evaluated during alert ingestion or correlation.
+
+Each status change publishes a `service_status_changed` SSE event so the UI updates live.
 
 ## API Endpoints
 
@@ -84,9 +88,9 @@ Each status change publishes a `service_status_changed` SSE event so the UI upda
 
 ### Incidents
 
-| Method | Path                              | Auth    | Permission      | Description                           |
-| ------ | --------------------------------- | ------- | --------------- | ------------------------------------- |
-| `GET`  | `/api/v1/services/{id}/incidents` | Session | `services:read` | List incidents affecting this service |
+| Method | Path                              | Auth    | Permission       | Description                           |
+| ------ | --------------------------------- | ------- | ---------------- | ------------------------------------- |
+| `GET`  | `/api/v1/services/{id}/incidents` | Session | `incidents:read` | List incidents affecting this service |
 
 ## Agent API
 

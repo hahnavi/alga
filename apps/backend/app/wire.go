@@ -250,7 +250,7 @@ func (a *App) wire() error {
 		dedupCache = valkey.NewDedupCache(a.valkeyClient)
 	}
 
-	whReceiver := webhook.NewReceiver(routingEngine, mmClient, slackClient, a.stores.Alert, a.stores.WebhookToken, dedupCache)
+	whReceiver := webhook.NewReceiver(routingEngine, mmClient, slackClient, a.stores.Alert, a.stores.WebhookToken, dedupCache, a.cfg.WebhookAllowQueryToken)
 	if a.idempotency != nil {
 		whReceiver.SetIdempotency(a.idempotency, a.cfg.IdempotencyTTL)
 	}
@@ -296,6 +296,7 @@ func (a *App) wire() error {
 	slackWebhookHandler.SetSSEBroker(a.sseBroker, a.valkeyClient)
 	slackWebhookHandler.SetIncidentLookupStore(a.stores.Incident)
 	slackWebhookHandler.SetIncidentCoordinationStore(a.stores.IncidentCoordination)
+	slackWebhookHandler.SetEscalationTimeline(a.stores.Incident)
 	agentExecutor.SetSSEBroker(a.sseBroker, a.valkeyClient)
 	whReceiver.SetSSEBroker(a.sseBroker, a.valkeyClient)
 
@@ -333,6 +334,7 @@ func (a *App) wire() error {
 	}
 
 	agentSSE := agent.NewAgentSSEHandler(a.sseBroker, a.valkeyClient, presence, a.stores.AgentToken, agentExecutor)
+	agentSSE.SetAllowQueryToken(a.cfg.AgentSSEAllowQueryToken)
 	if o := strings.TrimSpace(a.cfg.AgentSSEAllowedOrigins); o != "" {
 		var origins []string
 		for _, part := range strings.Split(o, ",") {
@@ -388,8 +390,6 @@ func (a *App) wire() error {
 
 	if a.workerSet != nil {
 		a.workerSet.SetAlertWorker(worker.NewAlertWorker(whReceiver, a.stores.Alert, publisher))
-		a.workerSet.SetAuditWorker(worker.NewAuditWorker(a.stores.Audit))
-		a.workerSet.SetNotificationWorker(worker.NewNotificationWorker(whReceiver))
 	}
 
 	whReceiver.SetAlertInvestigationStore(a.stores.AlertInvestigation)
@@ -436,7 +436,11 @@ func (a *App) wire() error {
 			var embedder memory.Embedder
 			var llm memory.LLM
 			if a.cfg.MemoryEmbeddingURL != "" {
-				embedder = memory.NewOpenAIEmbedder(a.cfg.MemoryEmbeddingURL, a.cfg.MemoryEmbeddingAPIKey, a.cfg.MemoryEmbeddingModel)
+				e, eerr := memory.NewOpenAIEmbedder(a.cfg.MemoryEmbeddingURL, a.cfg.MemoryEmbeddingAPIKey, a.cfg.MemoryEmbeddingModel)
+				if eerr != nil {
+					return fmt.Errorf("invalid MEMORY_EMBEDDING_MODEL: %w", eerr)
+				}
+				embedder = e
 			} else {
 				embedder = memory.NewNoopEmbedder()
 			}
@@ -449,11 +453,16 @@ func (a *App) wire() error {
 			}
 			var extractor *memory.Extractor
 			if llm != nil {
-				extractor = memory.NewExtractor(llm, embedder, a.stores.AgentMemory)
+				extractor = memory.NewExtractor(llm, embedder, a.stores.AgentMemory, a.cfg.MemoryMaxPerInvestigation)
 			}
-			memorySvc = memory.NewService(a.stores.AgentMemory, extractor, embedder, a.cfg.MemoryMaxPerInvestigation, autoExtract)
+			memorySvc = memory.NewService(a.stores.AgentMemory, extractor, embedder, memory.ServiceOptions{
+				MaxPerInv:           a.cfg.MemoryMaxPerInvestigation,
+				SimilarityThreshold: a.cfg.MemorySimilarityThreshold,
+				AutoExtract:         autoExtract,
+			})
 			knowledgeAggregator = knowledgeAggregator.WithMemory(knowledge.NewMemoryFinder(memorySvc))
-			logger.Info("Shared agent memory enabled", "auto_extract", autoExtract, "embedding_model", a.cfg.MemoryEmbeddingModel)
+			logger.Info("Shared agent memory enabled", "auto_extract", autoExtract, "embedding_model", a.cfg.MemoryEmbeddingModel,
+				"max_per_investigation", a.cfg.MemoryMaxPerInvestigation, "similarity_threshold", a.cfg.MemorySimilarityThreshold)
 		}
 
 		channelManager = incidentchannel.NewManager(slackClient, a.stores.Incident, a.stores.User, a.cfg.AlgaBaseURL)
@@ -485,6 +494,10 @@ func (a *App) wire() error {
 			a.scheduler.SetStalePublisher(publisher)
 			a.scheduler.SetStaleConfig(a.cfg.StaleAlertThreshold, a.cfg.StaleAlertSweepInterval)
 			a.scheduler.SetDataRetention(a.cfg.DataRetentionDays, time.Hour)
+			// retention family rides the same hourly leader-gated loop
+			// (audit logs reuse the SetAuditStore store below).
+			a.scheduler.SetAuditRetention(a.cfg.AuditRetentionDays)
+			a.scheduler.SetRetentionStores(a.stores.TriageResult, a.stores.Delivery, a.stores.PasswordReset)
 		}
 
 		a.scheduler.SetIncidentStore(a.stores.Incident)
@@ -509,6 +522,13 @@ func (a *App) wire() error {
 		a.scheduler.SetICSRoleStore(a.stores.ICSRole)
 		a.scheduler.SetCoordinationTaskStore(a.stores.CoordinationTask)
 		a.scheduler.SetCoordinationTaskSweepInterval(5 * time.Minute)
+
+		// the scheduler leader owns SLA sweep tick publication;
+		// interval <= 0 disables publication entirely.
+		if publisher != nil {
+			a.scheduler.SetSLAPublisher(publisher)
+			a.scheduler.SetSLASweepInterval(a.cfg.SLASweepInterval)
+		}
 
 		ssePublisher := &sse.DualPublisher{Broker: a.sseBroker, VKClient: a.valkeyClient}
 		alertLifecycle = api.NewAlertInvestigationLifecycleService(a.stores.Alert, a.stores.AlertInvestigation, a.stores.Audit, ssePublisher, a.scheduler)
@@ -577,6 +597,7 @@ func (a *App) wire() error {
 		a.workerSet.SetEscalationSweepWorker(escalationSweepWorker)
 
 		actionItemSweepWorker := worker.NewActionItemSweepWorker(a.stores.ActionItem, a.stores.Incident)
+		actionItemSweepWorker.SetSignals(a.stores.Notification, &sse.DualPublisher{Broker: a.sseBroker, VKClient: a.valkeyClient}, a.valkeyClient)
 		a.workerSet.SetActionItemSweepWorker(actionItemSweepWorker)
 
 		heartbeatSweepWorker := worker.NewHeartbeatSweepWorker(a.stores.Heartbeat, a.stores.Alert, a.stores.Audit, whReceiver)
@@ -607,6 +628,8 @@ func (a *App) wire() error {
 
 		icsProvisioner := api.NewICSWarRoomProvisioner(a.stores.ICSRole, a.stores.IncidentDocument, a.stores.Incident, provisionMeetClient(a.cfg, googleMeetClient))
 		icsWorker := worker.NewICSWorker(icsProvisioner, publisher)
+		icsWorker.SetSSEPublisher(&sse.DualPublisher{Broker: a.sseBroker, VKClient: a.valkeyClient})
+		icsWorker.SetValkeyClient(a.valkeyClient)
 		a.workerSet.SetICSWorker(icsWorker)
 
 		// W6 transactional outbox: a worker drains the outbox table and
@@ -651,12 +674,12 @@ func (a *App) wire() error {
 	// worker registered post-Start from the consume loop.
 	if a.valkeyClient != nil {
 		a.loginLimiter = valkey.NewLoginRateLimiter(a.valkeyClient, 5, 15*time.Minute, 30*time.Minute)
-		a.rateLimiter = valkey.NewRateLimiter(a.valkeyClient, 20)
-		a.agentRateLimiter = valkey.NewRateLimiter(a.valkeyClient, 120)
+		a.rateLimiter = valkey.NewRateLimiter(a.valkeyClient, a.cfg.RateLimitGeneralPerMinute)
+		a.agentRateLimiter = valkey.NewRateLimiter(a.valkeyClient, a.cfg.RateLimitAgentPerMinute)
 	} else {
 		a.loginLimiter = api.NewLoginRateLimiter(5, 15*time.Minute, 30*time.Minute)
-		a.rateLimiter = api.NewRateLimiter(10, 20)
-		a.agentRateLimiter = api.NewRateLimiter(30, 60)
+		a.rateLimiter = api.NewRateLimiter(a.cfg.RateLimitGeneralPerMinute, time.Minute)
+		a.agentRateLimiter = api.NewRateLimiter(a.cfg.RateLimitAgentPerMinute, time.Minute)
 	}
 
 	a.apiServer = api.NewServer(a.cfg, a.stores.Alert, a.stores.WebhookToken, a.stores.AgentToken, a.stores.User, sessionStore, a.stores.Audit, a.stores.Integration, a.stores.RouteRules, sessionExpiry, mmClient, slackClient, twilioClient, telnyxClient, whReceiver.SetRoutingEngine, a.loginLimiter, a.rateLimiter, a.stores.AlertInvestigation, a.stores.IncidentInvestigation, a.stores.InvestigationThread, a.stores.Notification, a.stores.Dashboard, a.stores.PersonalToken)
@@ -777,26 +800,6 @@ func (a *App) wire() error {
 		a.apiServer.SetPendingNotifier(a.scheduler)
 	}
 
-	invWorkerEnabled := a.rabbitClient != nil && a.workerSet != nil
-	var readinessNotes []string
-	if a.rabbitClient == nil {
-		readinessNotes = append(readinessNotes, "rabbitmq not configured")
-	}
-	if a.valkeyClient == nil {
-		readinessNotes = append(readinessNotes, "valkey not configured")
-	}
-	if a.correlator == nil && a.rabbitClient != nil && a.valkeyClient != nil {
-		readinessNotes = append(readinessNotes, "correlator disabled (check worker set)")
-	}
-	a.apiServer.SetReadiness(api.Readiness{
-		CorrelatorEnabled:        a.correlator != nil,
-		InvestigateWorkerEnabled: invWorkerEnabled,
-		ValkeyConfigured:         a.valkeyClient != nil,
-		RabbitMQConfigured:       a.rabbitClient != nil,
-		HAMode:                   a.valkeyClient != nil,
-		Replica:                  replicaID,
-		Notes:                    readinessNotes,
-	})
 	if publisher != nil {
 		a.apiServer.SetRabbitMQPublisher(publisher)
 		agentExecutor.SetEscalationPublisher(publisher)

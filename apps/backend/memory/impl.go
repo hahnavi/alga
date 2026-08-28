@@ -13,23 +13,40 @@ import (
 )
 
 type service struct {
-	memStore    store.AgentMemoryStore
-	extractor   *Extractor
-	embed       Embedder
-	maxPerInv   int
-	autoExtract bool
+	memStore            store.AgentMemoryStore
+	extractor           *Extractor
+	embed               Embedder
+	maxPerInv           int
+	similarityThreshold float64
+	autoExtract         bool
 }
 
-func NewService(memStore store.AgentMemoryStore, extractor *Extractor, embed Embedder, maxPerInv int, autoExtract bool) Service {
-	if maxPerInv <= 0 {
-		maxPerInv = 10
+// ServiceOptions carries the memory-knob plumbing from config into the
+// service: MaxPerInv hard-caps extraction, SimilarityThreshold
+// post-filters search results, AutoExtract gates LLM extraction.
+type ServiceOptions struct {
+	// MaxPerInv caps the memories persisted per investigation; <= 0 uses the
+	// default of 10.
+	MaxPerInv int
+	// SimilarityThreshold drops search results scoring below it; <= 0
+	// disables filtering (the historical default). ts_rank and cosine scores
+	// are different scales, so tune primarily for the vector path.
+	SimilarityThreshold float64
+	// AutoExtract enables LLM memory extraction after investigations.
+	AutoExtract bool
+}
+
+func NewService(memStore store.AgentMemoryStore, extractor *Extractor, embed Embedder, opts ServiceOptions) Service {
+	if opts.MaxPerInv <= 0 {
+		opts.MaxPerInv = 10
 	}
 	return &service{
-		memStore:    memStore,
-		extractor:   extractor,
-		embed:       embed,
-		maxPerInv:   maxPerInv,
-		autoExtract: autoExtract,
+		memStore:            memStore,
+		extractor:           extractor,
+		embed:               embed,
+		maxPerInv:           opts.MaxPerInv,
+		similarityThreshold: opts.SimilarityThreshold,
+		autoExtract:         opts.AutoExtract,
 	}
 }
 
@@ -50,6 +67,21 @@ func (s *service) ExtractFromInvestigation(ctx context.Context, inv *store.Alert
 	return nil
 }
 
+// filterByThreshold drops results below the configured similarity threshold
+// . A threshold <= 0 disables filtering, preserving the raw top-K.
+func (s *service) filterByThreshold(results []store.ScoredMemory) []store.ScoredMemory {
+	if s.similarityThreshold <= 0 {
+		return results
+	}
+	filtered := make([]store.ScoredMemory, 0, len(results))
+	for _, r := range results {
+		if r.Score >= s.similarityThreshold {
+			filtered = append(filtered, r)
+		}
+	}
+	return filtered
+}
+
 func (s *service) Search(ctx context.Context, query string, labels map[string]string, topK int) ([]store.ScoredMemory, error) {
 	if s == nil || s.memStore == nil {
 		return nil, nil
@@ -63,11 +95,14 @@ func (s *service) Search(ctx context.Context, query string, labels map[string]st
 		if err == nil && len(embeddings) > 0 && len(embeddings[0]) > 0 {
 			results, err := s.memStore.Search(ctx, embeddings[0], topK, store.MemoryFilters{})
 			if err == nil && len(results) > 0 {
-				ids := make([]uuid.UUID, len(results))
-				for i, r := range results {
-					ids[i] = r.ID
+				results = s.filterByThreshold(results)
+				if len(results) > 0 {
+					ids := make([]uuid.UUID, len(results))
+					for i, r := range results {
+						ids[i] = r.ID
+					}
+					_ = s.memStore.IncrementAccess(ctx, ids)
 				}
-				_ = s.memStore.IncrementAccess(ctx, ids)
 				return results, nil
 			}
 		}
@@ -77,6 +112,7 @@ func (s *service) Search(ctx context.Context, query string, labels map[string]st
 	if err != nil {
 		return nil, fmt.Errorf("memory text search: %w", err)
 	}
+	results = s.filterByThreshold(results)
 	if len(results) > 0 {
 		ids := make([]uuid.UUID, len(results))
 		for i, r := range results {

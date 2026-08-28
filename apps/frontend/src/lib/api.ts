@@ -137,6 +137,23 @@ export type WebhookTokenRow = {
 
 export type AgentType = "alga" | "hermes" | "openclaw" | "other";
 
+// One audit-log row as served by GET /api/v1/audit-events (admin/operator,
+// audit:read gated).
+export type AuditEventRow = {
+  id: string;
+  timestamp: string;
+  event: string;
+  user_id?: string;
+  username: string;
+  ip?: string;
+  user_agent?: string;
+  success: boolean;
+  details?: Record<string, unknown>;
+  request_id?: string;
+  entity_type?: string;
+  entity_id?: string;
+};
+
 // Slim, list-friendly view of the current alert investigation that ships
 // inline with alert list/detail payloads so the assigned actor (agent),
 // status, and promotion link can be rendered without a separate round-trip.
@@ -151,7 +168,7 @@ type AlertInvestigationListSummary = {
   promoted_incident_number?: number;
 };
 
-export type AgentCapability = "investigate" | "communicate" | "command";
+export type AgentCapability = "investigate" | "communicate" | "command" | "secrets";
 
 export type AgentTokenRow = {
   id: string;
@@ -651,11 +668,33 @@ export type StatusPageComponentRecord = {
   updated_at: string;
 };
 
+export type StatusPageViewPage = {
+  name: string;
+  slug: string;
+  description?: string;
+};
+
+export type StatusPageViewComponent = {
+  name: string;
+  description?: string;
+  status: ComponentStatus;
+  display_order: number;
+};
+
+export type StatusPageViewIncident = {
+  title: string;
+  status: string;
+  severity: string;
+  started_at?: string;
+};
+
+// Allow-listed payload of GET /status-pages/slug/{slug}: no internal
+// ids, owner team, Slack/war-room linkage or SLA fields.
 export type StatusPageView = {
-  page: StatusPageRecord;
+  page: StatusPageViewPage;
   overall_status: ComponentStatus;
-  components: StatusPageComponentRecord[];
-  incidents: IncidentRecord[];
+  components: StatusPageViewComponent[];
+  incidents: StatusPageViewIncident[];
 };
 
 export type OIDCProviderRecord = {
@@ -993,7 +1032,6 @@ export type TeamRecord = {
   id: string;
   name: string;
   description: string;
-  escalation_policy_id?: string;
   created_at: string;
   updated_at: string;
   members?: TeamMemberRecord[];
@@ -1095,6 +1133,20 @@ export type OnCallCurrent = {
   user_id: string;
   user_display_name?: string;
   until?: string;
+};
+
+export type OnCallSelfEntry = {
+  schedule_id: string;
+  schedule_name: string;
+  layer_name?: string;
+  user_id?: string;
+  start_at?: string;
+  end_at?: string;
+};
+
+export type OnCallSelfView = {
+  current: OnCallSelfEntry[];
+  pending: OnCallSelfEntry[];
 };
 
 export type HandoffRecord = {
@@ -1205,8 +1257,9 @@ export type ActionItemRecord = {
   updated_at: string;
 };
 
-type NotificationPreferences = {
+export type NotificationPreferences = {
   rules: NotificationPreferenceRule[];
+  default_channel?: string;
 };
 
 export type NotificationPreferenceRule = {
@@ -1560,6 +1613,25 @@ export const api = {
   },
   deleteUser(id: string) {
     return request<StatusResponse>(`/api/v1/users/${e(id)}`, { method: "DELETE" });
+  },
+
+  // Audit (read-only admin review surface, requires audit:read)
+  getAuditEvents(params?: {
+    event?: string;
+    entity_type?: string;
+    entity_id?: string;
+    limit?: number;
+    skip?: number;
+  }) {
+    return request<{ items: AuditEventRow[]; total: number }>(
+      `/api/v1/audit-events${buildQuery({
+        event: params?.event,
+        entity_type: params?.entity_type,
+        entity_id: params?.entity_id,
+        limit: params?.limit,
+        skip: params?.skip,
+      })}`,
+    );
   },
 
   // Alerts
@@ -2653,7 +2725,7 @@ export const api = {
       `/api/v1/teams${buildQuery({ q: params?.q, limit: params?.limit, skip: params?.skip })}`,
     );
   },
-  createTeam(input: { name: string; description?: string; escalation_policy_id?: string }) {
+  createTeam(input: { name: string; description?: string }) {
     return request<TeamRecord>("/api/v1/teams", {
       method: "POST",
       body: JSON.stringify(input),
@@ -2662,10 +2734,7 @@ export const api = {
   getTeam(teamId: string) {
     return request<TeamRecord>(`/api/v1/teams/${e(teamId)}`);
   },
-  updateTeam(
-    teamId: string,
-    input: { name?: string; description?: string; escalation_policy_id?: string },
-  ) {
+  updateTeam(teamId: string, input: { name?: string; description?: string }) {
     return request<TeamRecord>(`/api/v1/teams/${e(teamId)}`, {
       method: "PATCH",
       body: JSON.stringify(input),
@@ -2811,6 +2880,9 @@ export const api = {
   },
   getWhoIsOnCall() {
     return request<OnCallCurrent[]>("/api/v1/on-call/who-is-on-call");
+  },
+  getMyOnCall() {
+    return request<OnCallSelfView>("/api/v1/on-call/me");
   },
 
   // On-Call Handoffs

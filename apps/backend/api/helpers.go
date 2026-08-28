@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	"alga/api/platform"
+	"alga/logger"
 	"alga/store"
 	"alga/valkey"
 )
@@ -111,13 +112,30 @@ func (s *Server) auditAlertAction(r *http.Request, event store.AuditEvent, a *al
 
 func (s *Server) audit(r *http.Request, event store.AuditEvent, details map[string]any) {
 	if user := userFromContext(r.Context()); user != nil {
-		s.auditStore.Log(event, &user.ID, user.Email, s.ipExtractor.clientIP(r), r.UserAgent(), true, details)
+		s.auditStore.LogRecord(store.AuditRecord{
+			Event:     event,
+			UserID:    &user.ID,
+			Username:  user.Email,
+			IP:        s.ipExtractor.clientIP(r),
+			UserAgent: r.UserAgent(),
+			Success:   true,
+			Details:   details,
+			RequestID: logger.RequestIDFrom(r.Context()),
+		})
 	}
 }
 
 func (s *Server) auditAgent(r *http.Request, event store.AuditEvent, agentName string, details map[string]any) {
 	if s.auditStore != nil {
-		s.auditStore.Log(event, nil, "agent:"+agentName, s.ipExtractor.clientIP(r), r.UserAgent(), true, details)
+		s.auditStore.LogRecord(store.AuditRecord{
+			Event:     event,
+			Username:  "agent:" + agentName,
+			IP:        s.ipExtractor.clientIP(r),
+			UserAgent: r.UserAgent(),
+			Success:   true,
+			Details:   details,
+			RequestID: logger.RequestIDFrom(r.Context()),
+		})
 	}
 }
 

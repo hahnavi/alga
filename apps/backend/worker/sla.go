@@ -119,13 +119,30 @@ func (w *SLAWorker) markBreachDeduped(ctx context.Context, incidentID, breachTyp
 	if w.vkClient == nil {
 		return true
 	}
-	key := fmt.Sprintf("alga:sla:breach:%s:%s", incidentID, breachType)
+	key := breachDedupKey(incidentID, breachType)
 	ok, err := w.vkClient.SetNX(ctx, key, "1", 24*time.Hour)
 	if err != nil {
 		logger.Warn("SLA breach dedup SETNX failed", "component", "sla-worker", "key", key, "error", err)
 		return true
 	}
 	return ok
+}
+
+func breachDedupKey(incidentID, breachType string) string {
+	return fmt.Sprintf("alga:sla:breach:%s:%s", incidentID, breachType)
+}
+
+// ClearBreachDedupKeys deletes the per-incident SLA breach dedup markers so a
+// reopened incident can re-breach within the marker TTL. Part of the
+// reopen reset; safe to call with a nil client (no Valkey, no dedup either).
+func ClearBreachDedupKeys(ctx context.Context, vk *valkey.Client, incidentNumber int64) {
+	if vk == nil {
+		return
+	}
+	id := strconv.FormatInt(incidentNumber, 10)
+	if err := vk.Del(ctx, breachDedupKey(id, "response"), breachDedupKey(id, "resolve")); err != nil {
+		logger.Warn("failed to clear SLA breach dedup keys", "component", "sla-worker", "incident_id", id, "error", err)
+	}
 }
 
 func (w *SLAWorker) publishSLABreach(inc store.IncidentRecord, breachType string) {

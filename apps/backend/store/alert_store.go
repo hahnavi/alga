@@ -49,6 +49,19 @@ type AlertCascadeResult struct {
 	Failed   []AlertRef    // update errored; collected for surfacing
 }
 
+// ShiftAlertMetrics summarizes alert activity attributed to one on-call
+// shift window [start, end): every alert that fired while the shift holder
+// was on call counts as received by the shift. Acknowledge attribution is
+// deliberately window-based (not actor-based): ack/resolve events arrive from
+// surfaces whose actor ids are not always Alga user IDs (e.g. Slack).
+type ShiftAlertMetrics struct {
+	Received      int64   `json:"received"`
+	Acknowledged  int64   `json:"acknowledged"`
+	Resolved      int64   `json:"resolved"`
+	Missed        int64   `json:"missed"`
+	AvgAckSeconds float64 `json:"avg_ack_seconds"`
+}
+
 // AlertStore is the narrow read/link interface over alerts used by callers
 // that do not need the full mutation surface of Store.
 type AlertStore interface {
@@ -82,6 +95,8 @@ type Store interface {
 	LinkAlertToIncident(ctx context.Context, fingerprint string, incidentNumber int64) error
 	UnlinkAlertFromIncident(ctx context.Context, fingerprint string, incidentNumber int64) error
 	GetAlertsByIncident(ctx context.Context, incidentNumber int64) ([]string, error)
+	GetIncidentsByAlertNumber(ctx context.Context, alertNumber int64) ([]IncidentRecord, error)
+	ShiftAlertMetrics(ctx context.Context, start, end time.Time) (ShiftAlertMetrics, error)
 	ResolveAlertsByIncident(ctx context.Context, incidentNumber int64, actor *EventActor) (AlertCascadeResult, error)
 	Close()
 	TriageResultStore() TriageResultStore

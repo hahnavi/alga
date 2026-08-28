@@ -74,7 +74,7 @@ type MattermostPostEvent struct {
 
 func (h *MattermostWebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
 		return
 	}
 
@@ -85,7 +85,7 @@ func (h *MattermostWebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Requ
 
 	if h.webhookSecret == "" {
 		logger.Warn("Mattermost webhook accepted without authentication: webhook secret not configured", "component", "webhook")
-		http.Error(w, "webhook secret not configured", http.StatusServiceUnavailable)
+		platform.WriteErrorStatus(w, http.StatusServiceUnavailable, platform.ErrorCodeInternal, "webhook secret not configured")
 		return
 	}
 
@@ -109,7 +109,7 @@ func (h *MattermostWebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Requ
 	}
 	if !algacrypto.ConstantTimeEqualString(event.Token, h.webhookSecret) {
 		logger.Warn("Mattermost webhook rejected: invalid token", "component", "webhook")
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		webhookError(w, platform.ErrorCodeUnauthorized, "unauthorized")
 		return
 	}
 	h.handleEvent(w, r, event)
@@ -126,7 +126,7 @@ func (h *MattermostWebhookHandler) handleEvent(w http.ResponseWriter, r *http.Re
 	record, err := h.alertInvestigationStore.GetAlertInvestigationByMMThread(r.Context(), event.RootID)
 	if err != nil {
 		logger.Error("Failed to query investigation by thread ID", "component", "webhook", "error", err)
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		webhookError(w, platform.ErrorCodeInternal, "internal error")
 		return
 	}
 	if record == nil {
@@ -161,7 +161,7 @@ func (h *MattermostWebhookHandler) handleEvent(w http.ResponseWriter, r *http.Re
 
 	if err := h.alertInvestigationStore.AddAlertInvestigationUpdate(r.Context(), record.AlertInvestigationID, update); err != nil {
 		logger.Error("Failed to add investigation update from Mattermost", "component", "webhook", "error", err)
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		webhookError(w, platform.ErrorCodeInternal, "internal error")
 		return
 	}
 

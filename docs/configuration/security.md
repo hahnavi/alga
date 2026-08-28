@@ -74,7 +74,7 @@ When `GOOGLE_CLIENT_ID` is set, the login page displays a "Sign in with Google" 
 2. Browser redirects to Google's authorization page
 3. User authorizes the application
 4. Google redirects back to Alga's callback URL
-5. Alga creates or finds the user account automatically and establishes a session
+5. Alga finds an existing account linked by Google ID or matching a verified email and establishes a session. Accounts are provisioned via setup or invite — sign-in never creates one.
 
 ## Slack Sign-In
 
@@ -212,7 +212,8 @@ Passwords are hashed with Argon2id (OWASP baseline: 64 MiB memory, 3 iterations,
 - Sessions expire after `SESSION_EXPIRY_HOURS` (default: 24 hours, max: 720)
 - Refresh tokens enable seamless session renewal
 - Refresh tokens rotate on every use; the previous token hash is recorded (`prev_refresh_token_hashes`) within a session family (`family_id`)
-- Reuse of a previously-rotated refresh token is detected as replay and revokes the entire session family
+- Reuse of a previously-rotated refresh token — or presenting a rotated-out session cookie — is detected as replay and revokes all of the user's sessions (`session_replay_detected` / `refresh_token_reuse_detected` audit reasons)
+- API clients can drive refresh-token rotation via the optional HttpOnly `alga_rt` cookie issued alongside `alga_session`; browsers never need to present it
 - When `SECURE_COOKIES=true`, cookies are only sent over HTTPS
 - Cookie-side session IDs and refresh tokens are HMAC-SHA-256 hashed before persistence
 
@@ -220,7 +221,7 @@ Passwords are hashed with Argon2id (OWASP baseline: 64 MiB memory, 3 iterations,
 
 ### Webhook Tokens
 
-Bearer tokens for alert ingestion endpoints. Tokens are shown exactly once on creation and stored as HMAC-SHA-256 hashes with a non-secret `lookup_prefix` for efficient lookup:
+Bearer tokens for alert ingestion endpoints. Tokens are shown exactly once on creation and stored as HMAC-SHA-256 hashes with a non-secret `lookup_prefix` for efficient lookup. Send them via the `Authorization` header — **the `?token=` query parameter is denied by default** (`WEBHOOK_ALLOW_QUERY_TOKEN=true` is a temporary escape hatch slated for removal; credentials in URLs leak into proxy/access logs, `Referer` headers and browser history):
 
 ```sh
 curl -X POST http://localhost:8080/webhooks/alerts \
@@ -231,7 +232,7 @@ curl -X POST http://localhost:8080/webhooks/alerts \
 
 ### Agent Tokens
 
-Bearer tokens for AI agent API and SSE:
+Bearer tokens for AI agent API and SSE. The SSE endpoint also accepts `Authorization` headers (fetch-based SSE); a legacy `?token=` query fallback is denied by default (`AGENT_SSE_ALLOW_QUERY_TOKEN=true` escape hatch only):
 
 ```sh
 # SSE connection
@@ -271,9 +272,9 @@ See [Personal Access Tokens](/operations/personal-access-tokens) for details.
 - **HSTS** — `Strict-Transport-Security` emitted on all HTTPS responses regardless of the `SecureCookies` flag
 - **Encryption at Rest** — AES-256-GCM envelope encryption for integration secrets and auth secrets (Google/OIDC client secrets in system config)
 - **Constant-Time Comparison** — All secret checks use `crypto/subtle`
-- **Rate Limiting** — Per-IP rate limiting for public endpoints; per-agent-token rate limiting for agent endpoints; login attempts limited to 5 per 15 minutes
+- **Rate Limiting** — Per-IP fixed-window rate limiting (default 20/min, `RATE_LIMIT_GENERAL_PER_MINUTE`) for public endpoints; per-agent-token limiting (default 120/min, `RATE_LIMIT_AGENT_PER_MINUTE`) for agent endpoints — both backends enforce identical semantics; login attempts limited to 5 per 15 minutes
 - **Account Lockout** — Failed login tracking with time-based lockout
-- **Audit Logging** — Fire-and-forget audit trail for every create, update, delete, command, and state transition; must not block request success
+- **Audit Logging** — Fire-and-forget audit trail for every create, update, delete, command, and state transition; must not block request success (bursts may drop events under saturation — at-most-once delivery). Rows carry the middleware request ID so HTTP-triggered actions correlate with structured logs. Admins and operators can review the trail via `GET /api/v1/audit-events` (`audit:read` permission; paginated, filterable by `event`, `entity_type`, `entity_id`) — read-only, no API to mutate or delete audit rows. The `account_unlocked` and `suspicious_activity` event types are reserved for future features that do not exist yet.
 - **Idempotency-Key** — Optional replay protection for mutating requests (requires Valkey); first request executes, subsequent requests with the same key return the cached response
 - **Bearer Token Storage** — Tokens stored as HMAC-SHA-256 hashes with non-secret `lookup_prefix` for indexed lookup; never stored in plaintext
 - **Webhook Tokens** — Shown exactly once on creation; cannot be retrieved afterward

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"alga/api/platform"
+	"alga/escalation"
 	"alga/logger"
 	"alga/slack"
 	"alga/sse"
@@ -40,6 +41,8 @@ type SlackWebhookHandler struct {
 	incidentLookupStore       incidentSlackLookupStore
 	incidentCoordinationStore store.IncidentCoordinationStore
 	rateLimiter               RateLimiter
+	vkClient                  escalation.StateClient
+	escalationTimeline        escalation.TimelineWriter
 }
 
 func NewSlackWebhookHandler(
@@ -77,6 +80,14 @@ func (h *SlackWebhookHandler) SetInvestigationForwarder(f InvestigationAgentForw
 
 func (h *SlackWebhookHandler) SetSSEBroker(broker *sse.Broker, vkClient *valkey.Client) {
 	h.sse.SetSSEBroker(broker, vkClient)
+	h.vkClient = vkClient
+}
+
+// SetEscalationTimeline wires the incident store used to record
+// escalation_cancelled timeline entries when a Slack acknowledge stops a
+// pending escalation.
+func (h *SlackWebhookHandler) SetEscalationTimeline(st escalation.TimelineWriter) {
+	h.escalationTimeline = st
 }
 
 func (h *SlackWebhookHandler) AddBotUserID(id string) {
@@ -194,7 +205,7 @@ type slackInteractionPayload struct {
 
 func (h *SlackWebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
 		return
 	}
 	if h.rateLimiter != nil && !h.rateLimiter.Allow(clientIPFromRequest(r)) {
@@ -202,7 +213,7 @@ func (h *SlackWebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if h.signingSecret == "" {
-		http.Error(w, "slack webhook not configured", http.StatusServiceUnavailable)
+		platform.WriteErrorStatus(w, http.StatusServiceUnavailable, platform.ErrorCodeInternal, "slack webhook not configured")
 		return
 	}
 
@@ -211,7 +222,7 @@ func (h *SlackWebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	if strings.HasPrefix(contentType, "application/x-www-form-urlencoded") {
 		body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
 		if err != nil {
-			http.Error(w, "bad request", http.StatusBadRequest)
+			platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "bad request")
 			return
 		}
 
@@ -219,13 +230,13 @@ func (h *SlackWebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		sig := r.Header.Get("X-Slack-Signature")
 		if !verifySlackRequest(h.signingSecret, ts, body, sig) {
 			logger.Warn("Slack webhook rejected: invalid signature", "component", "webhook")
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			webhookError(w, platform.ErrorCodeUnauthorized, "unauthorized")
 			return
 		}
 
 		r.Body = io.NopCloser(bytes.NewReader(body))
 		if err := r.ParseForm(); err != nil {
-			http.Error(w, "bad request", http.StatusBadRequest)
+			platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "bad request")
 			return
 		}
 
@@ -241,7 +252,7 @@ func (h *SlackWebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
 	if err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
+		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "bad request")
 		return
 	}
 
@@ -249,13 +260,13 @@ func (h *SlackWebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	sig := r.Header.Get("X-Slack-Signature")
 	if !verifySlackRequest(h.signingSecret, ts, body, sig) {
 		logger.Warn("Slack webhook rejected: invalid signature", "component", "webhook")
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		webhookError(w, platform.ErrorCodeUnauthorized, "unauthorized")
 		return
 	}
 
 	var probe slackURLVerification
 	if err := json.Unmarshal(body, &probe); err != nil {
-		http.Error(w, "invalid json", http.StatusBadRequest)
+		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "invalid json")
 		return
 	}
 	if probe.Type == "url_verification" {
@@ -272,7 +283,7 @@ func (h *SlackWebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	var env slackEnvelope
 	if err := json.Unmarshal(body, &env); err != nil {
-		http.Error(w, "invalid json", http.StatusBadRequest)
+		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "invalid json")
 		return
 	}
 
@@ -308,7 +319,7 @@ func (h *SlackWebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	record, err := h.alertInvestigationStore.GetAlertInvestigationBySlackThread(r.Context(), ev.Channel, rootTS)
 	if err != nil {
 		logger.Error("Failed to query investigation by Slack thread", "component", "webhook", "error", err)
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		webhookError(w, platform.ErrorCodeInternal, "internal error")
 		return
 	}
 	if record == nil {
@@ -340,7 +351,7 @@ func (h *SlackWebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 	if err := h.alertInvestigationStore.AddAlertInvestigationUpdate(r.Context(), record.AlertInvestigationID, update); err != nil {
 		logger.Error("Failed to add investigation update from Slack", "component", "webhook", "error", err)
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		webhookError(w, platform.ErrorCodeInternal, "internal error")
 		return
 	}
 
@@ -418,6 +429,7 @@ func (h *SlackWebhookHandler) handleInteractivePayload(ctx context.Context, w ht
 			"fingerprint": fingerprint,
 		})
 		logger.Info("Alert acknowledged from Slack", "component", "webhook", "fingerprint", fingerprint, "user_name", userName)
+		h.cancelPendingEscalations(fingerprint, "alert acknowledged via Slack")
 		h.updateAlertMessage(ctx, fingerprint, channelID, messageTS, "acknowledge", userName)
 
 	case "resolve":
@@ -440,6 +452,52 @@ func (h *SlackWebhookHandler) handleInteractivePayload(ctx context.Context, w ht
 
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(`{"ok":true}`))
+}
+
+// cancelPendingEscalations stops pending escalations for every non-terminal
+// incident linked to the acknowledged alert, mirroring the UI/API and phone
+// ack surfaces. Fire-and-forget on a detached, time-bounded context (the
+// request context dies with the button response); failures are logged and
+// never fail the response.
+func (h *SlackWebhookHandler) cancelPendingEscalations(fingerprint, reason string) {
+	if h.alertStore == nil {
+		return
+	}
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				logger.Error("goroutine panic recovered", "panic", r, "location", "cancelPendingEscalations")
+			}
+		}()
+		h.cancelPendingEscalationsCtx(context.Background(), fingerprint, reason)
+	}()
+}
+
+func (h *SlackWebhookHandler) cancelPendingEscalationsCtx(parent context.Context, fingerprint, reason string) {
+	ctx, cancel := context.WithTimeout(parent, 10*time.Second)
+	defer cancel()
+
+	record, err := h.alertStore.GetByFingerprint(fingerprint)
+	if err != nil || record == nil || record.AlertNumber == 0 {
+		if err != nil {
+			logger.Warn("Slack ack: failed to load alert for escalation cancellation", "component", "webhook", "fingerprint", fingerprint, "error", err)
+		}
+		return
+	}
+	incidents, err := h.alertStore.GetIncidentsByAlertNumber(ctx, record.AlertNumber)
+	if err != nil {
+		logger.Warn("Slack ack: failed to resolve incidents for escalation cancellation", "component", "webhook", "alert_number", record.AlertNumber, "error", err)
+		return
+	}
+	for i := range incidents {
+		inc := &incidents[i]
+		if escalation.IsTerminalIncidentStatus(inc.Status) {
+			continue
+		}
+		incidentID := strconv.FormatInt(inc.IncidentNumber, 10)
+		escalation.CancelForIncident(ctx, h.vkClient, h.escalationTimeline, incidentID, reason)
+		logger.Info("Pending escalation cancelled by Slack acknowledge", "component", "webhook", "incident_number", inc.IncidentNumber, "fingerprint", fingerprint)
+	}
 }
 
 func (h *SlackWebhookHandler) updateAlertMessage(ctx context.Context, fingerprint, channelID, messageTS, action, userName string) {

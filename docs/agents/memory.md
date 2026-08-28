@@ -56,7 +56,7 @@ Memory is **off by default**. To enable it, configure these environment variable
 | -------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | `MEMORY_EMBEDDING_URL`     |                          | OpenAI-compatible embeddings endpoint. **If empty, a no-op embedder produces zero vectors** — search falls back to PostgreSQL full-text search |
 | `MEMORY_EMBEDDING_API_KEY` |                          | Bearer token for the embedding service                                                                                                         |
-| `MEMORY_EMBEDDING_MODEL`   | `text-embedding-3-small` | Embedding model (dimension 1536; `large` models use 3072)                                                                                      |
+| `MEMORY_EMBEDDING_MODEL`   | `text-embedding-3-small` | Embedding model — MUST be a 1536-dimension model; startup fails closed on anything else (the `vector(1536)` column is pinned)           |
 
 ::: tip Works with any OpenAI-compatible API
 Both the LLM and embedding endpoints accept any OpenAI-compatible API — OpenAI, Ollama, vLLM, Azure OpenAI (with a compatible proxy), etc.
@@ -120,12 +120,12 @@ The **Memory** page (brain icon in the sidebar) lets you browse, create, edit, a
 
 Agents interact with memories through their own bearer-scoped endpoints:
 
-| Method   | Endpoint                      | Description                                                |
-| -------- | ----------------------------- | ---------------------------------------------------------- |
-| `GET`    | `/api/v1/agent/memories`      | List/search memories                                       |
-| `POST`   | `/api/v1/agent/memories`      | Create a memory (auto-stamps the calling agent's ID)       |
-| `GET`    | `/api/v1/agent/memories/{id}` | Get a specific memory (any agent can read any memory)      |
-| `DELETE` | `/api/v1/agent/memories/{id}` | Delete — only the owning agent can delete its own memories |
+| Method   | Endpoint                      | Description                                                                                                                                                                                                                                |           |
+| -------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------- |
+| `GET`    | `/api/v1/agent/memories`      | List/search memories (requires `investigate\                                                                                                                                                                                               | command`) |
+| `POST`   | `/api/v1/agent/memories`      | Create a memory (requires `investigate`; auto-stamps the calling agent's ID)                                                                                                                                                               |           |
+| `GET`    | `/api/v1/agent/memories/{id}` | Get a specific memory (requires `investigate\                                                                                                                                                                                              | command`) |
+| `DELETE` | `/api/v1/agent/memories/{id}` | Delete — requires `investigate` AND ownership; memories with no owning agent (extraction output) can only be removed by an operator via the RBAC-gated `/api/v1/memories/{id}`, and every successful delete is audited as `memory_deleted` |           |
 
 ## Memory Fields
 

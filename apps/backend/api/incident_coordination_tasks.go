@@ -197,14 +197,23 @@ func (s *Server) handlePatchIncidentCoordinationTask(w http.ResponseWriter, r *h
 			writeError(w, ErrorCodeNotFound, "coordination task not found")
 			return
 		}
+		if errors.Is(err, store.ErrCoordinationTaskStatusConflict) {
+			writeConflict(w, "coordination task is already in a terminal status")
+			return
+		}
 		writeInternalError(w, err, "failed to cancel coordination task")
 		return
 	}
-	s.publishIncidentEvent("coordination_task_updated", map[string]any{
-		"incident_number": incidentID,
-		"task_id":         taskIDStr,
-		"status":          store.CoordinationTaskStatusCancelled,
-	})
+	// coordination_task_updated is kept for pre-existing listeners; the
+	// dedicated cancelled event matches the dedicated task-list filter so the
+	// UI can drop only the cancelled row without treating it as an update.
+	for _, eventType := range []string{"coordination_task_updated", "coordination_task_cancelled"} {
+		s.publishIncidentEvent(eventType, map[string]any{
+			"incident_number": incidentID,
+			"task_id":         taskIDStr,
+			"status":          store.CoordinationTaskStatusCancelled,
+		})
+	}
 	s.audit(r, store.AuditIncidentUpdated, map[string]any{
 		"incident_number": incidentID,
 		"action":          "cancel_coordination_task",

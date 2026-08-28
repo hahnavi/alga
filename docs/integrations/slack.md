@@ -52,8 +52,11 @@ For multi-workspace support via OAuth 2.0, see [Slack OAuth Setup](/integrations
 
 1. Enable **Event Subscriptions** in your app settings
 2. Set the request URL to `http://your-alga-host:8080/webhooks/slack`
-3. Subscribe to these events:
-   - `message.channels` (for thread replies)
+3. Subscribe to these events (matching `integrations/alga-slack-app/manifest.json`):
+   - `message.channels` (public channel messages, for thread replies)
+   - `message.groups` (private channel messages)
+
+Only `message` events are handled server-side today (`webhook/slack.go`): thread replies sync into alert investigations and incident-channel messages become coordination messages. Other event types — including `app_mentions` — are acknowledged with 200 and ignored.
 
 ### 3. Configure Signing Secret
 
@@ -61,18 +64,25 @@ Copy the **Signing Secret** from **Basic Information** to `SLACK_SIGNING_SECRET`
 
 ## Bot Token Scopes
 
-Configure these scopes in your Slack App's **OAuth & Permissions** section:
+The Slack app manifest (`integrations/alga-slack-app/manifest.json`) requests exactly these bot scopes — configure no others:
 
-| Scope               | Purpose                                 | Required    |
-| ------------------- | --------------------------------------- | ----------- |
-| `chat:write`        | Send messages to channels               | Yes         |
-| `chat:write.public` | Post to public channels without joining | Yes         |
-| `channels:join`     | Join public channels                    | Recommended |
-| `channels:read`     | Read channel information                | Yes         |
-| `groups:read`       | Read private channels/DMs               | Recommended |
-| `im:write`          | Send direct messages                    | Optional    |
-| `commands`          | Receive slash commands                  | Optional    |
-| `app_mentions:read` | Read app mentions                       | No          |
+| Scope                  | Purpose                                     | Required |
+| ---------------------- | ------------------------------------------- | -------- |
+| `chat:write`           | Send messages to channels                   | Yes      |
+| `chat:write.customize` | Post as the bot's custom name/icon          | Yes      |
+| `chat:write.public`    | Post to public channels without joining     | Yes      |
+| `channels:read`        | Read channel information                    | Yes      |
+| `groups:read`          | Read private channel information            | Yes      |
+| `channels:manage`      | Create/archive incident channels (public)   | Yes      |
+| `groups:manage`        | Create/archive incident channels (private)  | Yes      |
+| `channels:history`     | Read public channel message context         | Yes      |
+| `groups:history`       | Read private channel message context        | Yes      |
+| `im:write`             | Open direct messages (outbound DM delivery) | Yes      |
+| `mpim:write`           | Open group DM conversations                 | Yes      |
+
+User scope: `identity.basic` (Slack sign-in only).
+
+The manifest deliberately omits `channels:join`, `commands`, and `app_mentions:read`: there is no slash-command or mention handler server-side, and posting to public channels works via `chat:write.public`. The bot must be invited to private channels before it can post or read there. Inbound DM/MPIM messages are **not** received with these defaults — receiving them requires adding `im:history`, `mpim:history`, `im:read`, `mpim:read` scopes and `message.im`, `message.mpim` event subscriptions (flagged inside the manifest itself).
 
 ## Channel Types
 
@@ -84,7 +94,7 @@ Configure these scopes in your Slack App's **OAuth & Permissions** section:
 
 ## Message Formatting
 
-Alga uses Slack Block Kit for rich alert messages with action buttons for acknowledge, resolve, and investigate.
+Alga uses Slack Block Kit for rich alert messages with action buttons for acknowledge, resolve, and investigate. Acknowledging via the button does more than flip the alert's state — for alerts linked to incidents it also cancels any pending escalation (timeline entry `escalation_cancelled`), matching what a UI or API acknowledge does.
 
 ### Threading Strategy
 
@@ -219,7 +229,6 @@ Alga supports signing in with Slack as an authentication method (separate from t
 
 - Slack has tier-based rate limits
 - Alga implements automatic retries with exponential backoff
-- Monitor `/debug/vars` for rate limit metrics
 
 ## Disabling
 

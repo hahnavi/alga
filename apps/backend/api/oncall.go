@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -282,6 +283,9 @@ func (s *Server) handlePatchOnCallSchedule(w http.ResponseWriter, r *http.Reques
 		}
 		if layer.RotationType == "" {
 			layer.RotationType = "weekly"
+		} else if !oncall.ValidRotationType(layer.RotationType) {
+			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "rotation_type must be hourly, daily, weekly, or monthly")
+			return
 		}
 		if layer.RotationInterval == 0 {
 			layer.RotationInterval = 1
@@ -390,7 +394,26 @@ func (s *Server) handleCurrentOnCall(w http.ResponseWriter, r *http.Request, sch
 			}
 		}
 	}
+	if until, ok := s.activeShiftEnd(resolver, r.Context(), uid); ok {
+		result["until"] = until
+	}
 	writeData(w, http.StatusOK, result)
+}
+
+// activeShiftEnd reports when the shift covering `now` ends, via the same
+// hour-resolution shift expansion the timeline endpoint uses. The three-month
+// lookback covers all supported rotation lengths; when nobody is on call at
+// `now`, or the active shift began before the lookback window, ok=false and
+// the caller omits `until` rather than emitting a wrong boundary.
+func (s *Server) activeShiftEnd(resolver *oncall.Resolver, ctx context.Context, scheduleID uuid.UUID) (string, bool) {
+	now := time.Now().UTC()
+	shifts := resolver.GenerateShifts(ctx, scheduleID, now.AddDate(0, -3, 0), now.Add(2*time.Hour))
+	for _, shift := range shifts {
+		if !shift.Start.After(now) && shift.End.After(now) {
+			return shift.End.UTC().Format(time.RFC3339), true
+		}
+	}
+	return "", false
 }
 
 func (s *Server) handleScheduleTimeline(w http.ResponseWriter, r *http.Request, scheduleID string) {
@@ -765,36 +788,55 @@ func (s *Server) handleMyOnCall(w http.ResponseWriter, r *http.Request) {
 
 	myUserID := user.ID.String()
 	now := time.Now().UTC()
-	results := make([]map[string]any, 0)
+	current := make([]map[string]any, 0)
+	pending := make([]map[string]any, 0)
 	for _, sched := range schedules {
+		iAmMember := false
 		for _, layer := range sched.Layers {
-			found := false
-			for _, uid := range layer.UserIds {
-				if uid == myUserID {
-					found = true
-					break
+			if slices.Contains(layer.UserIds, myUserID) {
+				iAmMember = true
+				break
+			}
+		}
+		if !iAmMember {
+			continue
+		}
+
+		name := s.scheduleDisplayName(r.Context(), &sched)
+
+		resolved, err := resolver.ResolveWhoIsOnCall(r.Context(), sched.ID, now)
+		if err == nil && resolved != nil && resolved.String() == myUserID {
+			for _, layer := range sched.Layers {
+				if !slices.Contains(layer.UserIds, myUserID) {
+					continue
 				}
+				current = append(current, map[string]any{
+					"schedule_id":   sched.ID.String(),
+					"schedule_name": name,
+					"layer_name":    layer.Name,
+				})
 			}
-			if !found {
-				continue
-			}
+		}
 
-			resolved, err := resolver.ResolveWhoIsOnCall(r.Context(), sched.ID, now)
-			if err != nil || resolved == nil {
+		// Next upcoming shift on this schedule within a two-week horizon.
+		for _, shift := range resolver.GenerateShifts(r.Context(), sched.ID, now, now.AddDate(0, 0, 14)) {
+			if !shift.Start.After(now) || shift.UserID.String() != myUserID {
 				continue
 			}
-			if resolved.String() != myUserID {
-				continue
-			}
-
-			results = append(results, map[string]any{
+			pending = append(pending, map[string]any{
 				"schedule_id":   sched.ID.String(),
-				"schedule_name": s.scheduleDisplayName(r.Context(), &sched),
-				"layer_name":    layer.Name,
+				"schedule_name": name,
+				"user_id":       myUserID,
+				"start_at":      shift.Start.Format(time.RFC3339),
+				"end_at":        shift.End.Format(time.RFC3339),
 			})
+			break
 		}
 	}
-	writeData(w, http.StatusOK, results)
+	writeData(w, http.StatusOK, map[string]any{
+		"current": current,
+		"pending": pending,
+	})
 }
 
 func (s *Server) handleOnCallOverrideRoutes(w http.ResponseWriter, r *http.Request) {
@@ -894,12 +936,23 @@ func (s *Server) handleOnCallMetrics(w http.ResponseWriter, r *http.Request) {
 				names[uid] = name
 			}
 		}
-		result = append(result, shiftMetric{
+		entry := shiftMetric{
 			UserID:          uid,
 			UserDisplayName: name,
 			ShiftStart:      shift.Start.Format(time.RFC3339),
 			ShiftEnd:        shift.End.Format(time.RFC3339),
-		})
+		}
+		m, err := s.alertStore.ShiftAlertMetrics(r.Context(), shift.Start, shift.End)
+		if err != nil {
+			writeInternalError(w, err, "failed to compute shift alert metrics")
+			return
+		}
+		entry.AlertsReceived = int(m.Received)
+		entry.AlertsAcknowledged = int(m.Acknowledged)
+		entry.AlertsResolved = int(m.Resolved)
+		entry.AlertsMissed = int(m.Missed)
+		entry.AvgAckTimeSeconds = m.AvgAckSeconds
+		result = append(result, entry)
 	}
 
 	if groupBy == "user" {
@@ -923,10 +976,9 @@ func (s *Server) handleOnCallMetrics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Aggregate per-shift metrics into a summary. Note: per-shift alert
-	// counts are populated by callers above (currently the resolver does not
-	// fill them, so these sums may be 0 until that wiring lands); the
-	// aggregation itself is correct regardless.
+	// Aggregate per-shift metrics into a summary. Per-shift alert counters are
+	// computed by store.ShiftAlertMetrics over each shift window; "missed"
+	// counts fired-in-window alerts that were never acknowledged by shift end.
 	var totalAck, totalResolved, totalReceived, totalMissed int
 	var ackTimeSum float64
 	var ackTimeCount int
@@ -961,6 +1013,5 @@ func (s *Server) handleOnCallMetrics(w http.ResponseWriter, r *http.Request) {
 func (s *Server) invalidateOnCallCache(r *http.Request) {
 	if s.cache != nil {
 		_ = s.cache.InvalidatePrefix(r.Context(), valkey.PrefixOnCallWho)
-		_ = s.cache.Invalidate(r.Context(), valkey.PrefixOnCallSchedules)
 	}
 }

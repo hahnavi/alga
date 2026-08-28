@@ -110,7 +110,7 @@ An **incident** is a declared event requiring coordinated response. Incidents ca
 - **Manually created** by an operator
 - **Auto-created** by routing rules or triage decisions
 
-Incidents follow a formal lifecycle: `detected → triaging → active → mitigated → resolved → closed` (with `cancelled` as a terminal state).
+Incidents follow a formal lifecycle: `detected → triaging → active → mitigated → resolved → closed`, with `cancelled` as an additional terminal state and `reopen` returning `mitigated`/`resolved`/`closed` incidents to active response. The linear order is the normal path; the API also permits deliberate skip edges — acknowledge jumps `detected → active`, and mitigation/resolution may be reached directly from earlier states when appropriate (see [Incident Lifecycle](/incident-management/lifecycle) for the authoritative transition table).
 
 Beyond the lifecycle, incidents carry several collaboration features:
 
@@ -203,6 +203,8 @@ Alga uses partial unique indexes to enforce one-open-alert-per-fingerprint at th
 ### Resolved Alerts Stay Resolved
 
 Once an alert is resolved (by the monitoring system, an operator, or an agent), it is **never automatically reopened**. If the same condition fires again, a new alert is created. This prevents alert flapping.
+
+The sanctioned exception is **manual reopen**: an operator or agent can explicitly reopen the latest resolved alert (an audited operation that creates a new firing cycle from it). Automated sources never reopen resolved alerts.
 
 ### Fire-and-Forget Audit Logging
 

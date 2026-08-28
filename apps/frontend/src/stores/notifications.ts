@@ -3,6 +3,7 @@ import { defineStore } from "pinia";
 import { api, type NotificationRecord } from "@/lib/api";
 import { MAX_NOTIFICATIONS } from "@/lib/threadLimits";
 import {
+  notificationDispatchEventSchema,
   notificationNewEventSchema,
   notificationRecordSchema,
   notificationUnreadCountEventSchema,
@@ -91,16 +92,33 @@ export const useNotificationStore = defineStore("notifications", () => {
   }
 
   function handleSSEEvent(eventType: string, data: unknown) {
-    if (eventType === "notification_new") {
+    if (eventType === "notification_new" || eventType === "notification") {
       let n: NotificationRecord | null = null;
       try {
-        const envelope = validate(notificationNewEventSchema, data);
-        // The backend has historically emitted the record at the top level;
-        // also accept the wrapped `{notification: ...}` shape.
-        if ((envelope as { notification?: NotificationRecord }).notification) {
-          n = (envelope as { notification: NotificationRecord }).notification;
+        if (eventType === "notification") {
+          // Dispatch-worker payload omits user-scoped fields; the event only
+          // ever arrives on the owning user's stream and is born unread.
+          const d = validate(notificationDispatchEventSchema, data);
+          n = {
+            id: d.id,
+            user_id: "",
+            type: d.type,
+            title: d.title,
+            message: d.message,
+            read: false,
+            resource_type: d.resource_type,
+            resource_id: d.resource_id,
+            created_at: d.created_at,
+          };
         } else {
-          n = validate(notificationRecordSchema, data);
+          const envelope = validate(notificationNewEventSchema, data);
+          // The backend has historically emitted the record at the top level;
+          // also accept the wrapped `{notification: ...}` shape.
+          if ((envelope as { notification?: NotificationRecord }).notification) {
+            n = (envelope as { notification: NotificationRecord }).notification;
+          } else {
+            n = validate(notificationRecordSchema, data);
+          }
         }
       } catch {
         return; // malformed event — drop instead of corrupting UI state

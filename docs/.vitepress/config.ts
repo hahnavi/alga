@@ -5,7 +5,10 @@ export default defineConfig({
   description: "The open-source, AI-powered incident management platform",
   cleanUrls: true,
   ignoreDeadLinks: ["localhostLinks"],
-  head: [["link", { rel: "icon", type: "image/svg+xml", href: "/logo.svg" }]],
+  head: [
+    ["link", { rel: "icon", type: "image/svg+xml", href: "/logo.svg" }],
+    ["link", { rel: "stylesheet", href: "/custom.css" }],
+  ],
   lastUpdated: true,
   themeConfig: {
     siteTitle: "Alga",

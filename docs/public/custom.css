@@ -1,0 +1,18 @@
+/* Full-width page layout */
+.VPContent .container {
+  max-width: 100% !important;
+}
+
+.VPDoc .container .content-container {
+  max-width: 100% !important;
+}
+
+.VPDoc.has-aside .content-container {
+  max-width: calc(100% - var(--vp-aside-width)) !important;
+}
+
+.VPDoc .aside-container,
+.VPDoc .aside {
+  width: 260px;
+  max-width: 260px;
+}

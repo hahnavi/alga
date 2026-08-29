@@ -35,8 +35,8 @@ env:
   # loudly instead of auto-downloading a toolchain into the read-only module cache.
   GO_VERSION: "1.27.0"
   GOTOOLCHAIN: local
-  NODE_VERSION: "24"
-  # Keep in sync with `packageManager` in package.json and the corepack pin in
+  NODE_VERSION: "26"
+  # Keep in sync with `packageManager` in package.json and the pnpm pin in
   # apps/frontend/Dockerfile — pnpm/action-setup@v6 throws on a
   # version/packageManager mismatch.
   PNPM_VERSION: "11.17.0"

@@ -1,5 +1,8 @@
-FROM node:24-alpine3.23 AS builder
-RUN corepack enable && corepack prepare pnpm@11.17.0 --activate
+FROM node:26-alpine3.24 AS builder
+# corepack is no longer shipped in node:26+ images, so pnpm is installed from
+# npm instead; keep the version pinned to the same 11.17.0 triple-pin as
+# `packageManager` in package.json and PNPM_VERSION in ci.yml.
+RUN npm install -g pnpm@11.17.0
 
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./

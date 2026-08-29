@@ -366,11 +366,26 @@ func clientIPFromRequest(req *http.Request) string {
 func (r *Receiver) ProcessAlerts(ctx context.Context, payload types.GrafanaAlertingPayload) error {
 	var firstErr error
 	for _, alert := range payload.Alerts {
-		if r.dedupCache != nil {
-			if alert.Status != "resolved" && r.dedupCache.IsDuplicate(ctx, alert.Fingerprint) {
+		if r.dedupCache != nil && alert.Status != "resolved" && r.dedupCache.IsDuplicate(ctx, alert.Fingerprint) {
+			// The cache is an optimization, not the source of truth: automated
+			// resolve paths (triage, incident cascade) or TTL drift can leave a
+			// tracking entry behind after the open alert is gone. Verify against
+			// the store before skipping so a re-fired fingerprint still creates
+			// a new alert record (a new firing alert with a resolved fingerprint
+			// must never be swallowed).
+			existing, err := r.store.GetOpenByFingerprint(alert.Fingerprint)
+			if err != nil {
+				logger.Error("Failed to verify open alert for cached fingerprint", "component", "webhook", "fingerprint", alert.Fingerprint, "error", err)
+				if firstErr == nil {
+					firstErr = err
+				}
+				continue
+			}
+			if existing != nil {
 				logger.Debug("Alert deduplicated via cache, skipping", "component", "webhook", "fingerprint", alert.Fingerprint)
 				continue
 			}
+			logger.Info("Dedup cache entry stale for fingerprint without open alert; processing", "component", "webhook", "fingerprint", alert.Fingerprint)
 		}
 
 		existing, err := r.store.GetOpenByFingerprint(alert.Fingerprint)
@@ -648,6 +663,12 @@ func (r *Receiver) handleResolved(ctx context.Context, alert types.Alert, existi
 		if err := r.store.UpdateStatusSilenced(alert.Fingerprint); err != nil {
 			logger.Error("Failed to update silenced status in store", "component", "webhook", "fingerprint", alert.Fingerprint, "error", err)
 		} else {
+			if r.auditStore != nil {
+				r.auditStore.Log(store.AuditAlertResolved, nil, "system", "", "", true, map[string]any{
+					"fingerprint": alert.Fingerprint,
+					"reason":      "silenced",
+				})
+			}
 			if r.dedupCache != nil {
 				r.dedupCache.RemoveTracking(ctx, alert.Fingerprint)
 			}

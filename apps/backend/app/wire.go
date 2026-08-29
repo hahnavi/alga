@@ -395,13 +395,15 @@ func (a *App) wire() error {
 	whReceiver.SetIncidentInvestigationStore(a.stores.IncidentInvestigation)
 	if a.rabbitClient != nil && a.workerSet != nil && a.valkeyClient != nil && publisher != nil {
 		a.correlator = correlator.NewCorrelator(a.valkeyClient, publisher, correlator.Config{
-			Window:      a.cfg.CorrelationWindow,
-			CooldownTTL: a.cfg.CorrelationCooldownTTL,
+			Window:        a.cfg.CorrelationWindow,
+			CooldownTTL:   a.cfg.CorrelationCooldownTTL,
+			SweepInterval: time.Minute,
 		})
 		a.correlator.SetAlertInvestigationStore(a.stores.AlertInvestigation)
 		a.correlator.SetAgentNotifier(invForwarder)
 		a.correlator.SetTriageEnabled(a.cfg.TriageEnabled)
 		whReceiver.SetCorrelator(a.correlator)
+		a.correlator.Start()
 		logger.Info("SRE Agent correlation enabled", "cooldown", a.cfg.CorrelationCooldownTTL.String())
 	}
 
@@ -649,6 +651,10 @@ func (a *App) wire() error {
 		triageWorker := triage.NewWorker(triageEngine, publisher, a.stores.Alert)
 		triageWorker.SetCancelSet(a.cancelSet)
 		triageWorker.SetAuditStore(a.stores.Audit)
+		triageWorker.SetDedupCache(dedupCache)
+		if alertLifecycle != nil {
+			triageWorker.SetInvestigationLifecycle(alertLifecycle)
+		}
 		a.workerSet.SetTriageWorker(triageWorker)
 
 		outcomeWorker := triage.NewOutcomeWorker(

@@ -296,13 +296,24 @@ func (s *pgAlertStore) ResolveAlertByNumber(alertNumber int64, actor *EventActor
 	}
 
 	now := time.Now().UTC()
-	_, err = s.db.NewUpdate().Model((*models.Alert)(nil)).
+	res, err := s.db.NewUpdate().Model((*models.Alert)(nil)).
 		Set("status = ?", "resolved").
 		Set("updated_at = ?", now).
+		Set("ends_at = COALESCE(ends_at, ?)", now).
 		Where("id = ?", a.ID).
+		Where("status != ?", "resolved").
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to resolve alert: %w", err)
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to resolve alert: %w", err)
+	}
+	if rows == 0 {
+		// Already resolved by a concurrent request; keep idempotent and skip
+		// the duplicate resolved event.
+		return nil
 	}
 
 	ev := AlertEventWithActor("resolved", now, actor)
@@ -335,6 +346,8 @@ func (s *pgAlertStore) ReopenAlertByNumber(alertNumber int64, ev AlertEvent) err
 	_, err = s.db.NewUpdate().Model((*models.Alert)(nil)).
 		Set("status = ?", "firing").
 		Set("acknowledged = ?", false).
+		Set("silenced = ?", false).
+		Set("ends_at = NULL").
 		Set("updated_at = ?", now).
 		Where("id = ?", a.ID).
 		Exec(ctx)
@@ -407,20 +420,19 @@ func (s *pgAlertStore) UpdateStatus(fingerprint, status string, resolvedEvent *A
 
 	now := time.Now().UTC()
 
+	var ev *AlertEvent
 	if status == "resolved" {
-		ev := resolvedEvent
-		if ev == nil {
-			ev = &AlertEvent{Type: "resolved", Timestamp: now, Source: "grafana"}
+		e := resolvedEvent
+		if e == nil {
+			e = &AlertEvent{Type: "resolved", Timestamp: now, Source: "grafana"}
 		} else {
-			cp := *ev
+			cp := *e
 			if cp.Timestamp.IsZero() {
 				cp.Timestamp = now
 			}
-			ev = &cp
+			e = &cp
 		}
-		if err := s.insertAlertEvent(ctx, a.ID, *ev); err != nil {
-			logger.ErrorCtx(ctx, "Failed to insert resolved event for alert", "component", "store", "alert_id", a.ID, "error", err)
-		}
+		ev = e
 	}
 
 	update := s.db.NewUpdate().Model((*models.Alert)(nil)).
@@ -430,10 +442,27 @@ func (s *pgAlertStore) UpdateStatus(fingerprint, status string, resolvedEvent *A
 	if status == "resolved" {
 		// Stamp ends_at at resolution time unless the source already
 		// supplied one at ingest (e.g. Grafana resolve payloads carry endsAt).
-		update = update.Set("ends_at = COALESCE(ends_at, ?)", now)
+		update = update.Set("ends_at = COALESCE(ends_at, ?)", now).
+			// Conditional on the pre-resolution status so a concurrent resolve
+			// doesn't record a second resolved event (idempotent retry).
+			Where("status != ?", "resolved")
 	}
-	if _, err := update.Exec(ctx); err != nil {
+	res, err := update.Exec(ctx)
+	if err != nil {
 		return fmt.Errorf("failed to update alert status: %w", err)
+	}
+	if status == "resolved" {
+		rows, rerr := res.RowsAffected()
+		if rerr != nil {
+			return fmt.Errorf("failed to update alert status: %w", rerr)
+		}
+		if rows == 0 {
+			// Already resolved concurrently; skip the duplicate event.
+			return nil
+		}
+		if err := s.insertAlertEvent(ctx, a.ID, *ev); err != nil {
+			logger.ErrorCtx(ctx, "Failed to insert resolved event for alert", "component", "store", "alert_id", a.ID, "error", err)
+		}
 	}
 	return nil
 }
@@ -453,16 +482,21 @@ func (s *pgAlertStore) UpdateStatusSilenced(fingerprint string) error {
 	}
 
 	now := time.Now().UTC()
-	_, err = s.db.NewUpdate().Model((*models.Alert)(nil)).
+	res, err := s.db.NewUpdate().Model((*models.Alert)(nil)).
 		Set("status = ?", "resolved").
 		Set("silenced = ?", true).
 		Set("updated_at = ?", now).
 		// Preserve an ingest-supplied ends_at; stamp one only when NULL.
 		Set("ends_at = COALESCE(ends_at, ?)", now).
 		Where("id = ?", a.ID).
+		Where("status != ?", "resolved").
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to silence alert: %w", err)
+	}
+	if rows, rerr := res.RowsAffected(); rerr == nil && rows == 0 {
+		// Already resolved concurrently; skip the duplicate resolved event.
+		return nil
 	}
 
 	if err := s.insertAlertEvent(ctx, a.ID, AlertEvent{Type: "resolved", Timestamp: now, Source: "system"}); err != nil {
@@ -543,13 +577,19 @@ func (s *pgAlertStore) AcknowledgeAlert(fingerprint string, actor *EventActor) e
 	now := time.Now().UTC()
 	ackEv := AlertEventWithActor("acked", now, actor)
 
-	_, err = s.db.NewUpdate().Model((*models.Alert)(nil)).
+	res, err := s.db.NewUpdate().Model((*models.Alert)(nil)).
 		Set("acknowledged = ?", true).
 		Set("updated_at = ?", now).
 		Where("id = ?", a.ID).
+		Where("acknowledged = ?", false).
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to acknowledge alert: %w", err)
+	}
+	if rows, rerr := res.RowsAffected(); rerr == nil && rows == 0 {
+		// Already acknowledged by a concurrent request; keep idempotent and
+		// skip the duplicate event.
+		return nil
 	}
 
 	if err := s.insertAlertEvent(ctx, a.ID, ackEv); err != nil {
@@ -586,6 +626,7 @@ func (s *pgAlertStore) ReopenAlert(fingerprint string, ev AlertEvent) error {
 		Set("status = ?", "firing").
 		Set("acknowledged = ?", false).
 		Set("silenced = ?", false).
+		Set("ends_at = NULL").
 		Set("updated_at = ?", now).
 		Where("id = ?", a.ID).
 		Exec(ctx)
@@ -621,13 +662,20 @@ func (s *pgAlertStore) ResolveAlertByUser(fingerprint string, actor *EventActor)
 	now := time.Now().UTC()
 	ev := AlertEventWithActor("resolved", now, actor)
 
-	_, err = s.db.NewUpdate().Model((*models.Alert)(nil)).
+	res, err := s.db.NewUpdate().Model((*models.Alert)(nil)).
 		Set("status = ?", "resolved").
 		Set("updated_at = ?", now).
+		Set("ends_at = COALESCE(ends_at, ?)", now).
 		Where("id = ?", a.ID).
+		Where("status != ?", "resolved").
 		Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to resolve alert: %w", err)
+	}
+	if rows, rerr := res.RowsAffected(); rerr == nil && rows == 0 {
+		// Already resolved by a concurrent request; keep idempotent and skip
+		// the duplicate resolved event.
+		return nil
 	}
 
 	if err := s.insertAlertEvent(ctx, a.ID, ev); err != nil {
@@ -768,15 +816,14 @@ func (s *pgAlertStore) QueryAlerts(filter map[string]any) ([]AlertRecord, error)
 
 	_, summaryOnly := filter["summary"]
 	records := make([]AlertRecord, 0, len(alerts))
-	for i := range alerts {
-		if summaryOnly {
+	if summaryOnly {
+		for i := range alerts {
 			records = append(records, s.toAlertRecordSummary(&alerts[i]))
-		} else {
-			rec, err := s.toAlertRecord(ctx, &alerts[i])
-			if err != nil {
-				return nil, err
-			}
-			records = append(records, *rec)
+		}
+	} else {
+		records, err = s.toAlertRecords(ctx, alerts)
+		if err != nil {
+			return nil, err
 		}
 	}
 	s.attachInvestigationSummaries(ctx, records)
@@ -911,6 +958,57 @@ func (s *pgAlertStore) toAlertRecord(ctx context.Context, a *models.Alert) (*Ale
 		return nil, fmt.Errorf("failed to query targets: %w", err)
 	}
 
+	return buildAlertRecord(a, events, targets), nil
+}
+
+// toAlertRecords converts a batch of alerts with two IN queries (events and
+// delivery targets) instead of two queries per row.
+func (s *pgAlertStore) toAlertRecords(ctx context.Context, alerts []models.Alert) ([]AlertRecord, error) {
+	if len(alerts) == 0 {
+		return []AlertRecord{}, nil
+	}
+	ids := make([]uuid.UUID, 0, len(alerts))
+	for i := range alerts {
+		ids = append(ids, alerts[i].ID)
+	}
+
+	var events []models.AlertEvent
+	err := s.db.NewSelect().Model(&events).
+		Where("alert_id IN (?)", bun.In(ids)).
+		Order("timestamp ASC").
+		Scan(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query events: %w", err)
+	}
+
+	var targets []models.DeliveryTarget
+	err = s.db.NewSelect().Model(&targets).
+		Where("alert_id IN (?)", bun.In(ids)).
+		Scan(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query targets: %w", err)
+	}
+
+	eventsByAlert := make(map[uuid.UUID][]models.AlertEvent, len(alerts))
+	for i := range events {
+		eventsByAlert[events[i].AlertID] = append(eventsByAlert[events[i].AlertID], events[i])
+	}
+	targetsByAlert := make(map[uuid.UUID][]models.DeliveryTarget, len(alerts))
+	for i := range targets {
+		targetsByAlert[targets[i].AlertID] = append(targetsByAlert[targets[i].AlertID], targets[i])
+	}
+
+	records := make([]AlertRecord, 0, len(alerts))
+	for i := range alerts {
+		records = append(records, *buildAlertRecord(&alerts[i], eventsByAlert[alerts[i].ID], targetsByAlert[alerts[i].ID]))
+	}
+	return records, nil
+}
+
+// buildAlertRecord maps a persisted alert plus its preloaded events and
+// delivery targets into the application record. Callers load the associations
+// per-row (single records) or batched (lists).
+func buildAlertRecord(a *models.Alert, events []models.AlertEvent, targets []models.DeliveryTarget) *AlertRecord {
 	var alertEvents []AlertEvent
 	for i := range events {
 		e := &events[i]
@@ -955,7 +1053,7 @@ func (s *pgAlertStore) toAlertRecord(ctx context.Context, a *models.Alert) (*Ale
 	if a.EndsAt != nil {
 		rec.EndsAt = a.EndsAt
 	}
-	return rec, nil
+	return rec
 }
 
 func (s *pgAlertStore) LinkAlertToIncident(ctx context.Context, fingerprint string, incidentNumber int64) error {
@@ -1136,16 +1234,23 @@ func (s *pgAlertStore) ResolveAlertsByIncident(ctx context.Context, incidentNumb
 			result.Skipped = append(result.Skipped, ref)
 			continue
 		}
-		_, updErr := s.db.NewUpdate().Model((*models.Alert)(nil)).
+		updRes, updErr := s.db.NewUpdate().Model((*models.Alert)(nil)).
 			Set("status = ?", "resolved").
 			Set("updated_at = ?", now).
+			Set("ends_at = COALESCE(ends_at, ?)", now).
 			Where("id = ?", a.ID).
+			Where("status != ?", "resolved").
 			Exec(ctx)
 		if updErr != nil {
 			logger.ErrorCtx(ctx, "Failed to resolve alert during incident cascade",
 				"component", "store", "incident_number", incidentNumber,
 				"alert_number", ref.AlertNumber, "fingerprint", ref.Fingerprint, "error", updErr)
 			result.Failed = append(result.Failed, ref)
+			continue
+		}
+		if rows, rerr := updRes.RowsAffected(); rerr == nil && rows == 0 {
+			// Resolved concurrently between the listing and this update.
+			result.Skipped = append(result.Skipped, ref)
 			continue
 		}
 

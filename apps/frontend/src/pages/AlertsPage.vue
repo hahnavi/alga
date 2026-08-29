@@ -140,7 +140,13 @@ async function acknowledgeAlert(alert: AlertRecord) {
   try {
     const updated = await api.acknowledgeAlert(alert.alert_number);
     const idx = alerts.value.findIndex((a) => a.alert_number === alert.alert_number);
-    if (idx !== -1) alerts.value.splice(idx, 1, updated);
+    if (idx !== -1) {
+      if (passesListFilters(updated)) {
+        alerts.value.splice(idx, 1, updated);
+      } else {
+        alerts.value.splice(idx, 1);
+      }
+    }
     push("Alert acknowledged", "success");
   } catch (err) {
     push(getErrorMessage(err, "Failed to acknowledge alert"), "error");
@@ -542,10 +548,12 @@ const { setup: setupScrollObserver, teardown: teardownScrollObserver } = useInfi
 );
 
 onMounted(() => {
-  load(true).then(() => setupScrollObserver());
   mounted = true;
 });
 
+// Unconditional KeepAlive fires onActivated after the first onMounted too, so
+// the initial load happens here only — otherwise the first mount issues two
+// identical list fetches that race.
 onActivated(() => {
   isDeactivated = false;
   navigatingAlertNumber.value = null;
@@ -764,10 +772,10 @@ onUnmounted(() => {
                 />
               </div>
               <div class="mt-auto flex items-center gap-1.5">
-                <button
+                <Button
                   v-if="alert.status === 'firing' && !alert.acknowledged && canWrite"
-                  type="button"
-                  class="flex h-7 cursor-pointer items-center gap-1 rounded-md border border-[var(--border-primary)] px-2 text-xs font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-secondary)] disabled:cursor-not-allowed disabled:opacity-40"
+                  variant="outline"
+                  size="sm"
                   :disabled="!!(alert.alert_number != null && ackLoadingMap[alert.alert_number])"
                   @click.stop="acknowledgeAlert(alert)"
                 >
@@ -775,13 +783,14 @@ onUnmounted(() => {
                   {{
                     alert.alert_number != null && ackLoadingMap[alert.alert_number] ? "..." : "Ack"
                   }}
-                </button>
+                </Button>
                 <AlertActionsMenu
                   v-if="canWrite || canDelete"
                   :workflow-status="alert.status === 'resolved' ? 'resolved' : 'open'"
                   :status-busy="
                     !!(alert.alert_number != null && resolveLoadingMap[alert.alert_number])
                   "
+                  :can-write="canWrite"
                   :can-delete="canDelete"
                   :can-create-incident="false"
                   :show-ack-button="alert.status === 'firing' && !alert.acknowledged"

@@ -176,8 +176,12 @@ const router = createRouter({
     { path: "/sso", redirect: { path: "/settings/sso" } },
     { path: "/users", redirect: { path: "/settings/users" } },
     { path: "/", component: DashboardPage },
-    { path: "/alerts", component: AlertsPage },
-    { path: "/alerts/:alertNumber", component: AlertDetailPage },
+    { path: "/alerts", component: AlertsPage, meta: { requiredPermission: "alerts:read" } },
+    {
+      path: "/alerts/:alertNumber",
+      component: AlertDetailPage,
+      meta: { requiredPermission: "alerts:read" },
+    },
     {
       path: "/communication-channels",
       component: CommunicationChannelsPage,

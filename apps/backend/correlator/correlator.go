@@ -66,6 +66,10 @@ type Config struct {
 	// survives. Subsequent alerts during the cooldown are appended to the
 	// existing investigation rather than opening a new window.
 	CooldownTTL time.Duration
+	// SweepInterval is how often a background sweep SCANs for orphaned
+	// pending correlation lists — e.g. after a replica crash lost its flush
+	// timer — and drains them. 0 disables the sweep.
+	SweepInterval time.Duration
 }
 
 type cooldownEntry struct {
@@ -87,14 +91,15 @@ type Correlator struct {
 	correlationRules map[string]CorrelationRule
 	suppressionRules []SuppressionRule
 
-	appendScript *valkey.Lua
-	drainScript  *valkey.Lua
-
 	mu          sync.Mutex
 	flushTimers map[string]*time.Timer
 
 	wg     sync.WaitGroup
 	stopCh chan struct{}
+
+	appendScript *valkey.Lua
+	peekScript   *valkey.Lua
+	popScript    *valkey.Lua
 }
 
 // appendScript pushes the alert JSON onto the per-key list and, when this is
@@ -110,14 +115,21 @@ if n == 1 then
 end
 return n`
 
-// drainScript atomically returns the full pending list and deletes it. Used
-// by both the timer flush and Stop() to guarantee no other replica's flush
-// timer can publish duplicates.
+// peekScript returns the pending list WITHOUT deleting it. A flush publishes
+// first and pops afterwards, so a broker outage or crash between the two
+// leaves the batch buffered for the next flush instead of losing it.
 //
 // KEYS[1] = list key
-const drainScript = `local items = redis.call('LRANGE', KEYS[1], 0, -1)
-redis.call('DEL', KEYS[1])
-return items`
+const peekScript = `return redis.call('LRANGE', KEYS[1], 0, -1)`
+
+// popScript removes exactly the first N items (the peeked batch). Concurrent
+// appends only grow the tail, so popping the peeked count never removes an
+// alert that was not part of the published batch. The flush lock guarantees
+// no other flusher pops concurrently.
+//
+// KEYS[1] = list key
+// ARGV[1] = count
+const popScript = `return redis.call('LPOP', KEYS[1], tonumber(ARGV[1]))`
 
 func corrListKey(k string) string  { return "alga:corr:" + k }
 func cooldownKey(k string) string  { return "alga:cooldown:" + k }
@@ -135,7 +147,8 @@ func NewCorrelator(vkClient *vkclient.Client, publisher InvestigatePublisher, cf
 		flushTimers:  make(map[string]*time.Timer),
 		stopCh:       make(chan struct{}),
 		appendScript: vkclient.NewLuaScript(appendScript),
-		drainScript:  vkclient.NewLuaScript(drainScript),
+		peekScript:   vkclient.NewLuaScript(peekScript),
+		popScript:    vkclient.NewLuaScript(popScript),
 	}
 	return c
 }
@@ -191,12 +204,7 @@ func (c *Correlator) ProcessAlert(ctx context.Context, alert rabbitmq.Correlated
 		return nil
 	}
 
-	var rule *CorrelationRule
-	if c.correlationRules != nil {
-		if r, ok := c.correlationRules[alertName]; ok {
-			rule = &r
-		}
-	}
+	rule := c.ruleFor(alertName)
 	key, _ := CorrelationKeyWithRules(alert.Labels, rule)
 	window := c.effectiveWindow(rule)
 
@@ -393,8 +401,9 @@ func (c *Correlator) scheduleFlush(key string, window time.Duration) {
 	c.mu.Unlock()
 }
 
-// flushKey drains the pending list for a key under a SETNX lock, then
-// publishes a single InvestigateMessage.
+// flushKey flushes the pending list for a key under a SETNX lock. The list is
+// peeked (not drained) first and only popped after a successful publish, so a
+// broker outage or crash can't lose the batch — the next flush retries it.
 func (c *Correlator) flushKey(ctx context.Context, key string) error {
 	// SETNX flush lock so concurrent timers (multiple replicas) don't both
 	// publish.
@@ -414,19 +423,18 @@ func (c *Correlator) flushKey(ctx context.Context, key string) error {
 		delCooldownKey(context.Background(), c.vkClient, flushLockKey(key), "release-flush-lock")
 	}()
 
-	script := c.drainScript
+	script := c.peekScript
 	resp := script.Exec(ctx, c.vkClient.Client(), []string{corrListKey(key)}, nil)
 	if err := resp.Error(); err != nil {
-		return fmt.Errorf("drain list: %w", err)
+		return fmt.Errorf("peek pending list: %w", err)
 	}
 	items, err := resp.AsStrSlice()
 	if err != nil {
-		return fmt.Errorf("decode drained list: %w", err)
+		return fmt.Errorf("decode pending list: %w", err)
 	}
 	if len(items) == 0 {
 		return nil
 	}
-	metrics.CorrelatorWindowDepth.Add(-1)
 	alerts := make([]rabbitmq.CorrelatedAlert, 0, len(items))
 	for _, raw := range items {
 		var a rabbitmq.CorrelatedAlert
@@ -437,10 +445,25 @@ func (c *Correlator) flushKey(ctx context.Context, key string) error {
 		alerts = append(alerts, a)
 	}
 	if len(alerts) == 0 {
-		return nil
+		// Every item is undecodable (poison payloads); drop them so the
+		// window can't wedge the key forever.
+		return c.popPending(ctx, key, len(items))
 	}
 	metrics.CorrelatorFlushTotal.Add(1)
-	return c.flushInvestigation(ctx, key, alerts, alerts[0])
+	if err := c.flushInvestigation(ctx, key, alerts, alerts[0]); err != nil {
+		return err
+	}
+	return c.popPending(ctx, key, len(items))
+}
+
+// popPending removes the first n buffered alerts after a successful publish.
+func (c *Correlator) popPending(ctx context.Context, key string, n int) error {
+	resp := c.popScript.Exec(ctx, c.vkClient.Client(), []string{corrListKey(key)}, []string{strconv.Itoa(n)})
+	if err := resp.Error(); err != nil {
+		return fmt.Errorf("pop pending alerts: %w", err)
+	}
+	metrics.CorrelatorWindowDepth.Add(-1)
+	return nil
 }
 
 // Flush iterates all pending correlation lists with SCAN (never KEYS) and
@@ -471,6 +494,33 @@ func (c *Correlator) Flush(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+// Start launches the periodic orphan sweep when Config.SweepInterval > 0.
+// The sweep drains pending correlation lists whose flush timer was lost (e.g.
+// a replica crash), bounding how long a buffered alert can sit unflushed.
+func (c *Correlator) Start() {
+	if c.cfg.SweepInterval <= 0 {
+		return
+	}
+	c.wg.Add(1)
+	go func() {
+		defer c.wg.Done()
+		ticker := time.NewTicker(c.cfg.SweepInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-c.stopCh:
+				return
+			case <-ticker.C:
+				ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+				if err := c.Flush(ctx); err != nil {
+					logger.Error("Correlator sweep failed", "component", "correlator", "error", err)
+				}
+				cancel()
+			}
+		}
+	}()
 }
 
 // Stop drains any open windows synchronously and cancels pending timers.
@@ -627,13 +677,36 @@ func (c *Correlator) setCooldown(ctx context.Context, key, investigationID strin
 
 // RemoveCooldown clears all correlator state for the given alert labels. Used
 // when an operator manually closes a cooldown so the next firing alert opens
-// a fresh investigation.
+// a fresh investigation. Both the canonical key and any correlation-rule-
+// remapped key (solo/namespace/label_match) are cleared, since either may
+// have been used when the cooldown was written.
 func (c *Correlator) RemoveCooldown(ctx context.Context, labels map[string]string) {
 	if c == nil || c.vkClient == nil {
 		return
 	}
-	key, _ := CorrelationKey(labels)
-	for _, k := range []string{cooldownKey(key), corrListKey(key), flushLockKey(key)} {
-		delCooldownKey(ctx, c.vkClient, k, "reset-keys")
+	keys := make([]string, 0, 2)
+	if rule := c.ruleFor(labels["alertname"]); rule != nil {
+		if k, _ := CorrelationKeyWithRules(labels, rule); k != "" {
+			keys = append(keys, k)
+		}
 	}
+	if k, _ := CorrelationKey(labels); k != "" {
+		keys = append(keys, k)
+	}
+	for _, k := range keys {
+		for _, derived := range []string{cooldownKey(k), corrListKey(k), flushLockKey(k)} {
+			delCooldownKey(ctx, c.vkClient, derived, "reset-keys")
+		}
+	}
+}
+
+// ruleFor returns the correlation rule configured for an alertname, if any.
+func (c *Correlator) ruleFor(alertName string) *CorrelationRule {
+	if c.correlationRules == nil {
+		return nil
+	}
+	if r, ok := c.correlationRules[alertName]; ok {
+		return &r
+	}
+	return nil
 }

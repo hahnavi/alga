@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -183,7 +184,7 @@ func (s *Server) reopenLinkedInvestigations(fingerprint string) {
 	agentAvailable := latest.AgentID != "" && s.investigationForwarder != nil && s.investigationForwarder.AgentOnline(latest.AgentID)
 
 	if agentAvailable {
-		if err := s.alertInvestigationStore.TransitionAlertInvestigationStatus(ctx, invUUID, append(store.InvestigationTerminalStatuses, "paused"), "investigating"); err != nil {
+		if err := s.alertInvestigationStore.TransitionAlertInvestigationStatus(ctx, invUUID, slices.Concat(store.InvestigationTerminalStatuses, []string{"paused"}), "investigating"); err != nil {
 			logger.Error("failed to transition alert investigation on reopen", "investigation_id", invID, "error", err)
 			return
 		}
@@ -212,7 +213,7 @@ func (s *Server) reopenLinkedInvestigations(fingerprint string) {
 			logger.Error("failed to clear agent on alert investigation reopen", "investigation_id", invID, "error", err)
 			return
 		}
-		if err := s.alertInvestigationStore.TransitionAlertInvestigationStatus(ctx, invUUID, append(store.InvestigationTerminalStatuses, "paused"), "pending"); err != nil {
+		if err := s.alertInvestigationStore.TransitionAlertInvestigationStatus(ctx, invUUID, slices.Concat(store.InvestigationTerminalStatuses, []string{"paused"}), "pending"); err != nil {
 			logger.Error("failed to transition alert investigation to pending on reopen", "investigation_id", invID, "error", err)
 			return
 		}
@@ -793,7 +794,9 @@ func (s *Server) handleAlertReopenByNumber(w http.ResponseWriter, r *http.Reques
 	ev := store.AlertEventWithActor("reopened", time.Now(), a.actor)
 	if err := s.alertStore.ReopenAlertByNumber(alertNumber, ev); err != nil {
 		if errors.Is(err, store.ErrAlertNotFound) {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "alert is not resolved or does not exist")
+			// Same sentinel as ack/delete for this path (missing or not
+			// resolved); 404 keeps the by-number action codes aligned.
+			writeError(w, ErrorCodeNotFound, "not found")
 			return
 		}
 		writeInternalError(w, err, "failed to reopen alert")
@@ -961,6 +964,10 @@ func (s *Server) handleAlertInvestigate(w http.ResponseWriter, r *http.Request, 
 	}
 	if record == nil {
 		writeError(w, ErrorCodeNotFound, "alert not found")
+		return
+	}
+	if record.Status == "resolved" {
+		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "resolved alerts cannot be investigated")
 		return
 	}
 

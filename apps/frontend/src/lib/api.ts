@@ -2,6 +2,7 @@ import {
   validate,
   alertListSchema,
   alertDetailResponseSchema,
+  alertRelatedResponseSchema,
   incidentListSchema,
   incidentDetailSchema,
 } from "@/lib/validation";
@@ -1634,7 +1635,11 @@ export const api = {
     );
   },
   getAlertRelated(alertNumber: number) {
-    return request<AlertRelatedResponse>(`/api/v1/alerts/${e(alertNumber)}/related`);
+    return request<AlertRelatedResponse>(
+      `/api/v1/alerts/${e(alertNumber)}/related`,
+      undefined,
+      alertRelatedResponseSchema,
+    );
   },
   acknowledgeAlert(alertNumber: number) {
     return request<AlertRecord>(`/api/v1/alerts/${e(alertNumber)}/acknowledge`, {

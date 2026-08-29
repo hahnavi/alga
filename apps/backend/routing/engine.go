@@ -118,14 +118,30 @@ func (e *Engine) Route(alert types.Alert) RouteResult {
 	if len(defaults) > 0 {
 		return RouteResult{Destinations: defaults}
 	}
-	return RouteResult{Silenced: true}
+	// With no matching rule and no default destinations the alert is stored
+	// unsilenced without delivery (and still correlates into an
+	// investigation): "nothing configured" must not be conflated with an
+	// explicit silenced rule, and silence also suppresses investigations.
+	return RouteResult{}
 }
 
-// SetDefaults updates the default destinations used for every alert.
+// SetDefaults updates the default destinations used for every alert. Empty
+// channels are dropped and providers normalized, matching NewEngine.
 func (e *Engine) SetDefaults(defaults []Destination) {
+	cleaned := make([]Destination, 0, len(defaults))
+	for _, d := range defaults {
+		ch := strings.TrimSpace(d.Channel)
+		if ch == "" {
+			continue
+		}
+		cleaned = append(cleaned, Destination{
+			Provider: normalizeProvider(d.Provider),
+			Channel:  ch,
+		})
+	}
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	e.DefaultDestinations = defaults
+	e.DefaultDestinations = cleaned
 }
 
 func deduplicateDestinations(dests []Destination) []Destination {
@@ -158,7 +174,7 @@ func (e *Engine) match(ruleIdx int, rule Rule, alert types.Alert) bool {
 	conds := rule.Conditions
 	if normConds != nil {
 		for i, condition := range conds {
-			actual, _ := readNormalizedConditionField(normConds[i], alert)
+			actual, _ := readConditionField(normConds[i].Source, normConds[i].Field, alert)
 			matched := matching.MatchCondition(actual, normConds[i].Operator, condition.Value)
 			if matchAny && matched {
 				return true
@@ -172,7 +188,7 @@ func (e *Engine) match(ruleIdx int, rule Rule, alert types.Alert) bool {
 		}
 	} else {
 		for _, condition := range conds {
-			actual, _ := readConditionField(condition, alert)
+			actual, _ := readConditionField(condition.Source, condition.Field, alert)
 			op := strings.ToLower(strings.TrimSpace(condition.Operator))
 			matched := matching.MatchCondition(actual, op, condition.Value)
 			if matchAny && matched {
@@ -193,40 +209,11 @@ func (e *Engine) match(ruleIdx int, rule Rule, alert types.Alert) bool {
 	return true
 }
 
-func readNormalizedConditionField(nc normalizedCondition, alert types.Alert) (string, bool) {
-	switch nc.Source {
-	case "annotations":
-		v, ok := alert.Annotations[nc.Field]
-		return v, ok
-	case "alert":
-		switch nc.Field {
-		case "status":
-			return alert.Status, true
-		case "fingerprint":
-			return alert.Fingerprint, true
-		case "generator_url":
-			return alert.GeneratorURL, true
-		case "silence_url":
-			return alert.SilenceURL, true
-		case "dashboard_url":
-			return alert.DashboardURL, true
-		case "panel_url":
-			return alert.PanelURL, true
-		case "alertname":
-			return alert.Labels["alertname"], true
-		default:
-			return "", false
-		}
-	default:
-		v, ok := alert.Labels[nc.Field]
-		return v, ok
-	}
-}
-
-func readConditionField(condition config.RouteCondition, alert types.Alert) (string, bool) {
-	source := strings.ToLower(strings.TrimSpace(condition.Source))
-	field := strings.TrimSpace(condition.Field)
-	switch source {
+// readConditionField resolves a condition's source/field against an alert.
+// source is matched case-insensitively after trimming; unknown sources fall
+// back to labels.
+func readConditionField(source, field string, alert types.Alert) (string, bool) {
+	switch strings.ToLower(strings.TrimSpace(source)) {
 	case "annotations":
 		v, ok := alert.Annotations[field]
 		return v, ok

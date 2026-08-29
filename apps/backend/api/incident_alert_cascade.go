@@ -51,6 +51,14 @@ type cascadeSSEPublisher interface {
 	Publish(event sse.Event)
 }
 
+// cascadeDedupRemover clears the ingestion dedup tracking for cascaded alerts
+// so a re-fired fingerprint within the dedup TTL still creates a new alert
+// record instead of being swallowed by a stale cache entry. Callers pass nil
+// when no dedup cache is configured.
+type cascadeDedupRemover interface {
+	RemoveTracking(fingerprint string)
+}
+
 // runAlertCascade resolves linked firing alerts for an incident and emits the
 // per-alert audit + SSE side effects. Best-effort: the incident transition has
 // already succeeded before this is called. Returns the structured result so the
@@ -60,6 +68,7 @@ func runAlertCascade(
 	alertStore cascadeAlertStore,
 	auditStore store.AuditStore,
 	ssePublisher cascadeSSEPublisher,
+	dedup cascadeDedupRemover,
 	incidentNumber int64,
 	actor CascadeActor,
 ) store.AlertCascadeResult {
@@ -80,6 +89,9 @@ func runAlertCascade(
 	}
 
 	for _, rec := range result.Resolved {
+		if dedup != nil {
+			dedup.RemoveTracking(rec.Fingerprint)
+		}
 		if auditStore != nil {
 			auditStore.Log(store.AuditAlertAutoResolved, &actor.ID, actor.Name, actor.IP, actor.UserAgent, true, map[string]any{
 				"incident_number": incidentNumber,

@@ -189,7 +189,7 @@ func (s *Server) handleResolveIncident(w http.ResponseWriter, r *http.Request, i
 	}
 	s.ensurePostMortemDraft(r.Context(), updated, "Incident resolved")
 
-	cascade := runAlertCascade(r.Context(), s.alertStore, s.auditStore, cascadePublisherFromDual(s.ssePublisher), mustParseIncidentNumber(incidentID), cascadeActorFromRequest(r))
+	cascade := runAlertCascade(r.Context(), s.alertStore, s.auditStore, cascadePublisherFromDual(s.ssePublisher), s.dedupCache, mustParseIncidentNumber(incidentID), cascadeActorFromRequest(r))
 
 	s.invalidateDashboardCache(r)
 	writeData(w, http.StatusOK, incidentResolveResponse{Incident: updated, Cascade: cascadeSummary(cascade)})
@@ -256,7 +256,7 @@ func (s *Server) handleCloseIncident(w http.ResponseWriter, r *http.Request, inc
 		}
 	}
 
-	cascade := runAlertCascade(r.Context(), s.alertStore, s.auditStore, cascadePublisherFromDual(s.ssePublisher), mustParseIncidentNumber(incidentID), cascadeActorFromRequest(r))
+	cascade := runAlertCascade(r.Context(), s.alertStore, s.auditStore, cascadePublisherFromDual(s.ssePublisher), s.dedupCache, mustParseIncidentNumber(incidentID), cascadeActorFromRequest(r))
 
 	s.invalidateDashboardCache(r)
 	writeData(w, http.StatusOK, incidentResolveResponse{Incident: updated, Cascade: cascadeSummary(cascade)})

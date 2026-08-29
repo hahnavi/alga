@@ -7,6 +7,7 @@ const props = withDefaults(
   defineProps<{
     workflowStatus: string;
     statusBusy: boolean;
+    canWrite: boolean;
     canDelete: boolean;
     canCreateIncident: boolean;
     showAckButton: boolean;
@@ -34,7 +35,7 @@ type Item = {
 
 const items = computed<Item[]>(() => {
   const out: Item[] = [];
-  if (!props.showAckButton) {
+  if (props.canWrite && !props.showAckButton) {
     if (props.workflowStatus === "open") {
       out.push({
         label: "Mark resolved",

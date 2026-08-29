@@ -93,7 +93,7 @@ func (s *Server) AgentRevokeTokenByIDFn() func(w http.ResponseWriter, r *http.Re
 // CascadeActor and delegates to runAlertCascade.
 func (s *Server) AgentAlertCascadeFn() func(ctx context.Context, alertStore store.Store, auditStore store.AuditStore, publisher *sse.DualPublisher, incidentNumber int64, agentID uuid.UUID, agentName string) store.AlertCascadeResult {
 	return func(ctx context.Context, alertStore store.Store, auditStore store.AuditStore, publisher *sse.DualPublisher, incidentNumber int64, agentID uuid.UUID, agentName string) store.AlertCascadeResult {
-		return runAlertCascade(ctx, alertStore, auditStore, cascadePublisherFromDual(publisher), incidentNumber, CascadeActor{
+		return runAlertCascade(ctx, alertStore, auditStore, cascadePublisherFromDual(publisher), s.dedupCache, incidentNumber, CascadeActor{
 			ID:   agentID,
 			Type: "agent",
 			Name: agentName,

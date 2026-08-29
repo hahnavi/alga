@@ -55,11 +55,17 @@ func TestEngineRoute_SilencedRule(t *testing.T) {
 	}
 }
 
-func TestEngineRoute_NoRulesSilenced(t *testing.T) {
+func TestEngineRoute_NoRulesUnsilenced(t *testing.T) {
 	e := NewEngine(nil)
 	res := e.Route(types.Alert{Labels: map[string]string{"a": "b"}})
-	if !res.Silenced {
-		t.Fatal("expected default silenced")
+	// "Nothing configured" stores the alert unsilenced without delivery; it
+	// must not be conflated with an explicit silenced rule (silence also
+	// suppresses investigations).
+	if res.Silenced {
+		t.Fatal("expected unsilenced with no rules and no defaults")
+	}
+	if len(res.Destinations) != 0 {
+		t.Fatalf("expected no destinations, got %d", len(res.Destinations))
 	}
 }
 

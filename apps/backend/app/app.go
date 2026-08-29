@@ -110,10 +110,10 @@ func (a *App) Shutdown(ctx context.Context) error {
 	}
 
 	if a.correlator != nil {
+		// Stop terminates the orphan sweep and flush timers, then drains all
+		// pending correlation windows synchronously.
 		flushCtx, flushCancel := context.WithTimeout(context.Background(), 10*time.Second)
-		if err := a.correlator.Flush(flushCtx); err != nil {
-			logger.Error("Failed to flush correlator on shutdown", "error", err)
-		}
+		a.correlator.Stop(flushCtx)
 		flushCancel()
 	}
 

@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -332,7 +333,7 @@ func (e *AgentToolExecutor) ExecuteInvTool(ctx context.Context, agentRec *store.
 			if store.IsReopenableInvestigationStatus(inv.Status) {
 				agentAvailable := inv.AgentID != "" && e.investigationForwarder != nil && e.investigationForwarder.AgentOnline(inv.AgentID)
 				if agentAvailable {
-					if err := e.alertInvestigationStore.TransitionAlertInvestigationStatus(ctx, investigationUUID, append(store.InvestigationTerminalStatuses, "paused"), "investigating"); err != nil {
+					if err := e.alertInvestigationStore.TransitionAlertInvestigationStatus(ctx, investigationUUID, slices.Concat(store.InvestigationTerminalStatuses, []string{"paused"}), "investigating"); err != nil {
 						logger.WarnCtx(ctx, "inv_tool: reopen transition to investigating failed", "investigation_id", investigationID, "error", err)
 					} else {
 						e.publishInvestigationStatusChange(investigationID, "investigating")

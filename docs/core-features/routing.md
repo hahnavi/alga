@@ -15,9 +15,9 @@ When an alert arrives, the routing engine evaluates rules in order. The **first 
 
 Each rule has:
 
-- **Name** — human-readable identifier
 - **Conditions** — one or more label/field matchers
 - **Destinations** — Slack channels and/or Mattermost channels to notify
+- **Silenced** — when `true`, matching alerts are stored but not delivered or investigated (see [Silenced Rules](#silenced-rules))
 
 ## Condition Operators
 

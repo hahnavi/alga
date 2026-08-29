@@ -144,7 +144,7 @@ Request field limits:
 | `alertname`   | yes      | 256 chars                                 | Copied into `labels["alertname"]`; label keys must match `[A-Za-z_][A-Za-z0-9_]*` |
 | `message`     | no       | 4096 chars                                | Becomes `annotations["summary"]` unless an explicit summary annotation exists     |
 | `description` | no       | 4096 chars                                | Becomes `annotations["description"]` unless already present                       |
-| `source`      | no       | free text                                 | Defaults to `grafana`; manual alerts typically use `manual`                       |
+| `source`      | no       | 2048 chars                                | Defaults to `grafana`; manual alerts typically use `manual`                       |
 | `labels`      | no       | 32 entries; keys ≤256 chars; values ≤4096 | Values are trimmed and single-line                                                |
 | `annotations` | no       | 32 entries; keys ≤256 chars; values ≤4096 | Values may be multi-line                                                          |
 
@@ -170,14 +170,14 @@ Agent endpoints use fingerprint-based routing — see [Agent REST API](/api-refe
 
 Each alert tracks a timeline of events (acknowledge, resolve, reopen, investigate, etc.). Each event records:
 
-| Field                | Description                                                                                 |
-| -------------------- | ------------------------------------------------------------------------------------------- |
-| `type`               | Event type (e.g., `fired`, `acked`, `resolved`, `reopened`)                                 |
-| `timestamp`          | When the event occurred                                                                     |
-| `actor_user_id`      | ID of the acting user (empty for system/agent-originated events)                            |
-| `actor_username`     | Username of the actor (e.g., `grafana:monitoring`, an agent name, or a username)            |
-| `actor_display_name` | Human-readable actor name shown in the UI                                                   |
-| `source`             | Origin of the event (e.g., `api`, `user`, `agent`, `system`, `webhook`, `incident_cascade`) |
+| Field                | Description                                                                                                              |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `type`               | Event type (e.g., `fired`, `acked`, `resolved`, `reopened`)                                                              |
+| `timestamp`          | When the event occurred                                                                                                  |
+| `actor_user_id`      | ID of the acting user (empty for system/agent-originated events)                                                         |
+| `actor_username`     | Username of the actor (e.g., `grafana:monitoring`, an agent name, or a username)                                         |
+| `actor_display_name` | Human-readable actor name shown in the UI                                                                                |
+| `source`             | Origin of the event (e.g., `grafana`, `user`, `agent`, `system`, `heartbeat`, `incident_cascade`, `triage_auto_resolve`) |
 
 Actors are stored as user-or-system strings (`actor_user_id` / `actor_username` / `actor_display_name`) rather than a `type`/`id` pair; the separate free-text `source` column records where the event came from.
 
@@ -215,19 +215,19 @@ Returns related alerts sharing the same correlation key and the linked incident 
 
 ## Alert Correlation
 
-When `CORRELATION_WINDOW` is set (e.g., `5m`), alerts that share the same correlation key (deployment name + alertname) within the window are grouped into a single investigation.
+Alerts that share the same correlation key within the correlation window are grouped into a single investigation. The key is derived deterministically from the alert's labels: the first workload-identity label found (`deployment`, `statefulset`, `daemonset`, or `job`) combined with `namespace` and `alertname` — falling back to `namespace:alertname`, then a label-set hash when neither exists.
 
 The correlator:
 
-1. Buffers incoming alerts by correlation key
+1. Buffers incoming alerts by correlation key (default window `15s`; `0` flushes each alert immediately)
 2. Waits for the window to expire
 3. Creates a single investigation covering all correlated alerts
 4. Honors `CORRELATION_COOLDOWN_TTL` (default `30m`) to prevent duplicate investigations on the same key
 
-| Variable                   | Default        | Description                                                           |
-| -------------------------- | -------------- | --------------------------------------------------------------------- |
-| `CORRELATION_WINDOW`       | `0` (disabled) | Time window for grouping related alerts                               |
-| `CORRELATION_COOLDOWN_TTL` | `30m`          | Cooldown before a new investigation opens on the same correlation key |
+| Variable                   | Default | Description                                                           |
+| -------------------------- | ------- | --------------------------------------------------------------------- |
+| `CORRELATION_WINDOW`       | `15s`   | Time window for grouping related alerts (`0` disables buffering)      |
+| `CORRELATION_COOLDOWN_TTL` | `30m`   | Cooldown before a new investigation opens on the same correlation key |
 
 ## Delivery Targets
 

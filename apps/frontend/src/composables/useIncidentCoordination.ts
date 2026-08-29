@@ -1,11 +1,5 @@
 import { computed, ref, shallowRef, type Ref } from "vue";
-import {
-  api,
-  type AgentTokenRow,
-  type CoordinationTask,
-  type CoordinationTaskCreate,
-  type IncidentCoordinationMessage,
-} from "@/lib/api";
+import { api, type AgentTokenRow, type IncidentCoordinationMessage } from "@/lib/api";
 import { getErrorMessage } from "@/lib/error";
 import { useToast } from "@/lib/toast";
 import { useStickToBottom } from "@/composables/useStickToBottom";
@@ -22,10 +16,9 @@ type ThreadParticipant = {
 
 /**
  * Owns the coordination stream on the incident detail page:
- *   - the chat messages + dispatchable tasks
+ *   - the chat messages
  *   - the agent-typing indicator
- *   - the editor (text / kind / submitting) and the dispatch-task
- *     dialog (goal / kind / role / submitting)
+ *   - the editor (text / kind / submitting)
  *   - the status-update feed
  *   - the participants computed list
  *
@@ -37,7 +30,6 @@ export function useIncidentCoordination(incidentNumber: Ref<number>) {
   const { loadUsers } = useUsers();
 
   const coordinationMessages = shallowRef<IncidentCoordinationMessage[]>([]);
-  const coordinationTasks = shallowRef<CoordinationTask[]>([]);
   const statusUpdates = ref<IncidentCoordinationMessage[]>([]);
   const statusUpdatesLoading = ref(true);
   const statusUpdatesError = ref<string | null>(null);
@@ -45,12 +37,6 @@ export function useIncidentCoordination(incidentNumber: Ref<number>) {
   const coordinationText = ref("");
   const coordinationSubmitting = ref(false);
   const coordinationKind = ref<"chat" | "decision" | "action">("chat");
-
-  const showDispatchTaskDialog = ref(false);
-  const dispatchTaskGoal = ref("");
-  const dispatchTaskKind = ref<CoordinationTaskCreate["kind"]>("investigate");
-  const dispatchTaskRole = ref<CoordinationTaskCreate["assignee_role"]>("responder");
-  const dispatchTaskSubmitting = ref(false);
 
   const coordinationThreadEl = ref<HTMLElement | null>(null);
   const { stickToBottom: stickCoordinationToBottom, scrollToBottom: scrollCoordinationToBottom } =
@@ -132,15 +118,6 @@ export function useIncidentCoordination(incidentNumber: Ref<number>) {
     }
   }
 
-  async function loadCoordinationTasks() {
-    try {
-      coordinationTasks.value = await api.getIncidentCoordinationTasks(incidentNumber.value);
-    } catch (err) {
-      coordinationTasks.value = [];
-      push(getErrorMessage(err, "Failed to load coordination tasks"), "error");
-    }
-  }
-
   async function fetchStatusUpdates(silent = false) {
     if (!silent) statusUpdatesLoading.value = true;
     statusUpdatesError.value = null;
@@ -152,45 +129,6 @@ export function useIncidentCoordination(incidentNumber: Ref<number>) {
       push(msg, "error");
     } finally {
       statusUpdatesLoading.value = false;
-    }
-  }
-
-  function openDispatchTaskDialog() {
-    dispatchTaskGoal.value = "";
-    dispatchTaskKind.value = "investigate";
-    dispatchTaskRole.value = "responder";
-    showDispatchTaskDialog.value = true;
-  }
-
-  async function submitDispatchTask() {
-    const goal = dispatchTaskGoal.value.trim();
-    if (!goal || dispatchTaskSubmitting.value) return;
-    dispatchTaskSubmitting.value = true;
-    try {
-      await api.createIncidentCoordinationTask(incidentNumber.value, {
-        kind: dispatchTaskKind.value,
-        assignee_role: dispatchTaskRole.value,
-        goal,
-      });
-      showDispatchTaskDialog.value = false;
-      await loadCoordinationTasks();
-      push("Coordination task dispatched", "success");
-    } catch (err) {
-      push(getErrorMessage(err, "Failed to dispatch task"), "error");
-    } finally {
-      dispatchTaskSubmitting.value = false;
-    }
-  }
-
-  async function cancelCoordinationTask(task: CoordinationTask) {
-    try {
-      await api.patchIncidentCoordinationTask(incidentNumber.value, task.id, {
-        status: "cancelled",
-      });
-      await loadCoordinationTasks();
-      push("Coordination task cancelled", "success");
-    } catch (err) {
-      push(getErrorMessage(err, "Failed to cancel task"), "error");
     }
   }
 
@@ -238,7 +176,6 @@ export function useIncidentCoordination(incidentNumber: Ref<number>) {
 
   function reset() {
     coordinationMessages.value = [];
-    coordinationTasks.value = [];
     statusUpdates.value = [];
     statusUpdatesError.value = null;
     statusUpdatesLoading.value = true;
@@ -249,18 +186,12 @@ export function useIncidentCoordination(incidentNumber: Ref<number>) {
 
   return {
     coordinationMessages,
-    coordinationTasks,
     statusUpdates,
     statusUpdatesLoading,
     statusUpdatesError,
     coordinationText,
     coordinationSubmitting,
     coordinationKind,
-    showDispatchTaskDialog,
-    dispatchTaskGoal,
-    dispatchTaskKind,
-    dispatchTaskRole,
-    dispatchTaskSubmitting,
     coordinationThreadEl,
     coordinationTyping,
     coordinationTypingSource,
@@ -273,11 +204,7 @@ export function useIncidentCoordination(incidentNumber: Ref<number>) {
     stickCoordinationToBottom,
     scrollCoordinationToBottom,
     loadCoordinationMessages,
-    loadCoordinationTasks,
     fetchStatusUpdates,
-    openDispatchTaskDialog,
-    submitDispatchTask,
-    cancelCoordinationTask,
     loadMentionTargets,
     submitCoordinationMessage,
     reset,

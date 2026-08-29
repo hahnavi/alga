@@ -408,26 +408,12 @@ func (e *AgentToolExecutor) authorizeIncidentTool(ctx context.Context, agentRec 
 		if assignedInvestigator || hasRole(ics.RoleResponder) {
 			return nil
 		}
-	case "set_incident_priority", "trigger_escalation", "mitigate_incident", "resolve_incident", "begin_triage", "promote_incident", "assign_incident_role", "set_incident_resolution_docs", "dispatch_task", "synthesize_findings":
+	case "set_incident_priority", "trigger_escalation", "mitigate_incident", "resolve_incident", "begin_triage", "promote_incident", "assign_incident_role", "set_incident_resolution_docs":
 		if hasRole(ics.RoleIncidentCommander) {
 			return nil
 		}
 		if op == "resolve_incident" {
 			return errors.New("investigator agents cannot resolve incidents directly; notify the incident commander for verification")
-		}
-	case "claim_task":
-		// Any agent holding an active incident role may claim tasks targeted at
-		// their role; the performer re-derives the role from active roles so an
-		// agent cannot claim a task for a role they do not hold.
-		if hasRole(ics.RoleIncidentCommander) || hasRole(ics.RoleCommunicationsLead) || hasRole(ics.RoleResponder) || assignedInvestigator {
-			return nil
-		}
-	case "complete_task":
-		// Any agent holding an active role or assigned to an active investigation
-		// may complete a task they are the assignee of; the performer verifies
-		// assignee ownership before completing.
-		if hasRole(ics.RoleIncidentCommander) || hasRole(ics.RoleCommunicationsLead) || hasRole(ics.RoleResponder) || assignedInvestigator {
-			return nil
 		}
 	}
 	return fmt.Errorf("agent is not assigned or not authorized for incident tool %q by active incident role", op)

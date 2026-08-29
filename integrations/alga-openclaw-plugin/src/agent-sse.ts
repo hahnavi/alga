@@ -82,7 +82,9 @@ export class AlgaSSEClient {
         headers: { Authorization: `Bearer ${this.opts.token}` },
       });
     } catch (err) {
-      this.opts.log?.error(`Alga SSE init failed: ${err instanceof Error ? err.message : String(err)}`);
+      this.opts.log?.error(
+        `Alga SSE init failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
       this.scheduleReconnect();
       return;
     }
@@ -137,12 +139,6 @@ export class AlgaSSEClient {
       this.dispatchSignal("investigation_abort", ev.data);
     });
 
-    es.addEventListener("coordination_task_dispatched", (ev: MessageEvent) => {
-      this.opts.log?.info(
-        `Alga SSE coordination_task_dispatched: ${typeof ev.data === "string" ? ev.data : ""}`,
-      );
-    });
-
     es.addEventListener("summarize_incident", (ev: MessageEvent) => {
       this.opts.log?.info(
         `Alga SSE summarize_incident: ${typeof ev.data === "string" ? ev.data : ""}`,
@@ -162,10 +158,7 @@ export class AlgaSSEClient {
     });
   }
 
-  private dispatchSignal(
-    signalType: InvestigationSignalEventType,
-    rawData: unknown,
-  ): void {
+  private dispatchSignal(signalType: InvestigationSignalEventType, rawData: unknown): void {
     if (!this.opts.onInvestigationSignal) return;
     if (typeof rawData !== "string" || !rawData) return;
     try {

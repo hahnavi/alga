@@ -110,14 +110,6 @@ func (s *InvestigationScheduler) OnAgentOffline(agentIDHex string) {
 		}
 		logger.Info("Reset investigating investigations for absent agent after grace", "component", "scheduler", "agent_id", agentIDHex)
 		s.NotifyPending()
-		if s.coordinationTaskStore != nil {
-			if n, err := s.coordinationTaskStore.RevertByAgent(resetCtx, agentIDHex); err != nil {
-				logger.Error("Failed to revert coordination tasks for agent", "component", "scheduler", "agent_id", agentIDHex, "error", err)
-			} else if n > 0 {
-				logger.Info("Reverted coordination tasks for absent agent", "component", "scheduler", "agent_id", agentIDHex, "count", n)
-				s.NotifyPending()
-			}
-		}
 		if agentUID, parseErr := uuid.Parse(agentIDHex); parseErr == nil {
 			s.endAgentRolesOnDisconnect(context.Background(), agentUID)
 		}

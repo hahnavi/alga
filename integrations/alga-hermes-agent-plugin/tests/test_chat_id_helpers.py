@@ -214,27 +214,6 @@ class ChatIDHelperTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("alga_get_incident_context", allowed)
         self.assertNotIn("alga_resolve_incident", allowed)
 
-    async def test_coordination_task_dispatched_activates_agent(self):
-        module = _load_register_module()
-        adapter = module.AlgaAdapter(_PlatformConfig())
-
-        raw = json.dumps({
-            "type": "coordination_task_dispatched",
-            "message_id": "m-comms-1",
-            "chat_id": "incident_coord_24",
-            "text": "Commander dispatched a communicate-kind task for Incident 24.",
-            "sender_id": "cmd-1",
-            "sender_name": "commander-agent",
-            "incident_id": "24",
-            "incident_role": "communications_lead",
-            "status_level": "investigating",
-        })
-        await adapter._handle_sse_event("coordination_task_dispatched", raw)
-
-        # The dispatched coordination task must reach the agent as an actionable
-        # message so the assigned role (e.g. communicator) acts on it.
-        self.assertEqual(len(adapter.handled_messages), 1)
-        self.assertEqual(adapter.handled_messages[0].source["chat_id"], "incident_coord_24")
 
     async def test_incident_comms_task_event_no_longer_handled(self):
         # The legacy incident_comms_task SSE event was removed in favor of
@@ -357,8 +336,6 @@ class ChatIDHelperTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("incident commander", tools["alga_resolve_incident"].lower())
         self.assertIn("incident commander", tools["alga_mitigate_incident"].lower())
         self.assertIn("responder", tools["alga_set_incident_severity"].lower())
-        self.assertIn("commander-only", tools["alga_dispatch_task"].lower())
-        self.assertIn("commander-only", tools["alga_synthesize_findings"].lower())
         self.assertIn("assigned incident roles", tools["alga_get_incident_context"].lower())
         self.assertIn("do not mention internal alert", tools["alga_publish_status_update"].lower())
         coordination = tools["alga_post_handoff"].lower()
@@ -822,7 +799,8 @@ class ResolutionDocsTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("alga_set_incident_resolution_docs", module._TOOL_HANDLERS)
 
     async def test_request_status_update_tool_removed(self):
-        # L6 removed alga_request_status_update in favor of alga_dispatch_task.
+        # alga_request_status_update was removed; status updates are published directly
+        # via alga_publish_status_update or requested by @mentioning the communicator.
         module = _load_register_module()
         names = {t["name"] for t in module._ALGA_TOOLS}
         self.assertNotIn("alga_request_status_update", names)

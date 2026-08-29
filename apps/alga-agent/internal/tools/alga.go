@@ -27,7 +27,6 @@ type AlgaClient interface {
 	AddIncidentTimeline(ctx context.Context, incidentNumber int64, message, eventType string) error
 	ListServices(ctx context.Context, params map[string]string) (*alga.ServiceListResponse, error)
 	WhoIsOnCall(ctx context.Context) ([]alga.OnCallEntry, error)
-	ListIncidentTasks(ctx context.Context, incidentNumber int64, params map[string]string) ([]alga.CoordinationTask, error)
 }
 
 // *alga.AlgaClient satisfies AlgaClient at compile time. If the SDK ever
@@ -102,11 +101,10 @@ const algaCategory = "Alga Platform"
 // single closure so all tools share the same client reference without a
 // package-level var.
 func buildAlgaTools(client AlgaClient) []Tool {
-	return append(append(append(append(append(
+	return append(append(append(append(
 		alertTools(client),
 		investigationTools(client)...),
 		incidentTools(client)...),
 		knowledgeMemoryTools(client)...),
-		coordinationTools(client)...),
 		miscTools(client)...)
 }

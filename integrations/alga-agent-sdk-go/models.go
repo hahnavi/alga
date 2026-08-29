@@ -42,24 +42,6 @@ type Alert struct {
 	UpdatedAt       time.Time          `json:"updated_at"`
 }
 
-// CoordinationTask describes a unit of work dispatched by an incident
-// commander to a role (responder, communicator, verifier). Tasks are the
-// modern coordination primitive; the older post_handoff flow is deprecated.
-type CoordinationTask struct {
-	TaskID          string         `json:"task_id,omitempty"`
-	IncidentNumber  int64          `json:"incident_number,omitempty"`
-	Kind            string         `json:"kind,omitempty"`
-	Goal            string         `json:"goal,omitempty"`
-	AssigneeRole    string         `json:"assignee_role,omitempty"`
-	AssigneeAgentID string         `json:"assignee_agent_id,omitempty"`
-	Status          string         `json:"status,omitempty"`
-	Result          map[string]any `json:"result,omitempty"`
-	InputContext    map[string]any `json:"input_context,omitempty"`
-	ParentTaskID    string         `json:"parent_task_id,omitempty"`
-	CreatedAt       *time.Time     `json:"created_at,omitempty"`
-	CompletedAt     *time.Time     `json:"completed_at,omitempty"`
-}
-
 type KnowledgeNote struct {
 	ID                    string            `json:"id"`
 	Kind                  string            `json:"kind"`
@@ -279,32 +261,6 @@ type PeerReplyEvent struct {
 	RepliedByAgentID   string    `json:"replied_by_agent_id,omitempty"`
 	RepliedByAgentName string    `json:"replied_by_agent_name,omitempty"`
 	AnsweredAt         time.Time `json:"answered_at"`
-}
-
-// CoordinationTaskEvent is published by the backend when an incident commander
-// dispatches a task to this agent's role. Agents respond by claiming the task,
-// doing the work, then completing it with a typed result.
-type CoordinationTaskEvent struct {
-	Type            string         `json:"type"`
-	ChatID          string         `json:"chat_id,omitempty"`
-	TaskID          string         `json:"task_id"`
-	IncidentNumber  int64          `json:"incident_number"`
-	Kind            string         `json:"kind"`
-	Goal            string         `json:"goal"`
-	Text            string         `json:"text,omitempty"`
-	AssigneeRole    string         `json:"assignee_role,omitempty"`
-	AssigneeAgentID string         `json:"assignee_agent_id,omitempty"`
-	InputContext    map[string]any `json:"input_context,omitempty"`
-	ParentTaskID    string         `json:"parent_task_id,omitempty"`
-}
-
-// GoalText returns the task objective, preferring Goal and falling back to
-// Text (the backend historically sent the goal under the "text" key).
-func (e CoordinationTaskEvent) GoalText() string {
-	if e.Goal != "" {
-		return e.Goal
-	}
-	return e.Text
 }
 
 // SummarizeIncidentEvent asks a communicate-capable agent to produce an

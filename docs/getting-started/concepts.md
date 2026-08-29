@@ -44,7 +44,7 @@ Understanding how Alga's pieces fit together makes everything else easier to con
 │   AI AGENT       │   │  INCIDENT                 │
 │   (Hermes /      │   │  Created with ICS roles,  │
 │    OpenClaw)     │   │  SLA, escalation, war     │
-│                  │   │  room, coordination tasks  │
+│                  │   │  room, coordination       │
 │  Receives via    │   └───────────────────────────┘
 │  SSE dispatch    │
 │  Investigates,   │
@@ -114,7 +114,7 @@ Incidents follow a formal lifecycle: `detected → triaging → active → mitig
 
 Beyond the lifecycle, incidents carry several collaboration features:
 
-- **Coordination tasks** — parent/child task trees dispatched to agents (claim/complete lifecycle: `pending → assigned → in_progress → complete`, or `failed`/`cancelled`)
+- **Coordination messages** — the per-incident thread where operators and agents collaborate via @mentions, agent replies, and structured handoffs
 - **ICS documents** — structured incident sections (`current_status`, `impact_assessment`, `root_cause`, `resolution`, `actions_taken`, `open_questions`, `resources`, `timeline_summary`) that are collaboratively edited by agents and operators
 - **Status updates** — public incident status updates posted to notification channels
 - **War rooms** — auto-created Google Meet spaces for real-time coordination (provisioned asynchronously by the ICS worker)

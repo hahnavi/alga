@@ -16,7 +16,6 @@ from .errors import AlgaAPIError, AlgaAuthError, AlgaConnectionError
 from .models import (
     Alert,
     CommandResponse,
-    CoordinationTask,
     Incident,
     IncidentContext,
     KnowledgeListResponse,
@@ -67,7 +66,6 @@ class AlgaClient:
         self.on_peer_finding: Optional[EventHandler] = None
         self.on_peer_ask: Optional[EventHandler] = None
         self.on_peer_reply: Optional[EventHandler] = None
-        self.on_coordination_task: Optional[EventHandler] = None
         self.on_summarize_incident: Optional[EventHandler] = None
         self.on_alert_auto_resolved: Optional[EventHandler] = None
         self.on_incident_comms_stale: Optional[EventHandler] = None
@@ -97,7 +95,6 @@ class AlgaClient:
         self._sse.on_peer_finding = self.on_peer_finding
         self._sse.on_peer_ask = self.on_peer_ask
         self._sse.on_peer_reply = self.on_peer_reply
-        self._sse.on_coordination_task = self.on_coordination_task
         self._sse.on_summarize_incident = self.on_summarize_incident
         self._sse.on_alert_auto_resolved = self.on_alert_auto_resolved
         self._sse.on_incident_comms_stale = self.on_incident_comms_stale
@@ -236,15 +233,6 @@ class AlgaClient:
 
     async def reopen_alert(self, fingerprint: str) -> None:
         await self._post(f"/api/v1/agent/alerts/{_escape(fingerprint)}/reopen")
-
-    async def list_incident_tasks(
-        self,
-        incident_number: int,
-        params: Optional[dict[str, str]] = None,
-    ) -> list[CoordinationTask]:
-        path = _with_query(f"/api/v1/agent/incidents/{incident_number}/tasks", params)
-        data = await self._get(path)
-        return [CoordinationTask.model_validate(d) for d in _as_list(data)]
 
     async def get_incident(self, incident_number: int) -> IncidentContext:
         data = await self._get(f"/api/v1/agent/incidents/{incident_number}")

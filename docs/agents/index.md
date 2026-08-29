@@ -73,7 +73,7 @@ Agents are not isolated workers:
 
 - **[Peer Ask](/agents/peer-ask)** — one agent asks another (directed or broadcast by type) a question and gets the answer over SSE
 - **[Agent Memory](/agents/memory)** — learnings extracted from completed investigations are recalled semantically in future ones
-- **Coordination tasks** — during incidents, a commander agent decomposes work into typed tasks dispatched to other agents (see [Coordination](/incident-management/coordination))
+- **Incident coordination** — during incidents, a commander agent delegates via @mentions in the coordination thread and agents hand work back with structured handoffs (see [Coordination](/incident-management/coordination))
 
 ## See Also
 

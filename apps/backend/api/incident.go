@@ -385,19 +385,6 @@ func (s *Server) handleIncidentRoutes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if suffix == "coordination/tasks" || strings.HasSuffix(suffix, "/coordination/tasks") {
-		incidentID := strings.TrimSuffix(suffix, "/coordination/tasks")
-		if incidentID == "coordination/tasks" {
-			incidentID = ""
-		}
-		if incidentID == "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing incident id")
-			return
-		}
-		s.handleIncidentCoordinationTasks(w, r, incidentID)
-		return
-	}
-
 	if suffix == "status-updates" || strings.HasSuffix(suffix, "/status-updates") {
 		incidentID := strings.TrimSuffix(suffix, "/status-updates")
 		if incidentID == "status-updates" {

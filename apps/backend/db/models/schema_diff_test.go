@@ -19,7 +19,7 @@ func allModels() []any {
 		(*ActionItem)(nil), (*AgentAsk)(nil), (*AgentDMMessage)(nil), (*AgentMemory)(nil),
 		(*AgentToken)(nil), (*Alert)(nil), (*AlertEvent)(nil), (*AlertInvestigation)(nil),
 		(*AlertInvestigationAlert)(nil), (*AlertInvestigationEvent)(nil), (*AlertInvestigationUpdate)(nil),
-		(*AuditLog)(nil), (*CoordinationTask)(nil), (*CredentialProvider)(nil), (*DeliveryTarget)(nil),
+		(*AuditLog)(nil), (*CredentialProvider)(nil), (*DeliveryTarget)(nil),
 		(*EscalationPolicy)(nil), (*HandoffRecord)(nil), (*Heartbeat)(nil), (*ICSRoleAssignment)(nil),
 		(*Incident)(nil), (*IncidentCoordinationMessage)(nil), (*IncidentDocument)(nil),
 		(*IncidentInvestigation)(nil), (*IncidentInvestigationUpdate)(nil), (*IncidentTimelineEntry)(nil),

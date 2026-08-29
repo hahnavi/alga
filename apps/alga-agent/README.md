@@ -11,8 +11,8 @@ tool-calling loop.
 - **MCP integration**: expose every agent tool as an MCP server for Claude
   Desktop, Cursor, and other MCP-compatible clients. Consume external MCP
   servers (filesystem, GitHub, database, in-house) as agent tools.
-- **29 Alga tools**: alerts, investigations, incidents, knowledge, memory,
-  services, on-call, coordination tasks (dispatch/claim/complete/synthesize)
+- **25 Alga tools**: alerts, investigations, incidents, knowledge, memory,
+  services, on-call, coordination messages
 - **Typed tool framework**: JSON Schemas are auto-generated from Go struct
   tags — no more hand-written `map[string]any` schemas. Includes a standard
   `{ok, data, error}` result envelope and panic recovery.
@@ -129,7 +129,7 @@ mcp:
 
 Now Claude Desktop, Cursor, or any MCP-compatible client can connect to
 `http://localhost:8085/mcp` and call `alga_list_alerts`, `alga_resolve_alert`,
-`alga_dispatch_task`, `shell`, `web_search`, and every other agent tool.
+`shell`, `web_search`, and every other agent tool.
 
 ### Consume external MCP servers
 
@@ -278,7 +278,7 @@ Expect ~2–5 minutes per run (~5–10 with `ALGA_AGENT_E2E_TOOLS=1`). Notes:
 A separate opt-in test (`TestMultiAgentCoordination`) runs two agents — a
 commander (`command` capability) and a responder (`investigate` capability) —
 and asserts the full incident coordination flow: ICS role auto-assignment,
-coordination task dispatch/completion, and incident lifecycle transitions
+coordination-message exchange, and incident lifecycle transitions
 (detected → active → mitigated → resolved).
 
 ```bash
@@ -288,9 +288,8 @@ ALGA_AGENT_E2E=1 ALGA_AGENT_E2E_COORDINATION=1 \
 ```
 
 Expect ~5–10 minutes. This test is highly model-dependent: both agents must
-correctly use their coordination tools (dispatch_task, claim_task,
-complete_task, mitigate_incident, set_incident_resolution_docs,
-resolve_incident) in response to prompts.
+correctly use their coordination tools (mitigate_incident,
+set_incident_resolution_docs, resolve_incident) in response to prompts.
 
 ### Project Structure
 

@@ -322,7 +322,6 @@ func (a *App) wire() error {
 	agentExecutor.SetIncidentStore(a.stores.Incident)
 	agentExecutor.SetIncidentInvestigationStore(a.stores.IncidentInvestigation)
 	agentExecutor.SetIncidentCoordinationStore(a.stores.IncidentCoordination)
-	agentExecutor.SetCoordinationTaskStore(a.stores.CoordinationTask)
 	agentExecutor.SetPostMortemStore(a.stores.PostMortem)
 	agentExecutor.SetServiceStore(a.stores.Service)
 	agentExecutor.SetEscalationStore(a.stores.Escalation)
@@ -520,8 +519,6 @@ func (a *App) wire() error {
 		a.scheduler.SetPlaybookEnricher(playbookEnricher)
 
 		a.scheduler.SetICSRoleStore(a.stores.ICSRole)
-		a.scheduler.SetCoordinationTaskStore(a.stores.CoordinationTask)
-		a.scheduler.SetCoordinationTaskSweepInterval(5 * time.Minute)
 
 		// the scheduler leader owns SLA sweep tick publication;
 		// interval <= 0 disables publication entirely.
@@ -750,7 +747,6 @@ func (a *App) wire() error {
 	a.apiServer.SetTriageRuleStore(a.stores.TriageRule)
 	a.apiServer.SetIncidentStore(a.stores.Incident)
 	a.apiServer.SetIncidentCoordinationStore(a.stores.IncidentCoordination)
-	a.apiServer.SetCoordinationTaskStore(a.stores.CoordinationTask)
 	a.apiServer.SetIncidentChannelManager(channelManager)
 	a.apiServer.SetGoogleMeetClient(googleMeetClient)
 	a.apiServer.SetServiceStore(a.stores.Service)

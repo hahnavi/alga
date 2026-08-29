@@ -163,16 +163,6 @@ Hermes does not register a named peer-ask tool, but Hermes agents can still use 
 Every `alga_post_handoff` call **wakes up teammate agents** (commander, communicator) by forwarding the message to them, which can interrupt their current work and cause ping-pong loops. Reserve it for the single structured commander handoff that happens **after recovery is verified** and a `monitoring` status update has already been published via `alga_publish_status_update`. For status milestones during active work, always use `alga_publish_status_update` instead.
 :::
 
-### Coordination Tasks
-
-| Tool                       | Runtimes | Description                                                                                |
-| -------------------------- | -------- | ------------------------------------------------------------------------------------------ |
-| `alga_dispatch_task`       | All      | Dispatch a typed coordination task to a role (investigate, communicate, verify, mitigate). |
-| `alga_claim_task`          | All      | Claim a pending coordination task.                                                         |
-| `alga_complete_task`       | All      | Complete a coordination task with a typed result.                                          |
-| `alga_list_tasks`          | All      | List coordination tasks (commander tracks dispatched progress).                            |
-| `alga_synthesize_findings` | All      | Synthesize findings from completed child investigations into the incident conclusion.      |
-
 See [Coordination](/incident-management/coordination) for the multi-agent incident coordination model.
 
 ### Incident Query

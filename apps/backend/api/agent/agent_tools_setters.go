@@ -69,10 +69,6 @@ func (e *AgentToolExecutor) SetIncidentCoordinationStore(st store.IncidentCoordi
 	e.incidentCoordinationStore = st
 }
 
-func (e *AgentToolExecutor) SetCoordinationTaskStore(st store.CoordinationTaskStore) {
-	e.coordinationTaskStore = st
-}
-
 func (e *AgentToolExecutor) SetPostMortemStore(st store.PostMortemStore) {
 	e.postmortemStore = st
 }

@@ -150,7 +150,6 @@ type Server struct {
 	actionItemStore           store.ActionItemStore
 	incidentStore             store.IncidentStore
 	incidentCoordinationStore store.IncidentCoordinationStore
-	coordinationTaskStore     store.CoordinationTaskStore
 	incidentChannelManager    *incidentchannel.Manager
 	googleMeetClient          ics.MeetSpaceCreator
 	serviceStore              store.ServiceStore

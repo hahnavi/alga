@@ -27,7 +27,7 @@ See [Lifecycle & States](/incident-management/lifecycle) for the full state mach
 - **SLA Targets**: `sla_target_respond_at` and `sla_target_resolve_at` are computed from the service SLA config at creation
 - **Escalation**: Policy-driven multi-tier escalation. The SLA worker triggers escalation on a response breach; acknowledgement stops escalation
 - **ICS Role Assignments**: Formal ICS (Incident Command System) roles — commander, communicator, responder — for structured command. Users and agents can hold roles. See [ICS Roles](/incident-management/ics-roles)
-- **Coordination**: Real-time coordination messages, typed coordination tasks, and public status updates — see [Coordination](/incident-management/coordination)
+- **Coordination**: Real-time coordination messages and public status updates — see [Coordination](/incident-management/coordination)
 - **Incident Documents**: Section-based collaborative documents (current status, impact, root cause, resolution, etc.) with per-section versioning
 - **IC Handoffs**: Structured handoff process for transferring on-call responsibility — see [Handoffs](/incident-management/handoffs)
 - **Alert Linking**: Alerts can be linked to and unlinked from incidents; resolving an incident cascades `resolved` to linked firing alerts
@@ -110,8 +110,6 @@ Incident investigations follow `pending → assigned → investigating → compl
 | ------ | ---------------------------------------------- | ------- | ----------------- | -------------------------- |
 | `GET`  | `/api/v1/incidents/{id}/coordination/messages` | Session | `incidents:read`  | List coordination messages |
 | `POST` | `/api/v1/incidents/{id}/coordination/messages` | Session | `incidents:write` | Add coordination message   |
-| `GET`  | `/api/v1/incidents/{id}/coordination/tasks`    | Session | `incidents:read`  | List coordination tasks    |
-| `POST` | `/api/v1/incidents/{id}/coordination/tasks`    | Session | `incidents:write` | Create coordination task   |
 
 ### Status Updates
 
@@ -167,7 +165,6 @@ Alga computes SLA deadlines at creation and a background SLA worker sweeps for b
 | `GET`   | `/api/v1/agent/incidents/{id}`          | Bearer | Get incident context                              |
 | `GET`   | `/api/v1/agent/incidents/{id}/timeline` | Bearer | Get incident timeline                             |
 | `POST`  | `/api/v1/agent/incidents/{id}/timeline` | Bearer | Add timeline entry                                |
-| `GET`   | `/api/v1/agent/incidents/{id}/tasks`    | Bearer | List coordination tasks for the agent             |
 | `PATCH` | `/api/v1/agent/incidents/{id}`          | Bearer | Update incident (requires investigate capability) |
 
 ## See Also

@@ -1393,10 +1393,6 @@ func (s *Service) handleAgentIncidentRoutes(w http.ResponseWriter, r *http.Reque
 		platform.WriteData(w, http.StatusOK, platform.EnsureSlice(entries))
 		return
 	}
-	if len(parts) > 1 && parts[1] == "tasks" {
-		s.handleAgentListCoordinationTasks(w, r, *act, incidentNumber)
-		return
-	}
 	platform.WriteData(w, http.StatusOK, s.buildAgentIncidentContext(r.Context(), inc))
 }
 
@@ -1444,47 +1440,9 @@ func (s *Service) buildAgentIncidentContext(ctx context.Context, inc *store.Inci
 	return resp
 }
 
-// handleAgentListCoordinationTasks returns the coordination tasks for an
-// incident as JSON. Read-only: any agent that may read the incident context may
-// list its tasks. This is the read side of dispatch_task/claim_task/
-// complete_task — kept off the inv_tool mutation path because the agent needs
-// the actual list as the response body.
-func (s *Service) handleAgentListCoordinationTasks(w http.ResponseWriter, r *http.Request, agent agentTokenContext, incidentNumber int64) {
-	if s.exec == nil {
-		platform.WriteErrorStatus(w, http.StatusServiceUnavailable, platform.ErrorCodeInternal, "executor not configured")
-		return
-	}
-	taskStore := s.exec.coordinationTaskStoreSnapshot()
-	if taskStore == nil {
-		platform.WriteErrorStatus(w, http.StatusServiceUnavailable, platform.ErrorCodeInternal, "coordination task store not configured")
-		return
-	}
-	if !s.agentCanReadIncidentContext(r.Context(), agent, incidentNumber) {
-		platform.WriteError(w, platform.ErrorCodeForbidden, "agent is not assigned or authorized to read this incident")
-		return
-	}
-	q := r.URL.Query()
-	filter := map[string]any{}
-	if status := strings.TrimSpace(q.Get("status")); status != "" {
-		filter["status"] = status
-	}
-	if role := strings.TrimSpace(q.Get("assignee_role")); role != "" {
-		filter["assignee_role"] = role
-	}
-	if limit := strings.TrimSpace(q.Get("limit")); limit != "" {
-		filter["$limit"] = limit
-	}
-	if skip := strings.TrimSpace(q.Get("skip")); skip != "" {
-		filter["$skip"] = skip
-	}
-	tasks, err := taskStore.ListTasksByIncident(r.Context(), incidentNumber, filter)
-	if err != nil {
-		platform.WriteInternalError(w, err, "failed to list coordination tasks")
-		return
-	}
-	platform.WriteData(w, http.StatusOK, platform.EnsureSlice(tasks))
-}
-
+// agentCanReadIncidentContext reports whether the agent may read the incident
+// context: either by holding the investigate capability or by holding an
+// active ICS role on the incident.
 func (s *Service) agentCanReadIncidentContext(ctx context.Context, agent agentTokenContext, incidentNumber int64) bool {
 	if s.exec != nil && s.exec.requireCapability(agent, capability.Investigate) == nil {
 		return true

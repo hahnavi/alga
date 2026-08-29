@@ -25,7 +25,6 @@ import type {
   PeerFindingEvent,
   PeerAskEvent,
   PeerReplyEvent,
-  CoordinationTaskEvent,
   SummarizeIncidentEvent,
   AlertAutoResolvedEvent,
   IncidentCommsStaleEvent,
@@ -68,7 +67,6 @@ export class AlgaClient {
   onPeerFinding: Callback<PeerFindingEvent> | null = null;
   onPeerAsk: Callback<PeerAskEvent> | null = null;
   onPeerReply: Callback<PeerReplyEvent> | null = null;
-  onCoordinationTask: Callback<CoordinationTaskEvent> | null = null;
   onSummarizeIncident: Callback<SummarizeIncidentEvent> | null = null;
   onAlertAutoResolved: Callback<AlertAutoResolvedEvent> | null = null;
   onIncidentCommsStale: Callback<IncidentCommsStaleEvent> | null = null;
@@ -104,7 +102,6 @@ export class AlgaClient {
     this.sse.onPeerFinding = (data) => this.onPeerFinding?.(data);
     this.sse.onPeerAsk = (data) => this.onPeerAsk?.(data);
     this.sse.onPeerReply = (data) => this.onPeerReply?.(data);
-    this.sse.onCoordinationTask = (data) => this.onCoordinationTask?.(data);
     this.sse.onSummarizeIncident = (data) => this.onSummarizeIncident?.(data);
     this.sse.onAlertAutoResolved = (data) => this.onAlertAutoResolved?.(data);
     this.sse.onIncidentCommsStale = (data) => this.onIncidentCommsStale?.(data);
@@ -139,14 +136,6 @@ export class AlgaClient {
 
   // --- REST: Incidents ---
 
-  // listIncidentTasks returns the coordination tasks for an incident.
-  async listIncidentTasks(
-    incidentNumber: number,
-    params?: Record<string, string>,
-  ): Promise<CoordinationTaskListResponse> {
-    return this._get(`/api/v1/agent/incidents/${incidentNumber}/tasks`, params);
-  }
-
   async getIncident(incidentNumber: number): Promise<IncidentContext> {
     return this._get(`/api/v1/agent/incidents/${incidentNumber}`);
   }
@@ -155,8 +144,15 @@ export class AlgaClient {
     return this._get(`/api/v1/agent/incidents/${incidentNumber}/timeline`);
   }
 
-  async addIncidentTimeline(incidentNumber: number, message: string, eventType: string): Promise<void> {
-    await this._post(`/api/v1/agent/incidents/${incidentNumber}/timeline`, { message, event_type: eventType });
+  async addIncidentTimeline(
+    incidentNumber: number,
+    message: string,
+    eventType: string,
+  ): Promise<void> {
+    await this._post(`/api/v1/agent/incidents/${incidentNumber}/timeline`, {
+      message,
+      event_type: eventType,
+    });
   }
 
   async updateIncidentSummary(incidentNumber: number, summary: string): Promise<Incident> {
@@ -167,7 +163,11 @@ export class AlgaClient {
 
   // sendMessage sends a text message. An Idempotency-Key is auto-generated so
   // retries are replay-safe.
-  async sendMessage(chatId: string, text: string, mentions?: string[]): Promise<SendMessageResponse> {
+  async sendMessage(
+    chatId: string,
+    text: string,
+    mentions?: string[],
+  ): Promise<SendMessageResponse> {
     return this.sendMessageWithKey(chatId, text, mentions);
   }
 
@@ -227,7 +227,9 @@ export class AlgaClient {
   }
 
   async deleteMessage(messageId: string, chatId: string): Promise<void> {
-    await this._delete(`/api/v1/agent/messages/${encodeURIComponent(messageId)}`, { chat_id: chatId });
+    await this._delete(`/api/v1/agent/messages/${encodeURIComponent(messageId)}`, {
+      chat_id: chatId,
+    });
   }
 
   async sendTyping(chatId: string, active = true): Promise<void> {
@@ -490,11 +492,4 @@ function backoffMs(attempt: number, retryAfterMs: number): number {
   base = Math.min(base, 30_000);
   const jitter = Math.random() * base * 0.2;
   return base + jitter;
-}
-
-// CoordinationTaskListResponse is re-exported here to avoid a circular model
-// dependency; it mirrors the backend paginated envelope.
-export interface CoordinationTaskListResponse {
-  items?: import("./models.js").CoordinationTask[];
-  total?: number;
 }

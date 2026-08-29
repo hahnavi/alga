@@ -178,13 +178,10 @@ These endpoints require a valid session or PAT but do not enforce a specific RBA
 
 #### Incident Coordination
 
-| Method  | Path                                                 | Description                |
-| ------- | ---------------------------------------------------- | -------------------------- |
-| `GET`   | `/api/v1/incidents/{id}/coordination/messages`       | List coordination messages |
-| `POST`  | `/api/v1/incidents/{id}/coordination/messages`       | Add coordination message   |
-| `GET`   | `/api/v1/incidents/{id}/coordination/tasks`          | List coordination tasks    |
-| `POST`  | `/api/v1/incidents/{id}/coordination/tasks`          | Create a coordination task |
-| `PATCH` | `/api/v1/incidents/{id}/coordination/tasks/{taskId}` | Update coordination task   |
+| Method | Path                                           | Description                |
+| ------ | ---------------------------------------------- | -------------------------- |
+| `GET`  | `/api/v1/incidents/{id}/coordination/messages` | List coordination messages |
+| `POST` | `/api/v1/incidents/{id}/coordination/messages` | Add coordination message   |
 
 #### Incident Status Updates
 
@@ -599,7 +596,6 @@ These endpoints are called by agents using their bearer token.
 | ------ | --------------------------------------- | --------------------------------------- |
 | `GET`  | `/api/v1/agent/incidents/{id}`          | Get incident context (only if assigned) |
 | `GET`  | `/api/v1/agent/incidents/{id}/timeline` | Get incident timeline                   |
-| `GET`  | `/api/v1/agent/incidents/{id}/tasks`    | List coordination tasks for incident    |
 
 #### Services & On-Call
 

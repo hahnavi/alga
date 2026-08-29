@@ -305,16 +305,6 @@ impl AlgaClient {
             .await
     }
 
-    pub async fn list_incident_tasks(
-        &self,
-        incident_number: i64,
-        params: &[(&str, &str)],
-    ) -> Result<Vec<CoordinationTask>, AlgaError> {
-        let path = format!("/api/v1/agent/incidents/{}/tasks", incident_number);
-        self.do_json(reqwest::Method::GET, &path, None, Some(params), None)
-            .await
-    }
-
     pub async fn get_incident(
         &self,
         incident_number: i64,

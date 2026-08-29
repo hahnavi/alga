@@ -143,7 +143,7 @@ func TestBuildDispatchPromptResponderForbidsCoordinationUpdateDuringInvestigatio
 		"ACTIVATES the commander and communicator agents",
 		"FORBIDDEN from calling `alga_post_handoff` for ANY reason",
 		"ALL status communication while you are still working MUST go through `alga_publish_status_update`",
-		"`alga_post_handoff` is deprecated in favor of `alga_complete_task`",
+		"`alga_post_handoff` is the normal path for handing work back to the commander once your work is complete and verified",
 		"FORBIDDEN from publishing `status_level=\"resolved\"` (commander-only) or `status_level=\"investigating\"` (system-only)",
 	} {
 		if !strings.Contains(prompt, want) {
@@ -235,7 +235,7 @@ func TestBuildDispatchPromptCoordinationDisciplineForbidsMentionForAck(t *testin
 	}
 }
 
-func TestBuildDispatchPromptIncidentCommunicatorIsTaskDriven(t *testing.T) {
+func TestBuildDispatchPromptIncidentCommunicatorIsRequestDriven(t *testing.T) {
 	prompt := BuildDispatchPrompt(DispatchInput{
 		InvestigationID: "iinv-comms",
 		IncidentScope:   true,
@@ -244,30 +244,31 @@ func TestBuildDispatchPromptIncidentCommunicatorIsTaskDriven(t *testing.T) {
 		Alerts:          []rabbitmq.CorrelatedAlert{{Fingerprint: "fp-1", Labels: map[string]string{"alertname": "PostgreSQLDown"}}},
 	})
 
-	// The communications lead is now task-driven: it wakes on dispatched
-	// communicate-kind tasks and completes them, but does not act proactively.
+	// The communications lead is request-driven: it wakes on @mentions and
+	// comms_stale nudges, publishes what was asked for, and does not act
+	// proactively.
 	for _, want := range []string{
 		"Your incident role: Communications Lead",
-		"communicate-kind coordination tasks dispatched by the commander",
-		"coordination_task_dispatched event",
-		"complete the task via `alga_complete_task`",
+		"activated by @mentions in the incident coordination thread",
+		"`comms_stale` nudges",
 		"NOT expected to take proactive action on incident progression",
 		"Do NOT @mention another agent or teammate unless absolutely necessary",
 	} {
 		if !strings.Contains(prompt, want) {
-			t.Fatalf("task-driven communicator prompt missing %q:\n%s", want, prompt)
+			t.Fatalf("request-driven communicator prompt missing %q:\n%s", want, prompt)
 		}
 	}
-	// The old active-communicator instructions must be gone.
+	// Coordination-task machinery must be gone from the communicator prompt.
 	for _, forbidden := range []string{
 		"sole author of public status updates",
 		"alga_request_status_update",
 		"incident_comms_task",
-		"When you receive an `incident_comms_task` from the commander",
-		"remind the commander to request a status update via `alga_request_status_update`",
+		"coordination_task_dispatched",
+		"alga_complete_task",
+		"alga_list_tasks",
 	} {
 		if strings.Contains(prompt, forbidden) {
-			t.Fatalf("task-driven communicator prompt must not contain active-communicator instruction %q:\n%s", forbidden, prompt)
+			t.Fatalf("request-driven communicator prompt must not contain removed instruction %q:\n%s", forbidden, prompt)
 		}
 	}
 }

@@ -117,7 +117,7 @@ The investigation scheduler dispatches pending investigations to online agents a
 - **Leader election:** Valkey lease (`SCHEDULER_LEADER_TTL`); only the leader runs scheduling ticks
 - **Main tick (5s):** dispatches pending investigations to online agents via **Filter → Score → Bind**
 - **Role assignment (every 3rd tick):** maps agent capabilities to ICS roles
-- **Sub-loops:** stale-alert sweep, data-retention prune, dispatch-attempt purge, on-call handoff detection, incident summary sweep, incident investigation sweep, coordination task sweep
+- **Sub-loops:** stale-alert sweep, data-retention prune, dispatch-attempt purge, on-call handoff detection, incident summary sweep, incident investigation sweep
 - **AgentHealthTracker:** sliding-window circuit breaker per agent
 
 ## Data Flow

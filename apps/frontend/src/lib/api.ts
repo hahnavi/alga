@@ -951,55 +951,9 @@ export type IncidentCoordinationMessage = {
   provider_message_id?: string;
   linked_investigation_id?: string;
   parent_message_id?: string;
-  linked_coordination_task_id?: string;
   metadata?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
-};
-
-type CoordinationTaskKind = "investigate" | "communicate" | "verify" | "mitigate" | "synthesize";
-type CoordinationTaskStatus =
-  | "pending"
-  | "assigned"
-  | "in_progress"
-  | "complete"
-  | "failed"
-  | "cancelled";
-type CoordinationTaskAssigneeRole = "commander" | "communicator" | "responder";
-
-export type CoordinationTask = {
-  id: string;
-  incident_id?: string;
-  parent_task_id?: string;
-  kind: CoordinationTaskKind;
-  assignee_role: CoordinationTaskAssigneeRole;
-  assignee_agent_id?: string;
-  assignee_agent_name?: string;
-  goal: string;
-  input_context?: Record<string, unknown>;
-  result?: Record<string, unknown>;
-  result_schema?: Record<string, unknown>;
-  linked_investigation_id?: string;
-  status: CoordinationTaskStatus;
-  priority?: number;
-  due_at?: string;
-  claimed_at?: string;
-  completed_at?: string;
-  created_by_agent_id?: string;
-  created_by_name?: string;
-  failure_reason?: string;
-  dispatch_attempts?: number;
-  created_at: string;
-  updated_at: string;
-};
-
-export type CoordinationTaskCreate = {
-  kind: CoordinationTaskKind;
-  assignee_role: CoordinationTaskAssigneeRole;
-  goal: string;
-  assignee_agent_id?: string;
-  input_context?: Record<string, unknown>;
-  parent_task_id?: string;
 };
 
 export type ServiceRecord = {
@@ -2583,37 +2537,6 @@ export const api = {
     return request<IncidentCoordinationMessage>(
       `/api/v1/incidents/${e(incidentNumber)}/coordination/messages`,
       { method: "POST", body: JSON.stringify(body) },
-    );
-  },
-
-  getIncidentCoordinationTasks(
-    incidentNumber: string | number,
-    params: {
-      status?: string;
-      assignee_role?: string;
-      parent_task_id?: string;
-      limit?: number;
-      skip?: number;
-    } = {},
-  ) {
-    return request<CoordinationTask[]>(
-      `/api/v1/incidents/${e(incidentNumber)}/coordination/tasks${buildQuery(params)}`,
-    );
-  },
-  createIncidentCoordinationTask(incidentNumber: string | number, body: CoordinationTaskCreate) {
-    return request<CoordinationTask>(`/api/v1/incidents/${e(incidentNumber)}/coordination/tasks`, {
-      method: "POST",
-      body: JSON.stringify(body),
-    });
-  },
-  patchIncidentCoordinationTask(
-    incidentNumber: string | number,
-    taskId: string,
-    body: { status?: string },
-  ) {
-    return request<CoordinationTask>(
-      `/api/v1/incidents/${e(incidentNumber)}/coordination/tasks/${e(taskId)}`,
-      { method: "PATCH", body: JSON.stringify(body) },
     );
   },
 

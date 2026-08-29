@@ -56,16 +56,6 @@ type InvestigationCommand struct {
 	StatusLevel                 string `json:"status_level,omitempty"`
 	SourceCoordinationMessageID string `json:"source_coordination_message_id,omitempty"`
 	Internal                    bool   `json:"internal,omitempty"`
-
-	// --- Coordination tasks (dispatch_task / claim_task / complete_task) ---
-	TaskID          string         `json:"task_id,omitempty"`
-	TaskKind        string         `json:"task_kind,omitempty"`
-	AssigneeRole    string         `json:"assignee_role,omitempty"`
-	AssigneeAgentID string         `json:"assignee_agent_id,omitempty"`
-	Goal            string         `json:"goal,omitempty"`
-	InputContext    map[string]any `json:"input_context,omitempty"`
-	Result          map[string]any `json:"result,omitempty"`
-	ParentTaskID    string         `json:"parent_task_id,omitempty"`
 }
 
 // StrPtr is a convenience helper for the *string command fields.
@@ -180,10 +170,9 @@ func AssignIncidentRoleToAgent(incidentNumber int64, roleType, agentTokenID, sco
 // --- Coordination / status tools ---
 
 // PostHandoff posts a coordination handoff message. message, audience, and
-// urgency are required by the backend. PostHandoff is deprecated in favor of
-// DispatchTask + CompleteTask — every handoff activates the commander and
-// communicator agents and triggers ping-pong loops that slow incident
-// resolution. Use CompleteTask to hand work back to the commander.
+// urgency are required by the backend. The backend accepts only the
+// structured responder→commander handoff and urgent commander-attention
+// calls; see the incident role prompts for the expected message format.
 func PostHandoff(incidentNumber int64, message, audience, urgency string) InvestigationCommand {
 	return InvestigationCommand{
 		Op:             "post_handoff",
@@ -223,69 +212,6 @@ func SetIncidentResolutionDocs(incidentNumber int64, summary, impactAssessment, 
 		cmd.Resolution = &resolution
 	}
 	return cmd
-}
-
-// --- Coordination tasks ---
-
-// Task kinds. The backend recognizes these in InvTool.TaskKind.
-const (
-	TaskKindInvestigate = "investigate"
-	TaskKindCommunicate = "communicate"
-	TaskKindVerify      = "verify"
-	TaskKindMitigate    = "mitigate"
-)
-
-// DispatchTask is reserved for the incident commander. It decomposes the
-// incident into bounded units of work targeted at a role (responder,
-// communicator, verifier) or a specific agent.
-func DispatchTask(incidentNumber int64, kind, goal, assigneeRole string) InvestigationCommand {
-	return InvestigationCommand{
-		Op:             "dispatch_task",
-		IncidentNumber: incidentNumber,
-		TaskKind:       kind,
-		Goal:           goal,
-		AssigneeRole:   assigneeRole,
-	}
-}
-
-// DispatchTaskToAgent targets a specific agent rather than a role.
-func DispatchTaskToAgent(incidentNumber int64, kind, goal, assigneeAgentID string) InvestigationCommand {
-	return InvestigationCommand{
-		Op:              "dispatch_task",
-		IncidentNumber:  incidentNumber,
-		TaskKind:        kind,
-		Goal:            goal,
-		AssigneeAgentID: assigneeAgentID,
-	}
-}
-
-// ClaimTask binds a pending task to this agent. The backend rejects the claim
-// if the task is already claimed, completed, or past its deadline.
-func ClaimTask(taskID string) InvestigationCommand {
-	return InvestigationCommand{Op: "claim_task", TaskID: taskID}
-}
-
-// CompleteTask marks a claimed task done and records its typed result. The
-// shape of Result is task-kind specific (e.g. finding, hypothesis_confidence,
-// evidence, root_cause_candidate for investigate; published_status_id for
-// communicate). See apps/backend prompt/builder.go for the per-role contract.
-func CompleteTask(taskID string, result map[string]any) InvestigationCommand {
-	return InvestigationCommand{Op: "complete_task", TaskID: taskID, Result: result}
-}
-
-// SynthesizeFindings is the commander-only op that writes the incident-level
-// conclusion from a set of completed child investigations. summary is the
-// synthesized narrative; evidence is the cited per-investigation findings.
-func SynthesizeFindings(incidentNumber int64, summary string, evidence map[string]any) InvestigationCommand {
-	res := map[string]any{"summary": summary}
-	for k, v := range evidence {
-		res[k] = v
-	}
-	return InvestigationCommand{
-		Op:             "synthesize_findings",
-		IncidentNumber: incidentNumber,
-		Result:         res,
-	}
 }
 
 // --- Time helper ---

@@ -22,7 +22,6 @@ type Stores struct {
 	Notification          NotificationStore
 	Incident              IncidentStore
 	IncidentCoordination  IncidentCoordinationStore
-	CoordinationTask      CoordinationTaskStore
 	Service               ServiceStore
 	Team                  TeamStore
 	Escalation            EscalationStore
@@ -77,7 +76,6 @@ func NewStores(cli *db.Client, sessionExpiry, sessionMaxLifetime time.Duration) 
 		Notification:          newPGNotificationStore(bunDB),
 		Incident:              newPGIncidentStore(bunDB),
 		IncidentCoordination:  newPGIncidentCoordinationStore(bunDB),
-		CoordinationTask:      newPGCoordinationTaskStore(bunDB),
 		Service:               newPGServiceStore(bunDB),
 		Team:                  newPGTeamStore(bunDB),
 		Escalation:            newPGEscalationStore(bunDB),

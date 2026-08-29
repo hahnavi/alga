@@ -32,23 +32,6 @@ export interface Alert {
   updated_at?: string;
 }
 
-// CoordinationTask describes a unit of work dispatched by an incident
-// commander to a role (responder, communicator, verifier).
-export interface CoordinationTask {
-  task_id?: string;
-  incident_number?: number;
-  kind?: string;
-  goal?: string;
-  assignee_role?: string;
-  assignee_agent_id?: string;
-  status?: string;
-  result?: Record<string, unknown>;
-  input_context?: Record<string, unknown>;
-  parent_task_id?: string;
-  created_at?: string;
-  completed_at?: string;
-}
-
 export interface KnowledgeNote {
   id?: string;
   kind?: string;
@@ -269,21 +252,6 @@ export interface PeerReplyEvent {
 export interface AgentPresenceEvent {
   agent_id?: string;
   online?: boolean;
-}
-
-// CoordinationTaskEvent is published when an incident commander dispatches a
-// task to this agent's role.
-export interface CoordinationTaskEvent {
-  type?: string;
-  chat_id?: string;
-  task_id?: string;
-  incident_number?: number;
-  kind?: string;
-  goal?: string;
-  assignee_role?: string;
-  assignee_agent_id?: string;
-  input_context?: Record<string, unknown>;
-  parent_task_id?: string;
 }
 
 // SummarizeIncidentEvent asks a communicate-capable agent to produce an

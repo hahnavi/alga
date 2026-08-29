@@ -13,7 +13,7 @@ Unlike the [Hermes](/agents/hermes) and [OpenClaw](/agents/openclaw) plugins, wh
 
 - **Dual-channel** — Telegram (long polling or webhook) + Alga SSE investigation threads
 - **8 LLM providers** — OpenRouter (default), OpenAI, OpenCode Zen, OpenCode Go, Z.AI, Z.AI Coding Plan, Alibaba (DashScope), Alibaba Coding Plan, plus any custom OpenAI-compatible endpoint
-- **29 Alga tools** — alerts, investigations, incidents, knowledge, memory, services, on-call, and coordination tasks (dispatch/claim/complete/synthesize)
+- **25 Alga tools** — alerts, investigations, incidents, knowledge, memory, services, on-call, and coordination messages
 - **MCP both ways** — expose every agent tool as an MCP server for Claude Desktop, Cursor, and other MCP clients; consume external MCP servers (filesystem, GitHub, database, in-house) as agent tools
 - **Shell tool** — allowlisted command execution (not a sandbox — restrict the list)
 - **Web search** — DuckDuckGo (default), Brave, or Tavily
@@ -116,7 +116,7 @@ mcp:
     path: "/mcp"
 ```
 
-Claude Desktop, Cursor, or any MCP-compatible client can then connect to `http://localhost:8085/mcp` and call `alga_list_alerts`, `alga_resolve_alert`, `alga_dispatch_task`, `shell`, `web_search`, and every other agent tool.
+Claude Desktop, Cursor, or any MCP-compatible client can then connect to `http://localhost:8085/mcp` and call `alga_list_alerts`, `alga_resolve_alert`, `shell`, `web_search`, and every other agent tool.
 
 ### Consume external MCP servers
 

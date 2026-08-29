@@ -34,16 +34,16 @@ export const ALGA_TOOL_NAMES = [
   "alga_post_handoff",
   "alga_publish_status_update",
   "alga_set_incident_resolution_docs",
-  "alga_dispatch_task",
-  "alga_claim_task",
-  "alga_complete_task",
-  "alga_list_tasks",
-  "alga_synthesize_findings",
 ];
 
 async function ensureAlgaToolsInAllowlist(api: {
   config: Record<string, unknown>;
-  runtime: { config: { current: () => Record<string, unknown>; mutateConfigFile: (p: Record<string, unknown>) => Promise<unknown> } };
+  runtime: {
+    config: {
+      current: () => Record<string, unknown>;
+      mutateConfigFile: (p: Record<string, unknown>) => Promise<unknown>;
+    };
+  };
 }) {
   const current = api.runtime.config.current() as {
     tools?: { alsoAllow?: string[] };

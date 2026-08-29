@@ -106,7 +106,7 @@ On the Alga backend, the Hermes integration is configured via:
 
 ## Hermes-Specific Behavior
 
-- **Task-driven coordination** — Hermes exposes the coordination-task tools (`alga_dispatch_task`, `alga_complete_task`, `alga_list_tasks`, `alga_synthesize_findings`) that the commander uses to decompose an incident into typed tasks dispatched to roles. See [Coordination](/incident-management/coordination).
+- **Message-driven coordination** — Hermes exposes the incident coordination tools (status updates, structured handoffs) the commander and responder roles use to collaborate through the coordination thread. See [Coordination](/incident-management/coordination).
 - **Draft streaming** — Hermes edits messages in place as the agent reasons, via `/api/v1/agent/drafts`.
 - **Reconnect** — exponential backoff (2s base, 60s max).
 

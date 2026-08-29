@@ -48,7 +48,6 @@ type IncidentInvestigationStore interface {
 	UpdateIncidentInvestigationStatus(ctx context.Context, id string, status string) error
 	ClaimPendingIncidentInvestigation(ctx context.Context, id string, agentID string, agentName string, agentType string) (*IncidentInvestigationRecord, error)
 	ListPendingIncidentInvestigations(ctx context.Context, limit int64) ([]IncidentInvestigationRecord, error)
-	SetIncidentInvestigationSummary(ctx context.Context, incidentInvestigationID string, summary *models.InvestigationSummary) error
 	SetIncidentInvestigationAssignee(ctx context.Context, id string, assigneeType string, assigneeID *uuid.UUID) error
 }
 
@@ -236,34 +235,6 @@ func (s *pgIncidentInvestigationStore) UpdateIncidentInvestigationStatus(ctx con
 	n, err := res.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("failed to update incident investigation status: %w", err)
-	}
-	if n == 0 {
-		return fmt.Errorf("incident investigation not found: %w", ErrInvestigationNotFound)
-	}
-	return nil
-}
-
-// SetIncidentInvestigationSummary overwrites the summary of the investigation
-// identified by its string IncidentInvestigationID. Used by the commander's
-// synthesize_findings tool to record the synthesized conclusion.
-func (s *pgIncidentInvestigationStore) SetIncidentInvestigationSummary(ctx context.Context, incidentInvestigationID string, summary *models.InvestigationSummary) error {
-	ctx, cancel := pgctx(ctx)
-	defer cancel()
-
-	if summary == nil {
-		summary = &models.InvestigationSummary{}
-	}
-	res, err := s.db.NewUpdate().Model((*models.IncidentInvestigation)(nil)).
-		Set("summary = ?", summary).
-		Set("updated_at = ?", time.Now().UTC()).
-		Where("public_id = ?", incidentInvestigationID).
-		Exec(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to update incident investigation summary: %w", err)
-	}
-	n, err := res.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("failed to update incident investigation summary: %w", err)
 	}
 	if n == 0 {
 		return fmt.Errorf("incident investigation not found: %w", ErrInvestigationNotFound)

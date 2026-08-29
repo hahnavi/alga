@@ -68,14 +68,6 @@ func (e *AgentToolExecutor) executeIncidentTool(ctx context.Context, agentRec *s
 		err = e.performPostHandoff(ctx, agentRec, agent, incidentNumber, cmd)
 	case "publish_status_update":
 		err = e.performPublishStatusUpdate(ctx, agentRec, agent, incidentNumber, cmd)
-	case "dispatch_task":
-		err = e.performDispatchTask(ctx, agentRec, agent, incidentNumber, cmd)
-	case "claim_task":
-		err = e.performClaimTask(ctx, agentRec, agent, incidentNumber, cmd)
-	case "complete_task":
-		err = e.performCompleteTask(ctx, agentRec, agent, incidentNumber, cmd)
-	case "synthesize_findings":
-		err = e.performSynthesizeFindings(ctx, agentRec, agent, incidentNumber, cmd)
 	default:
 		return InvToolOutcome{ChatID: chatID, Ok: false, Op: op, Error: "unknown op"}
 	}

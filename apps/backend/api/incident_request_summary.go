@@ -74,6 +74,9 @@ func (s *Server) handleRequestSummary(w http.ResponseWriter, r *http.Request, in
 		writeErrorStatus(w, http.StatusServiceUnavailable, ErrorCodeInternal, "agent forwarding not configured")
 		return
 	}
+	if !s.requireIncidentInvestigationStore(w) {
+		return
+	}
 
 	ctx := r.Context()
 	inc, err := s.incidentStore.GetIncident(ctx, mustParseIncidentNumber(incidentID))

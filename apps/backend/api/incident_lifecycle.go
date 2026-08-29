@@ -59,14 +59,16 @@ func (s *Server) handleAcknowledgeIncident(w http.ResponseWriter, r *http.Reques
 
 	s.addIncidentTimeline(r, incidentID, "acknowledged", "Incident acknowledged")
 
-	updated, _ := s.incidentStore.GetIncident(r.Context(), mustParseIncidentNumber(incidentID))
-	s.publishIncidentEvent("incident_updated", updated)
-	s.publishIncidentLifecycleNotifications(r.Context(), updated, "incident_acknowledged", "acknowledged")
 	s.audit(r, store.AuditIncidentAcknowledged, map[string]any{
 		"incident_number": incidentID,
 	})
-	s.propagateServiceStatus(updated)
-	s.tryAutoCreateSlackChannel(r, updated)
+	updated := s.refetchIncidentForSideEffects(r.Context(), mustParseIncidentNumber(incidentID), "acknowledge")
+	if updated != nil {
+		s.publishIncidentEvent("incident_updated", updated)
+		s.publishIncidentLifecycleNotifications(r.Context(), updated, "incident_acknowledged", "acknowledged")
+		s.propagateServiceStatus(updated)
+		s.tryAutoCreateSlackChannel(r, updated)
+	}
 	s.invalidateDashboardCache(r)
 	writeData(w, http.StatusOK, updated)
 }
@@ -92,15 +94,17 @@ func (s *Server) handleMitigateIncident(w http.ResponseWriter, r *http.Request, 
 
 	metrics.IncidentsMitigatedTotal.Add(1)
 
-	updated, _ := s.incidentStore.GetIncident(r.Context(), mustParseIncidentNumber(incidentID))
-	s.publishIncidentEvent("incident_updated", updated)
-	s.publishIncidentLifecycleNotifications(r.Context(), updated, "incident_mitigated", "mitigated")
 	s.audit(r, store.AuditIncidentMitigated, map[string]any{
 		"incident_number": incidentID,
 	})
-	s.propagateServiceStatus(updated)
-	if s.incidentChannelManager != nil {
-		s.incidentChannelManager.PostStatusChange(r.Context(), updated, "mitigated")
+	updated := s.refetchIncidentForSideEffects(r.Context(), mustParseIncidentNumber(incidentID), "mitigate")
+	if updated != nil {
+		s.publishIncidentEvent("incident_updated", updated)
+		s.publishIncidentLifecycleNotifications(r.Context(), updated, "incident_mitigated", "mitigated")
+		s.propagateServiceStatus(updated)
+		if s.incidentChannelManager != nil {
+			s.incidentChannelManager.PostStatusChange(r.Context(), updated, "mitigated")
+		}
 	}
 	s.invalidateDashboardCache(r)
 	writeData(w, http.StatusOK, updated)
@@ -145,11 +149,13 @@ func (s *Server) handleResolveIncident(w http.ResponseWriter, r *http.Request, i
 
 	current, err := s.incidentStore.GetIncident(r.Context(), mustParseIncidentNumber(incidentID))
 	if err != nil {
-		if errors.Is(err, store.ErrIncidentNotFound) {
-			writeError(w, ErrorCodeNotFound, "incident not found")
-			return
-		}
 		writeInternalError(w, err, "failed to get incident")
+		return
+	}
+	// GetIncident is a tombstone read; a soft-deleted incident must 404 rather
+	// than fail the resolution gate with a misleading "missing" list.
+	if current == nil || current.DeletedAt != nil {
+		writeError(w, ErrorCodeNotFound, "incident not found")
 		return
 	}
 	missing, err := s.missingIncidentResolutionRequirements(r.Context(), current)
@@ -171,23 +177,29 @@ func (s *Server) handleResolveIncident(w http.ResponseWriter, r *http.Request, i
 		return
 	}
 
+	// Terminal transition: stop any pending escalation sweep so a resolved
+	// incident stops paging (the sweep itself only reads Valkey ack state).
+	s.cancelEscalationForIncident(r.Context(), incidentID, "incident resolved")
+
 	s.addIncidentTimeline(r, incidentID, "resolved", "Incident resolved")
 
 	metrics.IncidentsResolvedTotal.Add(1)
 	metrics.IncidentsActive.Add(-1)
 
-	updated, _ := s.incidentStore.GetIncident(r.Context(), mustParseIncidentNumber(incidentID))
-	s.publishIncidentEvent("incident_updated", updated)
-	s.publishIncidentLifecycleNotifications(r.Context(), updated, "incident_resolved", "resolved")
 	s.audit(r, store.AuditIncidentResolved, map[string]any{
 		"incident_number": incidentID,
 	})
-	s.propagateServiceStatus(updated)
-	if s.incidentChannelManager != nil {
-		s.incidentChannelManager.PostStatusChange(r.Context(), updated, "resolved")
-		s.incidentChannelManager.PostResolutionSummary(r.Context(), updated)
+	updated := s.refetchIncidentForSideEffects(r.Context(), mustParseIncidentNumber(incidentID), "resolve")
+	if updated != nil {
+		s.publishIncidentEvent("incident_updated", updated)
+		s.publishIncidentLifecycleNotifications(r.Context(), updated, "incident_resolved", "resolved")
+		s.propagateServiceStatus(updated)
+		if s.incidentChannelManager != nil {
+			s.incidentChannelManager.PostStatusChange(r.Context(), updated, "resolved")
+			s.incidentChannelManager.PostResolutionSummary(r.Context(), updated)
+		}
+		s.ensurePostMortemDraft(r.Context(), updated, "Incident resolved")
 	}
-	s.ensurePostMortemDraft(r.Context(), updated, "Incident resolved")
 
 	cascade := runAlertCascade(r.Context(), s.alertStore, s.auditStore, cascadePublisherFromDual(s.ssePublisher), s.dedupCache, mustParseIncidentNumber(incidentID), cascadeActorFromRequest(r))
 
@@ -212,6 +224,10 @@ func (s *Server) handleCloseIncident(w http.ResponseWriter, r *http.Request, inc
 		return
 	}
 
+	// Terminal transition: stop any pending escalation sweep (defense in depth
+	// alongside the resolve-time cancellation).
+	s.cancelEscalationForIncident(r.Context(), incidentID, "incident closed")
+
 	s.addIncidentTimeline(r, incidentID, "closed", "Incident closed")
 
 	// teardown-on-close: end any live ICS role assignments so a terminal
@@ -227,32 +243,36 @@ func (s *Server) handleCloseIncident(w http.ResponseWriter, r *http.Request, inc
 
 	metrics.IncidentsClosedTotal.Add(1)
 
-	updated, _ := s.incidentStore.GetIncident(r.Context(), mustParseIncidentNumber(incidentID))
-	s.publishIncidentEvent("incident_updated", updated)
 	s.audit(r, store.AuditIncidentClosed, map[string]any{
 		"incident_number": incidentID,
 	})
-	s.propagateServiceStatus(updated)
-	if s.incidentChannelManager != nil {
-		s.incidentChannelManager.PostStatusChange(r.Context(), updated, "closed")
-		s.mu.RLock()
-		archiveOnClose := s.cfg.SlackIncidentChannelArchiveOnClose
-		s.mu.RUnlock()
-		if archiveOnClose && updated.SlackChannelID != "" {
-			if err := s.incidentChannelManager.ArchiveIncidentChannel(r.Context(), updated); err != nil {
-				logger.WarnCtx(r.Context(), "failed to archive slack incident channel", "error", err)
-			} else {
-				s.audit(r, store.AuditIncidentSlackChannelArchived, map[string]any{
-					"incident_number": incidentID,
-					"channel_id":      updated.SlackChannelID,
-				})
+	updated := s.refetchIncidentForSideEffects(r.Context(), mustParseIncidentNumber(incidentID), "close")
+	if updated != nil {
+		s.publishIncidentEvent("incident_updated", updated)
+		s.propagateServiceStatus(updated)
+		if s.incidentChannelManager != nil {
+			s.incidentChannelManager.PostStatusChange(r.Context(), updated, "closed")
+			s.mu.RLock()
+			archiveOnClose := s.cfg.SlackIncidentChannelArchiveOnClose
+			s.mu.RUnlock()
+			if archiveOnClose && updated.SlackChannelID != "" {
+				if err := s.incidentChannelManager.ArchiveIncidentChannel(r.Context(), updated); err != nil {
+					logger.WarnCtx(r.Context(), "failed to archive slack incident channel", "error", err)
+				} else {
+					s.audit(r, store.AuditIncidentSlackChannelArchived, map[string]any{
+						"incident_number": incidentID,
+						"channel_id":      updated.SlackChannelID,
+					})
+				}
 			}
 		}
-	}
-	if s.postmortemStore != nil {
-		pm, pmErr := s.postmortemStore.GetByIncidentID(r.Context(), updated.ID)
-		if pmErr == nil && pm == nil {
-			w.Header().Set("X-Post-Mortem-Missing", "true")
+		// Warn when closing without a post-mortem ready for publication: a
+		// draft or in_review post-mortem still counts as missing per spec.
+		if s.postmortemStore != nil {
+			pm, pmErr := s.postmortemStore.GetByIncidentID(r.Context(), updated.ID)
+			if pmErr == nil && (pm == nil || !postMortemApprovedOrPublished(pm.Status)) {
+				w.Header().Set("X-Post-Mortem-Missing", "true")
+			}
 		}
 	}
 
@@ -260,6 +280,14 @@ func (s *Server) handleCloseIncident(w http.ResponseWriter, r *http.Request, inc
 
 	s.invalidateDashboardCache(r)
 	writeData(w, http.StatusOK, incidentResolveResponse{Incident: updated, Cascade: cascadeSummary(cascade)})
+}
+
+// postMortemApprovedOrPublished reports whether a post-mortem has completed
+// review (states per the post_mortems CHECK: draft, in_review, approved,
+// published); draft and in_review still count as "missing" for the
+// close-time X-Post-Mortem-Missing warning.
+func postMortemApprovedOrPublished(status string) bool {
+	return status == "approved" || status == "published"
 }
 
 func (s *Server) handleReopenIncident(w http.ResponseWriter, r *http.Request, incidentID string) {
@@ -295,23 +323,25 @@ func (s *Server) handleReopenIncident(w http.ResponseWriter, r *http.Request, in
 	metrics.IncidentsReopenedTotal.Add(1)
 	metrics.IncidentsActive.Add(1)
 
-	updated, _ := s.incidentStore.GetIncident(r.Context(), mustParseIncidentNumber(incidentID))
-	s.publishIncidentEvent("incident_updated", updated)
-	s.publishIncidentLifecycleNotifications(r.Context(), updated, "incident_reopened", "reopened")
 	s.audit(r, store.AuditIncidentReopened, map[string]any{
 		"incident_number": incidentID,
 	})
-	s.propagateServiceStatus(updated)
-	if s.incidentChannelManager != nil {
-		s.incidentChannelManager.PostStatusChange(r.Context(), updated, "active")
-		if updated.SlackChannelID != "" && updated.SlackChannelArchived {
-			if err := s.incidentChannelManager.UnarchiveIncidentChannel(r.Context(), updated); err != nil {
-				logger.WarnCtx(r.Context(), "failed to unarchive slack incident channel", "error", err)
-			} else {
-				s.audit(r, store.AuditIncidentSlackChannelUnarchived, map[string]any{
-					"incident_number": incidentID,
-					"channel_id":      updated.SlackChannelID,
-				})
+	updated := s.refetchIncidentForSideEffects(r.Context(), mustParseIncidentNumber(incidentID), "reopen")
+	if updated != nil {
+		s.publishIncidentEvent("incident_updated", updated)
+		s.publishIncidentLifecycleNotifications(r.Context(), updated, "incident_reopened", "reopened")
+		s.propagateServiceStatus(updated)
+		if s.incidentChannelManager != nil {
+			s.incidentChannelManager.PostStatusChange(r.Context(), updated, "active")
+			if updated.SlackChannelID != "" && updated.SlackChannelArchived {
+				if err := s.incidentChannelManager.UnarchiveIncidentChannel(r.Context(), updated); err != nil {
+					logger.WarnCtx(r.Context(), "failed to unarchive slack incident channel", "error", err)
+				} else {
+					s.audit(r, store.AuditIncidentSlackChannelUnarchived, map[string]any{
+						"incident_number": incidentID,
+						"channel_id":      updated.SlackChannelID,
+					})
+				}
 			}
 		}
 	}
@@ -341,14 +371,20 @@ func (s *Server) handleCancelIncident(w http.ResponseWriter, r *http.Request, in
 	metrics.IncidentsCancelledTotal.Add(1)
 	metrics.IncidentsActive.Add(-1)
 
-	updated, _ := s.incidentStore.GetIncident(r.Context(), mustParseIncidentNumber(incidentID))
-	s.publishIncidentEvent("incident_updated", updated)
+	// Terminal transition: stop any pending escalation sweep so a cancelled
+	// incident stops paging.
+	s.cancelEscalationForIncident(r.Context(), incidentID, "incident cancelled")
+
 	s.audit(r, store.AuditIncidentCancelled, map[string]any{
 		"incident_number": incidentID,
 	})
-	s.propagateServiceStatus(updated)
-	if s.incidentChannelManager != nil {
-		s.incidentChannelManager.PostStatusChange(r.Context(), updated, "cancelled")
+	updated := s.refetchIncidentForSideEffects(r.Context(), mustParseIncidentNumber(incidentID), "cancel")
+	if updated != nil {
+		s.publishIncidentEvent("incident_updated", updated)
+		s.propagateServiceStatus(updated)
+		if s.incidentChannelManager != nil {
+			s.incidentChannelManager.PostStatusChange(r.Context(), updated, "cancelled")
+		}
 	}
 	s.invalidateDashboardCache(r)
 	writeData(w, http.StatusOK, updated)
@@ -364,6 +400,13 @@ func (s *Server) handleEscalateIncident(w http.ResponseWriter, r *http.Request, 
 
 	record, ok := s.getIncidentOrError(w, r, incidentID)
 	if !ok {
+		return
+	}
+
+	// Terminal incidents cannot page anyone: reject instead of re-arming the
+	// escalation sweep on a dead incident.
+	if escalation.IsTerminalIncidentStatus(record.Status) {
+		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "cannot escalate an incident in '"+record.Status+"' status")
 		return
 	}
 
@@ -413,7 +456,7 @@ func (s *Server) handleEscalateIncident(w http.ResponseWriter, r *http.Request, 
 			MaxRetries:     rabbitmq.MaxEscalationRetries,
 		}
 
-		if record.ServiceID != nil {
+		if record.ServiceID != nil && s.serviceStore != nil {
 			svc, err := s.serviceStore.GetService(r.Context(), record.ServiceID.String())
 			if err == nil && svc != nil && svc.EscalationPolicyID != nil {
 				escMsg.PolicyID = *svc.EscalationPolicyID
@@ -434,6 +477,20 @@ func (s *Server) handleEscalateIncident(w http.ResponseWriter, r *http.Request, 
 // through the same state keys and timeline contract.
 func (s *Server) cancelEscalationForIncident(ctx context.Context, incidentID, reason string) {
 	escalation.CancelForIncident(ctx, s.vkClient, s.incidentStore, incidentID, reason)
+}
+
+// refetchIncidentForSideEffects re-fetches the incident after a successful
+// transition so side-effect helpers see the persisted row. GetIncident can
+// return nil (row deleted concurrently or a transient read error); callers
+// must skip record-dependent side effects but keep the transition's success
+// response — the transition itself has already committed.
+func (s *Server) refetchIncidentForSideEffects(ctx context.Context, incidentNumber int64, stage string) *store.IncidentRecord {
+	updated, err := s.incidentStore.GetIncident(ctx, incidentNumber)
+	if err != nil || updated == nil {
+		logger.WarnCtx(ctx, "failed to re-fetch incident after transition; skipping record-dependent side effects", "component", "api", "incident_number", incidentNumber, "stage", stage, "error", err)
+		return nil
+	}
+	return updated
 }
 
 func (s *Server) addIncidentTimeline(r *http.Request, incidentID, eventType, message string) {

@@ -120,3 +120,11 @@ func (e *AgentToolExecutor) SetPostMortemBuilder(fn func(ctx context.Context, do
 func (e *AgentToolExecutor) SetCoordinationForwarder(fn func(ctx context.Context, incidentNumber int64, messageText string, mentions []string, agentRec *store.AgentTokenRecord)) {
 	e.forwardCoordinationUpdateFn = fn
 }
+
+// SetPostIncidentResolve wires the operator resolve side effects
+// (service-status propagation, Slack postings, dashboard cache invalidation)
+// so an agent resolve mirrors the operator path. Injected so the agent package
+// does not import package api.
+func (e *AgentToolExecutor) SetPostIncidentResolve(fn func(ctx context.Context, incidentNumber int64)) {
+	e.postIncidentResolveFn = fn
+}

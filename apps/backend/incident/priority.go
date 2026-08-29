@@ -7,6 +7,12 @@ var validSeverities = map[string]struct{}{
 	"info":     {},
 }
 
+var validIncidentTypes = map[string]struct{}{
+	"real":        {},
+	"alert":       {},
+	"degradation": {},
+}
+
 var validImpacts = map[string]struct{}{
 	"high":   {},
 	"medium": {},
@@ -42,6 +48,11 @@ func ComputePriority(severity, impact string) string {
 
 func ValidSeverity(s string) bool {
 	_, ok := validSeverities[s]
+	return ok
+}
+
+func ValidIncidentType(t string) bool {
+	_, ok := validIncidentTypes[t]
 	return ok
 }
 

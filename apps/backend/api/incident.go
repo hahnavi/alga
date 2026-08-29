@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"alga/escalation"
 	"alga/incident"
 	"alga/logger"
 	"alga/metrics"
@@ -136,6 +137,10 @@ func (s *Server) handleCreateIncident(w http.ResponseWriter, r *http.Request) {
 	if req.ImpactLevel == "" {
 		req.ImpactLevel = "medium"
 	}
+	if req.IncidentType != "" && !incident.ValidIncidentType(req.IncidentType) {
+		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid incident_type: must be real, alert, or degradation")
+		return
+	}
 	if req.Priority == "" {
 		req.Priority = incident.ComputePriority(req.Severity, req.ImpactLevel)
 	} else if !incident.ValidPriority(req.Priority) {
@@ -253,7 +258,12 @@ func (s *Server) handleCreateIncident(w http.ResponseWriter, r *http.Request) {
 	if len(linkedAlerts) > 0 && s.alertInvestigationStore != nil {
 		primary := linkedAlerts[0]
 		existing, listErr := s.alertInvestigationStore.ListAlertInvestigationsByAlertNumber(r.Context(), primary.AlertNumber)
-		if listErr != nil || len(existing) == 0 {
+		switch {
+		case listErr != nil:
+			// Cannot tell whether an investigation exists; creating one here
+			// could duplicate it. Skip and let the alert pipeline proceed.
+			logger.WarnCtx(r.Context(), "failed to list alert investigations during incident create; skipping auto-investigation", "incident_number", created.IncidentNumber, "alert_number", primary.AlertNumber, "error", listErr)
+		case len(existing) == 0:
 			correlated := make([]rabbitmq.CorrelatedAlert, 0, len(linkedAlerts))
 			for _, rec := range linkedAlerts {
 				correlated = append(correlated, correlatedAlertFromRecord(rec))
@@ -547,7 +557,9 @@ func (s *Server) getIncidentOrError(w http.ResponseWriter, r *http.Request, inci
 		writeInternalError(w, err, "failed to get incident")
 		return nil, false
 	}
-	if record == nil {
+	// GetIncident is a tombstone read; operator handlers must not serve or
+	// mutate a soft-deleted incident.
+	if record == nil || record.DeletedAt != nil {
 		writeError(w, ErrorCodeNotFound, "incident not found")
 		return nil, false
 	}
@@ -642,16 +654,20 @@ func (s *Server) handlePatchIncident(w http.ResponseWriter, r *http.Request, inc
 		return
 	}
 
-	if req.Severity != nil && *req.Severity != "" && !incident.ValidSeverity(*req.Severity) {
+	if req.Severity != nil && !incident.ValidSeverity(*req.Severity) {
 		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid severity: must be critical, high, warning, or info")
 		return
 	}
-	if req.ImpactLevel != nil && *req.ImpactLevel != "" && !incident.ValidImpact(*req.ImpactLevel) {
+	if req.ImpactLevel != nil && !incident.ValidImpact(*req.ImpactLevel) {
 		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid impact_level: must be high, medium, or low")
 		return
 	}
 	if req.Priority != nil && *req.Priority != "" && !incident.ValidPriority(*req.Priority) {
 		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid priority: must be P1, P2, P3, P4, or P5")
+		return
+	}
+	if req.IncidentType != nil && !incident.ValidIncidentType(*req.IncidentType) {
+		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid incident_type: must be real, alert, or degradation")
 		return
 	}
 	if (req.Severity != nil || req.ImpactLevel != nil) && (req.Priority == nil || *req.Priority == "") {
@@ -739,7 +755,36 @@ func (s *Server) handleDeleteIncident(w http.ResponseWriter, r *http.Request, in
 		return
 	}
 
-	if err := s.incidentStore.DeleteIncident(r.Context(), mustParseIncidentNumber(incidentID)); err != nil {
+	incidentNumber := mustParseIncidentNumber(incidentID)
+
+	// Snapshot the incident and its investigations BEFORE the delete: the
+	// tombstone makes post-delete lookups (investigations, metric state) come
+	// back empty, which previously turned the agent abort signal into dead code.
+	current, err := s.incidentStore.GetIncident(r.Context(), incidentNumber)
+	if err != nil {
+		writeInternalError(w, err, "failed to get incident")
+		return
+	}
+	if current == nil || current.DeletedAt != nil {
+		writeError(w, ErrorCodeNotFound, "incident not found")
+		return
+	}
+	var linked []store.IncidentInvestigationRecord
+	if s.incidentInvestigationStore != nil {
+		invs, listErr := s.incidentInvestigationStore.ListIncidentInvestigationsByIncident(r.Context(), incidentNumber)
+		if listErr != nil {
+			logger.WarnCtx(r.Context(), "failed to list incident investigations before delete", "incident_number", incidentID, "error", listErr)
+		} else {
+			linked = invs
+		}
+	}
+
+	// Stop any pending escalation before the tombstone so the sweep's pending
+	// entry and the cancel marker agree (the escalation_cancelled timeline
+	// entry also needs a live row to attach to).
+	s.cancelEscalationForIncident(r.Context(), incidentID, "incident deleted")
+
+	if err := s.incidentStore.DeleteIncident(r.Context(), incidentNumber); err != nil {
 		if errors.Is(err, store.ErrIncidentNotFound) {
 			writeError(w, ErrorCodeNotFound, "incident not found")
 			return
@@ -747,11 +792,13 @@ func (s *Server) handleDeleteIncident(w http.ResponseWriter, r *http.Request, in
 		writeInternalError(w, err, "failed to delete incident")
 		return
 	}
+	if !escalation.IsTerminalIncidentStatus(current.Status) {
+		metrics.IncidentsActive.Add(-1)
+	}
 
-	incidentNumber := mustParseIncidentNumber(incidentID)
 	deleteCtx, deleteCancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer deleteCancel()
-	s.onIncidentDeleted(deleteCtx, incidentNumber)
+	s.onIncidentDeleted(deleteCtx, incidentNumber, linked)
 
 	s.publishIncidentEvent("incident_deleted", map[string]string{"incident_number": incidentID})
 	s.audit(r, store.AuditIncidentDeleted, map[string]any{
@@ -765,19 +812,11 @@ func (s *Server) handleDeleteIncident(w http.ResponseWriter, r *http.Request, in
 // onIncidentDeleted records a cancel marker for the deleted incident and
 // best-effort pushes investigation_abort to agents with an in-flight incident
 // investigation. The DB guard (hard-deleted rows) is the durable backstop.
-func (s *Server) onIncidentDeleted(ctx context.Context, incidentNumber int64) {
+// linked must be captured before DeleteIncident runs: once the incident is
+// tombstoned, ListIncidentInvestigationsByIncident can no longer see its rows.
+func (s *Server) onIncidentDeleted(ctx context.Context, incidentNumber int64, linked []store.IncidentInvestigationRecord) {
 	if s.cancelSet != nil {
 		_ = s.cancelSet.Add(ctx, valkey.CancelKeyIncident(incidentNumber))
-	}
-	if s.incidentInvestigationStore == nil {
-		return
-	}
-	listCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	linked, err := s.incidentInvestigationStore.ListIncidentInvestigationsByIncident(listCtx, incidentNumber)
-	if err != nil {
-		logger.Warn("failed to list incident investigations for abort", "incident_number", incidentNumber, "error", err)
-		return
 	}
 	for _, inv := range linked {
 		if inv.AgentID == "" {

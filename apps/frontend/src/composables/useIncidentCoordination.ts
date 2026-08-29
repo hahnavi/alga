@@ -109,9 +109,13 @@ export function useIncidentCoordination(incidentNumber: Ref<number>) {
 
   async function loadCoordinationMessages() {
     try {
-      coordinationMessages.value = await api.getIncidentCoordinationMessages(incidentNumber.value, {
+      const messages = await api.getIncidentCoordinationMessages(incidentNumber.value, {
         limit: 200,
       });
+      // The API returns newest-first (spec 05 coordination R1); the chat view
+      // renders chronological, so flip the page before storing. New messages
+      // are appended at the end by submit and SSE reloads.
+      coordinationMessages.value = [...messages].reverse();
     } catch (err) {
       coordinationMessages.value = [];
       push(getErrorMessage(err, "Failed to load coordination messages"), "error");

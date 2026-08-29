@@ -2444,13 +2444,13 @@ export const api = {
     return request<AlertRecord[]>(`/api/v1/incidents/${e(incidentNumber)}/alerts`);
   },
   linkAlertToIncident(incidentNumber: string | number, alertNumber: number) {
-    return request<IncidentRecord>(`/api/v1/incidents/${e(incidentNumber)}/alerts`, {
+    return request<StatusResponse>(`/api/v1/incidents/${e(incidentNumber)}/alerts`, {
       method: "POST",
       body: JSON.stringify({ alert_number: alertNumber }),
     });
   },
   unlinkAlertFromIncident(incidentNumber: string | number, alertNumber: number) {
-    return request<IncidentRecord>(
+    return request<StatusResponse>(
       `/api/v1/incidents/${e(incidentNumber)}/alerts/${e(alertNumber)}`,
       {
         method: "DELETE",

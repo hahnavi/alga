@@ -711,6 +711,7 @@ func (a *App) wire() error {
 	agentExecutor.SetAlertCascade(a.apiServer.AgentAlertCascadeFn())
 	agentExecutor.SetPostMortemBuilder(a.apiServer.AgentPostMortemBuilderFn())
 	agentExecutor.SetCoordinationForwarder(a.apiServer.AgentCoordinationForwarderFn())
+	agentExecutor.SetPostIncidentResolve(a.apiServer.AgentPostIncidentResolveFn())
 
 	agentService := agent.NewService(
 		a.cfg,

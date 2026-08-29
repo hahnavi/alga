@@ -21,6 +21,7 @@ import (
 	"alga/logger"
 	"alga/sse"
 	"alga/store"
+	"alga/valkey"
 )
 
 // PlatformAuthDeps returns the session/PAT auth dependencies the agent Service
@@ -111,6 +112,27 @@ func (s *Server) AgentPostMortemBuilderFn() func(ctx context.Context, documentSt
 			incidentStore:     incidentStore,
 			alertStore:        alertStore,
 		}, inc, summary)
+	}
+}
+
+// AgentPostIncidentResolveFn returns the post-resolve side-effect runner for
+// AgentToolExecutor so an agent resolve mirrors the operator path: service
+// status propagation, Slack status post + resolution summary, and dashboard
+// cache invalidation.
+func (s *Server) AgentPostIncidentResolveFn() func(ctx context.Context, incidentNumber int64) {
+	return func(ctx context.Context, incidentNumber int64) {
+		updated := s.refetchIncidentForSideEffects(ctx, incidentNumber, "agent resolve")
+		if updated == nil {
+			return
+		}
+		s.propagateServiceStatus(updated)
+		if s.incidentChannelManager != nil {
+			s.incidentChannelManager.PostStatusChange(ctx, updated, "resolved")
+			s.incidentChannelManager.PostResolutionSummary(ctx, updated)
+		}
+		if s.cache != nil {
+			_ = s.cache.Invalidate(ctx, valkey.PrefixDashboardStats)
+		}
 	}
 }
 

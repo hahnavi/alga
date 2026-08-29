@@ -117,6 +117,7 @@ type AgentToolExecutor struct {
 	runAlertCascadeFn           func(ctx context.Context, alertStore store.Store, auditStore store.AuditStore, publisher *sse.DualPublisher, incidentNumber int64, agentID uuid.UUID, agentName string) store.AlertCascadeResult
 	buildPostMortemDraftFn      func(ctx context.Context, documentStore store.IncidentDocumentStore, coordinationStore store.IncidentCoordinationStore, incidentStore store.IncidentStore, alertStore store.Store, inc *store.IncidentRecord, summary string) *store.PostMortemRecord
 	forwardCoordinationUpdateFn func(ctx context.Context, incidentNumber int64, messageText string, mentions []string, agentRec *store.AgentTokenRecord)
+	postIncidentResolveFn       func(ctx context.Context, incidentNumber int64)
 }
 
 type AgentAlertSideEffects struct {

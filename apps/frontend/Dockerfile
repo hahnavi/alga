@@ -1,19 +1,23 @@
 FROM node:26-alpine3.24 AS builder
 # corepack is no longer shipped in node:26+ images, so pnpm is installed from
-# npm instead; keep the version pinned to the same 11.17.0 triple-pin as
+# npm instead; keep the version pinned to the same 12.0.0 triple-pin as
 # `packageManager` in package.json and PNPM_VERSION in ci.yml.
-RUN npm install -g pnpm@11.17.0
+RUN npm install -g pnpm@12.0.0
 
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/frontend/package.json apps/frontend/package.json
+# Unfiltered on purpose: pnpm 12 syncs workspace dependencies before running
+# scripts (`pnpm build`), and a filtered install leaves the root importer
+# incomplete — the sync would then run the root `prepare` script, which needs
+# git (absent from this builder). A full install makes that sync a no-op.
 # --ignore-scripts: the root package.json `prepare` script runs
 # `git config core.hooksPath .githooks`, but git is absent from this builder
 # image and git-hook setup is irrelevant in a container build. Skipping scripts
 # also avoids running third-party postinstall scripts during the reproducible
 # build; the frontend build (`pnpm build`) runs explicitly below, so nothing
 # it depends on is skipped.
-RUN pnpm install --frozen-lockfile --filter frontend... --ignore-scripts
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 COPY apps/frontend/ apps/frontend/
 WORKDIR /app/apps/frontend

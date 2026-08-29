@@ -117,7 +117,7 @@ Open the ingress host in a browser and complete the setup wizard to create the i
 ### Prerequisites
 
 - **Go** 1.27+
-- **Node.js** 26+ with **pnpm** 11
+- **Node.js** 26+ with **pnpm** 12
 - **PostgreSQL** 18
 - **Valkey** 9+
 - **RabbitMQ** 4.3+

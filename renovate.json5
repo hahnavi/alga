@@ -98,15 +98,15 @@
 
     // ── Frozen: pnpm / packageManager version ──────────────────────────
     // pnpm is pinned in THREE places that must stay in lockstep:
-    //   1. root package.json          "packageManager": "pnpm@11.13.0"
-    //   2. apps/frontend/Dockerfile   corepack prepare pnpm@11.13.0
-    //   3. .github/workflows/ci.yml   env PNPM_VERSION: "11.13.0"
+    //   1. root package.json          "packageManager": "pnpm@12.0.0"
+    //   2. apps/frontend/Dockerfile   npm install -g pnpm@12.0.0
+    //   3. .github/workflows/ci.yml   env PNPM_VERSION: "12.0.0"
     // Renovate can update (1) and (2) but not the CI env (3), and CI is
-    // intentionally decoupled from the packageManager field (ci.yml pins
-    // pnpm/action-setup to PNPM_VERSION explicitly so it never falls back to
-    // packageManager). A partial bump — e.g. packageManager→11.14.0 while CI
-    // stays at 11.13.0 — throws in pnpm/action-setup and can shift the
-    // lockfile format. pnpm stays a deliberate, manual pin across all three.
+    // intentionally decoupled from the packageManager field (ci.yml passes
+    // PNPM_VERSION to pnpm/setup explicitly so it never falls back to
+    // packageManager). A partial bump — e.g. packageManager→12.0.1 while CI
+    // stays at 12.0.0 — silently splits the toolchain between CI and dev
+    // machines. pnpm stays a deliberate, manual pin across all three.
     {
       "matchPackageNames": ["pnpm"],
       "enabled": false

@@ -26,7 +26,7 @@ Thank you for your interest in contributing to Alga! This guide covers everythin
 
 - **Go 1.27+** - Backend language
 - **Node.js 26+** - Frontend tooling (Vite 8, TypeScript ~6.0.3, vue-tsc 3 require Node 20+; the project builds and CI runs on Node 26)
-- **pnpm 11+** - Package manager
+- **pnpm 12+** - Package manager
 - **PostgreSQL 18** - Database for development
 - **Valkey 9+** - For session/caching features (optional but recommended)
 - **RabbitMQ 4+** - For async pipeline (optional but recommended)

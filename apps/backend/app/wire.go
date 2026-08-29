@@ -689,6 +689,13 @@ func (a *App) wire() error {
 	whReceiver.SetRateLimiter(a.rateLimiter)
 	mmWebhookHandler.SetRateLimiter(a.rateLimiter)
 	slackWebhookHandler.SetRateLimiter(a.rateLimiter)
+
+	// Shared trusted-proxy-aware client-IP extractor for webhook rate limiting
+	// (TRUSTED_PROXIES); without trusted proxies the limiter keys on RemoteAddr.
+	webhookIPExtractor := api.NewIPExtractor(a.cfg)
+	whReceiver.SetIPExtractor(webhookIPExtractor)
+	mmWebhookHandler.SetIPExtractor(webhookIPExtractor)
+	slackWebhookHandler.SetIPExtractor(webhookIPExtractor)
 	a.apiServer.SetAlertBroadcaster(&alertEventPublisher{broker: a.sseBroker, vkClient: a.valkeyClient})
 	a.apiServer.SetSSEBroker(a.sseBroker, a.valkeyClient)
 	a.apiServer.SetCancelSet(a.cancelSet)

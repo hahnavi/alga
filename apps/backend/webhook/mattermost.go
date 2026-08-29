@@ -28,6 +28,7 @@ type MattermostWebhookHandler struct {
 	sse                     SSEPublisherMixin
 	botUsernames            map[string]bool
 	rateLimiter             RateLimiter
+	ipExtractor             platform.IPExtractor
 }
 
 func NewMattermostWebhookHandler(alertInvestigationStore store.AlertInvestigationStore, auditStore store.AuditStore, webhookSecret string) *MattermostWebhookHandler {
@@ -55,6 +56,22 @@ func (h *MattermostWebhookHandler) SetRateLimiter(rl RateLimiter) {
 	h.rateLimiter = rl
 }
 
+// SetIPExtractor injects the trusted-proxy-aware client-IP extractor used to
+// key the rate limiter. Without it only RemoteAddr keys the limiter.
+func (h *MattermostWebhookHandler) SetIPExtractor(x platform.IPExtractor) {
+	h.ipExtractor = x
+}
+
+// clientIP resolves the rate-limit key: header trust is opt-in via the
+// injected extractor (TRUSTED_PROXIES); otherwise RemoteAddr only, so
+// spoofed X-Forwarded-For can't rotate the key.
+func (h *MattermostWebhookHandler) clientIP(r *http.Request) string {
+	if h.ipExtractor != nil {
+		return h.ipExtractor.ClientIP(r)
+	}
+	return remoteAddrHost(r)
+}
+
 func (h *MattermostWebhookHandler) SetSSEBroker(broker *sse.Broker, vkClient *valkey.Client) {
 	h.sse.SetSSEBroker(broker, vkClient)
 }
@@ -78,7 +95,7 @@ func (h *MattermostWebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if h.rateLimiter != nil && !h.rateLimiter.Allow(clientIPFromRequest(r)) {
+	if h.rateLimiter != nil && !h.rateLimiter.Allow(h.clientIP(r)) {
 		platform.WriteRateLimitExceeded(w, "60")
 		return
 	}

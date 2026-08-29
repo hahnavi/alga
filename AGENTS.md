@@ -11,6 +11,7 @@ This is the operating guide for Alga agents. Keep it short, current, and biased 
 - Use `alga-dev-environment` for setup, build, test, format, migration, or troubleshooting commands.
 - Use `alga-release` for cutting a release — picking the SemVer tag from Conventional Commits, pre-flight checks, release notes, version wiring, and pushing a `v*` tag to trigger `release.yml`.
 - Follow nearby code first; if this guide and code disagree, update this guide or remove stale guidance.
+- If a nested `AGENTS.md` exists in or above your working directory, follow it as scoped instructions.
 
 ## Non-Negotiable Principles
 

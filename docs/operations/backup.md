@@ -21,7 +21,7 @@ docker compose exec postgres pg_dump -U alga --format=custom alga > backup_$(dat
 
 Set up a cron job:
 
-```cron
+```txt
 # Daily backup at 2 AM
 0 2 * * * docker compose exec -T postgres pg_dump -U alga --format=custom alga > /backups/alga_$(date +\%Y\%m\%d).dump
 ```

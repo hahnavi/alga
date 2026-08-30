@@ -83,7 +83,7 @@ Capabilities gate **what** an agent can do. Assign them during token creation or
 | Capability    | Allows                                                                                                       |
 | ------------- | ------------------------------------------------------------------------------------------------------------ |
 | `investigate` | Receive investigations, resolve/reopen alerts, set outcomes, search knowledge, query alerts/services/on-call |
-| `communicate` | Publish status updates, handle communications tasks                                                          |
+| `communicate` | Publish status updates and incident timeline coordination messages                                           |
 | `command`     | Incident command — set priority/severity, trigger escalation, mitigate/resolve incidents, assign ICS roles   |
 
 List available capabilities:
@@ -243,11 +243,11 @@ See the [Hermes](/agents/hermes#the-31-agent-tools) or [OpenClaw](/agents/opencl
 
 During an incident, agents are bound by their ICS role:
 
-| Role                    | Allowed Actions                                                                                    |
-| ----------------------- | -------------------------------------------------------------------------------------------------- |
-| **Incident Commander**  | Priority, escalation, mitigation, resolution, resolution docs, role assignment, task dispatch      |
-| **Responder**           | Investigation updates, severity, outcome, pause/cancel, complete investigate/verify/mitigate tasks |
-| **Communications Lead** | Publish status updates, complete communicate-kind tasks                                            |
+| Role                    | Allowed Actions                                                                                       |
+| ----------------------- | ----------------------------------------------------------------------------------------------------- |
+| **Incident Commander**  | Priority, escalation, mitigation, resolution, resolution docs, role assignment, coordination messages |
+| **Responder**           | Investigation updates, severity, outcome, pause/cancel, status updates, coordination messages         |
+| **Communications Lead** | Publish status updates and coordination messages                                                      |
 
 The backend enforces these boundaries server-side. If an agent attempts an action outside its role, it receives a clear 403 error with the `required_capability`.
 

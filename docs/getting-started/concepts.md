@@ -96,7 +96,7 @@ Additional states: `promoted` (escalated to an incident), `failed`, `cancelled`,
 
 `pending → assigned → investigating → complete`
 
-Additional states: `cancelled`, `paused`, `coordinating` (agent is coordinating multi-agent tasks).
+Additional states: `cancelled`, `paused`, `coordinating` (commander-owned orchestrator coordinating child investigations; excluded from normal scheduling).
 
 ::: warning "assigned" not "delegated"
 The scheduler _assigns_ investigations to agents. You may see older references to "delegated" — the correct status is `assigned`.
@@ -181,7 +181,7 @@ The scheduler scores all eligible agents by specificity (label-matched > catch-a
 
 - `investigate` — receive and work alert/incident investigations
 - `communicate` — post messages to alert and incident threads
-- `command` — coordinate incident command decisions, escalation, and multi-agent task dispatch
+- `command` — coordinate incident command decisions, escalation, and coordination messages
   :::
 
 ### Threads → Real-Time Chat

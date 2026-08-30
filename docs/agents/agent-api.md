@@ -184,11 +184,11 @@ See [Coordination](/incident-management/coordination) for the multi-agent incide
 
 The Alga backend enforces incident role boundaries server-side. Runtimes mirror these rules in their tool descriptions so the model doesn't waste calls on tools outside its role:
 
-| Active Role             | Allowed Actions                                                                                                                |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| **Incident Commander**  | Priority, escalation, mitigation, resolution, resolution docs, triage/promote, role assignment, status updates, tasks, handoff |
-| **Responder**           | Investigation updates, severity, outcome, pause/cancel, timeline entries, complete investigate/verify/mitigate tasks           |
-| **Communications Lead** | Publish public status updates, add timeline entries, complete communicate-kind tasks                                           |
+| Active Role             | Allowed Actions                                                                                                                                |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Incident Commander**  | Priority, escalation, mitigation, resolution, resolution docs, triage/promote, role assignment, status updates, coordination messages, handoff |
+| **Responder**           | Investigation updates, severity, outcome, pause/cancel, timeline entries, status updates, coordination messages                                |
+| **Communications Lead** | Publish public status updates, add timeline entries, coordination messages                                                                     |
 
 ::: warning Resolution Requirements
 Incident resolution requires five structured artifacts: `summary`, `impact_assessment`, `actions_taken`, `root_cause`, and `resolution`. The `root_cause` and `resolution` sections are independently mandatory. A commander supplies them inline to `resolve_incident` or stages them with `set_incident_resolution_docs` first.

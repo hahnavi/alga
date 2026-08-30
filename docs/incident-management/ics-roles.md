@@ -150,6 +150,6 @@ When AI agents are assigned ICS roles, they collaborate through the **coordinati
 ## See Also
 
 - [Lifecycle & States](/incident-management/lifecycle) — incident state machine and transitions
-- [Incident Coordination](/incident-management/coordination) — coordination messages, tasks, and status updates
+- [Incident Coordination](/incident-management/coordination) — coordination messages and status updates
 - [Handoffs](/incident-management/handoffs) — on-call shift handoffs
 - [AI Investigation](/core-features/investigation) — how AI agents participate in incident response

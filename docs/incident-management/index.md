@@ -171,7 +171,7 @@ Alga computes SLA deadlines at creation and a background SLA worker sweeps for b
 
 - [Lifecycle & States](/incident-management/lifecycle) — state machine and transitions
 - [ICS Roles](/incident-management/ics-roles) — ICS role assignments and handoffs
-- [Coordination](/incident-management/coordination) — coordination messages, tasks, and status updates
+- [Coordination](/incident-management/coordination) — coordination messages and status updates
 - [Handoffs](/incident-management/handoffs) — on-call handoff process
 - [SLA Tracking](/incident-management/sla) — SLA configuration and breach detection
 - [Post-Mortems](/incident-management/post-mortems) — structured post-incident review

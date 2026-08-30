@@ -136,6 +136,18 @@ These endpoints require a valid session or PAT but do not enforce a specific RBA
 | `POST` | `/api/v1/auth/change-email`    | Change email address          |
 | `POST` | `/api/v1/auth/profile`         | Update display name / profile |
 
+### Session Management (Self-Service)
+
+Cookie-session only — PAT callers receive `400`. All three require a valid session + CSRF. Mutations are audited.
+
+| Method   | Path                         | Description                                                                                                                                                            |
+| -------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET`    | `/api/v1/auth/sessions`      | List caller's active sessions (`{items:[{id,created_at,last_used_at,expires_at,ip,user_agent,current}]}` — `id` is the HMAC digest, `current` exactly one, MRU-sorted) |
+| `DELETE` | `/api/v1/auth/sessions/{id}` | Revoke one session by digest — current → 400 "sign out instead", foreign/missing → 404, PAT → 400                                                                      |
+| `DELETE` | `/api/v1/auth/sessions`      | Revoke all other sessions — returns `{revoked:n}` and leaves the current session intact                                                                                |
+
+See [Session Management](/configuration/session-management) for full details and frontend affordances.
+
 ### Alerts
 
 | Method   | Path                                  | Description                                                                                         |
@@ -212,12 +224,21 @@ These endpoints require a valid session or PAT but do not enforce a specific RBA
 
 #### Incident Post-Mortem
 
-| Method   | Path                                 | Description        |
-| -------- | ------------------------------------ | ------------------ |
-| `GET`    | `/api/v1/incidents/{id}/post-mortem` | Get post-mortem    |
-| `POST`   | `/api/v1/incidents/{id}/post-mortem` | Create post-mortem |
-| `PATCH`  | `/api/v1/incidents/{id}/post-mortem` | Update post-mortem |
-| `DELETE` | `/api/v1/incidents/{id}/post-mortem` | Delete post-mortem |
+| Method   | Path                                                         | Description                                                                                 |
+| -------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| `GET`    | `/api/v1/incidents/{id}/post-mortem`                         | Get post-mortem                                                                             |
+| `POST`   | `/api/v1/incidents/{id}/post-mortem`                         | Create post-mortem                                                                          |
+| `PATCH`  | `/api/v1/incidents/{id}/post-mortem`                         | Update post-mortem (409 when `published` — terminal)                                        |
+| `DELETE` | `/api/v1/incidents/{id}/post-mortem`                         | Delete post-mortem                                                                          |
+| `POST`   | `/api/v1/incidents/{id}/post-mortem/{pmId}/submit-review`    | `draft → in_review` (requires `blameless_confirmed`)                                        |
+| `POST`   | `/api/v1/incidents/{id}/post-mortem/{pmId}/revert-to-draft`  | `in_review → draft`                                                                         |
+| `POST`   | `/api/v1/incidents/{id}/post-mortem/{pmId}/revert-to-review` | `approved → in_review`                                                                      |
+| `POST`   | `/api/v1/incidents/{id}/post-mortem/{pmId}/approve`          | `in_review → approved` (stamps approver)                                                    |
+| `POST`   | `/api/v1/incidents/{id}/post-mortem/{pmId}/publish`          | `approved → published` (stamps `published_at`)                                              |
+| `GET`    | `/api/v1/incidents/{id}/post-mortem/action-items`            | List action items (scoped to incident)                                                      |
+| `POST`   | `/api/v1/incidents/{id}/post-mortem/action-items`            | Create action item (validates `type`/`priority`/`status`, `due_date` RFC3339 or YYYY-MM-DD) |
+| `PATCH`  | `/api/v1/incidents/{id}/post-mortem/action-items/{itemId}`   | Update action item                                                                          |
+| `DELETE` | `/api/v1/incidents/{id}/post-mortem/action-items/{itemId}`   | Delete action item                                                                          |
 
 #### ICS Roles & Document
 
@@ -331,17 +352,23 @@ These endpoints require a valid session or PAT but do not enforce a specific RBA
 | `PUT`  | `/api/v1/users/me/notification-preferences`      | Update preferences                                |
 | `POST` | `/api/v1/users/me/notification-preferences/test` | Send test notification (supports Idempotency-Key) |
 
+### Audit Events (Admin Review)
+
+| Method | Path                   | Permission   | Description                                                                                                       |
+| ------ | ---------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------- |
+| `GET`  | `/api/v1/audit-events` | `audit:read` | List audit events — filters `?event&entity_type&entity_id` (UUID), paginated `limit`/`skip`, 503 when unavailable |
+
 ### Action Items
 
-| Method | Path                   | Description           |
-| ------ | ---------------------- | --------------------- |
-| `GET`  | `/api/v1/action-items` | All open action items |
+| Method | Path                   | Description                                              |
+| ------ | ---------------------- | -------------------------------------------------------- |
+| `GET`  | `/api/v1/action-items` | All open action items (sorted `due_date ASC NULLS LAST`) |
 
 ### Post-Mortems
 
-| Method | Path                   | Description           |
-| ------ | ---------------------- | --------------------- |
-| `GET`  | `/api/v1/post-mortems` | List all post-mortems |
+| Method | Path                   | Description                                         |
+| ------ | ---------------------- | --------------------------------------------------- |
+| `GET`  | `/api/v1/post-mortems` | List all post-mortems (filter `?status&limit&skip`) |
 
 ### System Configuration
 

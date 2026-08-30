@@ -45,6 +45,7 @@ export default defineConfig({
           { text: "Environment Variables", link: "/configuration/environment-variables" },
           { text: "System Configuration API", link: "/configuration/system-config" },
           { text: "Security & Authentication", link: "/configuration/security" },
+          { text: "Session Management", link: "/configuration/session-management" },
         ],
       },
       {

@@ -64,7 +64,7 @@ All have safe defaults; override only to tune for your deployment.
 | Variable                | Default | Required | Description                                                                                                                                            |
 | ----------------------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `POSTGRES_DSN`          |         | Yes      | PostgreSQL connection string (e.g. `postgres://user:pass@localhost:5432/alga?sslmode=disable`). Production must use `sslmode=require` or `verify-full` |
-| `POSTGRES_AUTO_MIGRATE` | `false` | No       | Run Ent auto-migration on startup (enabled in Docker Compose)                                                                                          |
+| `POSTGRES_AUTO_MIGRATE` | `false` | No       | Run goose migrations on startup (enabled in Docker Compose)                                                                                            |
 
 ## Cryptography
 
@@ -80,6 +80,10 @@ All have safe defaults; override only to tune for your deployment.
 ::: tip `setup.sh` generates keys
 `setup.sh` appends a generated `ENCRYPTION_KEYS` value in the `1:<base64>` form above, plus `SECRET_PEPPER`, to `apps/backend/.env`.
 :::
+
+### Envelope format
+
+Ciphertext is stored as `enc:v<kid>:base64(12B nonce || AES-256-GCM ciphertext+tag)` — e.g. `enc:v1:…`. The `kid` picks the HMAC pepper for `SECRET_PEPPER`-derived token hashes (`hex(64)` with a 12-hex `lookup_prefix` for indexed prefix scans) and the Argon2id peppered pre-hash: password bytes are HMAC-SHA-256 with `SECRET_PEPPER` before Argon2id. `cfg.Validate()` rejects the process unless both values are present and well-formed — fail-closed in every environment, not only production (see [Security & Authentication](/configuration/security)).
 
 ### Argon2id Tuning
 

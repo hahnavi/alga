@@ -11,7 +11,7 @@ npm install @alga/agent-sdk
 ## Quickstart
 
 ```typescript
-import { AlgaClient, resolveAlert, setOutcome, dispatchTask } from "@alga/agent-sdk";
+import { AlgaClient, resolveAlert, setOutcome } from "@alga/agent-sdk";
 
 const client = new AlgaClient("https://alga.example.com", process.env.ALGA_AGENT_TOKEN!);
 
@@ -99,11 +99,7 @@ await client.sendCommand("alert_42", setOutcome("Memory exhaustion on db-01", un
 await client.sendCommand("incident_coord_9", setIncidentPriority(9, "P1"));
 await client.sendCommand(
   "incident_coord_9",
-  dispatchTask(9, "investigate", "Find root cause", "responder"),
-);
-await client.sendCommand(
-  "incident_coord_9",
-  completeTask("task-uuid", { summary: "OOM in worker pool" }),
+  publishStatusUpdate(9, "Investigating root cause", "investigating"),
 );
 ```
 

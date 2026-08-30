@@ -116,7 +116,7 @@ func (s *pgActionItemStore) ListByPostMortemIDs(ctx context.Context, postMortemI
 	}
 	var items []models.ActionItem
 	err := s.db.NewSelect().Model(&items).
-		Where("post_mortem_id IN (?)", bun.In(postMortemIDs)).
+		Where("post_mortem_id IN (?)", bun.List(postMortemIDs)).
 		OrderExpr("created_at ASC").
 		Scan(ctx)
 	if err != nil {

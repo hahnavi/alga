@@ -974,7 +974,7 @@ func (s *pgAlertStore) toAlertRecords(ctx context.Context, alerts []models.Alert
 
 	var events []models.AlertEvent
 	err := s.db.NewSelect().Model(&events).
-		Where("alert_id IN (?)", bun.In(ids)).
+		Where("alert_id IN (?)", bun.List(ids)).
 		Order("timestamp ASC").
 		Scan(ctx)
 	if err != nil {
@@ -983,7 +983,7 @@ func (s *pgAlertStore) toAlertRecords(ctx context.Context, alerts []models.Alert
 
 	var targets []models.DeliveryTarget
 	err = s.db.NewSelect().Model(&targets).
-		Where("alert_id IN (?)", bun.In(ids)).
+		Where("alert_id IN (?)", bun.List(ids)).
 		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query targets: %w", err)

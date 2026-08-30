@@ -47,7 +47,7 @@ func TestSetSlackIdentityDuplicateBinding(t *testing.T) {
 	}
 	t.Cleanup(func() {
 		_, _ = bunDB.NewDelete().Model((*models.User)(nil)).
-			Where("id IN (?)", bun.In([]uuid.UUID{first.ID, second.ID})).
+			Where("id IN (?)", bun.List([]uuid.UUID{first.ID, second.ID})).
 			Exec(context.Background())
 	})
 

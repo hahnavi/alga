@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from "vue";
-import { Send } from "@lucide/vue";
+import { BellRing, Send } from "@lucide/vue";
 import { api, type NotificationPreferenceRule, type NotificationPreferences } from "@/lib/api";
 import Button from "@/components/ui/Button.vue";
 import Card from "@/components/ui/Card.vue";
@@ -74,6 +74,7 @@ async function handleTest() {
 
 usePageHeaderActions({
   title: "Notification Preferences",
+  titleIcon: BellRing,
   searchInput: preferencesSearchInput,
   searchPlaceholder: "Search preferences...",
   onAdd: addRule,

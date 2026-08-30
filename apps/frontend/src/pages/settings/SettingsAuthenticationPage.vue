@@ -9,9 +9,16 @@ import ErrorBanner from "@/components/ui/ErrorBanner.vue";
 import SkeletonRows from "@/components/ui/SkeletonRows.vue";
 import SystemFormFooter from "@/components/system/SystemFormFooter.vue";
 import SettingsPageShell from "@/components/ui/settings/SettingsPageShell.vue";
+import { usePageHeaderActions } from "@/composables/usePageHeaderActions";
 import { useSystemConfigForm, type SystemForm } from "@/composables/useSystemConfigForm";
 
 defineOptions({ name: "SettingsAuthenticationPage" });
+
+usePageHeaderActions({
+  title: "Authentication",
+  titleIcon: ShieldCheck,
+  showAdd: false,
+});
 
 const FIELDS: ReadonlyArray<keyof SystemForm> = [
   "google_oauth_enabled",

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { getErrorMessage } from "@/lib/error";
 import { computed, onMounted, ref, watch } from "vue";
-import { Plus, KeyRound, Clock, Search, Shield } from "@lucide/vue";
+import { Plus, Key, KeyRound, Clock, Search, Shield } from "@lucide/vue";
 import { api, type PATRow } from "@/lib/api";
 import Button from "@/components/ui/Button.vue";
 import Input from "@/components/ui/Input.vue";
@@ -440,6 +440,7 @@ useEscapeKey(
 
 usePageHeaderActions({
   title: "Personal Access Tokens",
+  titleIcon: Key,
   onAdd: openCreateDialog,
   addLabel: "Create token",
 });

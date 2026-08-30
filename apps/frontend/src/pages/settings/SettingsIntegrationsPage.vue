@@ -1,11 +1,19 @@
 <script setup lang="ts">
 import { onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { Link2 } from "@lucide/vue";
 import SettingsPageShell from "@/components/ui/settings/SettingsPageShell.vue";
 import SettingsIntegrationsTab from "@/components/ui/settings/SettingsIntegrationsTab.vue";
+import { usePageHeaderActions } from "@/composables/usePageHeaderActions";
 import { useAuthStore } from "@/stores/auth";
 
 defineOptions({ name: "SettingsIntegrationsPage" });
+
+usePageHeaderActions({
+  title: "Connected Apps",
+  titleIcon: Link2,
+  showAdd: false,
+});
 
 const route = useRoute();
 const router = useRouter();

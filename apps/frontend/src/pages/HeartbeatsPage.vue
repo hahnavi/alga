@@ -12,6 +12,7 @@ import Card from "@/components/ui/Card.vue";
 import ErrorBanner from "@/components/ui/ErrorBanner.vue";
 import LoadingSpinner from "@/components/ui/LoadingSpinner.vue";
 import Modal from "@/components/ui/Modal.vue";
+import SettingsPageShell from "@/components/ui/settings/SettingsPageShell.vue";
 import ConfirmDialog from "@/components/ui/ConfirmDialog.vue";
 import Switch from "@/components/ui/Switch.vue";
 import EmptyState from "@/components/ui/EmptyState.vue";
@@ -238,14 +239,10 @@ onMounted(() => {
 </script>
 
 <template>
-  <section class="space-y-4 px-4 py-4 md:space-y-6 md:px-6 md:py-6">
+  <SettingsPageShell
+    description="Heartbeats alert you when a system stops checking in. Configure a ping URL and have your cron jobs, workers, or daemons hit it on schedule — if a ping is missed past its grace period, Alga fires an alert."
+  >
     <ErrorBanner v-if="error" :message="error" @dismiss="error = ''" />
-
-    <p class="text-sm text-[var(--text-muted)]">
-      Heartbeats alert you when a system stops checking in. Configure a ping URL and have your cron
-      jobs, workers, or daemons hit it on schedule — if a ping is missed past its grace period, Alga
-      fires an alert.
-    </p>
 
     <div class="flex flex-wrap items-center gap-2">
       <span class="text-sm text-[var(--text-muted)]"
@@ -422,5 +419,5 @@ onMounted(() => {
       :destructive="true"
       @confirm="doDelete"
     />
-  </section>
+  </SettingsPageShell>
 </template>

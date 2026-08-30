@@ -16,6 +16,7 @@ import EmptyState from "@/components/ui/EmptyState.vue";
 import DateTimePicker from "@/components/ui/DateTimePicker.vue";
 import FormLabel from "@/components/ui/FormLabel.vue";
 import Select from "@/components/ui/Select.vue";
+import SettingsPageShell from "@/components/ui/settings/SettingsPageShell.vue";
 import { useToast } from "@/lib/toast";
 import { useAuthStore } from "@/stores/auth";
 import { useDelete } from "@/composables/useDelete";
@@ -449,15 +450,10 @@ onMounted(() => {
 </script>
 
 <template>
-  <section class="space-y-4 px-4 py-4 md:space-y-6 md:px-6 md:py-6">
+  <SettingsPageShell
+    description="Manage personal access tokens for API authentication. Each token's secret is shown only once after creation. Tokens are scoped to the permissions you select."
+  >
     <ErrorBanner :message="error" />
-
-    <div class="flex items-center justify-between gap-4">
-      <p class="text-sm text-[var(--text-muted)]">
-        Manage personal access tokens for API authentication. Each token's secret is shown only once
-        after creation. Tokens are scoped to the permissions you select.
-      </p>
-    </div>
 
     <LoadingSpinner v-if="loading" centered />
 
@@ -766,5 +762,5 @@ onMounted(() => {
       :destructive="true"
       @confirm="doRevoke"
     />
-  </section>
+  </SettingsPageShell>
 </template>

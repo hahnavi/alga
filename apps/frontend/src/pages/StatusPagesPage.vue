@@ -17,6 +17,7 @@ import Card from "@/components/ui/Card.vue";
 import ErrorBanner from "@/components/ui/ErrorBanner.vue";
 import LoadingSpinner from "@/components/ui/LoadingSpinner.vue";
 import Modal from "@/components/ui/Modal.vue";
+import SettingsPageShell from "@/components/ui/settings/SettingsPageShell.vue";
 import ConfirmDialog from "@/components/ui/ConfirmDialog.vue";
 import Switch from "@/components/ui/Switch.vue";
 import EmptyState from "@/components/ui/EmptyState.vue";
@@ -284,13 +285,10 @@ onMounted(() => {
 </script>
 
 <template>
-  <section class="space-y-4 px-4 py-4 md:space-y-6 md:px-6 md:py-6">
+  <SettingsPageShell
+    description="Status pages communicate system health. Add components, set their status during incidents, and share the page link so stakeholders see live impact."
+  >
     <ErrorBanner v-if="error" :message="error" @dismiss="error = ''" />
-
-    <p class="text-sm text-[var(--text-muted)]">
-      Status pages communicate system health. Add components, set their status during incidents, and
-      share the page link so stakeholders see live impact.
-    </p>
 
     <div class="flex flex-wrap items-center gap-2">
       <span class="text-sm text-[var(--text-muted)]"
@@ -522,5 +520,5 @@ onMounted(() => {
       @confirm="confirmRemoveComponent"
       @cancel="cancelRemoveComponent"
     />
-  </section>
+  </SettingsPageShell>
 </template>

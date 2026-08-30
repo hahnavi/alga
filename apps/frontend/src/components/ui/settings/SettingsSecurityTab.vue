@@ -3,7 +3,9 @@ import { ref, computed } from "vue";
 import { api } from "@/lib/api";
 import { getErrorMessage } from "@/lib/error";
 import { validatePassword } from "@/lib/validators";
+import { useToast } from "@/lib/toast";
 import Button from "@/components/ui/Button.vue";
+import Card from "@/components/ui/Card.vue";
 import Input from "@/components/ui/Input.vue";
 import FormLabel from "@/components/ui/FormLabel.vue";
 
@@ -11,7 +13,6 @@ const currentPassword = ref("");
 const newPassword = ref("");
 const confirmPassword = ref("");
 
-const message = ref("");
 const error = ref("");
 const submitting = ref(false);
 
@@ -32,8 +33,9 @@ const confirmError = computed(() => {
   return "";
 });
 
+const { push } = useToast();
+
 async function changePassword() {
-  message.value = "";
   error.value = "";
   if (!currentPassword.value || !newPassword.value || !confirmPassword.value) {
     error.value = "All password fields are required.";
@@ -51,7 +53,7 @@ async function changePassword() {
   submitting.value = true;
   try {
     await api.changePassword(currentPassword.value, newPassword.value);
-    message.value = "Password updated successfully.";
+    push("Password updated successfully.", "success");
     currentPassword.value = "";
     newPassword.value = "";
     confirmPassword.value = "";
@@ -64,37 +66,45 @@ async function changePassword() {
 </script>
 
 <template>
-  <h2 class="text-sm font-semibold text-[var(--text-primary)]">Change password</h2>
-  <div class="space-y-1.5">
-    <FormLabel for="current-password">Current password</FormLabel>
-    <Input
-      id="current-password"
-      v-model="currentPassword"
-      type="password"
-      autocomplete="current-password"
-    />
-  </div>
-  <div class="space-y-1.5">
-    <FormLabel for="new-password">New password</FormLabel>
-    <Input
-      id="new-password"
-      v-model="newPassword"
-      type="password"
-      autocomplete="new-password"
-      :error="passwordError"
-    />
-  </div>
-  <div class="space-y-1.5">
-    <FormLabel for="confirm-password">Confirm new password</FormLabel>
-    <Input
-      id="confirm-password"
-      v-model="confirmPassword"
-      type="password"
-      autocomplete="new-password"
-      :error="confirmError"
-    />
-  </div>
-  <p v-if="error" class="text-xs text-[var(--text-error)]" role="alert">{{ error }}</p>
-  <p v-if="message" class="text-xs text-[var(--text-success)]">{{ message }}</p>
-  <Button :loading="submitting" @click="changePassword">Update password</Button>
+  <Card class="space-y-4">
+    <header>
+      <h3 class="text-sm font-semibold text-[var(--text-primary)]">Change password</h3>
+      <p class="text-xs text-[var(--text-muted)]">
+        Changing your password signs you out everywhere, including this session.
+      </p>
+    </header>
+    <div class="space-y-1.5">
+      <FormLabel for="current-password">Current password</FormLabel>
+      <Input
+        id="current-password"
+        v-model="currentPassword"
+        type="password"
+        autocomplete="current-password"
+      />
+    </div>
+    <div class="space-y-1.5">
+      <FormLabel for="new-password">New password</FormLabel>
+      <Input
+        id="new-password"
+        v-model="newPassword"
+        type="password"
+        autocomplete="new-password"
+        :error="passwordError"
+      />
+    </div>
+    <div class="space-y-1.5">
+      <FormLabel for="confirm-password">Confirm new password</FormLabel>
+      <Input
+        id="confirm-password"
+        v-model="confirmPassword"
+        type="password"
+        autocomplete="new-password"
+        :error="confirmError"
+      />
+    </div>
+    <p v-if="error" class="text-xs text-[var(--text-error)]" role="alert">{{ error }}</p>
+    <div class="flex justify-end">
+      <Button :loading="submitting" @click="changePassword">Update password</Button>
+    </div>
+  </Card>
 </template>

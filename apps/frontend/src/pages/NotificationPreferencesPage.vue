@@ -8,6 +8,7 @@ import ErrorBanner from "@/components/ui/ErrorBanner.vue";
 import LoadingSpinner from "@/components/ui/LoadingSpinner.vue";
 import EmptyState from "@/components/ui/EmptyState.vue";
 import PreferenceRuleEditor from "@/components/notification/PreferenceRuleEditor.vue";
+import SettingsPageShell from "@/components/ui/settings/SettingsPageShell.vue";
 import { useAsyncData } from "@/composables/useAsyncData";
 import { useFormSubmit } from "@/composables/useFormSubmit";
 import { usePageHeaderActions } from "@/composables/usePageHeaderActions";
@@ -85,7 +86,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <section class="space-y-4 px-4 py-4 md:space-y-6 md:px-6 md:py-6">
+  <SettingsPageShell
+    description="Rules that route notifications to channels. The default channel applies when no rule matches."
+  >
     <div class="flex justify-end gap-2">
       <Button variant="outline" :loading="sending" @click="handleTest">
         <Send class="h-3.5 w-3.5" />
@@ -146,5 +149,5 @@ onMounted(() => {
         </div>
       </Card>
     </template>
-  </section>
+  </SettingsPageShell>
 </template>

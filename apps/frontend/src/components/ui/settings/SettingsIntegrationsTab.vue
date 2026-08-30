@@ -6,6 +6,7 @@ import { useAuthStore } from "@/stores/auth";
 import { api } from "@/lib/api";
 import { getErrorMessage } from "@/lib/error";
 import Button from "@/components/ui/Button.vue";
+import Card from "@/components/ui/Card.vue";
 
 const auth = useAuthStore();
 
@@ -88,30 +89,37 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <p class="text-sm text-[var(--text-muted)]">Slack</p>
-  <div v-if="!auth.user?.slack_linked" class="rounded-lg border border-[var(--border-primary)] p-4">
-    <div class="flex items-start gap-3">
+  <Card class="space-y-4">
+    <header>
+      <h3 class="text-sm font-semibold text-[var(--text-primary)]">Slack</h3>
+      <p class="text-xs text-[var(--text-muted)]">
+        Connect your Slack account to be automatically invited to incident channels.
+      </p>
+    </header>
+    <div v-if="!auth.user?.slack_linked" class="flex items-start gap-3">
       <div
-        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--bg-tertiary,rgb(148_163_184/0.1))]"
+        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[rgb(148_163_184/0.1)]"
       >
         <Hash class="h-4 w-4 text-[var(--text-muted)]" />
       </div>
       <div class="flex-1">
-        <p class="text-sm text-[var(--text-primary)]">
-          Connect your Slack account to be automatically invited to incident channels.
+        <p class="text-sm text-[var(--text-primary)]">Not connected.</p>
+        <p v-if="slackError" class="mt-1 text-xs text-[var(--text-error)]" role="alert">
+          {{ slackError }}
         </p>
-        <p v-if="slackError" class="mt-1 text-xs text-[var(--text-error)]">{{ slackError }}</p>
-        <Button class="mt-2.5" :disabled="slackAuthorizing" @click="startUserSlackOAuth">
-          {{ slackAuthorizing ? "Opening Slack..." : "Connect Slack" }}
+        <Button
+          class="mt-2.5"
+          :loading="slackAuthorizing"
+          :disabled="slackAuthorizing"
+          @click="startUserSlackOAuth"
+        >
+          Connect Slack
         </Button>
       </div>
     </div>
-  </div>
-
-  <div v-else class="rounded-lg border border-[var(--border-primary)] p-4">
-    <div class="flex items-start gap-3">
+    <div v-else class="flex items-start gap-3">
       <div
-        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--text-success,rgb(34_197_94/0.1))]"
+        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[rgb(34_197_94/0.1)]"
       >
         <Hash class="h-4 w-4 text-[var(--text-success)]" />
       </div>
@@ -120,49 +128,57 @@ onBeforeUnmount(() => {
           Connected as
           <span class="font-medium">@{{ auth.user.slack_display_name }}</span>
         </p>
-        <p v-if="slackError" class="mt-1 text-xs text-[var(--text-error)]">{{ slackError }}</p>
+        <p v-if="slackError" class="mt-1 text-xs text-[var(--text-error)]" role="alert">
+          {{ slackError }}
+        </p>
         <Button
           variant="outline"
           class="mt-2.5"
+          :loading="slackDisconnecting"
           :disabled="slackDisconnecting"
           @click="disconnectUserSlack"
         >
-          {{ slackDisconnecting ? "Disconnecting..." : "Disconnect" }}
+          Disconnect
         </Button>
       </div>
     </div>
-  </div>
+  </Card>
 
-  <hr class="border-[var(--border-primary)]" />
-
-  <p class="text-sm text-[var(--text-muted)]">Google</p>
-  <div
-    v-if="!auth.user?.google_linked"
-    class="rounded-lg border border-[var(--border-primary)] p-4"
-  >
-    <div class="flex items-start gap-3">
+  <Card class="space-y-4">
+    <header>
+      <h3 class="text-sm font-semibold text-[var(--text-primary)]">Google</h3>
+      <p class="text-xs text-[var(--text-muted)]">
+        Bind your Google account to sign in with Google using your email address.
+      </p>
+    </header>
+    <div v-if="!auth.user?.google_linked" class="flex items-start gap-3">
       <div
-        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--bg-tertiary,rgb(148_163_184/0.1))]"
+        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[rgb(148_163_184/0.1)]"
       >
         <Mail class="h-4 w-4 text-[var(--text-muted)]" />
       </div>
       <div class="flex-1">
         <p class="text-sm text-[var(--text-primary)]">
-          Bind your Google account so you can sign in with Google using your
-          <span class="font-medium">{{ auth.user?.email }}</span> address.
+          Not connected to
+          <span class="font-medium">{{ auth.user?.email }}</span>
+          .
         </p>
-        <p v-if="googleError" class="mt-1 text-xs text-[var(--text-error)]">{{ googleError }}</p>
-        <Button class="mt-2.5" :disabled="googleAuthorizing" @click="startUserGoogleOAuth">
-          {{ googleAuthorizing ? "Opening Google..." : "Bind Google account" }}
+        <p v-if="googleError" class="mt-1 text-xs text-[var(--text-error)]" role="alert">
+          {{ googleError }}
+        </p>
+        <Button
+          class="mt-2.5"
+          :loading="googleAuthorizing"
+          :disabled="googleAuthorizing"
+          @click="startUserGoogleOAuth"
+        >
+          Bind Google account
         </Button>
       </div>
     </div>
-  </div>
-
-  <div v-else class="rounded-lg border border-[var(--border-primary)] p-4">
-    <div class="flex items-start gap-3">
+    <div v-else class="flex items-start gap-3">
       <div
-        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--text-success,rgb(34_197_94/0.1))]"
+        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[rgb(34_197_94/0.1)]"
       >
         <Mail class="h-4 w-4 text-[var(--text-success)]" />
       </div>
@@ -171,16 +187,19 @@ onBeforeUnmount(() => {
           Bound to <span class="font-medium">{{ auth.user.email }}</span>
         </p>
         <p class="text-xs text-[var(--text-muted)]">You can sign in with this Google account.</p>
-        <p v-if="googleError" class="mt-1 text-xs text-[var(--text-error)]">{{ googleError }}</p>
+        <p v-if="googleError" class="mt-1 text-xs text-[var(--text-error)]" role="alert">
+          {{ googleError }}
+        </p>
         <Button
           variant="outline"
           class="mt-2.5"
+          :loading="googleDisconnecting"
           :disabled="googleDisconnecting"
           @click="disconnectUserGoogle"
         >
-          {{ googleDisconnecting ? "Unbinding..." : "Unbind" }}
+          Unbind
         </Button>
       </div>
     </div>
-  </div>
+  </Card>
 </template>

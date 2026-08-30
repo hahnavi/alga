@@ -7,6 +7,7 @@ import Card from "@/components/ui/Card.vue";
 import ErrorBanner from "@/components/ui/ErrorBanner.vue";
 import LoadingSpinner from "@/components/ui/LoadingSpinner.vue";
 import Modal from "@/components/ui/Modal.vue";
+import SettingsPageShell from "@/components/ui/settings/SettingsPageShell.vue";
 import ConfirmDialog from "@/components/ui/ConfirmDialog.vue";
 import Switch from "@/components/ui/Switch.vue";
 import EmptyState from "@/components/ui/EmptyState.vue";
@@ -157,7 +158,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-6 max-w-4xl mx-auto space-y-6">
+  <SettingsPageShell description="Add an OIDC provider to enable single sign-on for your team.">
     <ErrorBanner v-if="error" :message="error" @retry="loadProviders" />
 
     <LoadingSpinner v-if="loading" />
@@ -180,16 +181,8 @@ onMounted(() => {
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-3">
             <h3 class="font-semibold text-lg truncate">{{ p.name }}</h3>
-            <span
-              class="text-xs px-2 py-0.5 rounded-full font-medium"
-              :class="
-                p.enabled
-                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                  : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
-              "
-            >
-              {{ p.enabled ? "Enabled" : "Disabled" }}
-            </span>
+            <span class="badge-green" v-if="p.enabled">Enabled</span>
+            <span v-else class="badge-muted">Disabled</span>
           </div>
           <div class="mt-1 flex items-center gap-1.5 text-sm text-[var(--text-muted)]">
             <span class="truncate">{{ p.issuer }}</span>
@@ -210,7 +203,7 @@ onMounted(() => {
           <div class="mt-1 text-xs text-[var(--text-muted)]">
             Client ID: <code class="font-mono">{{ p.client_id }}</code>
             <span v-if="p.client_secret_configured" class="ml-2 text-green-600">secret set</span>
-            <span v-else class="ml-2 text-red-500">secret missing</span>
+            <span v-else class="ml-2 text-[var(--text-error)]">secret missing</span>
           </div>
         </div>
 
@@ -290,5 +283,5 @@ onMounted(() => {
       @confirm="doDelete"
       @cancel="showDeleteConfirm = false"
     />
-  </div>
+  </SettingsPageShell>
 </template>

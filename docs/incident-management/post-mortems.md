@@ -20,7 +20,7 @@ draft → in_review → approved → published
 | `approved`  | Reviewed and approved (records `approved_by_id`) |
 | `published` | Publicly visible (records `published_at`)        |
 
-Allowed transitions: `draft → in_review`; `in_review → draft` or `approved`; `approved → in_review` or `published`. Submitting for review notifies the incident commander that a review is requested.
+Allowed transitions: `draft → in_review`; `in_review → draft` or `approved`; `approved → in_review` or `published`. `published` is terminal — published post-mortems cannot be edited or reverted (PATCH returns `409`). Submitting for review requires `blameless_confirmed` to be set and notifies the incident commander that a review is requested.
 
 ## Content Fields
 
@@ -48,45 +48,52 @@ When an incident is resolved, Alga can auto-create a post-mortem draft pre-popul
 
 Action items are tracked per post-mortem and can be assigned, prioritized, and driven to completion.
 
-| Field                           | Description                                               |
-| ------------------------------- | --------------------------------------------------------- |
-| `description`                   | What needs to be done (required)                          |
-| `type`                          | Kind of follow-up (defaults to `investigate`)             |
-| `assignee_id` / `assignee_name` | User responsible                                          |
-| `status`                        | `open` → `in_progress` → `completed` (defaults to `open`) |
-| `priority`                      | Priority level (defaults to `medium`)                     |
-| `due_date`                      | Target completion date                                    |
+| Field                           | Description                                                                                              |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `description`                   | What needs to be done (required)                                                                         |
+| `type`                          | Kind of follow-up (`prevent`, `mitigate`, `detect`, `investigate`; defaults to `investigate`)            |
+| `assignee_id` / `assignee_name` | User responsible (`assignee_id` must reference an existing user; reassignment notifies the new assignee) |
+| `status`                        | `open` → `in_progress` → `completed` (or `cancelled`; defaults to `open`)                                |
+| `priority`                      | Priority level (`low`, `medium`, `high`; defaults to `medium`)                                           |
+| `due_date`                      | Target completion date — RFC3339 timestamp or `YYYY-MM-DD` (interpreted as end of day UTC)               |
 
-View all open action items globally at `GET /api/v1/action-items`.
+Action item mutations are scoped to the path incident: an item id from a different incident's post-mortem returns `404`. Overdue items (due date in the past, not completed/cancelled) are detected by a background sweep every 5 minutes; the sweep emits an `action_item_overdue` SSE event and notifies the assignee at most once per item per 24 hours.
+
+View all open action items globally at `GET /api/v1/action-items` (sorted by due date, undated items last).
 
 ## Workflow
 
 1. **Create** the post-mortem (auto-drafted on resolve, or created manually)
-2. **Edit** content as needed (while in `draft`)
-3. **Submit for Review** — moves to `in_review` and notifies the commander
+2. **Edit** content as needed (while in `draft`; editing is allowed in any non-published state)
+3. **Submit for Review** — moves to `in_review` and notifies the commander (requires `blameless_confirmed`)
 4. **Approve** — moves to `approved` and records the approver
-5. **Publish** — moves to `published`
+5. **Publish** — moves to `published` (immutable)
 6. **Track Action Items** — ensure follow-up tasks are completed
+7. **Revert** — `in_review`/`approved` post-mortems can be returned to `draft` (or `approved` to `in_review`) via `POST …/revert-to-draft` / `POST …/revert-to-review`
 
 ## API Endpoints
 
 ### Post-Mortem Management
 
-| Method   | Path                                 | Auth    | Permission           | Description           |
-| -------- | ------------------------------------ | ------- | -------------------- | --------------------- |
-| `GET`    | `/api/v1/post-mortems`               | Session | `postmortems:read`   | List all post-mortems |
-| `GET`    | `/api/v1/incidents/{id}/post-mortem` | Session | `postmortems:read`   | Get post-mortem       |
-| `POST`   | `/api/v1/incidents/{id}/post-mortem` | Session | `postmortems:write`  | Create post-mortem    |
-| `PATCH`  | `/api/v1/incidents/{id}/post-mortem` | Session | `postmortems:write`  | Update post-mortem    |
-| `DELETE` | `/api/v1/incidents/{id}/post-mortem` | Session | `postmortems:delete` | Delete post-mortem    |
+| Method   | Path                                 | Auth    | Permission           | Description                             |
+| -------- | ------------------------------------ | ------- | -------------------- | --------------------------------------- |
+| `GET`    | `/api/v1/post-mortems`               | Session | `postmortems:read`   | List all post-mortems                   |
+| `GET`    | `/api/v1/incidents/{id}/post-mortem` | Session | `postmortems:read`   | Get post-mortem                         |
+| `POST`   | `/api/v1/incidents/{id}/post-mortem` | Session | `postmortems:write`  | Create post-mortem                      |
+| `PATCH`  | `/api/v1/incidents/{id}/post-mortem` | Session | `postmortems:write`  | Update post-mortem (409 when published) |
+| `DELETE` | `/api/v1/incidents/{id}/post-mortem` | Session | `postmortems:delete` | Delete post-mortem                      |
+
+`{id}` accepts either the incident number or the incident UUID.
 
 ### Workflow Actions
 
-| Method | Path                                               | Auth    | Permission          | Description                     |
-| ------ | -------------------------------------------------- | ------- | ------------------- | ------------------------------- |
-| `POST` | `/api/v1/incidents/{id}/post-mortem/submit-review` | Session | `postmortems:write` | Submit for review (`in_review`) |
-| `POST` | `/api/v1/incidents/{id}/post-mortem/approve`       | Session | `postmortems:write` | Approve post-mortem             |
-| `POST` | `/api/v1/incidents/{id}/post-mortem/publish`       | Session | `postmortems:write` | Publish post-mortem             |
+| Method | Path                                                  | Auth    | Permission          | Description                              |
+| ------ | ----------------------------------------------------- | ------- | ------------------- | ---------------------------------------- |
+| `POST` | `/api/v1/incidents/{id}/post-mortem/submit-review`    | Session | `postmortems:write` | Submit for review (`in_review`)          |
+| `POST` | `/api/v1/incidents/{id}/post-mortem/revert-to-draft`  | Session | `postmortems:write` | Return `in_review`/`approved` to `draft` |
+| `POST` | `/api/v1/incidents/{id}/post-mortem/revert-to-review` | Session | `postmortems:write` | Return `approved` to `in_review`         |
+| `POST` | `/api/v1/incidents/{id}/post-mortem/approve`          | Session | `postmortems:write` | Approve post-mortem                      |
+| `POST` | `/api/v1/incidents/{id}/post-mortem/publish`          | Session | `postmortems:write` | Publish post-mortem                      |
 
 ### Action Items
 

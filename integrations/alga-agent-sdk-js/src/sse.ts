@@ -8,7 +8,6 @@ import type {
   PeerFindingEvent,
   PeerAskEvent,
   PeerReplyEvent,
-  CoordinationTaskEvent,
   SummarizeIncidentEvent,
   AlertAutoResolvedEvent,
   IncidentCommsStaleEvent,
@@ -50,7 +49,6 @@ export class SSEClient {
   onPeerFinding: Callback<PeerFindingEvent> | null = null;
   onPeerAsk: Callback<PeerAskEvent> | null = null;
   onPeerReply: Callback<PeerReplyEvent> | null = null;
-  onCoordinationTask: Callback<CoordinationTaskEvent> | null = null;
   onSummarizeIncident: Callback<SummarizeIncidentEvent> | null = null;
   onAlertAutoResolved: Callback<AlertAutoResolvedEvent> | null = null;
   onIncidentCommsStale: Callback<IncidentCommsStaleEvent> | null = null;
@@ -253,9 +251,6 @@ export class SSEClient {
         break;
       case "peer_reply":
         this.onPeerReply?.(parsed as PeerReplyEvent);
-        break;
-      case "coordination_task_dispatched":
-        this.onCoordinationTask?.(parsed as CoordinationTaskEvent);
         break;
       case "summarize_incident":
         this.onSummarizeIncident?.(parsed as SummarizeIncidentEvent);

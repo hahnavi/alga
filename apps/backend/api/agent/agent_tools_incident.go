@@ -11,9 +11,11 @@ import (
 	"github.com/google/uuid"
 
 	"alga/capability"
+	"alga/escalation"
 	"alga/ics"
 	"alga/incident"
 	"alga/logger"
+	"alga/metrics"
 	"alga/rabbitmq"
 	"alga/sse"
 	"alga/store"
@@ -68,14 +70,6 @@ func (e *AgentToolExecutor) executeIncidentTool(ctx context.Context, agentRec *s
 		err = e.performPostHandoff(ctx, agentRec, agent, incidentNumber, cmd)
 	case "publish_status_update":
 		err = e.performPublishStatusUpdate(ctx, agentRec, agent, incidentNumber, cmd)
-	case "dispatch_task":
-		err = e.performDispatchTask(ctx, agentRec, agent, incidentNumber, cmd)
-	case "claim_task":
-		err = e.performClaimTask(ctx, agentRec, agent, incidentNumber, cmd)
-	case "complete_task":
-		err = e.performCompleteTask(ctx, agentRec, agent, incidentNumber, cmd)
-	case "synthesize_findings":
-		err = e.performSynthesizeFindings(ctx, agentRec, agent, incidentNumber, cmd)
 	default:
 		return InvToolOutcome{ChatID: chatID, Ok: false, Op: op, Error: "unknown op"}
 	}
@@ -282,16 +276,25 @@ func (e *AgentToolExecutor) performResolveIncident(ctx context.Context, agentRec
 	if len(missing) > 0 {
 		return fmt.Errorf("incident resolution requires: %s", strings.Join(missing, ", "))
 	}
-	if err := e.incidentStore.TransitionIncidentStatus(ctx, incidentNumber, []string{"detected", "triaging", "active", "mitigated"}, "resolved"); err != nil {
+	// Match the operator state machine: triaging can only be left via promote
+	// (spec 05 E3), so agents must not resolve a triaging incident directly.
+	if err := e.incidentStore.TransitionIncidentStatus(ctx, incidentNumber, []string{"detected", "active", "mitigated"}, "resolved"); err != nil {
 		return fmt.Errorf("transition to resolved: %w", err)
 	}
+	metrics.IncidentsResolvedTotal.Add(1)
+	metrics.IncidentsActive.Add(-1)
+
+	// Terminal transition: stop any pending escalation sweep so a resolved
+	// incident stops paging.
+	escalation.CancelForIncident(ctx, e.vkClient, e.incidentStore, incID, "incident resolved by agent")
+
 	reason := cmd.Reason
 	if reason == "" {
 		reason = "Resolved by agent"
 	}
 	_ = e.incidentStore.AddTimelineEntry(ctx, &store.IncidentTimelineEntryRecord{
 		IncidentNumber: incidentNumber,
-		EventType:      "incident_resolved",
+		EventType:      "resolved",
 		ActorID:        &agentRec.ID,
 		ActorType:      "agent",
 		Message:        fmt.Sprintf("Agent %s resolved incident: %s", agentRec.Name, reason),
@@ -304,6 +307,11 @@ func (e *AgentToolExecutor) performResolveIncident(ctx context.Context, agentRec
 	e.EnsurePostMortem(ctx, incidentNumber, "Incident resolved by agent "+agentRec.Name)
 	if e.ssePublisher != nil {
 		e.ssePublisher.Publish(sse.Event{Type: "incident_updated", Data: map[string]string{"incident_number": incID, "status": "resolved"}})
+	}
+	// Mirror the operator resolve side effects (service-status propagation,
+	// Slack status post + resolution summary, dashboard cache invalidation).
+	if e.postIncidentResolveFn != nil {
+		e.postIncidentResolveFn(ctx, incidentNumber)
 	}
 	e.backpropagateOutcomeToAlertInvestigations(ctx, incidentNumber, inc, cmd)
 	e.finalizeIncidentRelatedInvestigations(ctx, incidentNumber, agentRec)
@@ -449,22 +457,14 @@ func (e *AgentToolExecutor) agentCanResolveIncident(ctx context.Context, agentRe
 	return false
 }
 
+// missingIncidentResolutionRequirements mirrors the operator gate in
+// api/incident_lifecycle.go and spec R8: non-empty summary plus non-blank
+// impact_assessment, root_cause, and resolution document sections. When the
+// document store is unwired, all three sections count as missing (fail-closed).
 func (e *AgentToolExecutor) missingIncidentResolutionRequirements(ctx context.Context, inc *store.IncidentRecord) ([]string, error) {
 	missing := []string{}
 	if inc == nil || strings.TrimSpace(inc.Summary) == "" {
 		missing = append(missing, "summary")
-	}
-	// When an agent communicator is assigned, the commander must not silently
-	// bypass them: resolution requires at least one published public status
-	// update so the communicator is visibly involved in the incident.
-	if inc != nil && e.incidentCoordinationStore != nil {
-		updates, listErr := e.incidentCoordinationStore.ListMessagesByKind(ctx, inc.IncidentNumber, store.IncidentCoordinationKindStatusUpdate, 50, 0)
-		if listErr != nil {
-			return nil, fmt.Errorf("check published status updates: %w", listErr)
-		}
-		if !hasResolvedStatusUpdate(updates) {
-			missing = append(missing, "a resolved status update (publish one via alga_publish_status_update with status_level=resolved)")
-		}
 	}
 	if e.incidentDocumentStore == nil {
 		missing = append(missing, "impact_assessment", "root_cause", "resolution")
@@ -488,23 +488,6 @@ func (e *AgentToolExecutor) missingIncidentResolutionRequirements(ctx context.Co
 		missing = append(missing, "resolution")
 	}
 	return missing, nil
-}
-
-func hasResolvedStatusUpdate(updates []store.IncidentCoordinationMessageRecord) bool {
-	for _, update := range updates {
-		if coordinationStatusLevel(update) == "resolved" {
-			return true
-		}
-	}
-	return false
-}
-
-func coordinationStatusLevel(update store.IncidentCoordinationMessageRecord) string {
-	if update.Metadata == nil {
-		return ""
-	}
-	level, _ := update.Metadata["status_level"].(string)
-	return normalizeCoordinationStatusLevel(level)
 }
 
 func (e *AgentToolExecutor) performBeginTriage(ctx context.Context, agentRec *store.AgentTokenRecord, agent agentTokenContext, incidentNumber int64) error {
@@ -645,17 +628,26 @@ func (e *AgentToolExecutor) performPromoteToIncident(ctx context.Context, agentR
 	}
 
 	now := time.Now().UTC()
+	// Agent-created incidents get computed SLA targets at insert time per spec
+	// SLA R2, and the promote-equivalent ack stamp so the response clock starts
+	// like an operator triaging→active promotion (applyStatusTimestampsBun).
+	respondDur, resolveDur := worker.PriorityToSLATargets(priority)
+	respondAt := now.Add(respondDur)
+	resolveAt := now.Add(resolveDur)
 	record := &store.IncidentRecord{
-		IncidentNumber: incidentNumber,
-		Title:          title,
-		Description:    description,
-		Status:         "active",
-		Severity:       severity,
-		ImpactLevel:    "medium",
-		Priority:       priority,
-		StartedAt:      &now,
-		CreatedAt:      now,
-		UpdatedAt:      now,
+		IncidentNumber:     incidentNumber,
+		Title:              title,
+		Description:        description,
+		Status:             "active",
+		Severity:           severity,
+		ImpactLevel:        "medium",
+		Priority:           priority,
+		StartedAt:          &now,
+		SLAAcknowledgedAt:  &now,
+		SLATargetRespondAt: &respondAt,
+		SLATargetResolveAt: &resolveAt,
+		CreatedAt:          now,
+		UpdatedAt:          now,
 	}
 
 	created, err := e.incidentStore.CreateIncident(ctx, record)

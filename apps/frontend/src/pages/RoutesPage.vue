@@ -21,6 +21,7 @@ import { useFormSubmit } from "@/composables/useFormSubmit";
 import ErrorBanner from "@/components/ui/ErrorBanner.vue";
 import LoadingSpinner from "@/components/ui/LoadingSpinner.vue";
 import Modal from "@/components/ui/Modal.vue";
+import SettingsPageShell from "@/components/ui/settings/SettingsPageShell.vue";
 import { useEntityPermissions } from "@/composables/useEntityPermissions";
 import { usePageHeaderActions } from "@/composables/usePageHeaderActions";
 import { useListFilter } from "@/composables/useListFilter";
@@ -241,13 +242,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <section class="space-y-4 px-4 py-4 md:space-y-6 md:px-6 md:py-6">
-    <p class="text-sm text-[var(--text-muted)]">
-      Alerts are always sent to the default channels from Integration Settings. Routes forward
-      matching alerts to <strong>additional</strong> channels. Match <strong>all</strong> means
-      every condition must match (AND); match <strong>any</strong> means at least one (OR).
-    </p>
-
+  <SettingsPageShell
+    description="Alerts are always sent to the default channels from Integration Settings. Routes forward matching alerts to additional channels. Match all means every condition must match (AND); match any means at least one (OR)."
+  >
     <LoadingSpinner v-if="loading" centered />
 
     <div v-if="defaultDestinations.length > 0 && !loading" class="space-y-3">
@@ -325,7 +322,7 @@ onMounted(() => {
     </div>
 
     <ErrorBanner :message="formError || error" />
-  </section>
+  </SettingsPageShell>
 
   <Modal
     v-model:open="routeEditorOpen"

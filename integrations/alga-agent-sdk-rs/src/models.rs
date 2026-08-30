@@ -44,23 +44,6 @@ pub struct Alert {
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
-pub struct CoordinationTask {
-    pub task_id: String,
-    pub incident_number: i64,
-    pub kind: String,
-    pub goal: String,
-    pub assignee_role: String,
-    pub assignee_agent_id: String,
-    pub status: String,
-    pub result: Option<serde_json::Value>,
-    pub input_context: Option<serde_json::Value>,
-    pub parent_task_id: String,
-    pub created_at: Option<String>,
-    pub completed_at: Option<String>,
-}
-
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-#[serde(default)]
 pub struct KnowledgeNote {
     pub id: String,
     pub kind: String,
@@ -299,22 +282,6 @@ pub struct PeerReplyEvent {
     pub replied_by_agent_id: String,
     pub replied_by_agent_name: String,
     pub answered_at: String,
-}
-
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-#[serde(default)]
-pub struct CoordinationTaskEvent {
-    #[serde(rename = "type")]
-    pub event_type: String,
-    pub chat_id: String,
-    pub task_id: String,
-    pub incident_number: i64,
-    pub kind: String,
-    pub goal: String,
-    pub assignee_role: String,
-    pub assignee_agent_id: String,
-    pub input_context: Option<serde_json::Value>,
-    pub parent_task_id: String,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]

@@ -14,7 +14,7 @@ Requires Python >= 3.10. Dependencies (`httpx>=0.27`, `pydantic>=2.0`) are insta
 
 ```python
 import asyncio
-from alga_agent_sdk import AlgaClient, resolve_alert, set_outcome, dispatch_task
+from alga_agent_sdk import AlgaClient, resolve_alert, set_outcome
 
 client = AlgaClient("https://alga.example.com", token="your-agent-bearer-token")
 
@@ -64,31 +64,31 @@ client = AlgaClient(
 
 ### Options
 
-| Option              | Type         | Default                  | Description                                       |
-|---------------------|--------------|--------------------------|---------------------------------------------------|
-| heartbeat_interval  | float (sec)  | 30.0                     | Heartbeat cadence (floor 1s)                      |
-| dedup               | MessageDedup | new(1000, 300.0)         | SSE message dedup cache                           |
-| max_rest_retries    | int          | 2                        | Max REST retry attempts on transient errors       |
-| user_agent          | str          | "alga-agent-sdk-py"      | User-Agent header                                 |
+| Option             | Type         | Default             | Description                                 |
+| ------------------ | ------------ | ------------------- | ------------------------------------------- |
+| heartbeat_interval | float (sec)  | 30.0                | Heartbeat cadence (floor 1s)                |
+| dedup              | MessageDedup | new(1000, 300.0)    | SSE message dedup cache                     |
+| max_rest_retries   | int          | 2                   | Max REST retry attempts on transient errors |
+| user_agent         | str          | "alga-agent-sdk-py" | User-Agent header                           |
 
 ## SSE Events
 
 Register callbacks before calling `connect()`. The SSE client auto-reconnects with exponential backoff (2s → 60s with ±20% jitter), honoring `Retry-After` on 429s.
 
-| Callback                | Event type                   | Description                               |
-|-------------------------|------------------------------|-------------------------------------------|
-| `on_connected`          | `connected`                  | Initial connection handshake              |
-| `on_message`            | `message`                    | Chat message from operator/peer           |
-| `on_typing`             | `typing`                     | Typing indicator                          |
-| `on_investigation_resume` | `investigation_resume`     | Investigation resumed                     |
-| `on_peer_finding`       | `peer_finding`               | Notable finding from a peer agent         |
-| `on_peer_ask`           | `peer_ask`                   | Another agent is asking a question        |
-| `on_peer_reply`         | `peer_reply`                 | Reply to your peer ask                    |
-| `on_coordination_task`  | `coordination_task_dispatched` | Commander dispatched a task to you      |
-| `on_summarize_incident` | `summarize_incident`         | Backend requests an incident summary      |
-| `on_alert_auto_resolved`| `alert_auto_resolved`        | An investigated alert auto-resolved       |
-| `on_incident_comms_stale` | `incident_comms_stale`     | Incident comms went quiet past threshold  |
-| `on_unknown_event`      | any other                    | Escape hatch for new backend event types  |
+| Callback                  | Event type                     | Description                              |
+| ------------------------- | ------------------------------ | ---------------------------------------- |
+| `on_connected`            | `connected`                    | Initial connection handshake             |
+| `on_message`              | `message`                      | Chat message from operator/peer          |
+| `on_typing`               | `typing`                       | Typing indicator                         |
+| `on_investigation_resume` | `investigation_resume`         | Investigation resumed                    |
+| `on_peer_finding`         | `peer_finding`                 | Notable finding from a peer agent        |
+| `on_peer_ask`             | `peer_ask`                     | Another agent is asking a question       |
+| `on_peer_reply`           | `peer_reply`                   | Reply to your peer ask                   |
+| `on_coordination_task`    | `coordination_task_dispatched` | Commander dispatched a task to you       |
+| `on_summarize_incident`   | `summarize_incident`           | Backend requests an incident summary     |
+| `on_alert_auto_resolved`  | `alert_auto_resolved`          | An investigated alert auto-resolved      |
+| `on_incident_comms_stale` | `incident_comms_stale`         | Incident comms went quiet past threshold |
+| `on_unknown_event`        | any other                      | Escape hatch for new backend event types |
 
 Callbacks may be plain functions or coroutines. Messages prefixed with 🔒 (U+1F512) are automatically filtered, and duplicates are deduplicated via `MessageDedup`.
 
@@ -104,14 +104,11 @@ from alga_agent_sdk import (
     resolve_incident, begin_triage, promote_incident,
     assign_incident_role_to_user, assign_incident_role_to_agent,
     post_handoff, publish_status_update, set_incident_resolution_docs,
-    dispatch_task, dispatch_task_to_agent, claim_task, complete_task, synthesize_findings,
 )
 
 await client.send_command("alert_42", resolve_alert("fp-abc"))
 await client.send_command("alert_42", set_outcome("Memory exhaustion on db-01"))
 await client.send_command("incident_coord_9", set_incident_priority(9, "P1"))
-await client.send_command("incident_coord_9", dispatch_task(9, "investigate", "Find root cause", "responder"))
-await client.send_command("incident_coord_9", complete_task("task-uuid", {"summary": "OOM in worker pool"}))
 ```
 
 ## REST Methods
@@ -129,7 +126,6 @@ await client.reopen_alert("fp-abc")
 
 ```python
 ctx = await client.get_incident(9)          # IncidentContext (incident + roles)
-tasks = await client.list_incident_tasks(9)
 timeline = await client.get_incident_timeline(9)
 await client.add_incident_timeline(9, "Root cause: disk full", "root_cause")
 await client.update_incident_summary(9, "Summarized...")

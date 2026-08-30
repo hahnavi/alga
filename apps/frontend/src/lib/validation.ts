@@ -188,9 +188,37 @@ export const incidentRecordSchema = z
   })
   .passthrough();
 
+const relatedIncidentSchema = z
+  .object({
+    incident_number: z.number().int(),
+    title: z.string(),
+    status: z.string(),
+    severity: z.string(),
+    priority: z.string(),
+    deleted_at: z.union([z.string(), z.null()]).optional(),
+  })
+  .passthrough();
+
+const relatedAlertSchema = z
+  .object({
+    fingerprint: z.string(),
+    alert_number: z.number().int().optional(),
+    status: z.string(),
+    // Backend emits a nil labels map as JSON null.
+    labels: z.record(z.string(), z.string()).nullable().optional(),
+    starts_at: z.string(),
+  })
+  .passthrough();
+
 // Schemas reused at the boundary in `api.ts`.
 export const alertListSchema = z.array(alertRecordSchema).nullable();
 export const alertDetailResponseSchema = alertDetailSchema;
+export const alertRelatedResponseSchema = z
+  .object({
+    related_alerts: z.array(relatedAlertSchema).nullable().optional(),
+    incident: relatedIncidentSchema.nullable().optional(),
+  })
+  .passthrough();
 export const incidentListSchema = paginatedData(incidentRecordSchema);
 export const incidentDetailSchema = z.object({ incident: incidentRecordSchema }).passthrough();
 

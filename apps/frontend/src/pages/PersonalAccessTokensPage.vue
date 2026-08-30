@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { getErrorMessage } from "@/lib/error";
 import { computed, onMounted, ref, watch } from "vue";
-import { Plus, KeyRound, Clock, Search, Shield } from "@lucide/vue";
+import { Plus, Key, KeyRound, Clock, Search, Shield } from "@lucide/vue";
 import { api, type PATRow } from "@/lib/api";
 import Button from "@/components/ui/Button.vue";
 import Input from "@/components/ui/Input.vue";
@@ -16,6 +16,7 @@ import EmptyState from "@/components/ui/EmptyState.vue";
 import DateTimePicker from "@/components/ui/DateTimePicker.vue";
 import FormLabel from "@/components/ui/FormLabel.vue";
 import Select from "@/components/ui/Select.vue";
+import SettingsPageShell from "@/components/ui/settings/SettingsPageShell.vue";
 import { useToast } from "@/lib/toast";
 import { useAuthStore } from "@/stores/auth";
 import { useDelete } from "@/composables/useDelete";
@@ -439,6 +440,7 @@ useEscapeKey(
 
 usePageHeaderActions({
   title: "Personal Access Tokens",
+  titleIcon: Key,
   onAdd: openCreateDialog,
   addLabel: "Create token",
 });
@@ -449,15 +451,10 @@ onMounted(() => {
 </script>
 
 <template>
-  <section class="space-y-4 px-4 py-4 md:space-y-6 md:px-6 md:py-6">
+  <SettingsPageShell
+    description="Manage personal access tokens for API authentication. Each token's secret is shown only once after creation. Tokens are scoped to the permissions you select."
+  >
     <ErrorBanner :message="error" />
-
-    <div class="flex items-center justify-between gap-4">
-      <p class="text-sm text-[var(--text-muted)]">
-        Manage personal access tokens for API authentication. Each token's secret is shown only once
-        after creation. Tokens are scoped to the permissions you select.
-      </p>
-    </div>
 
     <LoadingSpinner v-if="loading" centered />
 
@@ -766,5 +763,5 @@ onMounted(() => {
       :destructive="true"
       @confirm="doRevoke"
     />
-  </section>
+  </SettingsPageShell>
 </template>

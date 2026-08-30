@@ -1,4 +1,11 @@
-export { AlgaError, AlgaAuthError, AlgaAPIError, AlgaConnectionError, isAuthError, isRetryableError } from "./errors.js";
+export {
+  AlgaError,
+  AlgaAuthError,
+  AlgaAPIError,
+  AlgaConnectionError,
+  isAuthError,
+  isRetryableError,
+} from "./errors.js";
 export { MessageDedup } from "./dedup.js";
 export {
   // alert investigation
@@ -24,27 +31,16 @@ export {
   postHandoff,
   publishStatusUpdate,
   setIncidentResolutionDocs,
-  // coordination tasks
-  dispatchTask,
-  dispatchTaskToAgent,
-  claimTask,
-  completeTask,
-  synthesizeFindings,
-  TASK_KIND_INVESTIGATE,
-  TASK_KIND_COMMUNICATE,
-  TASK_KIND_VERIFY,
-  TASK_KIND_MITIGATE,
 } from "./commands.js";
 export type { InvestigationCommand } from "./commands.js";
 export { SSEClient, parseRetryAfterMs } from "./sse.js";
 export type { ErrHandler, SSEOptions } from "./sse.js";
 export { AlgaClient } from "./client.js";
-export type { AlgaClientOptions, CoordinationTaskListResponse } from "./client.js";
+export type { AlgaClientOptions } from "./client.js";
 export type {
   Alert,
   AlertEvent,
   DeliveryTarget,
-  CoordinationTask,
   KnowledgeNote,
   Memory,
   PeerAsk,
@@ -65,7 +61,6 @@ export type {
   PeerAskEvent,
   PeerReplyEvent,
   AgentPresenceEvent,
-  CoordinationTaskEvent,
   SummarizeIncidentEvent,
   AlertAutoResolvedEvent,
   IncidentCommsStaleEvent,

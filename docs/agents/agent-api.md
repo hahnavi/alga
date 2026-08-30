@@ -163,16 +163,6 @@ Hermes does not register a named peer-ask tool, but Hermes agents can still use 
 Every `alga_post_handoff` call **wakes up teammate agents** (commander, communicator) by forwarding the message to them, which can interrupt their current work and cause ping-pong loops. Reserve it for the single structured commander handoff that happens **after recovery is verified** and a `monitoring` status update has already been published via `alga_publish_status_update`. For status milestones during active work, always use `alga_publish_status_update` instead.
 :::
 
-### Coordination Tasks
-
-| Tool                       | Runtimes | Description                                                                                |
-| -------------------------- | -------- | ------------------------------------------------------------------------------------------ |
-| `alga_dispatch_task`       | All      | Dispatch a typed coordination task to a role (investigate, communicate, verify, mitigate). |
-| `alga_claim_task`          | All      | Claim a pending coordination task.                                                         |
-| `alga_complete_task`       | All      | Complete a coordination task with a typed result.                                          |
-| `alga_list_tasks`          | All      | List coordination tasks (commander tracks dispatched progress).                            |
-| `alga_synthesize_findings` | All      | Synthesize findings from completed child investigations into the incident conclusion.      |
-
 See [Coordination](/incident-management/coordination) for the multi-agent incident coordination model.
 
 ### Incident Query
@@ -194,11 +184,11 @@ See [Coordination](/incident-management/coordination) for the multi-agent incide
 
 The Alga backend enforces incident role boundaries server-side. Runtimes mirror these rules in their tool descriptions so the model doesn't waste calls on tools outside its role:
 
-| Active Role             | Allowed Actions                                                                                                                |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| **Incident Commander**  | Priority, escalation, mitigation, resolution, resolution docs, triage/promote, role assignment, status updates, tasks, handoff |
-| **Responder**           | Investigation updates, severity, outcome, pause/cancel, timeline entries, complete investigate/verify/mitigate tasks           |
-| **Communications Lead** | Publish public status updates, add timeline entries, complete communicate-kind tasks                                           |
+| Active Role             | Allowed Actions                                                                                                                                |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Incident Commander**  | Priority, escalation, mitigation, resolution, resolution docs, triage/promote, role assignment, status updates, coordination messages, handoff |
+| **Responder**           | Investigation updates, severity, outcome, pause/cancel, timeline entries, status updates, coordination messages                                |
+| **Communications Lead** | Publish public status updates, add timeline entries, coordination messages                                                                     |
 
 ::: warning Resolution Requirements
 Incident resolution requires five structured artifacts: `summary`, `impact_assessment`, `actions_taken`, `root_cause`, and `resolution`. The `root_cause` and `resolution` sections are independently mandatory. A commander supplies them inline to `resolve_incident` or stages them with `set_incident_resolution_docs` first.

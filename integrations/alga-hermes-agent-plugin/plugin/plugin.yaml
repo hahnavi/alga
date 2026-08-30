@@ -5,7 +5,7 @@ description: >
   Alga SRE investigation gateway adapter for Hermes Agent.
   Connects via SSE (inbound) + REST (outbound) to Alga investigation threads.
   Provides Alga-specific tools (alert resolution, incident lifecycle,
-  coordination tasks, knowledge, and queries) alongside the platform adapter.
+  coordination messages, knowledge, and queries) alongside the platform adapter.
 author: Alga
 requires_env:
   - ALGA_SERVER_URL
@@ -25,10 +25,6 @@ provides_tools:
   - alga_set_incident_priority
   - alga_set_incident_severity
   - alga_trigger_escalation
-  - alga_dispatch_task
-  - alga_complete_task
-  - alga_list_tasks
-  - alga_synthesize_findings
   - alga_mitigate_incident
   - alga_resolve_incident
   - alga_set_incident_resolution_docs

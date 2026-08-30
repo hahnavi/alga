@@ -55,10 +55,10 @@ function commandActionsFor(
       items.push({ label: "Cancel", onSelect: emit.cancel, destructive: true });
       break;
     case "triaging":
+      // Spec 05 E3: triaging can only be left via promote — the backend
+      // rejects acknowledge/mitigate/cancel from this status, so don't offer
+      // actions that would always fail.
       items.push({ label: "Start Response", onSelect: emit.promote, disabled: busy });
-      items.push({ label: "Acknowledge", onSelect: emit.acknowledge, disabled: busy });
-      items.push({ label: "Mitigate", onSelect: emit.mitigate, disabled: busy });
-      items.push({ label: "Cancel", onSelect: emit.cancel, destructive: true });
       break;
     case "active":
       items.push({ label: "Mitigate", onSelect: emit.mitigate, disabled: busy });

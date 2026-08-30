@@ -5,6 +5,8 @@ import { FileText, CheckCircle2, AlertTriangle, ChevronRight } from "@lucide/vue
 import { api, type PostMortemRecord } from "@/lib/api";
 import { postMortemStatusBadgeClass } from "@/lib/alertLabels";
 import { formatTimeAgo } from "@/lib/time";
+import { getErrorMessage } from "@/lib/error";
+import { useToast } from "@/lib/toast";
 import { usePageHeaderActions } from "@/composables/usePageHeaderActions";
 import SeverityBadge from "@/components/ui/SeverityBadge.vue";
 import Select from "@/components/ui/Select.vue";
@@ -12,12 +14,14 @@ import ErrorBanner from "@/components/ui/ErrorBanner.vue";
 import LoadingSpinner from "@/components/ui/LoadingSpinner.vue";
 import EmptyState from "@/components/ui/EmptyState.vue";
 import InteractiveCard from "@/components/ui/InteractiveCard.vue";
+import Button from "@/components/ui/Button.vue";
 import { useListPage } from "@/composables/useListPage";
 import { useListFilter } from "@/composables/useListFilter";
 
 defineOptions({ name: "PostMortemsPage" });
 
 const router = useRouter();
+const { push } = useToast();
 
 const statusFilter = ref("");
 const searchInput = ref("");
@@ -29,11 +33,52 @@ const {
   reload: load,
 } = useListPage<PostMortemRecord>({
   fetch: () => {
-    const params: Record<string, string | number | boolean | undefined> = { limit: 100 };
+    const params: Record<string, string | number | boolean | undefined> = {
+      limit: PAGE_SIZE,
+      skip: 0,
+    };
     if (statusFilter.value) params.status = statusFilter.value;
     return api.listPostMortems(params);
   },
   entityName: "post-mortems",
+});
+
+const PAGE_SIZE = 50;
+// Rows accumulated across load-more batches; a plain limit query would
+// silently hide older post-mortems beyond the first page.
+const loadedCount = ref(0);
+const reachedEnd = ref(false);
+const loadingMore = ref(false);
+
+// Keep loadedCount/reachedEnd in sync after the initial load replaces items.
+watch(postMortems, (items) => {
+  loadedCount.value = items.length;
+  reachedEnd.value = items.length < PAGE_SIZE;
+});
+
+async function loadMore() {
+  if (loadingMore.value || reachedEnd.value) return;
+  loadingMore.value = true;
+  try {
+    const params: Record<string, string | number | boolean | undefined> = {
+      limit: PAGE_SIZE,
+      skip: loadedCount.value,
+    };
+    if (statusFilter.value) params.status = statusFilter.value;
+    const res = await api.listPostMortems(params);
+    const items = res.items ?? [];
+    if (items.length < PAGE_SIZE) reachedEnd.value = true;
+    loadedCount.value += items.length;
+    postMortems.value.push(...items);
+  } catch (err) {
+    push(getErrorMessage(err, "Failed to load more post-mortems"), "error");
+  } finally {
+    loadingMore.value = false;
+  }
+}
+
+watch(statusFilter, () => {
+  load();
 });
 function statusLabel(status: string): string {
   return status.replace("_", " ");
@@ -161,6 +206,12 @@ onMounted(() => {
           </div>
         </div>
       </InteractiveCard>
+
+      <div v-if="!reachedEnd" class="flex justify-center pt-2">
+        <Button variant="outline" size="sm" :loading="loadingMore" @click="loadMore">
+          Load more
+        </Button>
+      </div>
     </div>
   </section>
 </template>

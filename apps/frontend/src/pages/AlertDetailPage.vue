@@ -4,7 +4,9 @@ import {
   computed,
   h,
   nextTick,
+  onActivated,
   onBeforeUnmount,
+  onDeactivated,
   onMounted,
   ref,
   toRef,
@@ -624,8 +626,16 @@ function scrollChatToBottom() {
 // investigation_update / investigation_draft / investigation_typing
 // events matched by alertInvestigationId). The remaining SSE handlers
 // here are pure reload triggers for the alert row + sidebar.
+function handleAlertDeleted(data: unknown) {
+  const num = (data as { alert_number?: unknown } | null)?.alert_number;
+  if (typeof num !== "number" || num !== alertNumber.value) return;
+  push("Alert deleted", "info");
+  void router.push("/alerts");
+}
+
 const sse = useSSE("/api/v1/events", {
   alert_updated: handleAlertSSE,
+  alert_deleted: handleAlertDeleted,
   investigation_created: () => scheduleReload(),
   investigation_started: () => scheduleReload(),
   investigation_status_changed: () => scheduleReload(),
@@ -659,6 +669,10 @@ async function reopenAlert() {
   if (!alert.value) return;
   await withReopen(async () => {
     alert.value = await api.reopenAlert(alertNumber.value);
+    // Reopen may revive a linked investigation and auto-ack related alerts;
+    // refresh the dependent sections immediately instead of waiting for the
+    // SSE-debounced reload (which never fires when SSE is down).
+    await Promise.all([silentReload(), loadRelated(), thread.reload()]);
   }, "Alert reopened");
 }
 
@@ -1145,6 +1159,7 @@ usePageHeader(() => {
       h(AlertActionsMenu, {
         workflowStatus: workflowStatus.value,
         statusBusy: statusWorkflowBusy.value,
+        canWrite: canWriteAlerts.value,
         canDelete: canDeleteAlerts.value,
         canCreateIncident: canCreateIncident.value,
         showAckButton: showAckButton.value,
@@ -1156,6 +1171,21 @@ usePageHeader(() => {
     );
   }
   return { title: name, options: { titlePrefix: idPrefix, actions } };
+});
+
+onDeactivated(() => {
+  // Unconditional KeepAlive keeps this page alive off-screen; stop the SSE
+  // subscription and pending reloads while hidden (mirrors AlertsPage).
+  sse.close();
+  if (reloadTimer != null) {
+    clearTimeout(reloadTimer);
+    reloadTimer = null;
+  }
+});
+
+onActivated(() => {
+  sse.reconnect();
+  scheduleReload();
 });
 
 onMounted(async () => {
@@ -1306,7 +1336,7 @@ onMounted(async () => {
                   </span>
                 </div>
                 <div class="ml-auto flex items-center gap-1.5">
-                  <template v-if="showAckButton && !isDeleted">
+                  <template v-if="canWriteAlerts && showAckButton && !isDeleted">
                     <Button @click="acknowledge" :disabled="ackLoading" size="sm">
                       <ShieldCheck class="h-4 w-4" />
                       {{ ackLoading ? "Acknowledging..." : "Acknowledge" }}

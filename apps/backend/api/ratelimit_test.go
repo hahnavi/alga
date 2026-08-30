@@ -1,9 +1,13 @@
 package api
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"sync"
 	"testing"
 	"time"
+
+	"alga/config"
 )
 
 // fixedClock doubles time.Now for deterministic window rollover.
@@ -213,5 +217,91 @@ func TestMemoryRateLimiterEnvCeiling(t *testing.T) {
 	}
 	if rl.Allow("collector") {
 		t.Fatal("allowed past configured ceiling")
+	}
+}
+
+// extractClientIP builds the extractor under test and resolves the client IP
+// for a synthetic request with the given RemoteAddr and X-Forwarded-For.
+func extractClientIP(t *testing.T, trusted []string, remoteAddr, xff string) string {
+	t.Helper()
+	ex := newIPExtractor(&config.Config{TrustedProxies: trusted})
+	req := httptest.NewRequest(http.MethodPost, "/webhooks/alerts", nil)
+	req.RemoteAddr = remoteAddr
+	if xff != "" {
+		req.Header.Set("X-Forwarded-For", xff)
+	}
+	return ex.ClientIP(req)
+}
+
+func TestIPExtractorNoTrustedProxiesIgnoresXFF(t *testing.T) {
+	t.Parallel()
+
+	// Without TRUSTED_PROXIES the header is never consulted, so a directly
+	// exposed endpoint can't rotate the rate-limit key via a spoofed header.
+	got := extractClientIP(t, nil, "203.0.113.9:443", "198.51.100.1, 198.51.100.2")
+	if got != "203.0.113.9" {
+		t.Fatalf("got %q, want RemoteAddr 203.0.113.9", got)
+	}
+}
+
+func TestIPExtractorUntrustedRemoteIgnoresXFF(t *testing.T) {
+	t.Parallel()
+
+	// Even with trusted proxies configured, a request whose RemoteAddr is
+	// not one of them must not have its XFF honored.
+	got := extractClientIP(t, []string{"10.0.0.0/8"}, "203.0.113.9:443", "198.51.100.1")
+	if got != "203.0.113.9" {
+		t.Fatalf("got %q, want RemoteAddr 203.0.113.9", got)
+	}
+}
+
+func TestIPExtractorRightmostUntrustedWins(t *testing.T) {
+	t.Parallel()
+
+	// Proxy appends the real client after the client-supplied (spoofable)
+	// leftmost entry; the rightmost untrusted entry is the only trustworthy
+	// one.
+	got := extractClientIP(t, []string{"10.0.0.1"}, "10.0.0.1:5555", "198.51.100.1, 198.51.100.7")
+	if got != "198.51.100.7" {
+		t.Fatalf("got %q, want 198.51.100.7", got)
+	}
+}
+
+func TestIPExtractorSkipsTrustedChain(t *testing.T) {
+	t.Parallel()
+
+	// Chained trusted proxies each append themselves; all trusted entries
+	// are skipped down to the first untrusted (client) IP.
+	got := extractClientIP(t, []string{"10.0.0.0/8"}, "10.0.0.2:5555", "198.51.100.7, 10.0.0.1, 10.0.0.3")
+	if got != "198.51.100.7" {
+		t.Fatalf("got %q, want 198.51.100.7", got)
+	}
+}
+
+func TestIPExtractorAllTrustedFallsBackToRemote(t *testing.T) {
+	t.Parallel()
+
+	got := extractClientIP(t, []string{"10.0.0.0/8"}, "10.0.0.1:5555", "10.0.0.2, 10.0.0.3")
+	if got != "10.0.0.1" {
+		t.Fatalf("got %q, want RemoteAddr 10.0.0.1", got)
+	}
+}
+
+func TestIPExtractorSkipsJunkEntries(t *testing.T) {
+	t.Parallel()
+
+	got := extractClientIP(t, []string{"10.0.0.1"}, "10.0.0.1:5555", "junk, 198.51.100.7")
+	if got != "198.51.100.7" {
+		t.Fatalf("got %q, want 198.51.100.7", got)
+	}
+}
+
+func TestIPExtractorSingleIPTrustedEntry(t *testing.T) {
+	t.Parallel()
+
+	// A bare IP (no CIDR suffix) is accepted as a /32 or /128 entry.
+	got := extractClientIP(t, []string{"10.0.0.1"}, "10.0.0.1:5555", "198.51.100.7")
+	if got != "198.51.100.7" {
+		t.Fatalf("got %q, want 198.51.100.7", got)
 	}
 }

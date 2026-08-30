@@ -322,7 +322,6 @@ func (a *App) wire() error {
 	agentExecutor.SetIncidentStore(a.stores.Incident)
 	agentExecutor.SetIncidentInvestigationStore(a.stores.IncidentInvestigation)
 	agentExecutor.SetIncidentCoordinationStore(a.stores.IncidentCoordination)
-	agentExecutor.SetCoordinationTaskStore(a.stores.CoordinationTask)
 	agentExecutor.SetPostMortemStore(a.stores.PostMortem)
 	agentExecutor.SetServiceStore(a.stores.Service)
 	agentExecutor.SetEscalationStore(a.stores.Escalation)
@@ -396,13 +395,15 @@ func (a *App) wire() error {
 	whReceiver.SetIncidentInvestigationStore(a.stores.IncidentInvestigation)
 	if a.rabbitClient != nil && a.workerSet != nil && a.valkeyClient != nil && publisher != nil {
 		a.correlator = correlator.NewCorrelator(a.valkeyClient, publisher, correlator.Config{
-			Window:      a.cfg.CorrelationWindow,
-			CooldownTTL: a.cfg.CorrelationCooldownTTL,
+			Window:        a.cfg.CorrelationWindow,
+			CooldownTTL:   a.cfg.CorrelationCooldownTTL,
+			SweepInterval: time.Minute,
 		})
 		a.correlator.SetAlertInvestigationStore(a.stores.AlertInvestigation)
 		a.correlator.SetAgentNotifier(invForwarder)
 		a.correlator.SetTriageEnabled(a.cfg.TriageEnabled)
 		whReceiver.SetCorrelator(a.correlator)
+		a.correlator.Start()
 		logger.Info("SRE Agent correlation enabled", "cooldown", a.cfg.CorrelationCooldownTTL.String())
 	}
 
@@ -520,8 +521,6 @@ func (a *App) wire() error {
 		a.scheduler.SetPlaybookEnricher(playbookEnricher)
 
 		a.scheduler.SetICSRoleStore(a.stores.ICSRole)
-		a.scheduler.SetCoordinationTaskStore(a.stores.CoordinationTask)
-		a.scheduler.SetCoordinationTaskSweepInterval(5 * time.Minute)
 
 		// the scheduler leader owns SLA sweep tick publication;
 		// interval <= 0 disables publication entirely.
@@ -597,6 +596,7 @@ func (a *App) wire() error {
 		a.workerSet.SetEscalationSweepWorker(escalationSweepWorker)
 
 		actionItemSweepWorker := worker.NewActionItemSweepWorker(a.stores.ActionItem, a.stores.Incident)
+		actionItemSweepWorker.SetPostMortemStore(a.stores.PostMortem)
 		actionItemSweepWorker.SetSignals(a.stores.Notification, &sse.DualPublisher{Broker: a.sseBroker, VKClient: a.valkeyClient}, a.valkeyClient)
 		a.workerSet.SetActionItemSweepWorker(actionItemSweepWorker)
 
@@ -652,6 +652,10 @@ func (a *App) wire() error {
 		triageWorker := triage.NewWorker(triageEngine, publisher, a.stores.Alert)
 		triageWorker.SetCancelSet(a.cancelSet)
 		triageWorker.SetAuditStore(a.stores.Audit)
+		triageWorker.SetDedupCache(dedupCache)
+		if alertLifecycle != nil {
+			triageWorker.SetInvestigationLifecycle(alertLifecycle)
+		}
 		a.workerSet.SetTriageWorker(triageWorker)
 
 		outcomeWorker := triage.NewOutcomeWorker(
@@ -686,6 +690,13 @@ func (a *App) wire() error {
 	whReceiver.SetRateLimiter(a.rateLimiter)
 	mmWebhookHandler.SetRateLimiter(a.rateLimiter)
 	slackWebhookHandler.SetRateLimiter(a.rateLimiter)
+
+	// Shared trusted-proxy-aware client-IP extractor for webhook rate limiting
+	// (TRUSTED_PROXIES); without trusted proxies the limiter keys on RemoteAddr.
+	webhookIPExtractor := api.NewIPExtractor(a.cfg)
+	whReceiver.SetIPExtractor(webhookIPExtractor)
+	mmWebhookHandler.SetIPExtractor(webhookIPExtractor)
+	slackWebhookHandler.SetIPExtractor(webhookIPExtractor)
 	a.apiServer.SetAlertBroadcaster(&alertEventPublisher{broker: a.sseBroker, vkClient: a.valkeyClient})
 	a.apiServer.SetSSEBroker(a.sseBroker, a.valkeyClient)
 	a.apiServer.SetCancelSet(a.cancelSet)
@@ -701,6 +712,7 @@ func (a *App) wire() error {
 	agentExecutor.SetAlertCascade(a.apiServer.AgentAlertCascadeFn())
 	agentExecutor.SetPostMortemBuilder(a.apiServer.AgentPostMortemBuilderFn())
 	agentExecutor.SetCoordinationForwarder(a.apiServer.AgentCoordinationForwarderFn())
+	agentExecutor.SetPostIncidentResolve(a.apiServer.AgentPostIncidentResolveFn())
 
 	agentService := agent.NewService(
 		a.cfg,
@@ -750,7 +762,6 @@ func (a *App) wire() error {
 	a.apiServer.SetTriageRuleStore(a.stores.TriageRule)
 	a.apiServer.SetIncidentStore(a.stores.Incident)
 	a.apiServer.SetIncidentCoordinationStore(a.stores.IncidentCoordination)
-	a.apiServer.SetCoordinationTaskStore(a.stores.CoordinationTask)
 	a.apiServer.SetIncidentChannelManager(channelManager)
 	a.apiServer.SetGoogleMeetClient(googleMeetClient)
 	a.apiServer.SetServiceStore(a.stores.Service)

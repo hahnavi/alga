@@ -209,13 +209,15 @@ Passwords are hashed with Argon2id (OWASP baseline: 64 MiB memory, 3 iterations,
 
 ## Session Management
 
-- Sessions expire after `SESSION_EXPIRY_HOURS` (default: 24 hours, max: 720)
+- Sessions expire after `SESSION_EXPIRY_HOURS` (default: 24 hours, max: 720) and `SESSION_MAX_LIFETIME` (default 12h absolute cap, ASVS V3.2/V3.3)
 - Refresh tokens enable seamless session renewal
 - Refresh tokens rotate on every use; the previous token hash is recorded (`prev_refresh_token_hashes`) within a session family (`family_id`)
 - Reuse of a previously-rotated refresh token — or presenting a rotated-out session cookie — is detected as replay and revokes all of the user's sessions (`session_replay_detected` / `refresh_token_reuse_detected` audit reasons)
 - API clients can drive refresh-token rotation via the optional HttpOnly `alga_rt` cookie issued alongside `alga_session`; browsers never need to present it
 - When `SECURE_COOKIES=true`, cookies are only sent over HTTPS
 - Cookie-side session IDs and refresh tokens are HMAC-SHA-256 hashed before persistence
+- Valkey is preferred at runtime; every session write goes to both Postgres and Valkey when available so a restart does not invalidate sessions; reads/deletes check Valkey first and fall back to Postgres automatically
+- See [Session Management — Self-Service API](/configuration/session-management) for the user-facing routes: `GET /api/v1/auth/sessions` (list own, `current:true` exactly one, HMAC digest IDs, MRU-sorted, expired filtered), `DELETE /api/v1/auth/sessions/{id}` (revoke one; current → 400 "sign out instead", foreign/missing → 404 anti-enumeration, PAT → 400), and `DELETE /api/v1/auth/sessions` (revoke all others, returns `{revoked:n}`). All three require a session cookie and CSRF, and are audited as `session_revoked` / `sessions_revoked_all`. The Settings → Security tab (`/settings/security`) renders the list with device/IP, last-used time, and Revoke actions.
 
 ## API Tokens
 

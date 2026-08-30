@@ -166,7 +166,6 @@ func (a *AlgaChannel) registerCallbacks() {
 		c.OnPeerAsk = a.onPeerAsk
 		c.OnPeerFinding = a.onPeerFinding
 		c.OnInvestigationResume = a.onInvestigationResume
-		c.OnCoordinationTask = a.onCoordinationTask
 		c.OnSummarizeIncident = a.onSummarizeIncident
 		c.OnIncidentCommsStale = a.onIncidentCommsStale
 		c.OnAlertAutoResolved = a.onAlertAutoResolved
@@ -287,33 +286,6 @@ func (a *AlgaChannel) dispatchIncidentInstruction(incidentNumber int64, text, se
 		ChannelName: a.Name(),
 		AlgaCtx:     algaCtx,
 	})
-}
-
-// onCoordinationTask handles a coordination task dispatched by the scheduler
-// on behalf of an incident commander. The agent is expected to claim the task,
-// perform the work, and complete it with a typed result.
-func (a *AlgaChannel) onCoordinationTask(ev alga.CoordinationTaskEvent) {
-	goal := ev.GoalText()
-	if goal == "" {
-		a.logger.Warn("coordination task dispatch with empty goal, skipping",
-			"task_id", ev.TaskID, "incident_number", ev.IncidentNumber)
-		return
-	}
-
-	a.logger.Info("coordination task dispatched",
-		"task_id", ev.TaskID,
-		"incident_number", ev.IncidentNumber,
-		"kind", ev.Kind,
-		"assignee_role", ev.AssigneeRole)
-
-	text := fmt.Sprintf(
-		"You have been dispatched a coordination task for incident #%d.\n\n"+
-			"Task ID: %s\nKind: %s\nAssignee role: %s\nGoal: %s\n\n"+
-			"Claim this task with alga_claim_task, perform the work, then report your result with alga_complete_task.",
-		ev.IncidentNumber, ev.TaskID, ev.Kind, ev.AssigneeRole, goal,
-	)
-
-	a.dispatchIncidentInstruction(ev.IncidentNumber, text, "scheduler", "Coordination Scheduler", ev.ChatID)
 }
 
 // onSummarizeIncident handles a backend request for an incident summary

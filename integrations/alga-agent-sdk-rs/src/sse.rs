@@ -21,7 +21,6 @@ pub trait EventHandler: Send + Sync {
     async fn on_peer_finding(&self, _event: PeerFindingEvent) {}
     async fn on_peer_ask(&self, _event: PeerAskEvent) {}
     async fn on_peer_reply(&self, _event: PeerReplyEvent) {}
-    async fn on_coordination_task(&self, _event: CoordinationTaskEvent) {}
     async fn on_summarize_incident(&self, _event: SummarizeIncidentEvent) {}
     async fn on_alert_auto_resolved(&self, _event: AlertAutoResolvedEvent) {}
     async fn on_incident_comms_stale(&self, _event: IncidentCommsStaleEvent) {}
@@ -365,11 +364,6 @@ async fn dispatch_event(
         "peer_reply" => {
             if let Ok(event) = serde_json::from_str::<PeerReplyEvent>(trimmed) {
                 handler.on_peer_reply(event).await;
-            }
-        }
-        "coordination_task_dispatched" => {
-            if let Ok(event) = serde_json::from_str::<CoordinationTaskEvent>(trimmed) {
-                handler.on_coordination_task(event).await;
             }
         }
         "summarize_incident" => {

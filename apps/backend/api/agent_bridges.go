@@ -21,6 +21,7 @@ import (
 	"alga/logger"
 	"alga/sse"
 	"alga/store"
+	"alga/valkey"
 )
 
 // PlatformAuthDeps returns the session/PAT auth dependencies the agent Service
@@ -93,7 +94,7 @@ func (s *Server) AgentRevokeTokenByIDFn() func(w http.ResponseWriter, r *http.Re
 // CascadeActor and delegates to runAlertCascade.
 func (s *Server) AgentAlertCascadeFn() func(ctx context.Context, alertStore store.Store, auditStore store.AuditStore, publisher *sse.DualPublisher, incidentNumber int64, agentID uuid.UUID, agentName string) store.AlertCascadeResult {
 	return func(ctx context.Context, alertStore store.Store, auditStore store.AuditStore, publisher *sse.DualPublisher, incidentNumber int64, agentID uuid.UUID, agentName string) store.AlertCascadeResult {
-		return runAlertCascade(ctx, alertStore, auditStore, cascadePublisherFromDual(publisher), incidentNumber, CascadeActor{
+		return runAlertCascade(ctx, alertStore, auditStore, cascadePublisherFromDual(publisher), s.dedupCache, incidentNumber, CascadeActor{
 			ID:   agentID,
 			Type: "agent",
 			Name: agentName,
@@ -111,6 +112,27 @@ func (s *Server) AgentPostMortemBuilderFn() func(ctx context.Context, documentSt
 			incidentStore:     incidentStore,
 			alertStore:        alertStore,
 		}, inc, summary)
+	}
+}
+
+// AgentPostIncidentResolveFn returns the post-resolve side-effect runner for
+// AgentToolExecutor so an agent resolve mirrors the operator path: service
+// status propagation, Slack status post + resolution summary, and dashboard
+// cache invalidation.
+func (s *Server) AgentPostIncidentResolveFn() func(ctx context.Context, incidentNumber int64) {
+	return func(ctx context.Context, incidentNumber int64) {
+		updated := s.refetchIncidentForSideEffects(ctx, incidentNumber, "agent resolve")
+		if updated == nil {
+			return
+		}
+		s.propagateServiceStatus(updated)
+		if s.incidentChannelManager != nil {
+			s.incidentChannelManager.PostStatusChange(ctx, updated, "resolved")
+			s.incidentChannelManager.PostResolutionSummary(ctx, updated)
+		}
+		if s.cache != nil {
+			_ = s.cache.Invalidate(ctx, valkey.PrefixDashboardStats)
+		}
 	}
 }
 

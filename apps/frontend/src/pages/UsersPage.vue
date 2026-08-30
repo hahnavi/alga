@@ -14,6 +14,7 @@ import ConfirmDialog from "@/components/ui/ConfirmDialog.vue";
 import ErrorBanner from "@/components/ui/ErrorBanner.vue";
 import SkeletonRows from "@/components/ui/SkeletonRows.vue";
 import Modal from "@/components/ui/Modal.vue";
+import SettingsPageShell from "@/components/ui/settings/SettingsPageShell.vue";
 import EmptyState from "@/components/ui/EmptyState.vue";
 import PhoneInput from "@/components/ui/PhoneInput.vue";
 import { useToast } from "@/lib/toast";
@@ -243,11 +244,9 @@ watch(
 </script>
 
 <template>
-  <section class="space-y-4 px-4 py-4 md:space-y-6 md:px-6 md:py-6">
-    <p class="text-sm text-[var(--text-muted)]">
-      Manage user accounts and their access levels. Admins can view and modify all settings.
-    </p>
-
+  <SettingsPageShell
+    description="Manage user accounts and their access levels. Admins can view and modify all settings."
+  >
     <ErrorBanner v-if="!showCreateDialog && !showEditDialog" :message="error" />
 
     <div v-if="loading" class="space-y-2" aria-busy="true" aria-label="Loading users">
@@ -415,5 +414,5 @@ watch(
       :destructive="true"
       @confirm="doDelete"
     />
-  </section>
+  </SettingsPageShell>
 </template>

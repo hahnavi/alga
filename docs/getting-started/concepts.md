@@ -44,7 +44,7 @@ Understanding how Alga's pieces fit together makes everything else easier to con
 │   AI AGENT       │   │  INCIDENT                 │
 │   (Hermes /      │   │  Created with ICS roles,  │
 │    OpenClaw)     │   │  SLA, escalation, war     │
-│                  │   │  room, coordination tasks  │
+│                  │   │  room, coordination       │
 │  Receives via    │   └───────────────────────────┘
 │  SSE dispatch    │
 │  Investigates,   │
@@ -96,7 +96,7 @@ Additional states: `promoted` (escalated to an incident), `failed`, `cancelled`,
 
 `pending → assigned → investigating → complete`
 
-Additional states: `cancelled`, `paused`, `coordinating` (agent is coordinating multi-agent tasks).
+Additional states: `cancelled`, `paused`, `coordinating` (commander-owned orchestrator coordinating child investigations; excluded from normal scheduling).
 
 ::: warning "assigned" not "delegated"
 The scheduler _assigns_ investigations to agents. You may see older references to "delegated" — the correct status is `assigned`.
@@ -114,7 +114,7 @@ Incidents follow a formal lifecycle: `detected → triaging → active → mitig
 
 Beyond the lifecycle, incidents carry several collaboration features:
 
-- **Coordination tasks** — parent/child task trees dispatched to agents (claim/complete lifecycle: `pending → assigned → in_progress → complete`, or `failed`/`cancelled`)
+- **Coordination messages** — the per-incident thread where operators and agents collaborate via @mentions, agent replies, and structured handoffs
 - **ICS documents** — structured incident sections (`current_status`, `impact_assessment`, `root_cause`, `resolution`, `actions_taken`, `open_questions`, `resources`, `timeline_summary`) that are collaboratively edited by agents and operators
 - **Status updates** — public incident status updates posted to notification channels
 - **War rooms** — auto-created Google Meet spaces for real-time coordination (provisioned asynchronously by the ICS worker)
@@ -181,7 +181,7 @@ The scheduler scores all eligible agents by specificity (label-matched > catch-a
 
 - `investigate` — receive and work alert/incident investigations
 - `communicate` — post messages to alert and incident threads
-- `command` — coordinate incident command decisions, escalation, and multi-agent task dispatch
+- `command` — coordinate incident command decisions, escalation, and coordination messages
   :::
 
 ### Threads → Real-Time Chat

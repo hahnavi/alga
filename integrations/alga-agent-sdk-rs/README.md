@@ -28,10 +28,6 @@ impl EventHandler for MyAgent {
     async fn on_message(&self, event: MessageEvent) {
         println!("[{:?}] {:?}", event.chat_id, event.text);
     }
-
-    async fn on_coordination_task(&self, event: CoordinationTaskEvent) {
-        println!("Task dispatched: {:?}", event.goal);
-    }
 }
 
 #[tokio::main]
@@ -66,31 +62,30 @@ let client = AlgaClient::with_options("https://alga.example.com", token, options
 
 ### Options
 
-| Option             | Type              | Default                | Description                                  |
-|--------------------|-------------------|------------------------|----------------------------------------------|
-| heartbeat_interval | Duration          | 30s                    | Heartbeat cadence (floor 1s)                 |
-| max_rest_retries   | usize             | 2                      | Max REST retry attempts on transient errors  |
-| user_agent         | String            | "alga-agent-sdk-rs"    | User-Agent header                            |
-| dedup              | Option<Arc<...>>  | new(1000, 300s)        | SSE message dedup cache                      |
+| Option             | Type             | Default             | Description                                 |
+| ------------------ | ---------------- | ------------------- | ------------------------------------------- |
+| heartbeat_interval | Duration         | 30s                 | Heartbeat cadence (floor 1s)                |
+| max_rest_retries   | usize            | 2                   | Max REST retry attempts on transient errors |
+| user_agent         | String           | "alga-agent-sdk-rs" | User-Agent header                           |
+| dedup              | Option<Arc<...>> | new(1000, 300s)     | SSE message dedup cache                     |
 
 ## SSE Events
 
 Implement the `EventHandler` trait. All methods have default no-op implementations. The SSE client auto-reconnects with exponential backoff (2s → 60s with jitter), honoring `Retry-After` on 429s.
 
-| Method                   | Event type                   | Description                              |
-|--------------------------|------------------------------|------------------------------------------|
-| `on_connected`           | `connected`                  | Initial connection handshake             |
-| `on_message`             | `message`                    | Chat message from operator/peer          |
-| `on_typing`              | `typing`                     | Typing indicator                         |
-| `on_investigation_resume`| `investigation_resume`       | Investigation resumed                    |
-| `on_peer_finding`        | `peer_finding`               | Notable finding from a peer agent        |
-| `on_peer_ask`            | `peer_ask`                   | Another agent is asking a question       |
-| `on_peer_reply`          | `peer_reply`                 | Reply to your peer ask                   |
-| `on_coordination_task`   | `coordination_task_dispatched`| Commander dispatched a task to you      |
-| `on_summarize_incident`  | `summarize_incident`         | Backend requests an incident summary     |
-| `on_alert_auto_resolved` | `alert_auto_resolved`        | An investigated alert auto-resolved      |
-| `on_incident_comms_stale`| `incident_comms_stale`       | Incident comms went quiet past threshold |
-| `on_unknown_event`       | any other                    | Escape hatch for new backend event types |
+| Method                    | Event type             | Description                              |
+| ------------------------- | ---------------------- | ---------------------------------------- |
+| `on_connected`            | `connected`            | Initial connection handshake             |
+| `on_message`              | `message`              | Chat message from operator/peer          |
+| `on_typing`               | `typing`               | Typing indicator                         |
+| `on_investigation_resume` | `investigation_resume` | Investigation resumed                    |
+| `on_peer_finding`         | `peer_finding`         | Notable finding from a peer agent        |
+| `on_peer_ask`             | `peer_ask`             | Another agent is asking a question       |
+| `on_peer_reply`           | `peer_reply`           | Reply to your peer ask                   |
+| `on_summarize_incident`   | `summarize_incident`   | Backend requests an incident summary     |
+| `on_alert_auto_resolved`  | `alert_auto_resolved`  | An investigated alert auto-resolved      |
+| `on_incident_comms_stale` | `incident_comms_stale` | Incident comms went quiet past threshold |
+| `on_unknown_event`        | any other              | Escape hatch for new backend event types |
 
 Terminal auth errors (401/403) stop the loops and are retrievable via `client.take_fatal_error()`.
 
@@ -104,8 +99,6 @@ use alga_agent_sdk::commands::*;
 client.send_command("alert_42", resolve_alert("fp-abc")).await?;
 client.send_command("alert_42", set_outcome(Some("OOM"), None)).await?;
 client.send_command("incident_coord_9", set_incident_priority(9, "P1")).await?;
-client.send_command("incident_coord_9", dispatch_task(9, TASK_KIND_INVESTIGATE, "Find root cause", "responder")).await?;
-client.send_command("incident_coord_9", complete_task("task-uuid", serde_json::json!({"summary": "done"}))).await?;
 ```
 
 ## REST Methods
@@ -123,7 +116,6 @@ client.reopen_alert("fp-abc").await?;
 
 ```rust
 let ctx = client.get_incident(9).await?;
-let tasks = client.list_incident_tasks(9, &[]).await?;
 let timeline = client.get_incident_timeline(9).await?;
 client.add_incident_timeline(9, "Root cause: disk full", "root_cause").await?;
 client.update_incident_summary(9, "Summarized...").await?;

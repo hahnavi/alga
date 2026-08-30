@@ -269,28 +269,6 @@ func TestListAlertsDecodesEnvelope(t *testing.T) {
 	}
 }
 
-func TestListIncidentTasksDecodesEnvelope(t *testing.T) {
-	var seenPath string
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		seenPath = r.URL.Path
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"data":[{"task_id":"t1","incident_number":42,"kind":"investigate","goal":"g","status":"pending"}]}`))
-	}))
-	defer srv.Close()
-
-	c := NewAlgaClient(srv.URL, "tok", WithMaxRESTRetries(0))
-	tasks, err := c.ListIncidentTasks(context.Background(), 42, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if seenPath != "/api/v1/agent/incidents/42/tasks" {
-		t.Errorf("path = %q", seenPath)
-	}
-	if len(tasks) != 1 || tasks[0].TaskID != "t1" || tasks[0].IncidentNumber != 42 {
-		t.Errorf("tasks = %+v", tasks)
-	}
-}
-
 func TestGetIncidentDecodesContext(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -352,31 +330,6 @@ func TestSSEDispatchMessage(t *testing.T) {
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("OnMessage did not fire within 2s")
-	}
-}
-
-// TestSSEDispatchCoordinationTask verifies the coordination_task_dispatched
-// event is decoded and routed.
-func TestSSEDispatchCoordinationTask(t *testing.T) {
-	payload := "event: coordination_task_dispatched\ndata: {\"type\":\"coordination_task_dispatched\",\"task_id\":\"t1\",\"incident_number\":42,\"kind\":\"investigate\",\"goal\":\"find rc\",\"assignee_role\":\"responder\",\"chat_id\":\"incident_coord_42\"}\n\n"
-	srv := newSSEServer(t, payload, http.StatusOK)
-
-	got := make(chan CoordinationTaskEvent, 1)
-	c := NewAlgaClient(srv.URL, "tok", WithMaxRESTRetries(0))
-	c.OnCoordinationTask = func(ev CoordinationTaskEvent) { got <- ev }
-
-	if err := c.Connect(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-	defer c.Disconnect()
-
-	select {
-	case ev := <-got:
-		if ev.TaskID != "t1" || ev.IncidentNumber != 42 || ev.Kind != TaskKindInvestigate || ev.ChatID != "incident_coord_42" {
-			t.Errorf("got %+v", ev)
-		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("OnCoordinationTask did not fire within 2s")
 	}
 }
 
@@ -667,11 +620,6 @@ func TestCommandsRoundTrip(t *testing.T) {
 		PostHandoff(1, "m", "a", "u"),
 		PublishStatusUpdate(1, "m", "identified"),
 		SetIncidentResolutionDocs(1, "s", "i", "a", "r", "res"),
-		DispatchTask(1, TaskKindInvestigate, "g", "responder"),
-		DispatchTaskToAgent(1, TaskKindVerify, "g", "a1"),
-		ClaimTask("t1"),
-		CompleteTask("t1", map[string]any{"k": "v"}),
-		SynthesizeFindings(1, "s", nil),
 	}
 	for i, op := range ops {
 		raw, err := json.Marshal(op)

@@ -60,9 +60,6 @@ _SSE_EVENTS_FOR_AGENT = frozenset({
     "investigation_dispatch",
     "investigation_status_changed",
     "investigation_patch",
-    "coordination_task_dispatched",
-    "coordination_task_completed",
-    "coordination_task_failed",
 })
 
 
@@ -150,12 +147,11 @@ _INCIDENT_ROLE_INSTRUCTIONS = {
         "You own incident direction, escalation decisions, final calls, and documentation quality. "
         "Commander tools: alga_set_incident_priority, alga_set_incident_severity, alga_trigger_escalation, "
         "alga_publish_status_update, alga_mitigate_incident, alga_resolve_incident, alga_resolve_alert, alga_reopen_alert, alga_begin_triage, "
-        "alga_promote_incident, alga_assign_incident_role, alga_dispatch_task, alga_list_tasks, alga_synthesize_findings. "
-        "You are the orchestrator. Decompose incidents into tasks via alga_dispatch_task. Track via alga_list_tasks. "
-        "Synthesize via alga_synthesize_findings. Do not investigate directly. alga_dispatch_task replaces the deprecated "
-        "alga_post_handoff and the removed alga_request_status_update — use kind=investigate for technical work (auto-creates "
-        "a child investigation), kind=communicate to request a public status update from the communicator, kind=verify for "
-        "verification, and kind=mitigate for recovery actions. "
+        "alga_promote_incident, alga_assign_incident_role. "
+        "You are the orchestrator. Do not investigate directly. Delegate technical work by @mentioning responder agents in "
+        "the coordination thread with a bounded, specific goal (one goal per mention — a mention activates the agent), and "
+        "assign child incident investigations when parallel technical work is needed. Track progress through the coordination "
+        "thread, investigation summaries, and the Status Updates card. "
         "You are strictly forbidden from performing technical validation, running commands against the environment, "
         "or inspecting environment/service health. All technical work, commands, and validation must be handled by the Responder. "
         "Alert state checks (alga_list_alerts) and alert closure (alga_resolve_alert, alga_reopen_alert) are part of incident closure, not technical actions, and are owned by you. "
@@ -167,34 +163,30 @@ _INCIDENT_ROLE_INSTRUCTIONS = {
         "Do NOT @mention the Responder or any other teammate in appreciation, acknowledgement, sign-off, or recap. An @mention activates them and forces a ping-pong reply. When you have accepted the Responder's handoff, either act on it (verify and close the linked alert with alga_resolve_alert, publish the resolved status update, call alga_resolve_incident, set alga_set_incident_resolution_docs) or post a brief coordination reply without any mentions."
     ),
     "communications_lead": (
-        "You are the sole author of public status updates. You receive communicate-kind tasks dispatched by the commander "
-        "(which wake you via the coordination_task_dispatched event). Review the dispatched task and publish a public-facing "
-        "status update with alga_publish_status_update using an appropriate status_level (investigating, identified, "
-        "mitigated, monitoring, resolved), then complete the task via alga_complete_task with a result describing what was "
-        "published. Do not mention internal alert numbers, agent names, investigation IDs, UUIDs, or placeholder/test labels "
-        "in public status text. "
-        "Communication tools: alga_publish_status_update, alga_complete_task, alga_list_tasks. "
+        "You publish public status updates when asked. You are activated by @mentions in the incident coordination thread and "
+        "by comms_stale nudges (the SLA sweep nudging you that a status update is overdue). When activated, publish a "
+        "public-facing status update with alga_publish_status_update using the requested status_level (investigating, "
+        "identified, mitigated, monitoring, resolved) and reply in the thread confirming what was published. Do not mention "
+        "internal alert numbers, agent names, investigation IDs, UUIDs, or placeholder/test labels in public status text. "
+        "Communication tools: alga_publish_status_update. "
         "Do NOT @mention other agents or teammates unless absolutely necessary."
     ),
     "communicator": (
-        "You are the sole author of public status updates. You receive communicate-kind tasks dispatched by the commander "
-        "(which wake you via the coordination_task_dispatched event). Review the dispatched task and publish a public-facing "
-        "status update with alga_publish_status_update using an appropriate status_level (investigating, identified, "
-        "mitigated, monitoring, resolved), then complete the task via alga_complete_task with a result describing what was "
-        "published. Do not mention internal alert numbers, agent names, investigation IDs, UUIDs, or placeholder/test labels "
-        "in public status text. "
-        "Communication tools: alga_publish_status_update, alga_complete_task, alga_list_tasks. "
+        "You publish public status updates when asked. You are activated by @mentions in the incident coordination thread and "
+        "by comms_stale nudges (the SLA sweep nudging you that a status update is overdue). When activated, publish a "
+        "public-facing status update with alga_publish_status_update using the requested status_level (investigating, "
+        "identified, mitigated, monitoring, resolved) and reply in the thread confirming what was published. Do not mention "
+        "internal alert numbers, agent names, investigation IDs, UUIDs, or placeholder/test labels in public status text. "
+        "Communication tools: alga_publish_status_update. "
         "Do NOT @mention other agents or teammates unless absolutely necessary."
     ),
     "responder": (
         "You focus on technical recovery, safe mitigation, evidence, and readiness for commander verification. "
         "You are the sole owner of technical validation and environment investigation. "
-        "You receive investigate-kind tasks dispatched by the commander (which wake you via the coordination_task_dispatched "
-        "event). Execute the dispatched task, publish milestone progress via alga_publish_status_update, and complete the "
-        "task via alga_complete_task with a typed result (finding, hypothesis_confidence, evidence, root_cause_candidate). "
-        "Never call alga_dispatch_task — you are not the orchestrator. "
-        "Responder tools: alga_publish_status_update, alga_complete_task, alga_list_tasks, alga_pause_investigation, alga_cancel_investigation. "
-        "(alga_post_handoff is deprecated; alga_dispatch_task replaces it.) "
+        "You are activated when the scheduler dispatches an incident investigation to you and when the commander @mentions you "
+        "in the coordination thread. Investigate the assigned goal and publish milestone progress via "
+        "alga_publish_status_update. Do not delegate work yourself — delegation belongs to the commander. "
+        "Responder tools: alga_publish_status_update, alga_post_handoff, alga_pause_investigation, alga_cancel_investigation. "
         "You are FORBIDDEN from calling alga_resolve_alert or alga_reopen_alert on alerts linked to an active incident — "
         "alert closure is part of incident closure and is owned by the incident commander. The server will reject "
         "your call with a role-guard error if you try; do not retry or attempt the call from another thread. "
@@ -248,10 +240,6 @@ _INCIDENT_TOOLS = frozenset({
     "alga_set_incident_priority",
     "alga_set_incident_severity",
     "alga_trigger_escalation",
-    "alga_dispatch_task",
-    "alga_complete_task",
-    "alga_list_tasks",
-    "alga_synthesize_findings",
     "alga_mitigate_incident",
     "alga_resolve_incident",
     "alga_set_incident_resolution_docs",
@@ -314,7 +302,7 @@ def _allowed_alga_tools_for_chat(chat_id: str, incident_role: str = "") -> set[s
     # but listing them here keeps the agent from wasting a round-trip).
     tools = {tool["name"] for tool in _ALGA_TOOLS}
     if chat_id.startswith("incident_") and incident_role == "responder":
-        tools = tools - {"alga_resolve_alert", "alga_reopen_alert", "alga_who_is_on_call", "alga_dispatch_task", "alga_synthesize_findings"}
+        tools = tools - {"alga_resolve_alert", "alga_reopen_alert", "alga_who_is_on_call"}
     return tools
 
 
@@ -744,10 +732,6 @@ class AlgaAdapter(BasePlatformAdapter):
             else:
                 self._clear_chat_stopped(chat_id)
                 await self._handle_incoming(data)
-        elif event_type == "coordination_task_dispatched":
-            # A coordination task was dispatched/assigned to this agent; treat as
-            # incoming so the agent wakes and acts under its role instructions.
-            await self._handle_incoming(data)
         elif event_type in _SSE_EVENTS_FOR_AGENT:
             logger.debug("Alga: SSE event %s received", event_type)
         else:
@@ -1329,76 +1313,6 @@ _ALGA_TOOLS = [
             },
         },
     },
-    {
-        "name": "alga_dispatch_task",
-        "schema": {
-            "name": "alga_dispatch_task",
-            "description": "Dispatch a typed coordination task to a role (commander-only). Replaces alga_post_handoff and alga_request_status_update. Use kind=investigate for technical work (auto-creates a child investigation), kind=communicate to ask the communicator to publish a status update, kind=verify for verification, kind=mitigate for recovery actions.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "chat_id": {"type": "string", "description": "Owner-scoped chat ID (e.g. incident_coord_12)."},
-                    "incident_number": {"type": "string", "description": "Incident number."},
-                    "kind": {"type": "string", "enum": ["investigate", "communicate", "verify", "mitigate"], "description": "Task kind. investigate=technical work (creates child investigation), communicate=status update request, verify=verification, mitigate=recovery action."},
-                    "assignee_role": {"type": "string", "enum": ["responder", "communicator"], "description": "Role to target. responders do investigate/verify/mitigate; communicators do communicate."},
-                    "goal": {"type": "string", "description": "Clear, specific instruction for the task."},
-                    "assignee_agent_id": {"type": "string", "description": "Optional: pin to a specific agent (affinity hint). Usually omit to let the scheduler pick."},
-                    "input_context": {"type": "object", "description": "Optional structured context (hypotheses, suspect services, evidence so far)."},
-                    "parent_task_id": {"type": "string", "description": "Optional parent task ID for sub-tasks."},
-                },
-                "required": ["chat_id", "incident_number", "kind", "assignee_role", "goal"],
-            },
-        },
-    },
-    {
-        "name": "alga_complete_task",
-        "schema": {
-            "name": "alga_complete_task",
-            "description": "Complete a coordination task assigned to you with a typed result. Call this when your dispatched task is done. For investigate tasks: include finding, hypothesis_confidence, evidence, root_cause_candidate. For communicate: include channel and message_ref.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "chat_id": {"type": "string", "description": "Owner-scoped chat ID."},
-                    "task_id": {"type": "string", "description": "The task ID you are completing."},
-                    "result": {"type": "object", "description": "Typed result. Investigate: {finding, hypothesis_confidence: confirmed|refuted|inconclusive, evidence: [{source,type,content}], root_cause_candidate}. Communicate: {channel, message_ref, audiences}. Verify: {claim_verified, evidence, notes}. Mitigate: {action_taken, system, confirmed_effective, evidence}."},
-                },
-                "required": ["chat_id", "task_id"],
-            },
-        },
-    },
-    {
-        "name": "alga_list_tasks",
-        "schema": {
-            "name": "alga_list_tasks",
-            "description": "List coordination tasks for an incident (commander tracks dispatched task progress). Returns tasks with status, assignee, goal, result. Filters optional.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "incident_number": {"type": "string", "description": "Incident number."},
-                    "status": {"type": "string", "description": "Optional filter: pending, assigned, in_progress, complete, failed, cancelled."},
-                    "assignee_role": {"type": "string", "description": "Optional filter: responder, communicator, commander."},
-                    "limit": {"type": "integer", "description": "Optional limit (default 50)."},
-                },
-                "required": ["incident_number"],
-            },
-        },
-    },
-    {
-        "name": "alga_synthesize_findings",
-        "schema": {
-            "name": "alga_synthesize_findings",
-            "description": "Synthesize findings from completed child investigations and tasks into the incident's coordinating investigation summary (commander-only). Call after child tasks complete to write the incident conclusion.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "chat_id": {"type": "string", "description": "Owner-scoped chat ID."},
-                    "incident_number": {"type": "string", "description": "Incident number."},
-                    "summary": {"type": "string", "description": "The synthesized incident conclusion (root cause, resolution, evidence summary)."},
-                },
-                "required": ["chat_id", "incident_number", "summary"],
-            },
-        },
-    },
 ]
 
 
@@ -1618,66 +1532,12 @@ async def _alga_trigger_escalation(args: dict, **kw) -> str:
     return await _inv_tool(f"incident_coord_{incident_id}", cmd)
 
 
-async def _alga_dispatch_task(args: dict, **kw) -> str:
-    incident_id = args.get("incident_number", "").strip()
-    if not incident_id:
-        return json.dumps({"error": "incident_number is required"})
-    kind = args.get("kind", "investigate").strip()
-    if kind not in ("investigate", "communicate", "verify", "mitigate"):
-        return json.dumps({"error": "kind must be investigate, communicate, verify, or mitigate"})
-    assignee_role = args.get("assignee_role", "responder").strip()
-    if assignee_role not in ("responder", "communicator"):
-        return json.dumps({"error": "assignee_role must be responder or communicator"})
-    goal = args.get("goal", "").strip()
-    if not goal:
-        return json.dumps({"error": "goal is required"})
-    cmd = {"op": "dispatch_task", "incident_number": int(incident_id), "task_kind": kind, "assignee_role": assignee_role, "goal": goal}
-    if (aid := args.get("assignee_agent_id", "").strip()):
-        cmd["assignee_agent_id"] = aid
-    if (ptid := args.get("parent_task_id", "").strip()):
-        cmd["parent_task_id"] = ptid
-    if (ctx := args.get("input_context")):
-        cmd["input_context"] = ctx
-    return await _inv_tool(f"incident_coord_{incident_id}", cmd)
 
 
-async def _alga_complete_task(args: dict, **kw) -> str:
-    task_id = args.get("task_id", "").strip()
-    if not task_id:
-        return json.dumps({"error": "task_id is required"})
-    chat_id = args.get("chat_id", "").strip()
-    if not chat_id:
-        return json.dumps({"error": "chat_id is required"})
-    cmd = {"op": "complete_task", "task_id": task_id}
-    if (result := args.get("result")):
-        cmd["result"] = result
-    return await _inv_tool(chat_id, cmd)
 
 
-async def _alga_list_tasks(args: dict, **kw) -> str:
-    incident_id = args.get("incident_number", "").strip()
-    if not incident_id:
-        return json.dumps({"error": "incident_number is required"})
-    params = {}
-    for k in ("status", "assignee_role", "limit"):
-        if (v := args.get(k)):
-            params[k] = v
-    qs = "&".join(f"{k}={v}" for k, v in params.items())
-    path = f"/api/v1/agent/incidents/{incident_id}/tasks"
-    if qs:
-        path += f"?{qs}"
-    return await _agent_get(path)
 
 
-async def _alga_synthesize_findings(args: dict, **kw) -> str:
-    incident_id = args.get("incident_number", "").strip()
-    if not incident_id:
-        return json.dumps({"error": "incident_number is required"})
-    summary = args.get("summary", "").strip()
-    if not summary:
-        return json.dumps({"error": "summary is required"})
-    cmd = {"op": "synthesize_findings", "incident_number": int(incident_id), "summary": summary}
-    return await _inv_tool(f"incident_coord_{incident_id}", cmd)
 
 
 async def _alga_mitigate_incident(args: dict, **kw) -> str:
@@ -1888,10 +1748,6 @@ _TOOL_HANDLERS = {
     "alga_set_incident_priority": _alga_set_incident_priority,
     "alga_set_incident_severity": _alga_set_incident_severity,
     "alga_trigger_escalation": _alga_trigger_escalation,
-    "alga_dispatch_task": _alga_dispatch_task,
-    "alga_complete_task": _alga_complete_task,
-    "alga_list_tasks": _alga_list_tasks,
-    "alga_synthesize_findings": _alga_synthesize_findings,
     "alga_mitigate_incident": _alga_mitigate_incident,
     "alga_resolve_incident": _alga_resolve_incident,
     "alga_set_incident_resolution_docs": _alga_set_incident_resolution_docs,

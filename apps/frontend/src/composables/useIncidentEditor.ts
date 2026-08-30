@@ -143,13 +143,22 @@ export function useIncidentEditor(
 
   function close() {
     let cascade: IncidentCascadeSummary = { resolved: 0, skipped: 0, failed: 0 };
+    let pmMissing = false;
     return executeAction(
       async () => {
-        const res = await api.closeIncident(incidentNumber.value);
+        const res = await api.closeIncidentWithPMWarning(incidentNumber.value);
         cascade = res.cascade;
+        pmMissing = res.postMortemMissing;
         return res.incident;
       },
-      () => cascadeToast("Closed", cascade),
+      () => {
+        if (pmMissing) {
+          // The close succeeded; the warning is advisory, so surface it as a
+          // distinct toast rather than folding it into the success message.
+          push("Closed without an approved post-mortem — consider writing one", "info");
+        }
+        return cascadeToast("Closed", cascade);
+      },
     );
   }
 

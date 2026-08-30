@@ -55,6 +55,28 @@ type expiryError struct{}
 
 func (e *expiryError) Error() string { return "expires_at must be in the future" }
 
+// parseActionItemDueDate parses an action-item due date. Accepts either a
+// full RFC3339 timestamp or a bare calendar date (`YYYY-MM-DD`, interpreted as
+// 23:59:59 UTC so a due date picked "today" is not immediately overdue).
+// Unlike token expiries, past dates are valid — an overdue due date is a
+// legitimate state the sweep reports on. Empty input means "no due date".
+func parseActionItemDueDate(raw string) (*time.Time, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil, nil
+	}
+	if t, err := time.Parse(time.RFC3339, raw); err == nil {
+		return &t, nil
+	}
+	if len(raw) == 10 {
+		if d, err := time.Parse(time.DateOnly, raw); err == nil {
+			endOfDay := time.Date(d.Year(), d.Month(), d.Day(), 23, 59, 59, 0, time.UTC)
+			return &endOfDay, nil
+		}
+	}
+	return nil, fmt.Errorf("due_date must be RFC3339 or YYYY-MM-DD: %q", raw)
+}
+
 // requireAgent retrieves the agent from the request context (delegating to
 // platform.AgentFromContext) or writes a 401.
 func requireAgent(w http.ResponseWriter, r *http.Request) (*platform.AgentTokenContext, bool) {

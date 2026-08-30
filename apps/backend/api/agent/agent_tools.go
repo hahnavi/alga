@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -100,7 +101,6 @@ type AgentToolExecutor struct {
 	incidentStore              store.IncidentStore
 	incidentCoordinationStore  store.IncidentCoordinationStore
 	incidentInvestigationStore store.IncidentInvestigationStore
-	coordinationTaskStore      store.CoordinationTaskStore
 	postmortemStore            store.PostMortemStore
 	serviceStore               store.ServiceStore
 	escalationStore            store.EscalationStore
@@ -117,10 +117,7 @@ type AgentToolExecutor struct {
 	runAlertCascadeFn           func(ctx context.Context, alertStore store.Store, auditStore store.AuditStore, publisher *sse.DualPublisher, incidentNumber int64, agentID uuid.UUID, agentName string) store.AlertCascadeResult
 	buildPostMortemDraftFn      func(ctx context.Context, documentStore store.IncidentDocumentStore, coordinationStore store.IncidentCoordinationStore, incidentStore store.IncidentStore, alertStore store.Store, inc *store.IncidentRecord, summary string) *store.PostMortemRecord
 	forwardCoordinationUpdateFn func(ctx context.Context, incidentNumber int64, messageText string, mentions []string, agentRec *store.AgentTokenRecord)
-}
-
-func (e *AgentToolExecutor) coordinationTaskStoreSnapshot() store.CoordinationTaskStore {
-	return e.coordinationTaskStore
+	postIncidentResolveFn       func(ctx context.Context, incidentNumber int64)
 }
 
 type AgentAlertSideEffects struct {
@@ -337,7 +334,7 @@ func (e *AgentToolExecutor) ExecuteInvTool(ctx context.Context, agentRec *store.
 			if store.IsReopenableInvestigationStatus(inv.Status) {
 				agentAvailable := inv.AgentID != "" && e.investigationForwarder != nil && e.investigationForwarder.AgentOnline(inv.AgentID)
 				if agentAvailable {
-					if err := e.alertInvestigationStore.TransitionAlertInvestigationStatus(ctx, investigationUUID, append(store.InvestigationTerminalStatuses, "paused"), "investigating"); err != nil {
+					if err := e.alertInvestigationStore.TransitionAlertInvestigationStatus(ctx, investigationUUID, slices.Concat(store.InvestigationTerminalStatuses, []string{"paused"}), "investigating"); err != nil {
 						logger.WarnCtx(ctx, "inv_tool: reopen transition to investigating failed", "investigation_id", investigationID, "error", err)
 					} else {
 						e.publishInvestigationStatusChange(investigationID, "investigating")
@@ -589,7 +586,7 @@ func (e *AgentToolExecutor) ExecuteInvTool(ctx context.Context, agentRec *store.
 		}
 		return InvToolOutcome{ChatID: chatID, Ok: true, Op: op}
 
-	case "set_incident_priority", "set_incident_severity", "trigger_escalation", "mitigate_incident", "resolve_incident", "begin_triage", "promote_incident", "assign_incident_role", "dispatch_task", "claim_task", "complete_task", "synthesize_findings":
+	case "set_incident_priority", "set_incident_severity", "trigger_escalation", "mitigate_incident", "resolve_incident", "begin_triage", "promote_incident", "assign_incident_role":
 		incidentNumber := cmd.IncidentNumber
 		if incidentNumber == 0 && inv.PromotedIncidentID != nil && e.incidentStore != nil {
 			if inc, err := e.incidentStore.GetIncidentByID(ctx, *inv.PromotedIncidentID); err == nil && inc != nil {
@@ -620,14 +617,6 @@ func (e *AgentToolExecutor) ExecuteInvTool(ctx context.Context, agentRec *store.
 			err = e.performPromoteIncident(ctx, agentRec, agent, incidentNumber)
 		case "assign_incident_role":
 			err = e.performAssignIncidentRole(ctx, agentRec, agent, incidentNumber, cmd)
-		case "dispatch_task":
-			err = e.performDispatchTask(ctx, agentRec, agent, incidentNumber, cmd)
-		case "claim_task":
-			err = e.performClaimTask(ctx, agentRec, agent, incidentNumber, cmd)
-		case "complete_task":
-			err = e.performCompleteTask(ctx, agentRec, agent, incidentNumber, cmd)
-		case "synthesize_findings":
-			err = e.performSynthesizeFindings(ctx, agentRec, agent, incidentNumber, cmd)
 		}
 		if err != nil {
 			return InvToolOutcome{ChatID: chatID, Ok: false, Op: op, Error: err.Error()}
@@ -641,7 +630,7 @@ func (e *AgentToolExecutor) ExecuteInvTool(ctx context.Context, agentRec *store.
 
 func isIncidentToolOp(op string) bool {
 	switch op {
-	case "set_incident_priority", "set_incident_severity", "trigger_escalation", "mitigate_incident", "resolve_incident", "begin_triage", "promote_incident", "assign_incident_role", "pause_investigation", "cancel_investigation", "post_handoff", "publish_status_update", "set_incident_resolution_docs", "dispatch_task", "claim_task", "complete_task", "synthesize_findings":
+	case "set_incident_priority", "set_incident_severity", "trigger_escalation", "mitigate_incident", "resolve_incident", "begin_triage", "promote_incident", "assign_incident_role", "pause_investigation", "cancel_investigation", "post_handoff", "publish_status_update", "set_incident_resolution_docs":
 		return true
 	default:
 		return false

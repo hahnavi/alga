@@ -61,22 +61,6 @@ pub struct InvestigationCommand {
     pub source_coordination_message_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub internal: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub task_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub task_kind: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub assignee_role: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub assignee_agent_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub goal: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub input_context: Option<serde_json::Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub result: Option<serde_json::Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub parent_task_id: Option<String>,
 }
 
 impl InvestigationCommand {
@@ -95,11 +79,6 @@ fn opt(val: &str) -> Option<String> {
         Some(val.to_string())
     }
 }
-
-pub const TASK_KIND_INVESTIGATE: &str = "investigate";
-pub const TASK_KIND_COMMUNICATE: &str = "communicate";
-pub const TASK_KIND_VERIFY: &str = "verify";
-pub const TASK_KIND_MITIGATE: &str = "mitigate";
 
 pub fn resolve_alert(fingerprint: &str) -> InvestigationCommand {
     let mut cmd = InvestigationCommand::new("resolve_alert");
@@ -304,67 +283,5 @@ pub fn set_incident_resolution_docs(
     if !resolution.is_empty() {
         cmd.resolution = Some(resolution.to_string());
     }
-    cmd
-}
-
-pub fn dispatch_task(
-    incident_number: i64,
-    kind: &str,
-    goal: &str,
-    assignee_role: &str,
-) -> InvestigationCommand {
-    let mut cmd = InvestigationCommand::new("dispatch_task");
-    cmd.incident_number = Some(incident_number);
-    cmd.task_kind = Some(kind.to_string());
-    cmd.goal = Some(goal.to_string());
-    cmd.assignee_role = Some(assignee_role.to_string());
-    cmd
-}
-
-pub fn dispatch_task_to_agent(
-    incident_number: i64,
-    kind: &str,
-    goal: &str,
-    assignee_agent_id: &str,
-) -> InvestigationCommand {
-    let mut cmd = InvestigationCommand::new("dispatch_task");
-    cmd.incident_number = Some(incident_number);
-    cmd.task_kind = Some(kind.to_string());
-    cmd.goal = Some(goal.to_string());
-    cmd.assignee_agent_id = Some(assignee_agent_id.to_string());
-    cmd
-}
-
-pub fn claim_task(task_id: &str) -> InvestigationCommand {
-    let mut cmd = InvestigationCommand::new("claim_task");
-    cmd.task_id = Some(task_id.to_string());
-    cmd
-}
-
-pub fn complete_task(
-    task_id: &str,
-    result: serde_json::Value,
-) -> InvestigationCommand {
-    let mut cmd = InvestigationCommand::new("complete_task");
-    cmd.task_id = Some(task_id.to_string());
-    cmd.result = Some(result);
-    cmd
-}
-
-pub fn synthesize_findings(
-    incident_number: i64,
-    summary: &str,
-    evidence: Option<serde_json::Map<String, serde_json::Value>>,
-) -> InvestigationCommand {
-    let mut result = serde_json::Map::new();
-    result.insert("summary".to_string(), serde_json::Value::String(summary.to_string()));
-    if let Some(ev) = evidence {
-        for (k, v) in ev {
-            result.insert(k, v);
-        }
-    }
-    let mut cmd = InvestigationCommand::new("synthesize_findings");
-    cmd.incident_number = Some(incident_number);
-    cmd.result = Some(serde_json::Value::Object(result));
     cmd
 }

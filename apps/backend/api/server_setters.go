@@ -292,12 +292,6 @@ func (s *Server) SetIncidentCoordinationStore(st store.IncidentCoordinationStore
 	s.incidentCoordinationStore = st
 }
 
-func (s *Server) SetCoordinationTaskStore(st store.CoordinationTaskStore) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.coordinationTaskStore = st
-}
-
 func (s *Server) SetIncidentChannelManager(m *incidentchannel.Manager) {
 	s.incidentChannelManager = m
 }

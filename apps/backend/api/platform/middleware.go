@@ -177,6 +177,10 @@ func AuthMiddleware(deps AuthDeps, next http.HandlerFunc, perms ...rbac.Permissi
 		}
 
 		ctx := WithUser(r.Context(), user)
+		// Expose which session authenticated the request so self-scoped
+		// handlers (session management) can tell "this device" from the
+		// caller's other sessions. Only the persisted digest is stored.
+		ctx = WithSessionIDHash(ctx, session.IDHash)
 		// Inject the authenticated user id into the context so the logger's
 		// contextHandler attaches user_id to every downstream log line (W8).
 		ctx = logger.WithUser(ctx, user.ID.String())

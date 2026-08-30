@@ -139,9 +139,6 @@ type InvestigationScheduler struct {
 	icsRoleStore                store.ICSRoleStore
 	agentRoleTickCounter        int
 	alertInvestigationLifecycle alertInvestigationLifecycle
-
-	coordinationTaskStore         store.CoordinationTaskStore
-	coordinationTaskSweepInterval time.Duration
 }
 
 // staleInvestigatePublisher is the subset of rabbitmq.Publisher used by the
@@ -248,14 +245,6 @@ func (s *InvestigationScheduler) SetIncidentInvestigationStore(iis store.Inciden
 
 func (s *InvestigationScheduler) SetIncidentCoordinationStore(ics store.IncidentCoordinationStore) {
 	s.incidentCoordinationStore = ics
-}
-
-func (s *InvestigationScheduler) SetCoordinationTaskStore(cts store.CoordinationTaskStore) {
-	s.coordinationTaskStore = cts
-}
-
-func (s *InvestigationScheduler) SetCoordinationTaskSweepInterval(d time.Duration) {
-	s.coordinationTaskSweepInterval = d
 }
 
 func (s *InvestigationScheduler) SetIncidentChannelMgr(mgr summaryChannelMgr) {
@@ -399,10 +388,6 @@ func (s *InvestigationScheduler) Start() {
 		s.wg.Add(1)
 		go s.runIncidentSweep()
 	}
-	if s.coordinationTaskStore != nil {
-		s.wg.Add(1)
-		go s.runCoordinationTaskSweep()
-	}
 	logger.Info("Investigation scheduler started", "component", "scheduler", "max_concurrent", s.maxConcurrent, "leader", s.leader != nil, "stale_sweep", s.staleThreshold > 0, "sla_sweep", s.slaSweepPublisher != nil && s.slaSweepInterval > 0, "incident_sweep", s.incidentStore != nil, "summary_sweep", s.summaryEnabled)
 }
 
@@ -476,7 +461,6 @@ func (s *InvestigationScheduler) tick(ctx context.Context) {
 
 	s.schedule(ctx)
 	s.scheduleIncidentInvestigations(ctx)
-	s.scheduleCoordinationTasks(ctx)
 
 	s.agentRoleTickCounter++
 	if s.agentRoleTickCounter >= 3 {

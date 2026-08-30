@@ -1,5 +1,5 @@
 use alga_agent_sdk::commands::*;
-use alga_agent_sdk::{InvestigationCommand, TASK_KIND_INVESTIGATE};
+use alga_agent_sdk::InvestigationCommand;
 use serde_json::{json, Value};
 
 fn round_trip(cmd: InvestigationCommand) -> Value {
@@ -213,70 +213,6 @@ fn test_set_incident_resolution_docs_omits_empty_pointers() {
         v["command"].get("resolution").is_none(),
         "empty resolution must be omitted"
     );
-}
-
-#[test]
-fn test_dispatch_task() {
-    let v = round_trip(dispatch_task(9, TASK_KIND_INVESTIGATE, "Find root cause", "responder"));
-    assert_eq!(v["command"]["op"], "dispatch_task");
-    assert_eq!(v["command"]["incident_number"], 9);
-    assert_eq!(v["command"]["task_kind"], "investigate");
-    assert_eq!(v["command"]["goal"], "Find root cause");
-    assert_eq!(v["command"]["assignee_role"], "responder");
-    assert!(
-        v["command"].get("assignee_agent_id").is_none(),
-        "role variant must not set assignee_agent_id"
-    );
-    assert_no_incident_id(&v);
-}
-
-#[test]
-fn test_dispatch_task_to_agent() {
-    let v = round_trip(dispatch_task_to_agent(9, "communicate", "Publish status", "agent-42"));
-    assert_eq!(v["command"]["op"], "dispatch_task");
-    assert_eq!(v["command"]["assignee_agent_id"], "agent-42");
-    assert!(
-        v["command"].get("assignee_role").is_none(),
-        "agent variant must not set assignee_role"
-    );
-}
-
-#[test]
-fn test_claim_task() {
-    let v = round_trip(claim_task("task-uuid-1"));
-    assert_eq!(v["command"]["op"], "claim_task");
-    assert_eq!(v["command"]["task_id"], "task-uuid-1");
-    assert!(
-        v["command"].get("incident_number").is_none(),
-        "claim_task must not set incident_number"
-    );
-    assert_no_incident_id(&v);
-}
-
-#[test]
-fn test_complete_task() {
-    let v = round_trip(complete_task("task-uuid-2", json!({ "summary": "OOM in worker pool" })));
-    assert_eq!(v["command"]["op"], "complete_task");
-    assert_eq!(v["command"]["task_id"], "task-uuid-2");
-    assert_eq!(v["command"]["result"]["summary"], "OOM in worker pool");
-}
-
-#[test]
-fn test_synthesize_findings() {
-    let mut evidence = serde_json::Map::new();
-    evidence.insert("finding_1".to_string(), json!("memory leak in cache layer"));
-    let v = round_trip(synthesize_findings(
-        5,
-        "Multiple OOM events traced to cache leak",
-        Some(evidence),
-    ));
-    assert_eq!(v["command"]["op"], "synthesize_findings");
-    assert_eq!(v["command"]["incident_number"], 5);
-    assert_eq!(
-        v["command"]["result"]["summary"],
-        "Multiple OOM events traced to cache leak"
-    );
-    assert_eq!(v["command"]["result"]["finding_1"], "memory leak in cache layer");
 }
 
 #[test]

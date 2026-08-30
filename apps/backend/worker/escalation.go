@@ -85,6 +85,17 @@ func (w *EscalationWorker) Handle(ctx context.Context, d amqp.Delivery) {
 		return
 	}
 
+	// Terminal incidents must not page anyone: the sweep only reads Valkey
+	// ack state, so this DB check is the backstop for entries that were
+	// scheduled before the incident hit a terminal status.
+	if w.incidentStore != nil && msg.IncidentNumber > 0 {
+		if inc, err := w.incidentStore.GetIncident(ctx, msg.IncidentNumber); err == nil && inc != nil && escalation.IsTerminalIncidentStatus(inc.Status) {
+			logger.Info("Dropping escalation; incident in terminal status", "component", "escalation-worker", "incident_number", msg.IncidentNumber, "status", inc.Status)
+			_ = d.Ack(false)
+			return
+		}
+	}
+
 	logger.Info("Processing escalation", "component", "escalation-worker", "incident_number", msg.IncidentNumber, "policy_id", msg.PolicyID, "level", msg.Level, "retry", msg.RetryCount)
 
 	userIDs, channels, forcedChannels, err := w.engine.EvaluatePolicy(ctx, msg.PolicyID, msg.Level)

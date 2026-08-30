@@ -45,6 +45,9 @@ type PostMortemListFilter struct {
 type PostMortemStore interface {
 	Create(ctx context.Context, record *PostMortemRecord) (*PostMortemRecord, error)
 	GetByIncidentID(ctx context.Context, incidentID uuid.UUID) (*PostMortemRecord, error)
+	// ExistsByIncidentID answers "does a post-mortem exist for this incident"
+	// without paying for action-item loading — used by the auto-draft guard.
+	ExistsByIncidentID(ctx context.Context, incidentID uuid.UUID) (bool, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*PostMortemRecord, error)
 	Update(ctx context.Context, id uuid.UUID, record *PostMortemRecord) (*PostMortemRecord, error)
 	UpdateStatus(ctx context.Context, id uuid.UUID, status string, approvedBy *uuid.UUID) (*PostMortemRecord, error)
@@ -103,6 +106,16 @@ func (s *pgPostMortemStore) GetByIncidentID(ctx context.Context, incidentID uuid
 		return handleQueryErr[*PostMortemRecord](err, "post-mortem by incident id")
 	}
 	return s.toRecord(ctx, &pm)
+}
+
+func (s *pgPostMortemStore) ExistsByIncidentID(ctx context.Context, incidentID uuid.UUID) (bool, error) {
+	exists, err := s.db.NewSelect().Model((*models.PostMortem)(nil)).
+		Where("incident_id = ?", incidentID).
+		Exists(ctx)
+	if err != nil {
+		return false, fmt.Errorf("failed to check post-mortem existence: %w", err)
+	}
+	return exists, nil
 }
 
 func (s *pgPostMortemStore) GetByID(ctx context.Context, id uuid.UUID) (*PostMortemRecord, error) {
@@ -241,18 +254,47 @@ func (s *pgPostMortemStore) List(ctx context.Context, filter PostMortemListFilte
 
 	records := make([]PostMortemRecord, 0, len(items))
 	for _, pm := range items {
-		rec, recErr := s.toRecord(ctx, &pm)
-		if recErr != nil {
-			return nil, 0, recErr
-		}
+		rec := postMortemModelToRecord(&pm)
 		records = append(records, *rec)
+	}
+
+	// Batch-load action items for the page in one query instead of one
+	// ListByPostMortem per row.
+	if s.actionItemStore != nil && len(records) > 0 {
+		ids := make([]uuid.UUID, 0, len(records))
+		for i := range records {
+			ids = append(ids, records[i].ID)
+		}
+		byPM, aiErr := s.actionItemStore.ListByPostMortemIDs(ctx, ids)
+		if aiErr == nil {
+			for i := range records {
+				if items, ok := byPM[records[i].ID]; ok {
+					records[i].ActionItems = items
+				}
+			}
+		}
 	}
 
 	return records, total, nil
 }
 
 func (s *pgPostMortemStore) toRecord(ctx context.Context, pm *models.PostMortem) (*PostMortemRecord, error) {
-	rec := &PostMortemRecord{
+	rec := postMortemModelToRecord(pm)
+
+	if s.actionItemStore != nil {
+		items, err := s.actionItemStore.ListByPostMortem(ctx, pm.ID)
+		if err == nil {
+			rec.ActionItems = items
+		}
+	}
+
+	return rec, nil
+}
+
+// postMortemModelToRecord maps the persistence model to the API record
+// without side-effect loads.
+func postMortemModelToRecord(pm *models.PostMortem) *PostMortemRecord {
+	return &PostMortemRecord{
 		ID:                  pm.ID,
 		IncidentID:          pm.IncidentID,
 		Title:               pm.Title,
@@ -272,13 +314,4 @@ func (s *pgPostMortemStore) toRecord(ctx context.Context, pm *models.PostMortem)
 		CreatedAt:           pm.CreatedAt,
 		UpdatedAt:           pm.UpdatedAt,
 	}
-
-	if s.actionItemStore != nil {
-		items, err := s.actionItemStore.ListByPostMortem(ctx, pm.ID)
-		if err == nil {
-			rec.ActionItems = items
-		}
-	}
-
-	return rec, nil
 }

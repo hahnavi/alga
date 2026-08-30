@@ -56,7 +56,6 @@ type AlgaClient struct {
 	OnPeerFinding         func(PeerFindingEvent)
 	OnPeerAsk             func(PeerAskEvent)
 	OnPeerReply           func(PeerReplyEvent)
-	OnCoordinationTask    func(CoordinationTaskEvent)
 	OnSummarizeIncident   func(SummarizeIncidentEvent)
 	OnAlertAutoResolved   func(AlertAutoResolvedEvent)
 	OnIncidentCommsStale  func(IncidentCommsStaleEvent)
@@ -121,7 +120,6 @@ func (c *AlgaClient) Connect(ctx context.Context) error {
 	sseClient.OnPeerFinding = c.OnPeerFinding
 	sseClient.OnPeerAsk = c.OnPeerAsk
 	sseClient.OnPeerReply = c.OnPeerReply
-	sseClient.OnCoordinationTask = c.OnCoordinationTask
 	sseClient.OnSummarizeIncident = c.OnSummarizeIncident
 	sseClient.OnAlertAutoResolved = c.OnAlertAutoResolved
 	sseClient.OnIncidentCommsStale = c.OnIncidentCommsStale
@@ -363,17 +361,6 @@ func (c *AlgaClient) ResolveAlert(ctx context.Context, fingerprint string) error
 
 func (c *AlgaClient) ReopenAlert(ctx context.Context, fingerprint string) error {
 	return c.doJSON(ctx, http.MethodPost, "/api/v1/agent/alerts/"+url.PathEscape(fingerprint)+"/reopen", nil, nil)
-}
-
-// ListIncidentTasks returns the coordination tasks for an incident. This is
-// the read side of dispatch_task / claim_task / complete_task.
-func (c *AlgaClient) ListIncidentTasks(ctx context.Context, incidentNumber int64, params map[string]string) ([]CoordinationTask, error) {
-	path := withQuery(fmt.Sprintf("/api/v1/agent/incidents/%d/tasks", incidentNumber), params)
-	var result []CoordinationTask
-	if err := c.doJSON(ctx, http.MethodGet, path, nil, &result); err != nil {
-		return nil, err
-	}
-	return result, nil
 }
 
 // SendMessage sends a text message to a chat. An Idempotency-Key is

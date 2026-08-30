@@ -48,11 +48,7 @@ export type AlgaInvestigationCommandOp =
   | "assign_incident_role"
   | "post_handoff"
   | "publish_status_update"
-  | "set_incident_resolution_docs"
-  | "dispatch_task"
-  | "claim_task"
-  | "complete_task"
-  | "synthesize_findings";
+  | "set_incident_resolution_docs";
 
 export type AlgaInvestigationSeverity = "critical" | "high" | "warning" | "info";
 
@@ -84,12 +80,6 @@ export type AlgaInvestigationCommand = {
   summary?: string;
   impact_assessment?: string;
   actions_taken?: string;
-  task_kind?: "investigate" | "communicate" | "verify" | "mitigate";
-  goal?: string;
-  assignee_role?: "commander" | "communicator" | "responder";
-  assignee_agent_id?: string;
-  task_id?: string;
-  result?: Record<string, unknown>;
 };
 
 export type AlgaChannelData = {
@@ -101,9 +91,7 @@ export type AlgaOutboundMessagePayload =
   | { kind: "tool_call"; text: string }
   | { kind: "inv_tool"; command: AlgaInvestigationCommand };
 
-export type InvestigationSignalEventType =
-  | "investigation_resume"
-  | "investigation_abort";
+export type InvestigationSignalEventType = "investigation_resume" | "investigation_abort";
 
 export type InvestigationSignalEvent = {
   investigation_id: string;

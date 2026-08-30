@@ -43,21 +43,6 @@ class Alert(_AlgaModel):
     updated_at: str = ""
 
 
-class CoordinationTask(_AlgaModel):
-    task_id: str = ""
-    incident_number: int = 0
-    kind: str = ""
-    goal: str = ""
-    assignee_role: str = ""
-    assignee_agent_id: str = ""
-    status: str = ""
-    result: Optional[dict[str, Any]] = None
-    input_context: Optional[dict[str, Any]] = None
-    parent_task_id: str = ""
-    created_at: Optional[str] = None
-    completed_at: Optional[str] = None
-
-
 class KnowledgeNote(_AlgaModel):
     id: str = ""
     kind: str = ""
@@ -268,19 +253,6 @@ class PeerReplyEvent(_AlgaModel):
 class AgentPresenceEvent(_AlgaModel):
     agent_id: str = ""
     online: bool = False
-
-
-class CoordinationTaskEvent(_AlgaModel):
-    type: str = ""
-    chat_id: str = ""
-    task_id: str = ""
-    incident_number: int = 0
-    kind: str = ""
-    goal: str = ""
-    assignee_role: str = ""
-    assignee_agent_id: str = ""
-    input_context: Optional[dict[str, Any]] = None
-    parent_task_id: str = ""
 
 
 class SummarizeIncidentEvent(_AlgaModel):

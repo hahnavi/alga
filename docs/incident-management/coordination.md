@@ -1,15 +1,15 @@
 ---
 title: Incident Coordination
-description: Coordination messages, typed coordination tasks, public status updates, Slack incident channels, and how agents and operators collaborate during an incident.
+description: Coordination messages, public status updates, Slack incident channels, and how agents and operators collaborate during an incident.
 ---
 
 # Incident Coordination
 
-Alga provides structured communication channels for coordinating incident response: a coordination message stream, typed coordination tasks for agent work, public status updates, and optional Slack incident channels.
+Alga provides structured communication channels for coordinating incident response: a coordination message stream, public status updates, and optional Slack incident channels.
 
 ## Coordination Messages
 
-The coordination stream is a real-time message feed within each incident (`IncidentCoordinationMessage`). Each message records an actor, a body, and metadata, and can be threaded and linked to investigations or tasks.
+The coordination stream is a real-time message feed within each incident (`IncidentCoordinationMessage`). Each message records an actor, a body, and metadata, and can be threaded and linked to investigations. Mentioning an agent with `[@name](agent:…)` in a message activates that agent; a message that is empty after stripping mention links is stored but does not activate anyone.
 
 ### Message Kinds
 
@@ -34,7 +34,6 @@ The coordination stream is a real-time message feed within each incident (`Incid
 | `source`                                                    | Origin of the message (defaults to `alga`)            |
 | `parent_message_id`                                         | Parent message for threading                          |
 | `linked_investigation_id`                                   | Investigation this message relates to                 |
-| `linked_coordination_task_id`                               | Coordination task this message relates to             |
 | `slack_channel_id` / `slack_message_ts` / `slack_thread_ts` | Slack mirroring references                            |
 | `provider_message_id`                                       | External provider message identifier                  |
 
@@ -53,72 +52,6 @@ curl -X POST http://localhost:8080/api/v1/incidents/{id}/coordination/messages \
     "kind": "decision",
     "body": "Decided to failover to us-east-2 region.",
     "internal": false
-  }'
-```
-
-## Coordination Tasks
-
-Coordination tasks (`CoordinationTask`) are typed, persisted work units that structure agent collaboration. A commander dispatches tasks; responder/communicator agents claim and complete them. Tasks form parent/child trees.
-
-### Task Kinds
-
-`investigate`, `communicate`, `verify`, `mitigate`, `synthesize` (defaults to `investigate`).
-
-### Task Lifecycle
-
-```
-pending → assigned → in_progress → complete
-                                 → failed
-                                 → cancelled
-```
-
-| Status        | Meaning                        |
-| ------------- | ------------------------------ |
-| `pending`     | Created, not yet claimed       |
-| `assigned`    | Claimed by an agent            |
-| `in_progress` | Actively being worked          |
-| `complete`    | Finished with a result         |
-| `failed`      | Failed (with `failure_reason`) |
-| `cancelled`   | Cancelled                      |
-
-Transitions are validated centrally by the store (`CanTransitionCoordinationTask`);
-illegal jumps — for example `pending → complete`, or any move out of a terminal
-status — fail with a status-conflict error. Reverting an in-flight task back to
-`pending` (agent disconnect, dispatch retry) and cancel/fail from any
-non-terminal status are the supported side edges.
-
-### Task Fields
-
-| Field                                       | Description                           |
-| ------------------------------------------- | ------------------------------------- |
-| `kind`                                      | Task kind (defaults to `investigate`) |
-| `assignee_role`                             | Target role (defaults to `responder`) |
-| `assignee_agent_id` / `assignee_agent_name` | Assigned agent                        |
-| `goal`                                      | What the task must achieve (required) |
-| `input_context`                             | Structured input (JSON)               |
-| `result` / `result_schema`                  | Structured output and its schema      |
-| `linked_investigation_id`                   | Investigation spawned by this task    |
-| `priority`                                  | Numeric priority                      |
-| `due_at`                                    | Optional deadline                     |
-| `dispatch_attempts`                         | Number of dispatch attempts           |
-| `parent_task_id`                            | Parent task for sub-task trees        |
-
-### API Endpoints
-
-| Method  | Path                                        | Permission          | Description                                                   |
-| ------- | ------------------------------------------- | ------------------- | ------------------------------------------------------------- |
-| `GET`   | `/api/v1/incidents/{id}/coordination/tasks` | `incidents:read`    | List coordination tasks (filter by `status`, `assignee_role`) |
-| `POST`  | `/api/v1/incidents/{id}/coordination/tasks` | `incidents:command` | Create a coordination task                                    |
-| `PATCH` | `/api/v1/incidents/{id}/coordination/tasks` | `incidents:command` | Update a task's status (cancel)                               |
-
-```sh
-curl -X POST http://localhost:8080/api/v1/incidents/{id}/coordination/tasks \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "kind": "investigate",
-    "assignee_role": "responder",
-    "goal": "Determine whether the database connection pool is exhausted"
   }'
 ```
 

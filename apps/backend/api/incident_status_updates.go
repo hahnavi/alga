@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -89,6 +90,10 @@ func (s *Server) handleCreateStatusUpdate(w http.ResponseWriter, r *http.Request
 		r.Context(), incidentNumber, statusLevel, body, req.Internal, actorID, actorName,
 	)
 	if err != nil {
+		if errors.Is(err, store.ErrInvalidStatusLevel) {
+			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid status_level: must be investigating, identified, mitigated, monitoring, or resolved")
+			return
+		}
 		writeInternalError(w, err, "failed to create status update")
 		return
 	}

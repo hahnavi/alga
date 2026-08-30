@@ -27,9 +27,8 @@ type fakeAlgaClient struct {
 	// knowledge / memory
 	notes    []alga.KnowledgeNote
 	memories []alga.Memory
-	// incident / tasks
+	// incident
 	incident *alga.IncidentContext
-	tasks    []alga.CoordinationTask
 	// catalog
 	services []alga.Service
 	oncall   []alga.OnCallEntry
@@ -93,9 +92,6 @@ func (f *fakeAlgaClient) ListServices(_ context.Context, _ map[string]string) (*
 func (f *fakeAlgaClient) WhoIsOnCall(_ context.Context) ([]alga.OnCallEntry, error) {
 	return f.oncall, nil
 }
-func (f *fakeAlgaClient) ListIncidentTasks(_ context.Context, _ int64, _ map[string]string) ([]alga.CoordinationTask, error) {
-	return f.tasks, nil
-}
 
 // --- Tool tests ---
 
@@ -113,8 +109,6 @@ func TestAlgaToolRegistryShape(t *testing.T) {
 		"alga_trigger_escalation", "alga_mitigate_incident", "alga_resolve_incident",
 		"alga_search_knowledge", "alga_create_knowledge",
 		"alga_list_memories", "alga_create_memory", "alga_delete_memory",
-		"alga_dispatch_task", "alga_claim_task", "alga_complete_task",
-		"alga_synthesize_findings", "alga_list_tasks",
 		"alga_list_services", "alga_who_is_on_call",
 	}
 	for _, name := range wantTools {
@@ -237,41 +231,6 @@ func TestAlgaSendCommandSDKError(t *testing.T) {
 	}
 }
 
-// TestAlgaDispatchTask verifies the new coordination task tools.
-func TestAlgaDispatchTask(t *testing.T) {
-	reg := NewRegistry()
-	fc := &fakeAlgaClient{}
-	RegisterAlgaTools(reg, fc)
-
-	tool, _ := reg.Get("alga_dispatch_task")
-	ctx := WithCallContext(context.Background(), CallContext{ChatID: "incident_coord_42"})
-	out, err := tool.Execute(ctx, json.RawMessage(`{"incident_number":42,"kind":"investigate","goal":"find rc"}`))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(out, `"ok":true`) {
-		t.Errorf("expected success envelope, got %s", out)
-	}
-	if fc.lastCmd.Op != "dispatch_task" || fc.lastCmd.TaskKind != "investigate" || fc.lastCmd.Goal != "find rc" {
-		t.Errorf("cmd = %+v", fc.lastCmd)
-	}
-}
-
-// TestAlgaCompleteTaskRequiredFields verifies validation.
-func TestAlgaCompleteTaskRequiredFields(t *testing.T) {
-	reg := NewRegistry()
-	RegisterAlgaTools(reg, &fakeAlgaClient{})
-
-	tool, _ := reg.Get("alga_complete_task")
-	ctx := WithCallContext(context.Background(), CallContext{ChatID: "incident_coord_1"})
-
-	// Missing task_id.
-	out, _ := tool.Execute(ctx, json.RawMessage(`{}`))
-	if !strings.Contains(out, "task_id is required") {
-		t.Errorf("expected validation error, got %s", out)
-	}
-}
-
 // TestAlgaToolCapabilityGating verifies the command-required tools are
 // filtered out for investigate-only agents.
 func TestAlgaToolCapabilityGating(t *testing.T) {
@@ -280,8 +239,7 @@ func TestAlgaToolCapabilityGating(t *testing.T) {
 
 	investigateOnly := reg.ListForCapabilities([]string{"investigate"})
 	for _, tool := range investigateOnly {
-		if tool.Name() == "alga_dispatch_task" || tool.Name() == "alga_synthesize_findings" ||
-			tool.Name() == "alga_resolve_incident" || tool.Name() == "alga_mitigate_incident" ||
+		if tool.Name() == "alga_resolve_incident" || tool.Name() == "alga_mitigate_incident" ||
 			tool.Name() == "alga_add_incident_timeline" {
 			t.Errorf("investigate-only agent should not see %s", tool.Name())
 		}
@@ -293,8 +251,8 @@ func TestAlgaToolCapabilityGating(t *testing.T) {
 	for _, tool := range commander {
 		names[tool.Name()] = true
 	}
-	if !names["alga_dispatch_task"] || !names["alga_synthesize_findings"] {
-		t.Errorf("commander should see dispatch_task and synthesize_findings")
+	if !names["alga_resolve_incident"] || !names["alga_mitigate_incident"] {
+		t.Errorf("commander should see resolve_incident and mitigate_incident")
 	}
 }
 
@@ -368,32 +326,6 @@ func TestAlgaSendCommandWithRealBackendHTTP(t *testing.T) {
 	}
 	if !strings.HasPrefix(sawIdem, "alga-") {
 		t.Errorf("Idempotency-Key = %q, want prefix alga-", sawIdem)
-	}
-}
-
-// TestAlgaListIncidentTasks verifies the new task listing tool.
-func TestAlgaListIncidentTasks(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.HasSuffix(r.URL.Path, "/tasks") {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"data":[{"task_id":"t1","kind":"investigate","goal":"g","status":"claimed"}]}`))
-	}))
-	defer srv.Close()
-
-	client := alga.NewAlgaClient(srv.URL, "tok", alga.WithMaxRESTRetries(0))
-	reg := NewRegistry()
-	RegisterAlgaTools(reg, client)
-
-	tool, _ := reg.Get("alga_list_tasks")
-	out, err := tool.Execute(context.Background(), json.RawMessage(`{"incident_number":42}`))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(out, "t1") || !strings.Contains(out, `"count":1`) {
-		t.Errorf("expected t1 in result, got %s", out)
 	}
 }
 

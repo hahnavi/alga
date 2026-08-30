@@ -87,6 +87,17 @@ func (s *Server) handleCreateIncidentCoordinationMessage(w http.ResponseWriter, 
 	if kind == "" {
 		kind = store.IncidentCoordinationKindChat
 	}
+	// Operators may only post conversational kinds. System kinds (status_update,
+	// agent_reply, investigation_summary, system) are written exclusively by
+	// their gated/internal paths — status_update in particular carries the
+	// incidents:command gate on /status-updates, so accepting it here would let
+	// incidents:write holders forge status updates (and status_level metadata).
+	switch kind {
+	case store.IncidentCoordinationKindChat, store.IncidentCoordinationKindDecision, store.IncidentCoordinationKindAction:
+	default:
+		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid kind: must be chat, decision, or action")
+		return
+	}
 	user := userFromContext(r.Context())
 	actorName := "User"
 	var actorID *uuid.UUID

@@ -37,13 +37,13 @@ func AvailableTransitions(status string) []string {
 func ExpectedIncidentPhaseActions(status string) []string {
 	switch status {
 	case "detected":
-		return []string{"Acknowledge/triage the incident", "Assign commander/communicator/responder roles", "Dispatch initial investigate tasks for likely-affected services"}
+		return []string{"Acknowledge/triage the incident", "Assign commander/communicator/responder roles", "Ensure responder agents are investigating likely-affected services (mention them or assign child investigations)"}
 	case "triaging":
-		return []string{"Complete triage", "Promote to active", "Dispatch investigate tasks"}
+		return []string{"Complete triage", "Promote to active", "Ensure responder agents are assigned to investigate"}
 	case "active":
-		return []string{"Ensure investigate tasks are dispatched for all affected services", "Track child task progress via alga_list_tasks", "Synthesize findings as they complete", "Publish status updates (dispatch communicate tasks or publish directly)"}
+		return []string{"Ensure investigations cover all affected services", "Track progress via coordination messages and status updates", "Collect responder findings as handoffs complete", "Publish status updates (ask the communicator via mention or publish directly)"}
 	case "mitigated":
-		return []string{"Verify recovery via responder evidence", "Synthesize final findings", "Publish resolved status update", "Set resolution docs (root_cause, impact_assessment, actions_taken, resolution)", "Resolve the incident"}
+		return []string{"Verify recovery via responder evidence", "Collect final responder findings", "Publish resolved status update", "Set resolution docs (root_cause, impact_assessment, actions_taken, resolution)", "Resolve the incident"}
 	case "resolved":
 		return []string{"Confirm resolution docs are complete", "Close the incident"}
 	case "closed", "cancelled":

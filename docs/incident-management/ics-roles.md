@@ -138,7 +138,7 @@ Set these environment variables:
 
 ## Multi-Agent Coordination
 
-When AI agents are assigned ICS roles, they collaborate through a **task-driven coordination model**: the commander dispatches typed coordination tasks, the assigned responder/communicator agents execute them, and report results back. This replaces ad-hoc coordination with structured, typed work units. See [Coordination](/incident-management/coordination) for the coordination task and message model.
+When AI agents are assigned ICS roles, they collaborate through the **coordination thread**: the commander delegates by @mentioning responder/communicator agents (a mention activates them), agents publish milestone status updates, and responders hand work back with structured `alga_post_handoff` messages. See [Coordination](/incident-management/coordination) for the message model.
 
 ## Best Practices
 
@@ -150,6 +150,6 @@ When AI agents are assigned ICS roles, they collaborate through a **task-driven 
 ## See Also
 
 - [Lifecycle & States](/incident-management/lifecycle) — incident state machine and transitions
-- [Incident Coordination](/incident-management/coordination) — coordination messages, tasks, and status updates
+- [Incident Coordination](/incident-management/coordination) — coordination messages and status updates
 - [Handoffs](/incident-management/handoffs) — on-call shift handoffs
 - [AI Investigation](/core-features/investigation) — how AI agents participate in incident response

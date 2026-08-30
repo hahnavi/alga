@@ -336,9 +336,10 @@ func (s *pgIncidentStore) UpdateIncident(ctx context.Context, incidentNumber int
 	}
 	q = q.Set("slack_channel_archived = ?", record.SlackChannelArchived)
 
-	if record.Status != "" {
-		q = q.Set("status = ?", record.Status)
-	}
+	// Status is intentionally NOT written here: lifecycle changes go through
+	// TransitionIncidentStatus's optimistic status guard. Rewriting status from
+	// the caller's stale read would let a concurrent PATCH revert a resolve or
+	// cancel without any conflict.
 	if record.CommanderID != nil {
 		q = q.Set("commander_id = ?", *record.CommanderID)
 	} else {
@@ -553,10 +554,13 @@ func (s *pgIncidentStore) ListIncidents(ctx context.Context, filter IncidentList
 		listQ = listQ.Order("updated_at DESC")
 	case "-updated_at":
 		listQ = listQ.Order("updated_at ASC")
-	case "severity":
-		listQ = listQ.Order("severity ASC")
-	case "-severity":
-		listQ = listQ.Order("severity DESC")
+	case "severity", "severity_desc":
+		// Base order only; the semantic severity ordering is applied in Go
+		// below via incident.SeverityRank (SQL alphabetical order would put
+		// "info" before "warning").
+		listQ = listQ.Order("created_at ASC")
+	case "-severity", "severity_asc":
+		listQ = listQ.Order("created_at ASC")
 	case "priority", "priority_asc":
 		listQ = listQ.Order("created_at ASC")
 	case "priority_desc":
@@ -595,6 +599,14 @@ func (s *pgIncidentStore) ListIncidents(ctx context.Context, filter IncidentList
 	case "priority_desc":
 		slices.SortFunc(records, func(a, b IncidentRecord) int {
 			return cmp.Compare(incident.PriorityRank(b.Priority), incident.PriorityRank(a.Priority))
+		})
+	case "severity", "severity_desc":
+		slices.SortFunc(records, func(a, b IncidentRecord) int {
+			return cmp.Compare(incident.SeverityRank(a.Severity), incident.SeverityRank(b.Severity))
+		})
+	case "-severity", "severity_asc":
+		slices.SortFunc(records, func(a, b IncidentRecord) int {
+			return cmp.Compare(incident.SeverityRank(b.Severity), incident.SeverityRank(a.Severity))
 		})
 	}
 
@@ -724,7 +736,10 @@ func (s *pgIncidentStore) GetTimeline(ctx context.Context, incidentNumber int64)
 	defer cancel()
 
 	var inc models.Incident
-	err := s.db.NewSelect().Model(&inc).Where("incident_number = ?", incidentNumber).Scan(ctx)
+	err := s.db.NewSelect().Model(&inc).
+		Where("incident_number = ?", incidentNumber).
+		Where("deleted_at IS NULL").
+		Scan(ctx)
 	if err != nil {
 		return handleQueryErr[[]IncidentTimelineEntryRecord](err, "incident timeline")
 	}
@@ -952,7 +967,10 @@ func (s *pgIncidentStore) ListActiveIncidentsForServices(ctx context.Context, se
 
 func (s *pgIncidentStore) GetIncidentBySlackChannel(ctx context.Context, channelID string) (*IncidentRecord, error) {
 	var item models.Incident
-	err := s.db.NewSelect().Model(&item).Where("slack_channel_id = ?", channelID).Scan(ctx)
+	err := s.db.NewSelect().Model(&item).
+		Where("slack_channel_id = ?", channelID).
+		Where("deleted_at IS NULL").
+		Scan(ctx)
 	if err != nil {
 		return handleQueryErr[*IncidentRecord](err, "incident by slack channel")
 	}

@@ -83,7 +83,7 @@ Capabilities gate **what** an agent can do. Assign them during token creation or
 | Capability    | Allows                                                                                                       |
 | ------------- | ------------------------------------------------------------------------------------------------------------ |
 | `investigate` | Receive investigations, resolve/reopen alerts, set outcomes, search knowledge, query alerts/services/on-call |
-| `communicate` | Publish status updates, handle communications tasks                                                          |
+| `communicate` | Publish status updates and incident timeline coordination messages                                           |
 | `command`     | Incident command — set priority/severity, trigger escalation, mitigate/resolve incidents, assign ICS roles   |
 
 List available capabilities:
@@ -230,7 +230,7 @@ Both plugins share the same backend executor (`AgentToolExecutor`). Tools fall i
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Alert lifecycle               | `alga_resolve_alert`, `alga_reopen_alert`, `alga_set_outcome`, `alga_cancel_investigation`, `alga_pause_investigation`                                               |
 | Incident command              | `alga_promote_to_incident`, `alga_set_incident_priority`, `alga_set_incident_severity`, `alga_trigger_escalation`, `alga_mitigate_incident`, `alga_resolve_incident` |
-| Coordination                  | `alga_dispatch_task`, `alga_complete_task`, `alga_synthesize_findings`, `alga_publish_status_update`, `alga_post_handoff`                                            |
+| Coordination                  | `alga_publish_status_update`, `alga_post_handoff`                                                                                                                    |
 | Knowledge                     | `alga_search_knowledge`, `alga_get_knowledge`, `alga_create_knowledge`                                                                                               |
 | Context queries               | `alga_list_alerts`, `alga_get_incident_context`, `alga_get_incident_timeline`, `alga_list_services`, `alga_who_is_on_call`                                           |
 | Triage feedback               | `alga_triage_feedback`                                                                                                                                               |
@@ -243,11 +243,11 @@ See the [Hermes](/agents/hermes#the-31-agent-tools) or [OpenClaw](/agents/opencl
 
 During an incident, agents are bound by their ICS role:
 
-| Role                    | Allowed Actions                                                                                    |
-| ----------------------- | -------------------------------------------------------------------------------------------------- |
-| **Incident Commander**  | Priority, escalation, mitigation, resolution, resolution docs, role assignment, task dispatch      |
-| **Responder**           | Investigation updates, severity, outcome, pause/cancel, complete investigate/verify/mitigate tasks |
-| **Communications Lead** | Publish status updates, complete communicate-kind tasks                                            |
+| Role                    | Allowed Actions                                                                                       |
+| ----------------------- | ----------------------------------------------------------------------------------------------------- |
+| **Incident Commander**  | Priority, escalation, mitigation, resolution, resolution docs, role assignment, coordination messages |
+| **Responder**           | Investigation updates, severity, outcome, pause/cancel, status updates, coordination messages         |
+| **Communications Lead** | Publish status updates and coordination messages                                                      |
 
 The backend enforces these boundaries server-side. If an agent attempts an action outside its role, it receives a clear 403 error with the `required_capability`.
 
@@ -272,7 +272,6 @@ All agent API endpoints require the agent bearer token and are rate-limited per-
 | `PATCH /api/v1/agent/incidents/{id}`         | Update incident                                                                  |
 | `GET /api/v1/agent/incidents/{id}/timeline`  | Get incident timeline                                                            |
 | `POST /api/v1/agent/incidents/{id}/timeline` | Add timeline entry                                                               |
-| `GET /api/v1/agent/incidents/{id}/tasks`     | List coordination tasks                                                          |
 | `GET /api/v1/agent/services`                 | List services                                                                    |
 | `GET /api/v1/agent/on-call/current`          | Who is on call now                                                               |
 | `GET /api/v1/agent/playbooks`                | Matching playbooks                                                               |

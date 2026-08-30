@@ -2,6 +2,7 @@ import {
   validate,
   alertListSchema,
   alertDetailResponseSchema,
+  alertRelatedResponseSchema,
   incidentListSchema,
   incidentDetailSchema,
 } from "@/lib/validation";
@@ -951,55 +952,9 @@ export type IncidentCoordinationMessage = {
   provider_message_id?: string;
   linked_investigation_id?: string;
   parent_message_id?: string;
-  linked_coordination_task_id?: string;
   metadata?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
-};
-
-type CoordinationTaskKind = "investigate" | "communicate" | "verify" | "mitigate" | "synthesize";
-type CoordinationTaskStatus =
-  | "pending"
-  | "assigned"
-  | "in_progress"
-  | "complete"
-  | "failed"
-  | "cancelled";
-type CoordinationTaskAssigneeRole = "commander" | "communicator" | "responder";
-
-export type CoordinationTask = {
-  id: string;
-  incident_id?: string;
-  parent_task_id?: string;
-  kind: CoordinationTaskKind;
-  assignee_role: CoordinationTaskAssigneeRole;
-  assignee_agent_id?: string;
-  assignee_agent_name?: string;
-  goal: string;
-  input_context?: Record<string, unknown>;
-  result?: Record<string, unknown>;
-  result_schema?: Record<string, unknown>;
-  linked_investigation_id?: string;
-  status: CoordinationTaskStatus;
-  priority?: number;
-  due_at?: string;
-  claimed_at?: string;
-  completed_at?: string;
-  created_by_agent_id?: string;
-  created_by_name?: string;
-  failure_reason?: string;
-  dispatch_attempts?: number;
-  created_at: string;
-  updated_at: string;
-};
-
-export type CoordinationTaskCreate = {
-  kind: CoordinationTaskKind;
-  assignee_role: CoordinationTaskAssigneeRole;
-  goal: string;
-  assignee_agent_id?: string;
-  input_context?: Record<string, unknown>;
-  parent_task_id?: string;
 };
 
 export type ServiceRecord = {
@@ -1257,6 +1212,10 @@ export type ActionItemRecord = {
   updated_at: string;
 };
 
+// Action-item payloads accept either a full RFC3339 timestamp or a bare
+// calendar date; the backend normalizes date-only values to end-of-day UTC.
+export type ActionItemDueDateInput = string;
+
 export type NotificationPreferences = {
   rules: NotificationPreferenceRule[];
   default_channel?: string;
@@ -1273,6 +1232,18 @@ export type NotificationPreferenceRule = {
 };
 
 type StatusResponse = { status: string };
+
+/** One of the caller's active cookie sessions, as shown in Security settings. */
+export type SessionRow = {
+  id: string;
+  created_at: string;
+  last_used_at: string;
+  expires_at: string;
+  ip: string;
+  user_agent: string;
+  current: boolean;
+};
+
 type ItemsResponse<T> = { items: T[]; total?: number };
 type DataResponse<T> = { data: T[] };
 type ListPostMortemsParams = Record<string, string | number | boolean | undefined>;
@@ -1391,6 +1362,24 @@ async function request<T>(
   init?: RequestInit,
   schema?: z.ZodType<unknown>,
 ): Promise<T> {
+  return (await requestCore<T>(path, init, schema)).data;
+}
+
+// requestWithHeaders is request() for the rare caller that also needs
+// response headers (e.g. X-Post-Mortem-Missing on incident close).
+async function requestWithHeaders<T>(
+  path: string,
+  init?: RequestInit,
+  schema?: z.ZodType<unknown>,
+): Promise<{ data: T; headers: Headers }> {
+  return requestCore<T>(path, init, schema);
+}
+
+async function requestCore<T>(
+  path: string,
+  init?: RequestInit,
+  schema?: z.ZodType<unknown>,
+): Promise<{ data: T; headers: Headers }> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
@@ -1456,11 +1445,11 @@ async function request<T>(
   }
 
   if (res.status === 204) {
-    return undefined as T;
+    return { data: undefined as T, headers: res.headers };
   }
   const text = await res.text();
   if (!text) {
-    return undefined as T;
+    return { data: undefined as T, headers: res.headers };
   }
   const parsed: unknown = JSON.parse(text);
   // Unwrap the stable {data: ...} envelope for single resources and lists.
@@ -1481,7 +1470,7 @@ async function request<T>(
   if (schema) {
     value = validate(schema, value);
   }
-  return value as T;
+  return { data: value as T, headers: res.headers };
 }
 
 type LoginResponse = UserInfo & { csrf_token?: string };
@@ -1523,6 +1512,20 @@ export const api = {
       method: "POST",
       headers: { "X-Requested-With": "XMLHttpRequest" },
     });
+  },
+
+  getSessions() {
+    return request<{ items: SessionRow[] }>("/api/v1/auth/sessions");
+  },
+
+  revokeSession(sessionId: string) {
+    return request<StatusResponse>(`/api/v1/auth/sessions/${e(sessionId)}`, {
+      method: "DELETE",
+    });
+  },
+
+  revokeOtherSessions() {
+    return request<{ revoked: number }>("/api/v1/auth/sessions", { method: "DELETE" });
   },
 
   changePassword(currentPassword: string, newPassword: string) {
@@ -1680,7 +1683,11 @@ export const api = {
     );
   },
   getAlertRelated(alertNumber: number) {
-    return request<AlertRelatedResponse>(`/api/v1/alerts/${e(alertNumber)}/related`);
+    return request<AlertRelatedResponse>(
+      `/api/v1/alerts/${e(alertNumber)}/related`,
+      undefined,
+      alertRelatedResponseSchema,
+    );
   },
   acknowledgeAlert(alertNumber: number) {
     return request<AlertRecord>(`/api/v1/alerts/${e(alertNumber)}/acknowledge`, {
@@ -2439,6 +2446,20 @@ export const api = {
       method: "POST",
     });
   },
+  // Variant of closeIncident that also reports the X-Post-Mortem-Missing
+  // warning header so the UI can nudge operators toward writing a
+  // post-mortem after closing without one.
+  async closeIncidentWithPMWarning(incidentNumber: string | number) {
+    const { data, headers } = await requestWithHeaders<IncidentResolveResponse>(
+      `/api/v1/incidents/${e(incidentNumber)}/close`,
+      { method: "POST" },
+    );
+    return {
+      incident: data.incident,
+      cascade: data.cascade,
+      postMortemMissing: headers.get("X-Post-Mortem-Missing") === "true",
+    };
+  },
   reopenIncident(incidentNumber: string | number) {
     return request<IncidentRecord>(`/api/v1/incidents/${e(incidentNumber)}/reopen`, {
       method: "POST",
@@ -2485,13 +2506,13 @@ export const api = {
     return request<AlertRecord[]>(`/api/v1/incidents/${e(incidentNumber)}/alerts`);
   },
   linkAlertToIncident(incidentNumber: string | number, alertNumber: number) {
-    return request<IncidentRecord>(`/api/v1/incidents/${e(incidentNumber)}/alerts`, {
+    return request<StatusResponse>(`/api/v1/incidents/${e(incidentNumber)}/alerts`, {
       method: "POST",
       body: JSON.stringify({ alert_number: alertNumber }),
     });
   },
   unlinkAlertFromIncident(incidentNumber: string | number, alertNumber: number) {
-    return request<IncidentRecord>(
+    return request<StatusResponse>(
       `/api/v1/incidents/${e(incidentNumber)}/alerts/${e(alertNumber)}`,
       {
         method: "DELETE",
@@ -2583,37 +2604,6 @@ export const api = {
     return request<IncidentCoordinationMessage>(
       `/api/v1/incidents/${e(incidentNumber)}/coordination/messages`,
       { method: "POST", body: JSON.stringify(body) },
-    );
-  },
-
-  getIncidentCoordinationTasks(
-    incidentNumber: string | number,
-    params: {
-      status?: string;
-      assignee_role?: string;
-      parent_task_id?: string;
-      limit?: number;
-      skip?: number;
-    } = {},
-  ) {
-    return request<CoordinationTask[]>(
-      `/api/v1/incidents/${e(incidentNumber)}/coordination/tasks${buildQuery(params)}`,
-    );
-  },
-  createIncidentCoordinationTask(incidentNumber: string | number, body: CoordinationTaskCreate) {
-    return request<CoordinationTask>(`/api/v1/incidents/${e(incidentNumber)}/coordination/tasks`, {
-      method: "POST",
-      body: JSON.stringify(body),
-    });
-  },
-  patchIncidentCoordinationTask(
-    incidentNumber: string | number,
-    taskId: string,
-    body: { status?: string },
-  ) {
-    return request<CoordinationTask>(
-      `/api/v1/incidents/${e(incidentNumber)}/coordination/tasks/${e(taskId)}`,
-      { method: "PATCH", body: JSON.stringify(body) },
     );
   },
 
@@ -3032,6 +3022,22 @@ export const api = {
   submitPostMortemForReview(incidentNumber: string | number) {
     return request<PostMortemRecord>(
       `/api/v1/incidents/${e(incidentNumber)}/post-mortem/submit-review`,
+      {
+        method: "POST",
+      },
+    );
+  },
+  revertPostMortemToDraft(incidentNumber: string | number) {
+    return request<PostMortemRecord>(
+      `/api/v1/incidents/${e(incidentNumber)}/post-mortem/revert-to-draft`,
+      {
+        method: "POST",
+      },
+    );
+  },
+  revertPostMortemToReview(incidentNumber: string | number) {
+    return request<PostMortemRecord>(
+      `/api/v1/incidents/${e(incidentNumber)}/post-mortem/revert-to-review`,
       {
         method: "POST",
       },

@@ -50,16 +50,6 @@ export interface InvestigationCommand {
   status_level?: string;
   source_coordination_message_id?: string;
   internal?: boolean;
-
-  // --- Coordination tasks (dispatch_task / claim_task / complete_task) ---
-  task_id?: string;
-  task_kind?: string;
-  assignee_role?: string;
-  assignee_agent_id?: string;
-  goal?: string;
-  input_context?: Record<string, unknown>;
-  result?: Record<string, unknown>;
-  parent_task_id?: string;
 }
 
 // --- Alert investigation tools ---
@@ -98,7 +88,11 @@ export function triageFeedback(
   correctSeverity?: string,
   note?: string,
 ): InvestigationCommand {
-  const cmd: InvestigationCommand = { op: "triage_feedback", triage_result_id: triageResultId, agreed };
+  const cmd: InvestigationCommand = {
+    op: "triage_feedback",
+    triage_result_id: triageResultId,
+    agreed,
+  };
   if (correctDecision !== undefined) cmd.correct_decision = correctDecision;
   if (correctSeverity !== undefined) cmd.correct_severity = correctSeverity;
   if (note !== undefined) cmd.note = note;
@@ -109,7 +103,11 @@ export function assignInvestigation(targetAgentId: string): InvestigationCommand
   return { op: "assign_investigation", target_agent_id: targetAgentId };
 }
 
-export function promoteToIncident(title?: string, severity?: string, priority?: string): InvestigationCommand {
+export function promoteToIncident(
+  title?: string,
+  severity?: string,
+  priority?: string,
+): InvestigationCommand {
   const cmd: InvestigationCommand = { op: "promote_to_incident" };
   if (title !== undefined) cmd.title = title;
   if (severity !== undefined) cmd.severity = severity;
@@ -119,11 +117,17 @@ export function promoteToIncident(title?: string, severity?: string, priority?: 
 
 // --- Incident tools ---
 
-export function setIncidentPriority(incidentNumber: number, priority: string): InvestigationCommand {
+export function setIncidentPriority(
+  incidentNumber: number,
+  priority: string,
+): InvestigationCommand {
   return { op: "set_incident_priority", incident_number: incidentNumber, priority };
 }
 
-export function setIncidentSeverity(incidentNumber: number, severity: string): InvestigationCommand {
+export function setIncidentSeverity(
+  incidentNumber: number,
+  severity: string,
+): InvestigationCommand {
   return { op: "set_incident_severity", incident_number: incidentNumber, severity };
 }
 
@@ -212,7 +216,12 @@ export function publishStatusUpdate(
   message: string,
   statusLevel: string,
 ): InvestigationCommand {
-  return { op: "publish_status_update", incident_number: incidentNumber, message, status_level: statusLevel };
+  return {
+    op: "publish_status_update",
+    incident_number: incidentNumber,
+    message,
+    status_level: statusLevel,
+  };
 }
 
 // SetIncidentResolutionDocs sets incident resolution documents. At least one
@@ -227,67 +236,14 @@ export function setIncidentResolutionDocs(
     resolution?: string;
   },
 ): InvestigationCommand {
-  const cmd: InvestigationCommand = { op: "set_incident_resolution_docs", incident_number: incidentNumber };
+  const cmd: InvestigationCommand = {
+    op: "set_incident_resolution_docs",
+    incident_number: incidentNumber,
+  };
   if (opts.summary !== undefined) cmd.summary = opts.summary;
   if (opts.impactAssessment !== undefined) cmd.impact_assessment = opts.impactAssessment;
   if (opts.actionsTaken !== undefined) cmd.actions_taken = opts.actionsTaken;
   if (opts.rootCause !== undefined) cmd.root_cause = opts.rootCause;
   if (opts.resolution !== undefined) cmd.resolution = opts.resolution;
   return cmd;
-}
-
-// --- Coordination tasks ---
-
-export const TASK_KIND_INVESTIGATE = "investigate";
-export const TASK_KIND_COMMUNICATE = "communicate";
-export const TASK_KIND_VERIFY = "verify";
-export const TASK_KIND_MITIGATE = "mitigate";
-
-// DispatchTask is reserved for the incident commander. It decomposes the
-// incident into bounded units of work targeted at a role.
-export function dispatchTask(
-  incidentNumber: number,
-  kind: string,
-  goal: string,
-  assigneeRole: string,
-): InvestigationCommand {
-  return { op: "dispatch_task", incident_number: incidentNumber, task_kind: kind, goal, assignee_role: assigneeRole };
-}
-
-// DispatchTaskToAgent targets a specific agent rather than a role.
-export function dispatchTaskToAgent(
-  incidentNumber: number,
-  kind: string,
-  goal: string,
-  assigneeAgentId: string,
-): InvestigationCommand {
-  return {
-    op: "dispatch_task",
-    incident_number: incidentNumber,
-    task_kind: kind,
-    goal,
-    assignee_agent_id: assigneeAgentId,
-  };
-}
-
-// ClaimTask binds a pending task to this agent.
-export function claimTask(taskId: string): InvestigationCommand {
-  return { op: "claim_task", task_id: taskId };
-}
-
-// CompleteTask marks a claimed task done and records its typed result.
-export function completeTask(taskId: string, result: Record<string, unknown>): InvestigationCommand {
-  return { op: "complete_task", task_id: taskId, result };
-}
-
-// SynthesizeFindings is the commander-only op that writes the incident-level
-// conclusion from a set of completed child investigations.
-export function synthesizeFindings(
-  incidentNumber: number,
-  summary: string,
-  evidence?: Record<string, unknown>,
-): InvestigationCommand {
-  const result: Record<string, unknown> = { summary };
-  if (evidence) for (const [k, v] of Object.entries(evidence)) result[k] = v;
-  return { op: "synthesize_findings", incident_number: incidentNumber, result };
 }

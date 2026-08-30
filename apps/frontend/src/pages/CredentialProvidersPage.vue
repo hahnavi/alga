@@ -10,6 +10,7 @@ import Card from "@/components/ui/Card.vue";
 import ErrorBanner from "@/components/ui/ErrorBanner.vue";
 import LoadingSpinner from "@/components/ui/LoadingSpinner.vue";
 import Modal from "@/components/ui/Modal.vue";
+import SettingsPageShell from "@/components/ui/settings/SettingsPageShell.vue";
 import ConfirmDialog from "@/components/ui/ConfirmDialog.vue";
 import Switch from "@/components/ui/Switch.vue";
 import EmptyState from "@/components/ui/EmptyState.vue";
@@ -179,7 +180,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-6 max-w-4xl mx-auto space-y-6">
+  <SettingsPageShell
+    description="Credential providers store shared secrets in Alga or proxy them from an external vault."
+  >
     <ErrorBanner v-if="error" :message="error" @retry="loadProviders" />
 
     <div class="flex items-center justify-end">
@@ -209,16 +212,8 @@ onMounted(() => {
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-3">
             <h3 class="font-semibold text-lg truncate">{{ p.name }}</h3>
-            <span
-              class="text-xs px-2 py-0.5 rounded-full font-medium"
-              :class="
-                p.enabled
-                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                  : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
-              "
-            >
-              {{ p.enabled ? "Enabled" : "Disabled" }}
-            </span>
+            <span v-if="p.enabled" class="badge-green">Enabled</span>
+            <span v-else class="badge-muted">Disabled</span>
             <span class="badge-muted">
               {{ p.provider_type_name ?? p.type }}
             </span>
@@ -339,5 +334,5 @@ onMounted(() => {
       @confirm="doDelete"
       @cancel="showDeleteConfirm = false"
     />
-  </div>
+  </SettingsPageShell>
 </template>

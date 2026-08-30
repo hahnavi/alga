@@ -1,13 +1,16 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { getErrorMessage } from "@/lib/error";
+import { useToast } from "@/lib/toast";
 import Button from "@/components/ui/Button.vue";
+import Card from "@/components/ui/Card.vue";
 import Input from "@/components/ui/Input.vue";
 import FormLabel from "@/components/ui/FormLabel.vue";
 import PhoneInput from "@/components/ui/PhoneInput.vue";
 
 const auth = useAuthStore();
+const { push } = useToast();
 
 const editFullName = ref("");
 const editPhone = ref("");
@@ -15,15 +18,10 @@ const editPhoneCountry = ref("");
 const editEmail = ref("");
 const emailPassword = ref("");
 
-const savingName = ref(false);
-const savingPhone = ref(false);
+const savingProfile = ref(false);
 const changingEmail = ref(false);
 
-const nameMessage = ref("");
-const nameError = ref("");
-const phoneMessage = ref("");
-const phoneError = ref("");
-const emailMessage = ref("");
+const profileError = ref("");
 const emailError = ref("");
 
 function syncFromUser() {
@@ -33,44 +31,39 @@ function syncFromUser() {
   editEmail.value = auth.user?.email ?? "";
 }
 
+// Refetches (OAuth link callbacks, re-login) replace the user object; only
+// re-sync while no field has been edited so unsaved input is not clobbered.
+const profileDirty = computed(
+  () =>
+    editFullName.value !== (auth.user?.full_name ?? "") ||
+    editPhone.value !== (auth.user?.phone ?? "") ||
+    editPhoneCountry.value !== (auth.user?.phone_country ?? ""),
+);
+
 watch(
   () => auth.user,
-  () => syncFromUser(),
+  () => {
+    if (!profileDirty.value) syncFromUser();
+  },
   { immediate: true },
 );
 
 onMounted(syncFromUser);
 
-async function saveName() {
-  nameMessage.value = "";
-  nameError.value = "";
-  savingName.value = true;
+async function saveProfile() {
+  profileError.value = "";
+  savingProfile.value = true;
   try {
     await auth.updateProfile(editFullName.value.trim(), editPhone.value, editPhoneCountry.value);
-    nameMessage.value = "Name updated successfully.";
+    push("Profile updated successfully.", "success");
   } catch (err) {
-    nameError.value = getErrorMessage(err, "Failed to update name");
+    profileError.value = getErrorMessage(err, "Failed to update profile");
   } finally {
-    savingName.value = false;
-  }
-}
-
-async function savePhone() {
-  phoneMessage.value = "";
-  phoneError.value = "";
-  savingPhone.value = true;
-  try {
-    await auth.updateProfile(editFullName.value.trim(), editPhone.value, editPhoneCountry.value);
-    phoneMessage.value = "Phone updated successfully.";
-  } catch (err) {
-    phoneError.value = getErrorMessage(err, "Failed to update phone");
-  } finally {
-    savingPhone.value = false;
+    savingProfile.value = false;
   }
 }
 
 async function saveEmail() {
-  emailMessage.value = "";
   emailError.value = "";
   if (!emailPassword.value) {
     emailError.value = "Password is required to change email.";
@@ -79,7 +72,7 @@ async function saveEmail() {
   changingEmail.value = true;
   try {
     await auth.changeEmail(emailPassword.value, editEmail.value.trim());
-    emailMessage.value = "Email updated successfully.";
+    push("Email updated successfully.", "success");
     emailPassword.value = "";
   } catch (err) {
     emailError.value = getErrorMessage(err, "Failed to update email");
@@ -90,44 +83,47 @@ async function saveEmail() {
 </script>
 
 <template>
-  <p class="text-sm text-[var(--text-muted)]">Profile</p>
-  <div class="space-y-1.5">
-    <FormLabel>Full name</FormLabel>
-    <Input v-model="editFullName" placeholder="Jane Doe" />
-  </div>
-  <p v-if="nameMessage" class="text-xs text-[var(--text-success)]">{{ nameMessage }}</p>
-  <p v-if="nameError" class="text-xs text-[var(--text-error)]">{{ nameError }}</p>
-  <Button :disabled="savingName" @click="saveName">
-    {{ savingName ? "Saving..." : "Save name" }}
-  </Button>
+  <Card class="space-y-4">
+    <header>
+      <h3 class="text-sm font-semibold text-[var(--text-primary)]">Profile</h3>
+      <p class="text-xs text-[var(--text-muted)]">Your name and phone number.</p>
+    </header>
+    <div class="space-y-1.5">
+      <FormLabel for="settings-full-name">Full name</FormLabel>
+      <Input id="settings-full-name" v-model="editFullName" placeholder="Jane Doe" />
+    </div>
+    <div class="space-y-1.5">
+      <FormLabel for="settings-phone">Phone number</FormLabel>
+      <PhoneInput id="settings-phone" v-model="editPhone" v-model:country="editPhoneCountry" />
+    </div>
+    <p v-if="profileError" class="text-xs text-[var(--text-error)]" role="alert">
+      {{ profileError }}
+    </p>
+    <div class="flex justify-end">
+      <Button :loading="savingProfile" @click="saveProfile">Save profile</Button>
+    </div>
+  </Card>
 
-  <hr class="border-[var(--border-primary)]" />
-
-  <p class="text-sm text-[var(--text-muted)]">Phone</p>
-  <div class="space-y-1.5">
-    <FormLabel>Phone number</FormLabel>
-    <PhoneInput v-model="editPhone" v-model:country="editPhoneCountry" />
-  </div>
-  <p v-if="phoneMessage" class="text-xs text-[var(--text-success)]">{{ phoneMessage }}</p>
-  <p v-if="phoneError" class="text-xs text-[var(--text-error)]">{{ phoneError }}</p>
-  <Button :disabled="savingPhone" @click="savePhone">
-    {{ savingPhone ? "Saving..." : "Save phone" }}
-  </Button>
-
-  <hr class="border-[var(--border-primary)]" />
-
-  <p class="text-sm text-[var(--text-muted)]">Email</p>
-  <div class="space-y-1.5">
-    <FormLabel>Email address</FormLabel>
-    <Input v-model="editEmail" type="email" placeholder="you@example.com" />
-  </div>
-  <div class="space-y-1.5">
-    <FormLabel>Confirm password</FormLabel>
-    <Input v-model="emailPassword" type="password" />
-  </div>
-  <p v-if="emailError" class="text-xs text-[var(--text-error)]">{{ emailError }}</p>
-  <p v-if="emailMessage" class="text-xs text-[var(--text-success)]">{{ emailMessage }}</p>
-  <Button :disabled="changingEmail" @click="saveEmail">
-    {{ changingEmail ? "Updating..." : "Update email" }}
-  </Button>
+  <Card class="space-y-4">
+    <header>
+      <h3 class="text-sm font-semibold text-[var(--text-primary)]">Email</h3>
+      <p class="text-xs text-[var(--text-muted)]">
+        Changing your email requires your current password.
+      </p>
+    </header>
+    <div class="space-y-1.5">
+      <FormLabel for="settings-email">Email address</FormLabel>
+      <Input id="settings-email" v-model="editEmail" type="email" placeholder="you@example.com" />
+    </div>
+    <div class="space-y-1.5">
+      <FormLabel for="settings-email-password">Confirm password</FormLabel>
+      <Input id="settings-email-password" v-model="emailPassword" type="password" />
+    </div>
+    <p v-if="emailError" class="text-xs text-[var(--text-error)]" role="alert">
+      {{ emailError }}
+    </p>
+    <div class="flex justify-end">
+      <Button :loading="changingEmail" @click="saveEmail">Update email</Button>
+    </div>
+  </Card>
 </template>

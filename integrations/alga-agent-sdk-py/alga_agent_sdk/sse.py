@@ -16,7 +16,6 @@ from .errors import AlgaAPIError, AlgaAuthError, AlgaConnectionError
 from .models import (
     AlertAutoResolvedEvent,
     ConnectedEvent,
-    CoordinationTaskEvent,
     IncidentCommsStaleEvent,
     InvestigationSignalEvent,
     MessageEvent,
@@ -92,7 +91,6 @@ class SSEClient:
         self.on_peer_finding: Optional[EventHandler] = None
         self.on_peer_ask: Optional[EventHandler] = None
         self.on_peer_reply: Optional[EventHandler] = None
-        self.on_coordination_task: Optional[EventHandler] = None
         self.on_summarize_incident: Optional[EventHandler] = None
         self.on_alert_auto_resolved: Optional[EventHandler] = None
         self.on_incident_comms_stale: Optional[EventHandler] = None
@@ -263,11 +261,6 @@ class SSEClient:
         elif event_type == "peer_reply":
             await self._invoke(
                 self.on_peer_reply, PeerReplyEvent.model_validate(payload)
-            )
-        elif event_type == "coordination_task_dispatched":
-            await self._invoke(
-                self.on_coordination_task,
-                CoordinationTaskEvent.model_validate(payload),
             )
         elif event_type == "summarize_incident":
             await self._invoke(

@@ -117,7 +117,7 @@ The investigation scheduler dispatches pending investigations to online agents a
 - **Leader election:** Valkey lease (`SCHEDULER_LEADER_TTL`); only the leader runs scheduling ticks
 - **Main tick (5s):** dispatches pending investigations to online agents via **Filter → Score → Bind**
 - **Role assignment (every 3rd tick):** maps agent capabilities to ICS roles
-- **Sub-loops:** stale-alert sweep, data-retention prune, dispatch-attempt purge, on-call handoff detection, incident summary sweep, incident investigation sweep, coordination task sweep
+- **Sub-loops:** stale-alert sweep, data-retention prune, dispatch-attempt purge, on-call handoff detection, incident summary sweep, incident investigation sweep
 - **AgentHealthTracker:** sliding-window circuit breaker per agent
 
 ## Data Flow
@@ -403,7 +403,7 @@ Each exchange routes to a dedicated processing queue plus `alga.dead_letter`.
 | **Frontend**            | Vite                 | Latest              | Build tooling                  |
 | **Frontend**            | Tailwind CSS         | v4                  | Styling                        |
 | **Database**            | PostgreSQL           | Latest              | Primary persistence            |
-| **Database ORM**        | Ent                  | Latest              | Schema & query builder         |
+| **Database ORM**        | Bun                  | v1.2                | Query builder + models         |
 | **Database Driver**     | pgx                  | v5                  | PostgreSQL driver              |
 | **Database Extensions** | pgvector             | Latest              | Vector search for agent memory |
 | **Cache**               | Valkey/Redis         | Latest              | Distributed state, caching     |
@@ -469,8 +469,8 @@ Alga is designed to scale horizontally when Valkey and RabbitMQ are configured:
 
 ### Atomic Claims
 
-- **Investigation binding:** `ClaimPendingInvestigationByID`
-- **Mechanism:** Ent `UpdateOneID` with status filter
+- **Investigation binding:** `ClaimPendingAlertInvestigation` / `ClaimPendingIncidentInvestigation`
+- **Mechanism:** Bun `NewUpdate` with a guarded `WHERE status = 'pending'` filter
 - **Guarantees:**
   - Status must be `pending`
   - Per-agent capacity ceiling enforced
@@ -502,10 +502,11 @@ Each delay is adjusted by ±20% jitter to avoid retry storms.
 ### Session Management
 
 - **Valkey preferred:** Atomic Lua scripts for refresh token rotation
-- **PostgreSQL fallback:** When Valkey unavailable
+- **PostgreSQL fallback:** When Valkey unavailable; both backends implement identical `ListUserSessions` / `DeleteSessionByIDHash` and filter expired sessions with MRU ordering
 - **Session secrets:** HMAC-SHA-256(`SECRET_PEPPER`, value)
 - **Storage:** Only hashed values persisted (plaintext never stored)
 - **Security:** Constant-time comparison on all checks
+- **Self-service:** `GET /api/v1/auth/sessions`, `DELETE /api/v1/auth/sessions/{id}`, `DELETE /api/v1/auth/sessions` — cookie-session only (PAT → 400), CSRF-required, audited; see [Session Management](/configuration/session-management)
 
 ### SSE Presence Tracking
 

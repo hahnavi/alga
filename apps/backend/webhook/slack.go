@@ -41,6 +41,7 @@ type SlackWebhookHandler struct {
 	incidentLookupStore       incidentSlackLookupStore
 	incidentCoordinationStore store.IncidentCoordinationStore
 	rateLimiter               RateLimiter
+	ipExtractor               platform.IPExtractor
 	vkClient                  escalation.StateClient
 	escalationTimeline        escalation.TimelineWriter
 }
@@ -68,6 +69,22 @@ func (h *SlackWebhookHandler) SetAlertStore(alertStore store.Store, broadcaster 
 // the pre-auth signature verification performed on every request.
 func (h *SlackWebhookHandler) SetRateLimiter(rl RateLimiter) {
 	h.rateLimiter = rl
+}
+
+// SetIPExtractor injects the trusted-proxy-aware client-IP extractor used to
+// key the rate limiter. Without it only RemoteAddr keys the limiter.
+func (h *SlackWebhookHandler) SetIPExtractor(x platform.IPExtractor) {
+	h.ipExtractor = x
+}
+
+// clientIP resolves the rate-limit key: header trust is opt-in via the
+// injected extractor (TRUSTED_PROXIES); otherwise RemoteAddr only, so
+// spoofed X-Forwarded-For can't rotate the key.
+func (h *SlackWebhookHandler) clientIP(r *http.Request) string {
+	if h.ipExtractor != nil {
+		return h.ipExtractor.ClientIP(r)
+	}
+	return remoteAddrHost(r)
 }
 
 func (h *SlackWebhookHandler) SetSlackClient(client *slack.Client) {
@@ -208,7 +225,7 @@ func (h *SlackWebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
 		return
 	}
-	if h.rateLimiter != nil && !h.rateLimiter.Allow(clientIPFromRequest(r)) {
+	if h.rateLimiter != nil && !h.rateLimiter.Allow(h.clientIP(r)) {
 		platform.WriteRateLimitExceeded(w, "60")
 		return
 	}

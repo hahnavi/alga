@@ -197,8 +197,12 @@ func (s *pgIncidentDocumentStore) InitializeDocument(ctx context.Context, incide
 	}
 
 	if len(docs) > 0 {
-		_, err = s.db.NewInsert().Model(&docs).Exec(ctx)
-		if err != nil {
+		// Idempotent per spec R17: sections that already exist (e.g. begin-triage
+		// ran before war-room provisioning) are left untouched instead of
+		// failing on the (incident_id, section) unique index.
+		if _, err = s.db.NewInsert().Model(&docs).
+			On("CONFLICT (incident_id, section) DO NOTHING").
+			Exec(ctx); err != nil {
 			return fmt.Errorf("failed to initialize document sections: %w", err)
 		}
 	}

@@ -394,39 +394,3 @@ func (c *backendClient) hasActiveRole(incidentNumber int64, roleType, agentToken
 	}
 	return false, nil
 }
-
-type coordinationTask struct {
-	ID           string         `json:"id"`
-	Kind         string         `json:"kind"`
-	AssigneeRole string         `json:"assignee_role"`
-	Status       string         `json:"status"`
-	Goal         string         `json:"goal"`
-	Result       map[string]any `json:"result"`
-}
-
-// listCoordinationTasks returns the coordination tasks for an incident.
-func (c *backendClient) listCoordinationTasks(incidentNumber int64) ([]coordinationTask, error) {
-	var resp struct {
-		Data []coordinationTask `json:"data"`
-	}
-	path := fmt.Sprintf("/api/v1/incidents/%d/coordination/tasks", incidentNumber)
-	if _, err := c.do(http.MethodGet, path, nil, &resp); err != nil {
-		return nil, err
-	}
-	return resp.Data, nil
-}
-
-// findCoordinationTask returns the first coordination task matching the given
-// status (empty matches any).
-func (c *backendClient) findCoordinationTask(incidentNumber int64, status string) (*coordinationTask, error) {
-	tasks, err := c.listCoordinationTasks(incidentNumber)
-	if err != nil {
-		return nil, err
-	}
-	for i := range tasks {
-		if status == "" || tasks[i].Status == status {
-			return &tasks[i], nil
-		}
-	}
-	return nil, nil
-}

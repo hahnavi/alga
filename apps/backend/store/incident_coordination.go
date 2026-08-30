@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -141,7 +142,7 @@ func (s *pgIncidentCoordinationStore) ListMessages(ctx context.Context, incident
 	if err := s.db.NewSelect().Model(&items).
 		Where("incident_id IN (SELECT id FROM incidents WHERE incident_number = ? AND deleted_at IS NULL)", incidentNumber).
 		Where("kind != ?", IncidentCoordinationKindStatusUpdate).
-		Order("created_at ASC").
+		Order("created_at DESC").
 		Limit(limit).
 		Offset(skip).
 		Scan(ctx); err != nil {
@@ -190,9 +191,13 @@ var validStatusLevels = map[string]bool{
 	"resolved":      true,
 }
 
+// ErrInvalidStatusLevel is returned by CreateStatusUpdate for a status_level
+// outside the valid enum; callers map it to a 400 validation error.
+var ErrInvalidStatusLevel = errors.New("invalid status_level")
+
 func (s *pgIncidentCoordinationStore) CreateStatusUpdate(ctx context.Context, incidentNumber int64, statusLevel string, body string, internal bool, actorID uuid.UUID, actorDisplayName string) (*IncidentCoordinationMessageRecord, error) {
 	if !validStatusLevels[statusLevel] {
-		return nil, fmt.Errorf("invalid status_level: %q", statusLevel)
+		return nil, fmt.Errorf("%w: %q", ErrInvalidStatusLevel, statusLevel)
 	}
 	return s.CreateMessage(ctx, &IncidentCoordinationMessageRecord{
 		IncidentNumber:   incidentNumber,

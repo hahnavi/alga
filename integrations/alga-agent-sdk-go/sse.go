@@ -45,7 +45,6 @@ type SSEClient struct {
 	OnPeerFinding         func(PeerFindingEvent)
 	OnPeerAsk             func(PeerAskEvent)
 	OnPeerReply           func(PeerReplyEvent)
-	OnCoordinationTask    func(CoordinationTaskEvent)
 	OnSummarizeIncident   func(SummarizeIncidentEvent)
 	OnAlertAutoResolved   func(AlertAutoResolvedEvent)
 	OnIncidentCommsStale  func(IncidentCommsStaleEvent)
@@ -355,14 +354,6 @@ func (c *SSEClient) dispatch(eventType, data string) {
 			var evt PeerReplyEvent
 			if json.Unmarshal([]byte(data), &evt) == nil {
 				c.OnPeerReply(evt)
-			}
-		}
-
-	case "coordination_task_dispatched":
-		if c.OnCoordinationTask != nil {
-			var evt CoordinationTaskEvent
-			if json.Unmarshal([]byte(data), &evt) == nil {
-				c.OnCoordinationTask(evt)
 			}
 		}
 

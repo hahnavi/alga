@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -438,8 +439,20 @@ func (s *SessionStore) DeleteSession(id string) error {
 	if id == "" {
 		return nil
 	}
+	return s.deleteSessionByIDHash(algacrypto.Default().HMACString(id))
+}
+
+// DeleteSessionByIDHash removes a session by its persisted id digest — the
+// identifier the self-service session API works with.
+func (s *SessionStore) DeleteSessionByIDHash(idHash string) error {
+	if idHash == "" {
+		return nil
+	}
+	return s.deleteSessionByIDHash(idHash)
+}
+
+func (s *SessionStore) deleteSessionByIDHash(idHash string) error {
 	ctx := context.Background()
-	idHash := algacrypto.Default().HMACString(id)
 	val, err := s.client.Do(ctx, s.client.Builder().Get().Key(sessionKeyPrefix+idHash).Build()).ToString()
 	if err != nil || val == "" {
 		return nil
@@ -495,6 +508,50 @@ func (s *SessionStore) DeleteAllUserSessions(userID uuid.UUID) error {
 // enforced on read. It satisfies the SessionStore interface for the reaper.
 func (s *SessionStore) DeleteExpired(_ context.Context) (int, error) {
 	return 0, nil
+}
+
+// ListUserSessions returns the user's live sessions, most recently used
+// first. The user set can outlive individual sessions (it carries its own
+// TTL), so entries whose session key has already expired are skipped and
+// opportunistically dropped from the set.
+func (s *SessionStore) ListUserSessions(userID uuid.UUID) ([]store.SessionRecord, error) {
+	ctx := context.Background()
+	userKey := userSessionsKey + userID.String()
+
+	idHashes, err := s.client.Do(ctx, s.client.Builder().Smembers().Key(userKey).Build()).AsStrSlice()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list user sessions: %w", err)
+	}
+
+	now := time.Now()
+	records := make([]store.SessionRecord, 0, len(idHashes))
+	for _, h := range idHashes {
+		val, err := s.client.Do(ctx, s.client.Builder().Get().Key(sessionKeyPrefix+h).Build()).ToString()
+		if err != nil {
+			if isValkeyNil(err) {
+				s.removeUserSession(ctx, userID.String(), h)
+				continue
+			}
+			return nil, fmt.Errorf("failed to get user session: %w", err)
+		}
+		rec, err := unmarshalSession(val)
+		if err != nil {
+			// Corrupt entry: drop the membership so it stops showing up.
+			logger.Warn("corrupt session record during listing", "component", "valkey", "user_id", userID.String(), "error", err)
+			s.removeUserSession(ctx, userID.String(), h)
+			continue
+		}
+		if rec.ExpiresAt.Before(now) || !withinAbsoluteLifetime(rec, s.sessionMaxLifetime) {
+			s.removeUserSession(ctx, userID.String(), h)
+			continue
+		}
+		records = append(records, *rec)
+	}
+
+	slices.SortFunc(records, func(a, b store.SessionRecord) int {
+		return b.LastUsedAt.Compare(a.LastUsedAt)
+	})
+	return records, nil
 }
 
 func (s *SessionStore) refreshSessionFallback(idHash string, current *store.SessionRecord, newRT, newRTHash, ip, userAgent string) (*store.SessionRecord, error) {

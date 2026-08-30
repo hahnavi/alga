@@ -20,14 +20,32 @@ type Worker struct {
 	alertStore store.Store
 	auditStore store.AuditStore
 	cancelSet  *valkey.CancelSet
+	dedup      DedupRemover
+	lifecycle  InvestigationLifecycle
+}
+
+// DedupRemover clears the ingestion dedup tracking for fingerprints this
+// worker resolves or suppresses. Without it the Valkey dedup entry (1h TTL)
+// would swallow the next firing notification for a fingerprint that no longer
+// has an open alert.
+type DedupRemover interface {
+	RemoveTracking(ctx context.Context, fingerprint string)
+}
+
+// InvestigationLifecycle completes linked investigations once every alert
+// they cover is resolved, mirroring the user and webhook resolve paths.
+type InvestigationLifecycle interface {
+	CompleteIfAllAlertsResolved(ctx context.Context, req store.AlertInvestigationLifecycleCompletionRequest) error
 }
 
 func NewWorker(engine *Engine, publisher *rabbitmq.Publisher, alertStore store.Store) *Worker {
 	return &Worker{engine: engine, publisher: publisher, alertStore: alertStore}
 }
 
-func (w *Worker) SetCancelSet(cs *valkey.CancelSet) { w.cancelSet = cs }
-func (w *Worker) SetAuditStore(s store.AuditStore)  { w.auditStore = s }
+func (w *Worker) SetCancelSet(cs *valkey.CancelSet)                  { w.cancelSet = cs }
+func (w *Worker) SetAuditStore(s store.AuditStore)                   { w.auditStore = s }
+func (w *Worker) SetDedupCache(d DedupRemover)                       { w.dedup = d }
+func (w *Worker) SetInvestigationLifecycle(l InvestigationLifecycle) { w.lifecycle = l }
 
 func (w *Worker) Queue() string {
 	return rabbitmq.QueueTriageProcess
@@ -130,6 +148,27 @@ func (w *Worker) handleAutoResolve(ctx context.Context, msg rabbitmq.TriageMessa
 			logger.ErrorCtx(ctx, "Failed to auto-resolve alert", "component", "triage", "fingerprint", ca.Fingerprint, "error", err)
 			return err
 		}
+		if w.dedup != nil {
+			w.dedup.RemoveTracking(ctx, ca.Fingerprint)
+		}
+	}
+	// Complete investigations whose alerts are all resolved now, mirroring
+	// the user and webhook resolve paths so linked investigations don't
+	// linger active after an auto-resolve.
+	if w.lifecycle != nil {
+		for _, ca := range msg.Alerts {
+			if ca.AlertNumber <= 0 {
+				continue
+			}
+			if err := w.lifecycle.CompleteIfAllAlertsResolved(ctx, store.AlertInvestigationLifecycleCompletionRequest{
+				AlertNumber: ca.AlertNumber,
+				Reason:      store.AlertInvestigationCompletedReasonAlertsResolved,
+				ActorType:   store.InvestigationActorSystem,
+				ActorName:   "triage",
+			}); err != nil {
+				logger.WarnCtx(ctx, "auto-resolve: linked investigation completion failed", "component", "triage", "alert_number", ca.AlertNumber, "error", err)
+			}
+		}
 	}
 	return nil
 }
@@ -144,6 +183,9 @@ func (w *Worker) handleSuppress(ctx context.Context, msg rabbitmq.TriageMessage,
 		if err := w.alertStore.UpdateStatusSilenced(ca.Fingerprint); err != nil {
 			logger.ErrorCtx(ctx, "Failed to suppress alert", "component", "triage", "fingerprint", ca.Fingerprint, "error", err)
 			return err
+		}
+		if w.dedup != nil {
+			w.dedup.RemoveTracking(ctx, ca.Fingerprint)
 		}
 		// Audit each suppression so the transition is attributable. The
 		// auto_resolve path emits a persisted alert event via UpdateStatus;

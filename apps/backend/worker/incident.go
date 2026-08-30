@@ -233,6 +233,9 @@ func (w *IncidentWorker) Handle(ctx context.Context, d amqp.Delivery) {
 	}
 
 	metrics.IncidentsCreatedTotal.Add(1)
+	// Mirror the API create path so the active gauge counts correlation-created
+	// incidents too (resolve/cancel decrement it for every creation path).
+	metrics.IncidentsActive.Add(1)
 	logger.Info("Created incident", "component", "incident-worker", "incident_number", created.IncidentNumber, "severity", created.Severity)
 
 	w.ensureIncidentInvestigation(ctx, created)

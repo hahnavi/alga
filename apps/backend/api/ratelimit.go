@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"alga/api/platform"
 	"alga/config"
 	"alga/logger"
 )
@@ -27,6 +28,14 @@ type LoginRateLimiting interface {
 // ipExtractor handles trusted proxy configuration for IP extraction
 type ipExtractor struct {
 	trustedProxies []*net.IPNet
+}
+
+// NewIPExtractor builds the trusted-proxy-aware client-IP extractor from
+// TRUSTED_PROXIES for consumers outside this package (webhook ingress rate
+// limiting). With no trusted proxies configured it never consults
+// X-Forwarded-For.
+func NewIPExtractor(cfg *config.Config) platform.IPExtractor {
+	return newIPExtractor(cfg)
 }
 
 func newIPExtractor(cfg *config.Config) *ipExtractor {

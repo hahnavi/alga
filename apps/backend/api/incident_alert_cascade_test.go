@@ -73,7 +73,7 @@ func TestRunAlertCascadeEmitsAuditAndSSEPerResolvedAlert(t *testing.T) {
 	audit := &cascadeFakeAudit{}
 	pub := &cascadeFakeSSE{}
 
-	res := runAlertCascade(context.Background(), alerts, audit, pub, 77, CascadeActor{
+	res := runAlertCascade(context.Background(), alerts, audit, pub, nil, 77, CascadeActor{
 		ID:        uuid.New(),
 		Type:      "user",
 		Name:      "ops@example.com",
@@ -126,7 +126,7 @@ func TestRunAlertCascadePublishesPartialEventOnFailure(t *testing.T) {
 	}}
 	pub := &cascadeFakeSSE{}
 
-	runAlertCascade(context.Background(), alerts, &cascadeFakeAudit{}, pub, 1, CascadeActor{ID: uuid.New(), Type: "agent", Name: "responder-1"})
+	runAlertCascade(context.Background(), alerts, &cascadeFakeAudit{}, pub, nil, 1, CascadeActor{ID: uuid.New(), Type: "agent", Name: "responder-1"})
 
 	var partial *sse.Event
 	for i := range pub.events {
@@ -143,7 +143,7 @@ func TestRunAlertCascadeNilDepsAreNoOp(t *testing.T) {
 	alerts := &cascadeFakeAlertStore{result: store.AlertCascadeResult{
 		Resolved: []store.AlertRecord{{AlertNumber: 1, Fingerprint: "fp-1", Status: "resolved"}},
 	}}
-	res := runAlertCascade(context.Background(), alerts, nil, nil, 1, CascadeActor{ID: uuid.New(), Type: "user", Name: "x"})
+	res := runAlertCascade(context.Background(), alerts, nil, nil, nil, 1, CascadeActor{ID: uuid.New(), Type: "user", Name: "x"})
 	if len(res.Resolved) != 1 {
 		t.Fatalf("expected result propagated with nil audit/sse, got %#v", res)
 	}

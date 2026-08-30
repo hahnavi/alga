@@ -78,6 +78,11 @@ type Receiver struct {
 	alertInvestigationLifecycle alertInvestigationLifecycle
 	idempotency                 *valkey.IdempotencyCache
 	idempotencyTTL              time.Duration
+	// ipExtractor, when set, resolves the rate-limit key with trusted-proxy
+	// awareness (TRUSTED_PROXIES). Nil means RemoteAddr-only: X-Forwarded-For
+	// is never consulted, so a directly exposed endpoint can't bypass the
+	// per-IP limit with spoofed headers.
+	ipExtractor platform.IPExtractor
 	// allowQueryToken re-enables the legacy `?token=` ingestion fallback;
 	// deny-by-default (see webhookTokenFromRequest).
 	allowQueryToken bool
@@ -134,6 +139,12 @@ func (r *Receiver) SetOutboxStore(s store.OutboxStore) {
 // pre-auth work (token validation) performed on every request.
 func (r *Receiver) SetRateLimiter(rl RateLimiter) {
 	r.rateLimiter = rl
+}
+
+// SetIPExtractor injects the trusted-proxy-aware client-IP extractor used to
+// key the rate limiter. Without it only RemoteAddr keys the limiter.
+func (r *Receiver) SetIPExtractor(x platform.IPExtractor) {
+	r.ipExtractor = x
 }
 
 // SetIdempotency enables Idempotency-Key replay for the alert-ingest webhook.
@@ -228,7 +239,7 @@ func (r *Receiver) handleWebhook(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if r.rateLimiter != nil && !r.rateLimiter.Allow(clientIPFromRequest(req)) {
+	if r.rateLimiter != nil && !r.rateLimiter.Allow(r.clientIP(req)) {
 		platform.WriteRateLimitExceeded(w, "60")
 		return
 	}
@@ -342,16 +353,19 @@ func (r *Receiver) webhookTokenFromRequest(req *http.Request) string {
 	return ""
 }
 
-// clientIPFromRequest returns a best-effort client IP for rate limiting.
-// It honors the first X-Forwarded-For entry (set by trusted front proxies)
-// and falls back to the connection's remote address.
-func clientIPFromRequest(req *http.Request) string {
-	if xff := req.Header.Get("X-Forwarded-For"); xff != "" {
-		if idx := strings.Index(xff, ","); idx >= 0 {
-			return strings.TrimSpace(xff[:idx])
-		}
-		return strings.TrimSpace(xff)
+// clientIP resolves the rate-limit key for a request. Header trust is opt-in
+// through the injected platform.IPExtractor (configured via TRUSTED_PROXIES);
+// without one only the connection's remote address is used, so spoofed
+// X-Forwarded-For headers can't rotate the key to bypass the limit.
+func (r *Receiver) clientIP(req *http.Request) string {
+	if r.ipExtractor != nil {
+		return r.ipExtractor.ClientIP(req)
 	}
+	return remoteAddrHost(req)
+}
+
+// remoteAddrHost returns the host part of the connection's remote address.
+func remoteAddrHost(req *http.Request) string {
 	host := req.RemoteAddr
 	if idx := strings.LastIndex(host, ":"); idx >= 0 {
 		host = host[:idx]
@@ -366,11 +380,26 @@ func clientIPFromRequest(req *http.Request) string {
 func (r *Receiver) ProcessAlerts(ctx context.Context, payload types.GrafanaAlertingPayload) error {
 	var firstErr error
 	for _, alert := range payload.Alerts {
-		if r.dedupCache != nil {
-			if alert.Status != "resolved" && r.dedupCache.IsDuplicate(ctx, alert.Fingerprint) {
+		if r.dedupCache != nil && alert.Status != "resolved" && r.dedupCache.IsDuplicate(ctx, alert.Fingerprint) {
+			// The cache is an optimization, not the source of truth: automated
+			// resolve paths (triage, incident cascade) or TTL drift can leave a
+			// tracking entry behind after the open alert is gone. Verify against
+			// the store before skipping so a re-fired fingerprint still creates
+			// a new alert record (a new firing alert with a resolved fingerprint
+			// must never be swallowed).
+			existing, err := r.store.GetOpenByFingerprint(alert.Fingerprint)
+			if err != nil {
+				logger.Error("Failed to verify open alert for cached fingerprint", "component", "webhook", "fingerprint", alert.Fingerprint, "error", err)
+				if firstErr == nil {
+					firstErr = err
+				}
+				continue
+			}
+			if existing != nil {
 				logger.Debug("Alert deduplicated via cache, skipping", "component", "webhook", "fingerprint", alert.Fingerprint)
 				continue
 			}
+			logger.Info("Dedup cache entry stale for fingerprint without open alert; processing", "component", "webhook", "fingerprint", alert.Fingerprint)
 		}
 
 		existing, err := r.store.GetOpenByFingerprint(alert.Fingerprint)
@@ -648,6 +677,12 @@ func (r *Receiver) handleResolved(ctx context.Context, alert types.Alert, existi
 		if err := r.store.UpdateStatusSilenced(alert.Fingerprint); err != nil {
 			logger.Error("Failed to update silenced status in store", "component", "webhook", "fingerprint", alert.Fingerprint, "error", err)
 		} else {
+			if r.auditStore != nil {
+				r.auditStore.Log(store.AuditAlertResolved, nil, "system", "", "", true, map[string]any{
+					"fingerprint": alert.Fingerprint,
+					"reason":      "silenced",
+				})
+			}
 			if r.dedupCache != nil {
 				r.dedupCache.RemoveTracking(ctx, alert.Fingerprint)
 			}

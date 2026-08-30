@@ -38,20 +38,6 @@ class InvestigationCommand(BaseModel):
     status_level: Optional[str] = None
     source_coordination_message_id: Optional[str] = None
     internal: Optional[bool] = None
-    task_id: Optional[str] = None
-    task_kind: Optional[str] = None
-    assignee_role: Optional[str] = None
-    assignee_agent_id: Optional[str] = None
-    goal: Optional[str] = None
-    input_context: Optional[dict[str, Any]] = None
-    result: Optional[dict[str, Any]] = None
-    parent_task_id: Optional[str] = None
-
-
-TASK_KIND_INVESTIGATE = "investigate"
-TASK_KIND_COMMUNICATE = "communicate"
-TASK_KIND_VERIFY = "verify"
-TASK_KIND_MITIGATE = "mitigate"
 
 
 def resolve_alert(fingerprint: str) -> InvestigationCommand:
@@ -213,50 +199,4 @@ def set_incident_resolution_docs(
         actions_taken=actions_taken,
         root_cause=root_cause,
         resolution=resolution,
-    )
-
-
-def dispatch_task(
-    incident_number: int, kind: str, goal: str, assignee_role: str
-) -> InvestigationCommand:
-    return InvestigationCommand(
-        op="dispatch_task",
-        incident_number=incident_number,
-        task_kind=kind,
-        goal=goal,
-        assignee_role=assignee_role,
-    )
-
-
-def dispatch_task_to_agent(
-    incident_number: int, kind: str, goal: str, assignee_agent_id: str
-) -> InvestigationCommand:
-    return InvestigationCommand(
-        op="dispatch_task",
-        incident_number=incident_number,
-        task_kind=kind,
-        goal=goal,
-        assignee_agent_id=assignee_agent_id,
-    )
-
-
-def claim_task(task_id: str) -> InvestigationCommand:
-    return InvestigationCommand(op="claim_task", task_id=task_id)
-
-
-def complete_task(task_id: str, result: dict[str, Any]) -> InvestigationCommand:
-    return InvestigationCommand(op="complete_task", task_id=task_id, result=result)
-
-
-def synthesize_findings(
-    incident_number: int,
-    summary: str,
-    evidence: dict[str, Any] | None = None,
-) -> InvestigationCommand:
-    result: dict[str, Any] = {"summary": summary}
-    if evidence:
-        for k, v in evidence.items():
-            result[k] = v
-    return InvestigationCommand(
-        op="synthesize_findings", incident_number=incident_number, result=result
     )

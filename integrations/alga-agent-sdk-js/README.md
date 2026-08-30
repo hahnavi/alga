@@ -11,21 +11,12 @@ npm install @alga/agent-sdk
 ## Quickstart
 
 ```typescript
-import {
-  AlgaClient,
-  resolveAlert,
-  setOutcome,
-  dispatchTask,
-} from "@alga/agent-sdk";
+import { AlgaClient, resolveAlert, setOutcome } from "@alga/agent-sdk";
 
 const client = new AlgaClient("https://alga.example.com", process.env.ALGA_AGENT_TOKEN!);
 
 client.onMessage = (msg) => {
   console.log("received message:", msg.text);
-};
-
-client.onCoordinationTask = (evt) => {
-  console.log("task dispatched:", evt.goal);
 };
 
 // Terminal errors (e.g. revoked token) surface here once, then the client stops.
@@ -49,32 +40,31 @@ const client = new AlgaClient("https://alga.example.com", token, {
 
 ### Options
 
-| Option              | Type         | Default                  | Description                                       |
-|---------------------|--------------|--------------------------|---------------------------------------------------|
-| heartbeatIntervalMs | number (ms)  | 30000                    | Heartbeat cadence (floor 1s)                      |
-| dedup               | MessageDedup | new(1000, 300000)        | SSE message dedup cache                           |
-| maxRestRetries      | number       | 2                        | Max REST retry attempts on transient errors       |
-| userAgent           | string       | "alga-agent-sdk-js"      | User-Agent header                                 |
-| fetchImpl           | typeof fetch | global fetch             | Custom fetch (for testing or non-Node runtimes)   |
+| Option              | Type         | Default             | Description                                     |
+| ------------------- | ------------ | ------------------- | ----------------------------------------------- |
+| heartbeatIntervalMs | number (ms)  | 30000               | Heartbeat cadence (floor 1s)                    |
+| dedup               | MessageDedup | new(1000, 300000)   | SSE message dedup cache                         |
+| maxRestRetries      | number       | 2                   | Max REST retry attempts on transient errors     |
+| userAgent           | string       | "alga-agent-sdk-js" | User-Agent header                               |
+| fetchImpl           | typeof fetch | global fetch        | Custom fetch (for testing or non-Node runtimes) |
 
 ## SSE Events
 
 Register callbacks before calling `connect()`. The SSE client auto-reconnects with exponential backoff (2s → 60s with jitter), honoring `Retry-After` on 429s.
 
-| Callback              | Event type                   | Description                               |
-|-----------------------|------------------------------|-------------------------------------------|
-| `onConnected`         | `connected`                  | Initial connection handshake              |
-| `onMessage`           | `message`                    | Chat message from operator/peer           |
-| `onTyping`            | `typing`                     | Typing indicator                          |
-| `onInvestigationResume` | `investigation_resume`     | Investigation resumed                     |
-| `onPeerFinding`       | `peer_finding`               | Notable finding from a peer agent         |
-| `onPeerAsk`           | `peer_ask`                   | Another agent is asking a question        |
-| `onPeerReply`         | `peer_reply`                 | Reply to your peer ask                    |
-| `onCoordinationTask`  | `coordination_task_dispatched` | Commander dispatched a task to you      |
-| `onSummarizeIncident` | `summarize_incident`         | Backend requests an incident summary      |
-| `onAlertAutoResolved` | `alert_auto_resolved`        | An investigated alert auto-resolved       |
-| `onIncidentCommsStale`| `incident_comms_stale`       | Incident comms went quiet past threshold  |
-| `onUnknownEvent`      | any other                    | Escape hatch for new backend event types  |
+| Callback                | Event type             | Description                              |
+| ----------------------- | ---------------------- | ---------------------------------------- |
+| `onConnected`           | `connected`            | Initial connection handshake             |
+| `onMessage`             | `message`              | Chat message from operator/peer          |
+| `onTyping`              | `typing`               | Typing indicator                         |
+| `onInvestigationResume` | `investigation_resume` | Investigation resumed                    |
+| `onPeerFinding`         | `peer_finding`         | Notable finding from a peer agent        |
+| `onPeerAsk`             | `peer_ask`             | Another agent is asking a question       |
+| `onPeerReply`           | `peer_reply`           | Reply to your peer ask                   |
+| `onSummarizeIncident`   | `summarize_incident`   | Backend requests an incident summary     |
+| `onAlertAutoResolved`   | `alert_auto_resolved`  | An investigated alert auto-resolved      |
+| `onIncidentCommsStale`  | `incident_comms_stale` | Incident comms went quiet past threshold |
+| `onUnknownEvent`        | any other              | Escape hatch for new backend event types |
 
 ## Commands
 
@@ -82,20 +72,35 @@ Commands are sent via `sendCommand()` using factory functions. All incident-scop
 
 ```typescript
 import {
-  resolveAlert, reopenAlert, setOutcome, cancelInvestigation, pauseInvestigation,
-  triageFeedback, assignInvestigation, promoteToIncident,
-  setIncidentPriority, setIncidentSeverity, triggerEscalation, mitigateIncident,
-  resolveIncident, beginTriage, promoteIncident,
-  assignIncidentRoleToUser, assignIncidentRoleToAgent,
-  postHandoff, publishStatusUpdate, setIncidentResolutionDocs,
-  dispatchTask, dispatchTaskToAgent, claimTask, completeTask, synthesizeFindings,
+  resolveAlert,
+  reopenAlert,
+  setOutcome,
+  cancelInvestigation,
+  pauseInvestigation,
+  triageFeedback,
+  assignInvestigation,
+  promoteToIncident,
+  setIncidentPriority,
+  setIncidentSeverity,
+  triggerEscalation,
+  mitigateIncident,
+  resolveIncident,
+  beginTriage,
+  promoteIncident,
+  assignIncidentRoleToUser,
+  assignIncidentRoleToAgent,
+  postHandoff,
+  publishStatusUpdate,
+  setIncidentResolutionDocs,
 } from "@alga/agent-sdk";
 
 await client.sendCommand("alert_42", resolveAlert("fp-abc"));
 await client.sendCommand("alert_42", setOutcome("Memory exhaustion on db-01", undefined));
 await client.sendCommand("incident_coord_9", setIncidentPriority(9, "P1"));
-await client.sendCommand("incident_coord_9", dispatchTask(9, "investigate", "Find root cause", "responder"));
-await client.sendCommand("incident_coord_9", completeTask("task-uuid", { summary: "OOM in worker pool" }));
+await client.sendCommand(
+  "incident_coord_9",
+  publishStatusUpdate(9, "Investigating root cause", "investigating"),
+);
 ```
 
 ## REST Methods
@@ -112,8 +117,7 @@ await client.reopenAlert("fp-abc");
 ### Incidents
 
 ```typescript
-const ctx = await client.getIncident(9);          // IncidentContext (incident + roles)
-const tasks = await client.listIncidentTasks(9);
+const ctx = await client.getIncident(9); // IncidentContext (incident + roles)
 const timeline = await client.getIncidentTimeline(9);
 await client.addIncidentTimeline(9, "Root cause: disk full", "root_cause");
 await client.updateIncidentSummary(9, "Summarized...");
@@ -164,7 +168,13 @@ const secret = await client.getSecret("secret-id");
 ## Error Handling
 
 ```typescript
-import { AlgaAuthError, AlgaAPIError, AlgaConnectionError, isAuthError, isRetryableError } from "@alga/agent-sdk";
+import {
+  AlgaAuthError,
+  AlgaAPIError,
+  AlgaConnectionError,
+  isAuthError,
+  isRetryableError,
+} from "@alga/agent-sdk";
 
 try {
   await client.resolveAlert("fp-abc");
@@ -182,8 +192,8 @@ try {
 ## Lifecycle
 
 ```typescript
-client.connect();     // Start SSE + heartbeat loops
-client.disconnect();  // Stop loops and cleanup
+client.connect(); // Start SSE + heartbeat loops
+client.disconnect(); // Stop loops and cleanup
 ```
 
 ## License

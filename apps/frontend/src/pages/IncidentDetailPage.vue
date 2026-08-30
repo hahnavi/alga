@@ -49,7 +49,6 @@ import IncidentActionsMenu from "@/components/incident/IncidentActionsMenu.vue";
 import IncidentTimeline from "@/components/incident/IncidentTimeline.vue";
 import IncidentCoordinationStream from "@/components/incident/IncidentCoordinationStream.vue";
 import StatusUpdateFeed from "@/components/incident/StatusUpdateFeed.vue";
-import CoordinationTaskBoard from "@/components/incident/CoordinationTaskBoard.vue";
 import ICSRoleBoard from "@/components/incident/ICSRoleBoard.vue";
 import OwnerThreadPanel from "@/components/thread/OwnerThreadPanel.vue";
 import Card from "@/components/ui/Card.vue";
@@ -122,7 +121,6 @@ async function loadIncident() {
   await Promise.all([
     docs.load(),
     coord.loadCoordinationMessages(),
-    coord.loadCoordinationTasks(),
     thread.loadIncidentThread(),
     coord.fetchStatusUpdates(true),
   ]);
@@ -166,12 +164,6 @@ const threadLayoutOpen = ref(false);
 const threadLeaving = ref(false);
 
 const coordinationMessages = coord.coordinationMessages;
-const coordinationTasks = coord.coordinationTasks;
-const showDispatchTaskDialog = coord.showDispatchTaskDialog;
-const dispatchTaskGoal = coord.dispatchTaskGoal;
-const dispatchTaskKind = coord.dispatchTaskKind;
-const dispatchTaskRole = coord.dispatchTaskRole;
-const dispatchTaskSubmitting = coord.dispatchTaskSubmitting;
 const coordinationTypingSource = coord.coordinationTypingSource;
 const coordinationTypingAgentType = coord.coordinationTypingAgentType;
 const coordinationTyping = coord.coordinationTyping;
@@ -475,15 +467,6 @@ const sse = useSSE(
         fetchStatusUpdates(true);
       });
     },
-    coordination_task_created: (data: unknown) => onIncidentSSE(data, coord.loadCoordinationTasks),
-    coordination_task_dispatched: (data: unknown) =>
-      onIncidentSSE(data, coord.loadCoordinationTasks),
-    coordination_task_claimed: (data: unknown) => onIncidentSSE(data, coord.loadCoordinationTasks),
-    coordination_task_completed: (data: unknown) =>
-      onIncidentSSE(data, coord.loadCoordinationTasks),
-    coordination_task_failed: (data: unknown) => onIncidentSSE(data, coord.loadCoordinationTasks),
-    coordination_task_cancelled: (data: unknown) =>
-      onIncidentSSE(data, coord.loadCoordinationTasks),
     ...thread.handlers,
     owner_thread_typing: (data: unknown) => {
       const d = data as { source?: string; agent_type?: string };
@@ -963,14 +946,6 @@ onBeforeUnmount(() => {
             :incident-status="incident?.status"
             @posted="fetchStatusUpdates(true)"
             @retry="() => fetchStatusUpdates()"
-          />
-
-          <CoordinationTaskBoard
-            v-if="incident"
-            :tasks="coordinationTasks"
-            :can-command="canCommand && !isDeleted"
-            @dispatch="coord.openDispatchTaskDialog"
-            @cancel="coord.cancelCoordinationTask"
           />
 
           <!-- Summary -->
@@ -1828,51 +1803,6 @@ onBeforeUnmount(() => {
             Add
           </Button>
         </template>
-      </Modal>
-
-      <!-- Dispatch coordination task -->
-      <Modal
-        :open="showDispatchTaskDialog"
-        title="Dispatch coordination task"
-        max-width="lg"
-        confirm-label="Dispatch"
-        :loading="dispatchTaskSubmitting"
-        @update:open="!$event && (showDispatchTaskDialog = false)"
-        @close="showDispatchTaskDialog = false"
-        @confirm="coord.submitDispatchTask"
-      >
-        <div class="flex flex-col gap-3">
-          <div>
-            <label class="field-label mb-1 block" for="dispatch-task-goal">Goal</label>
-            <Textarea
-              id="dispatch-task-goal"
-              v-model="dispatchTaskGoal"
-              :disabled="dispatchTaskSubmitting"
-              placeholder="Describe what needs to be done..."
-              :rows="3"
-            />
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="field-label mb-1 block" for="dispatch-task-kind">Kind</label>
-              <Select id="dispatch-task-kind" v-model="dispatchTaskKind">
-                <option value="investigate">Investigate</option>
-                <option value="communicate">Communicate</option>
-                <option value="verify">Verify</option>
-                <option value="mitigate">Mitigate</option>
-                <option value="synthesize">Synthesize</option>
-              </Select>
-            </div>
-            <div>
-              <label class="field-label mb-1 block" for="dispatch-task-role">Assignee role</label>
-              <Select id="dispatch-task-role" v-model="dispatchTaskRole">
-                <option value="commander">Commander</option>
-                <option value="communicator">Communicator</option>
-                <option value="responder">Responder</option>
-              </Select>
-            </div>
-          </div>
-        </div>
       </Modal>
 
       <!-- Confirm dialogs -->

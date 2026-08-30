@@ -52,7 +52,14 @@ type SessionStore interface {
 	// cookies detect replay this way; unknown IDs return (nil, nil).
 	FindRotatedOutSession(id string) (*SessionRecord, error)
 	DeleteSession(id string) error
+	// DeleteSessionByIDHash deletes a session by its persisted id digest —
+	// used by the self-service session API, which only ever sees digests.
+	DeleteSessionByIDHash(idHash string) error
 	DeleteAllUserSessions(userID uuid.UUID) error
+	// ListUserSessions returns the user's active (unexpired) sessions, most
+	// recently used first. Records carry id digests only — plaintext session
+	// IDs are never persisted, so they cannot appear here.
+	ListUserSessions(userID uuid.UUID) ([]SessionRecord, error)
 	// DeleteExpired removes sessions past their idle or absolute-max lifetime.
 	// Valkey-backed stores self-expire via TTL and return 0; the PG store
 	// hard-deletes reaped rows. Used by the background session reaper.
@@ -384,6 +391,22 @@ func (s *pgSessionStore) DeleteSession(id string) error {
 	return nil
 }
 
+func (s *pgSessionStore) DeleteSessionByIDHash(idHash string) error {
+	if idHash == "" {
+		return nil
+	}
+	ctx, cancel := pgctx(context.Background())
+	defer cancel()
+
+	_, err := s.db.NewDelete().Model((*models.Session)(nil)).
+		Where("id_hash = ?", idHash).
+		Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to delete session: %w", err)
+	}
+	return nil
+}
+
 func (s *pgSessionStore) DeleteAllUserSessions(userID uuid.UUID) error {
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
@@ -395,6 +418,37 @@ func (s *pgSessionStore) DeleteAllUserSessions(userID uuid.UUID) error {
 		return fmt.Errorf("failed to delete user sessions: %w", err)
 	}
 	return nil
+}
+
+func (s *pgSessionStore) ListUserSessions(userID uuid.UUID) ([]SessionRecord, error) {
+	ctx, cancel := pgctx(context.Background())
+	defer cancel()
+
+	var rows []models.Session
+	err := s.db.NewSelect().Model(&rows).
+		Where("user_id = ?", userID).
+		Where("expires_at > ?", time.Now()).
+		Order("last_used_at DESC").
+		Scan(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list user sessions: %w", err)
+	}
+
+	now := time.Now()
+	records := make([]SessionRecord, 0, len(rows))
+	for i := range rows {
+		rec := pgSessionToRecord(&rows[i])
+		// Absolute-cap rows are effectively expired; GetSession would reap
+		// them on use, so they are excluded from the listing as well.
+		if !isWithinAbsoluteLifetime(rec, s.sessionMaxLifetime) {
+			continue
+		}
+		if rec.ExpiresAt.Before(now) {
+			continue
+		}
+		records = append(records, *rec)
+	}
+	return records, nil
 }
 
 // DeleteExpired hard-deletes sessions past their idle expiry OR their absolute

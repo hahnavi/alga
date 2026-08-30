@@ -284,6 +284,166 @@ func (s *Server) handleGetCurrentUser(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// sessionView is the API projection of an active session. It deliberately
+// exposes only recognition metadata: refresh-token and family material never
+// leaves the server, and the id is the persisted HMAC digest, which is
+// useless off-device (presenting it as a cookie fails validation).
+type sessionView struct {
+	ID         string    `json:"id"`
+	CreatedAt  time.Time `json:"created_at"`
+	LastUsedAt time.Time `json:"last_used_at"`
+	ExpiresAt  time.Time `json:"expires_at"`
+	IP         string    `json:"ip"`
+	UserAgent  string    `json:"user_agent"`
+	Current    bool      `json:"current"`
+}
+
+// requireCurrentSession returns the authenticated user and the id digest of
+// the session that authenticated the request, rejecting requests that arrived
+// without a session cookie (PAT/token-authenticated callers have no
+// self-session to manage).
+func (s *Server) requireCurrentSession(w http.ResponseWriter, r *http.Request) (*store.UserRecord, string, bool) {
+	user := userFromContext(r.Context())
+	if user == nil {
+		writeError(w, ErrorCodeUnauthorized, "not authenticated")
+		return nil, "", false
+	}
+	currentHash := platform.SessionIDHashFromContext(r.Context())
+	if currentHash == "" {
+		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "session management is only available for cookie sessions")
+		return nil, "", false
+	}
+	return user, currentHash, true
+}
+
+func (s *Server) handleListSessions(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		return
+	}
+
+	user, currentHash, ok := s.requireCurrentSession(w, r)
+	if !ok {
+		return
+	}
+
+	sessions, err := s.sessionStore.ListUserSessions(user.ID)
+	if err != nil {
+		writeInternalError(w, err, "failed to list sessions")
+		return
+	}
+
+	views := make([]sessionView, 0, len(sessions))
+	for _, sess := range sessions {
+		views = append(views, sessionView{
+			ID:         sess.IDHash,
+			CreatedAt:  sess.CreatedAt,
+			LastUsedAt: sess.LastUsedAt,
+			ExpiresAt:  sess.ExpiresAt,
+			IP:         sess.IP,
+			UserAgent:  sess.UserAgent,
+			Current:    sess.IDHash == currentHash,
+		})
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": views})
+}
+
+func (s *Server) handleRevokeSession(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		return
+	}
+
+	user, currentHash, ok := s.requireCurrentSession(w, r)
+	if !ok {
+		return
+	}
+
+	targetID := pathID(r, "/api/v1/auth/sessions/")
+	if targetID == "" {
+		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "session id is required")
+		return
+	}
+	if targetID == currentHash {
+		s.auditStore.Log(store.AuditSessionRevoked, &user.ID, user.Email, s.ipExtractor.clientIP(r), r.UserAgent(), false, map[string]any{
+			"reason": "current_session_rejected",
+		})
+		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "cannot revoke the current session; sign out instead")
+		return
+	}
+
+	// Self-scope: the target must exist and belong to the caller. Foreign and
+	// nonexistent ids take the same path so existence is not confirmed.
+	sessions, err := s.sessionStore.ListUserSessions(user.ID)
+	if err != nil {
+		writeInternalError(w, err, "failed to list sessions")
+		return
+	}
+	owned := false
+	for _, sess := range sessions {
+		if sess.IDHash == targetID {
+			owned = true
+			break
+		}
+	}
+	if !owned {
+		s.auditStore.Log(store.AuditSessionRevoked, &user.ID, user.Email, s.ipExtractor.clientIP(r), r.UserAgent(), false, map[string]any{
+			"reason": "session_not_found",
+		})
+		writeErrorStatus(w, http.StatusNotFound, ErrorCodeNotFound, "session not found")
+		return
+	}
+
+	// DeleteSession takes a plaintext id; sessions deleted from the listing
+	// only expose digests, so a digest-keyed delete is needed. It is
+	// implemented directly against the store contract to avoid keeping
+	// plaintext ids around.
+	if err := s.sessionStore.DeleteSessionByIDHash(targetID); err != nil {
+		writeInternalError(w, err, "failed to revoke session")
+		return
+	}
+
+	s.auditStore.Log(store.AuditSessionRevoked, &user.ID, user.Email, s.ipExtractor.clientIP(r), r.UserAgent(), true, map[string]any{
+		"session_id": targetID,
+	})
+	writeStatus(w, "session revoked")
+}
+
+func (s *Server) handleRevokeOtherSessions(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		return
+	}
+
+	user, currentHash, ok := s.requireCurrentSession(w, r)
+	if !ok {
+		return
+	}
+
+	sessions, err := s.sessionStore.ListUserSessions(user.ID)
+	if err != nil {
+		writeInternalError(w, err, "failed to list sessions")
+		return
+	}
+
+	revoked := 0
+	for _, sess := range sessions {
+		if sess.IDHash == currentHash {
+			continue
+		}
+		if err := s.sessionStore.DeleteSessionByIDHash(sess.IDHash); err != nil {
+			logger.Warn("failed to revoke session during revoke-all", "component", "api", "error", err)
+			continue
+		}
+		revoked++
+	}
+
+	s.auditStore.Log(store.AuditSessionsRevokedAll, &user.ID, user.Email, s.ipExtractor.clientIP(r), r.UserAgent(), true, map[string]any{
+		"revoked": revoked,
+	})
+	writeJSON(w, http.StatusOK, map[string]any{"revoked": revoked})
+}
+
 func (s *Server) handleRefreshSession(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")

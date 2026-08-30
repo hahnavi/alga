@@ -85,6 +85,25 @@ func AuthMethodFromContext(ctx context.Context) string {
 	return m
 }
 
+type sessionIDHashKeyT string
+
+const sessionIDHashKey sessionIDHashKeyT = "session_id_hash"
+
+// WithSessionIDHash stores the persisted HMAC digest of the session that
+// authenticated the request (cookie path only). Token-authenticated requests
+// carry no session and leave it empty; handlers use the empty value to reject
+// session-scoped operations.
+func WithSessionIDHash(ctx context.Context, idHash string) context.Context {
+	return context.WithValue(ctx, sessionIDHashKey, idHash)
+}
+
+// SessionIDHashFromContext retrieves the current session's id digest, or the
+// empty string when the request was not authenticated with a session cookie.
+func SessionIDHashFromContext(ctx context.Context) string {
+	v, _ := ctx.Value(sessionIDHashKey).(string)
+	return v
+}
+
 // RequireAgent retrieves the agent from the request context or writes a 401
 // and returns ok=false. Convenience helper for agent handlers.
 func RequireAgent(w http.ResponseWriter, r *http.Request) (*AgentTokenContext, bool) {

@@ -1232,6 +1232,18 @@ export type NotificationPreferenceRule = {
 };
 
 type StatusResponse = { status: string };
+
+/** One of the caller's active cookie sessions, as shown in Security settings. */
+export type SessionRow = {
+  id: string;
+  created_at: string;
+  last_used_at: string;
+  expires_at: string;
+  ip: string;
+  user_agent: string;
+  current: boolean;
+};
+
 type ItemsResponse<T> = { items: T[]; total?: number };
 type DataResponse<T> = { data: T[] };
 type ListPostMortemsParams = Record<string, string | number | boolean | undefined>;
@@ -1500,6 +1512,20 @@ export const api = {
       method: "POST",
       headers: { "X-Requested-With": "XMLHttpRequest" },
     });
+  },
+
+  getSessions() {
+    return request<{ items: SessionRow[] }>("/api/v1/auth/sessions");
+  },
+
+  revokeSession(sessionId: string) {
+    return request<StatusResponse>(`/api/v1/auth/sessions/${e(sessionId)}`, {
+      method: "DELETE",
+    });
+  },
+
+  revokeOtherSessions() {
+    return request<{ revoked: number }>("/api/v1/auth/sessions", { method: "DELETE" });
   },
 
   changePassword(currentPassword: string, newPassword: string) {

@@ -32,6 +32,8 @@ const (
 	AuditPATRevoked                 AuditEvent = "pat_revoked"
 	AuditRoutesUpdated              AuditEvent = "routes_updated"
 	AuditSessionRefreshed           AuditEvent = "session_refreshed"
+	AuditSessionRevoked             AuditEvent = "session_revoked"
+	AuditSessionsRevokedAll         AuditEvent = "sessions_revoked_all"
 	AuditSuspiciousActivity         AuditEvent = "suspicious_activity"
 	AuditAlertCreated               AuditEvent = "alert_created"
 	AuditAlertAcknowledged          AuditEvent = "alert_acknowledged"

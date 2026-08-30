@@ -40,7 +40,11 @@ func (s *replaySessionStore) RefreshSessionByRefreshToken(string, string, string
 func (s *replaySessionStore) FindRotatedOutSession(id string) (*store.SessionRecord, error) {
 	return s.rotatedOut, nil
 }
-func (s *replaySessionStore) DeleteSession(string) error { return nil }
+func (s *replaySessionStore) DeleteSession(string) error         { return nil }
+func (s *replaySessionStore) DeleteSessionByIDHash(string) error { return nil }
+func (s *replaySessionStore) ListUserSessions(uuid.UUID) ([]store.SessionRecord, error) {
+	return nil, nil
+}
 func (s *replaySessionStore) DeleteAllUserSessions(userID uuid.UUID) error {
 	s.revokedUsers = append(s.revokedUsers, userID)
 	return nil

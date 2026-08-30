@@ -29,6 +29,10 @@ type ActionItemStore interface {
 	Create(ctx context.Context, record *ActionItemRecord) (*ActionItemRecord, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*ActionItemRecord, error)
 	ListByPostMortem(ctx context.Context, postMortemID uuid.UUID) ([]ActionItemRecord, error)
+	// ListByPostMortemIDs batch-loads action items for many post-mortems in
+	// one query, grouped by post-mortem ID. Used by list endpoints to avoid a
+	// per-row action-item query.
+	ListByPostMortemIDs(ctx context.Context, postMortemIDs []uuid.UUID) (map[uuid.UUID][]ActionItemRecord, error)
 	ListOpen(ctx context.Context) ([]ActionItemRecord, error)
 	ListOverdue(ctx context.Context) ([]ActionItemRecord, error)
 	Update(ctx context.Context, id uuid.UUID, record *ActionItemRecord) (*ActionItemRecord, error)
@@ -105,12 +109,33 @@ func (s *pgActionItemStore) ListByPostMortem(ctx context.Context, postMortemID u
 	return records, nil
 }
 
+func (s *pgActionItemStore) ListByPostMortemIDs(ctx context.Context, postMortemIDs []uuid.UUID) (map[uuid.UUID][]ActionItemRecord, error) {
+	out := make(map[uuid.UUID][]ActionItemRecord, len(postMortemIDs))
+	if len(postMortemIDs) == 0 {
+		return out, nil
+	}
+	var items []models.ActionItem
+	err := s.db.NewSelect().Model(&items).
+		Where("post_mortem_id IN (?)", bun.In(postMortemIDs)).
+		OrderExpr("created_at ASC").
+		Scan(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list action items by post-mortems: %w", err)
+	}
+	for i := range items {
+		out[items[i].PostMortemID] = append(out[items[i].PostMortemID], *s.toRecord(&items[i]))
+	}
+	return out, nil
+}
+
 func (s *pgActionItemStore) ListOpen(ctx context.Context) ([]ActionItemRecord, error) {
 	var items []models.ActionItem
 	err := s.db.NewSelect().Model(&items).
 		Where("status != ?", "completed").
 		Where("status != ?", "cancelled").
-		OrderExpr("due_date ASC").
+		// NULLS LAST keeps undated items from crowding out everything with a
+		// due date; Postgres ASC otherwise sorts NULLs first.
+		OrderExpr("due_date ASC NULLS LAST").
 		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list open action items: %w", err)

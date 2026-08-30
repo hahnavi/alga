@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
+
 	"alga/logger"
 	"alga/sse"
 	"alga/store"
@@ -19,9 +21,14 @@ const (
 type ActionItemSweepWorker struct {
 	actionItemStore   store.ActionItemStore
 	incidentStore     store.IncidentStore
+	postMortemStore   store.PostMortemStore
 	notificationStore store.NotificationStore
 	ssePublisher      *sse.DualPublisher
 	vkClient          *valkey.Client
+	// overdueDedup decides whether an item's overdue signal window is fresh.
+	// Split out from the Valkey SETNX so tests can exercise the dedup
+	// contract hermetically.
+	overdueDedup func(ctx context.Context, itemID string) bool
 }
 
 // NewActionItemSweepWorker creates the overdue action-item sweep. The
@@ -35,6 +42,13 @@ func NewActionItemSweepWorker(
 		actionItemStore: actionItemStore,
 		incidentStore:   incidentStore,
 	}
+}
+
+// SetPostMortemStore wires the post-mortem lookup used to deep-link overdue
+// notifications back to the incident. Optional; without it notifications use
+// the post-mortem id as the resource id.
+func (w *ActionItemSweepWorker) SetPostMortemStore(pmStore store.PostMortemStore) {
+	w.postMortemStore = pmStore
 }
 
 // SetSignals wires the optional user-visible signal paths (SSE + in-app
@@ -77,9 +91,17 @@ func (w *ActionItemSweepWorker) tick(ctx context.Context) {
 
 // signalOverdue publishes an SSE event and (when an assignee exists) creates a
 // per-assignee in-app notification for an overdue item. Both paths are best-
-// effort: failures are logged and never abort the sweep. Returns true when at
-// least one fresh signal was delivered.
+// effort: failures are logged and never abort the sweep. Both are deduplicated
+// per item by the 24h Valkey SETNX, so a long-overdue item does not re-broadcast
+// on every 5-minute tick. Returns true when at least one fresh signal was
+// delivered.
 func (w *ActionItemSweepWorker) signalOverdue(ctx context.Context, item store.ActionItemRecord) bool {
+	// Acquire the per-item dedup window up front: SSE and in-app notification
+	// share it, so an item signals at most once per 24h either way.
+	if !w.overdueSignalFresh(ctx, item.ID) {
+		return false
+	}
+
 	signaled := false
 
 	data := map[string]any{
@@ -108,7 +130,7 @@ func (w *ActionItemSweepWorker) signalOverdue(ctx context.Context, item store.Ac
 		signaled = true
 	}
 
-	if w.notificationStore != nil && item.AssigneeID != nil && w.markOverdueNotified(ctx, item.ID) {
+	if w.notificationStore != nil && item.AssigneeID != nil {
 		title := "Action item overdue"
 		msg := fmt.Sprintf("%q is past its due date (%s).",
 			truncateForNotification(item.Description), item.DueDate.Format(time.RFC3339))
@@ -119,6 +141,12 @@ func (w *ActionItemSweepWorker) signalOverdue(ctx context.Context, item store.Ac
 			Message:      msg,
 			ResourceType: "post_mortem",
 			ResourceID:   item.PostMortemID.String(),
+		}
+		if incidentNumber := w.resolveIncidentNumber(ctx, item.PostMortemID); incidentNumber != 0 {
+			// Frontend notification clicks route by resource type + id; the
+			// incident number is the only deep-linkable id for a post-mortem.
+			record.ResourceType = "incident"
+			record.ResourceID = fmt.Sprintf("%d", incidentNumber)
 		}
 		if _, err := w.notificationStore.Create(ctx, record); err != nil {
 			logger.Error("Failed to create overdue action-item notification",
@@ -131,9 +159,38 @@ func (w *ActionItemSweepWorker) signalOverdue(ctx context.Context, item store.Ac
 	return signaled
 }
 
-// markOverdueNotified deduplicates assignee notifications with a 24h Valkey
-// SETNX so the 5-minute sweep does not spam users. On Valkey failure it
-// returns true (notify anyway): a duplicate reminder beats silence.
+// resolveIncidentNumber finds the incident that owns the post-mortem so
+// overdue notifications can deep-link somewhere useful. Returns 0 when the
+// store is unwired or the lookup fails.
+func (w *ActionItemSweepWorker) resolveIncidentNumber(ctx context.Context, postMortemID uuid.UUID) int64 {
+	if w.postMortemStore == nil {
+		return 0
+	}
+	pm, err := w.postMortemStore.GetByID(ctx, postMortemID)
+	if err != nil || pm == nil {
+		return 0
+	}
+	inc, err := w.incidentStore.GetIncidentByID(ctx, pm.IncidentID)
+	if err != nil || inc == nil {
+		return 0
+	}
+	return inc.IncidentNumber
+}
+
+// overdueSignalFresh reports whether this item's 24h signal window should be
+// opened now (true) or is already held (false). Uses the injected test seam
+// when present, the Valkey SETNX otherwise.
+func (w *ActionItemSweepWorker) overdueSignalFresh(ctx context.Context, itemID fmt.Stringer) bool {
+	if w.overdueDedup != nil {
+		return w.overdueDedup(ctx, itemID.String())
+	}
+	return w.markOverdueNotified(ctx, itemID)
+}
+
+// markOverdueNotified deduplicates per-item overdue signals (SSE + in-app
+// notification) with a 24h Valkey SETNX so the 5-minute sweep does not spam. On
+// Valkey failure it returns true (signal anyway): a duplicate reminder beats
+// silence.
 func (w *ActionItemSweepWorker) markOverdueNotified(ctx context.Context, itemID fmt.Stringer) bool {
 	if w.vkClient == nil {
 		return true

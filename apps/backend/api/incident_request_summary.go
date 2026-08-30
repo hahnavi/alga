@@ -24,12 +24,12 @@ func (s *Server) ensurePostMortemDraft(ctx context.Context, incident *store.Inci
 	if incident == nil || s.postmortemStore == nil || s.incidentStore == nil {
 		return
 	}
-	existing, err := s.postmortemStore.GetByIncidentID(ctx, incident.ID)
+	exists, err := s.postmortemStore.ExistsByIncidentID(ctx, incident.ID)
 	if err != nil {
 		logger.WarnCtx(ctx, "failed to check post-mortem", "incident_number", incident.IncidentNumber, "error", err)
 		return
 	}
-	if existing != nil {
+	if exists {
 		return
 	}
 	s.mu.RLock()

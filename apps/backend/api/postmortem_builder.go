@@ -330,7 +330,11 @@ func buildPMTimeline(incident *store.IncidentRecord, timelineEntries []store.Inc
 	seen := make(map[string]bool, len(entries))
 	for _, e := range entries {
 		ts := e.timestamp.UTC().Format(time.RFC3339)
-		dedupKey := ts + "|" + e.event + "|" + e.description
+		// Dedup on timestamp+description only: the same moment is routinely
+		// recorded twice with different event names (the lifecycle milestone
+		// "incident_resolved" and the timeline entry "resolved" both say
+		// "Incident resolved"), and showing both renders a duplicate line.
+		dedupKey := ts + "|" + e.description
 		if seen[dedupKey] {
 			continue
 		}

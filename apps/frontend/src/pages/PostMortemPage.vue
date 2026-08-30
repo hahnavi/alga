@@ -202,6 +202,9 @@ const { canWrite, canDelete } = useEntityPermissions("postmortems");
 const isDraft = computed(() => postMortem.value?.status === "draft");
 const canEditDraft = computed(() => isDraft.value && canWrite.value);
 const isEditable = computed(() => isEditing.value && canEditDraft.value);
+// The backend gates submit-review on blameless_confirmed; mirror that here so
+// the button state explains the 400 before it happens.
+const blamelessGateMet = computed(() => blamelessConfirmed.value || !!blamelessNotes.value.trim());
 const completedActionItems = computed(
   () => actionItems.value.filter((item) => item.status === "completed").length,
 );
@@ -450,6 +453,32 @@ async function handleSubmitForReview() {
     push("Submitted for review", "success");
   } catch (err) {
     push(getErrorMessage(err, "Failed to submit"), "error");
+  } finally {
+    actionLoading.value = false;
+  }
+}
+
+async function handleRevertToDraft() {
+  actionLoading.value = true;
+  try {
+    const pm = await api.revertPostMortemToDraft(incidentNumber.value);
+    postMortem.value = pm;
+    push("Post-mortem returned to draft", "success");
+  } catch (err) {
+    push(getErrorMessage(err, "Failed to revert"), "error");
+  } finally {
+    actionLoading.value = false;
+  }
+}
+
+async function handleRevertToReview() {
+  actionLoading.value = true;
+  try {
+    const pm = await api.revertPostMortemToReview(incidentNumber.value);
+    postMortem.value = pm;
+    push("Post-mortem returned to review", "success");
+  } catch (err) {
+    push(getErrorMessage(err, "Failed to revert"), "error");
   } finally {
     actionLoading.value = false;
   }
@@ -712,12 +741,42 @@ watch(incidentNumber, (next, prev) => {
               Edit Draft
             </Button>
             <Button
-              v-if="canWrite && postMortem.status === 'draft' && !isEditable"
+              v-if="postMortem.status === 'draft' && canWrite && !isEditable"
+              :disabled="!blamelessGateMet"
               :loading="actionLoading"
               size="sm"
+              :title="
+                blamelessGateMet
+                  ? undefined
+                  : 'Confirm the blameless review section before submitting'
+              "
               @click="handleSubmitForReview"
             >
               Submit for Review
+            </Button>
+            <Button
+              v-if="
+                canWrite &&
+                (postMortem.status === 'in_review' || postMortem.status === 'approved') &&
+                !isEditable
+              "
+              variant="outline"
+              :disabled="actionLoading"
+              size="sm"
+              @click="handleRevertToDraft"
+            >
+              <ArrowLeft class="h-3.5 w-3.5" />
+              Back to Draft
+            </Button>
+            <Button
+              v-if="canWrite && postMortem.status === 'approved' && !isEditable"
+              variant="outline"
+              :disabled="actionLoading"
+              size="sm"
+              @click="handleRevertToReview"
+            >
+              <ArrowLeft class="h-3.5 w-3.5" />
+              Back to Review
             </Button>
             <Button
               v-if="canWrite && postMortem.status === 'in_review'"

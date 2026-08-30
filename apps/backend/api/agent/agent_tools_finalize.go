@@ -254,12 +254,12 @@ func (e *AgentToolExecutor) EnsurePostMortem(ctx context.Context, incidentNumber
 		logger.WarnCtx(ctx, "failed to load incident for post-mortem", "incident_number", incidentNumber, "error", err)
 		return
 	}
-	existing, err := e.postmortemStore.GetByIncidentID(ctx, inc.ID)
+	existing, err := e.postmortemStore.ExistsByIncidentID(ctx, inc.ID)
 	if err != nil {
 		logger.WarnCtx(ctx, "failed to check post-mortem", "incident_number", incidentNumber, "error", err)
 		return
 	}
-	if existing != nil {
+	if existing {
 		return
 	}
 

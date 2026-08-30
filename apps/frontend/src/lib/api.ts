@@ -1212,6 +1212,10 @@ export type ActionItemRecord = {
   updated_at: string;
 };
 
+// Action-item payloads accept either a full RFC3339 timestamp or a bare
+// calendar date; the backend normalizes date-only values to end-of-day UTC.
+export type ActionItemDueDateInput = string;
+
 export type NotificationPreferences = {
   rules: NotificationPreferenceRule[];
   default_channel?: string;
@@ -1346,6 +1350,24 @@ async function request<T>(
   init?: RequestInit,
   schema?: z.ZodType<unknown>,
 ): Promise<T> {
+  return (await requestCore<T>(path, init, schema)).data;
+}
+
+// requestWithHeaders is request() for the rare caller that also needs
+// response headers (e.g. X-Post-Mortem-Missing on incident close).
+async function requestWithHeaders<T>(
+  path: string,
+  init?: RequestInit,
+  schema?: z.ZodType<unknown>,
+): Promise<{ data: T; headers: Headers }> {
+  return requestCore<T>(path, init, schema);
+}
+
+async function requestCore<T>(
+  path: string,
+  init?: RequestInit,
+  schema?: z.ZodType<unknown>,
+): Promise<{ data: T; headers: Headers }> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
@@ -1411,11 +1433,11 @@ async function request<T>(
   }
 
   if (res.status === 204) {
-    return undefined as T;
+    return { data: undefined as T, headers: res.headers };
   }
   const text = await res.text();
   if (!text) {
-    return undefined as T;
+    return { data: undefined as T, headers: res.headers };
   }
   const parsed: unknown = JSON.parse(text);
   // Unwrap the stable {data: ...} envelope for single resources and lists.
@@ -1436,7 +1458,7 @@ async function request<T>(
   if (schema) {
     value = validate(schema, value);
   }
-  return value as T;
+  return { data: value as T, headers: res.headers };
 }
 
 type LoginResponse = UserInfo & { csrf_token?: string };
@@ -2398,6 +2420,20 @@ export const api = {
       method: "POST",
     });
   },
+  // Variant of closeIncident that also reports the X-Post-Mortem-Missing
+  // warning header so the UI can nudge operators toward writing a
+  // post-mortem after closing without one.
+  async closeIncidentWithPMWarning(incidentNumber: string | number) {
+    const { data, headers } = await requestWithHeaders<IncidentResolveResponse>(
+      `/api/v1/incidents/${e(incidentNumber)}/close`,
+      { method: "POST" },
+    );
+    return {
+      incident: data.incident,
+      cascade: data.cascade,
+      postMortemMissing: headers.get("X-Post-Mortem-Missing") === "true",
+    };
+  },
   reopenIncident(incidentNumber: string | number) {
     return request<IncidentRecord>(`/api/v1/incidents/${e(incidentNumber)}/reopen`, {
       method: "POST",
@@ -2960,6 +2996,22 @@ export const api = {
   submitPostMortemForReview(incidentNumber: string | number) {
     return request<PostMortemRecord>(
       `/api/v1/incidents/${e(incidentNumber)}/post-mortem/submit-review`,
+      {
+        method: "POST",
+      },
+    );
+  },
+  revertPostMortemToDraft(incidentNumber: string | number) {
+    return request<PostMortemRecord>(
+      `/api/v1/incidents/${e(incidentNumber)}/post-mortem/revert-to-draft`,
+      {
+        method: "POST",
+      },
+    );
+  },
+  revertPostMortemToReview(incidentNumber: string | number) {
+    return request<PostMortemRecord>(
+      `/api/v1/incidents/${e(incidentNumber)}/post-mortem/revert-to-review`,
       {
         method: "POST",
       },

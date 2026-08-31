@@ -46,9 +46,19 @@ type IncidentInvestigationStore interface {
 	ListIncidentInvestigationsByIncident(ctx context.Context, incidentNumber int64) ([]IncidentInvestigationRecord, error)
 	AddIncidentInvestigationUpdate(ctx context.Context, id string, update InvestigationUpdate) error
 	UpdateIncidentInvestigationStatus(ctx context.Context, id string, status string) error
-	ClaimPendingIncidentInvestigation(ctx context.Context, id string, agentID string, agentName string, agentType string) (*IncidentInvestigationRecord, error)
+	ClaimPendingIncidentInvestigation(ctx context.Context, id string, agentID string, agentName string, agentType string, lease time.Duration) (*IncidentInvestigationRecord, error)
 	ListPendingIncidentInvestigations(ctx context.Context, limit int64) ([]IncidentInvestigationRecord, error)
 	SetIncidentInvestigationAssignee(ctx context.Context, id string, assigneeType string, assigneeID *uuid.UUID) error
+	// ExpireIncidentInvestigationLeases requeues assigned/investigating rows
+	// whose dispatch lease has lapsed and returns their public ids.
+	ExpireIncidentInvestigationLeases(ctx context.Context) ([]string, error)
+	// RenewIncidentInvestigationLeases extends the lease of every
+	// investigating row owned by the agent (heartbeat keep-alive).
+	RenewIncidentInvestigationLeases(ctx context.Context, agentID string, lease time.Duration) error
+	// ExpireIncidentInvestigationLeasesByAgent shortens the leases of an
+	// agent's active rows after a disconnect: assigned rows lapse immediately,
+	// investigating rows get one reconnect grace window.
+	ExpireIncidentInvestigationLeasesByAgent(ctx context.Context, agentID string, investigatingGrace time.Duration) error
 }
 
 type pgIncidentInvestigationStore struct {
@@ -242,7 +252,7 @@ func (s *pgIncidentInvestigationStore) UpdateIncidentInvestigationStatus(ctx con
 	return nil
 }
 
-func (s *pgIncidentInvestigationStore) ClaimPendingIncidentInvestigation(ctx context.Context, id string, agentID string, agentName string, agentType string) (*IncidentInvestigationRecord, error) {
+func (s *pgIncidentInvestigationStore) ClaimPendingIncidentInvestigation(ctx context.Context, id string, agentID string, agentName string, agentType string, lease time.Duration) (*IncidentInvestigationRecord, error) {
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
@@ -251,6 +261,9 @@ func (s *pgIncidentInvestigationStore) ClaimPendingIncidentInvestigation(ctx con
 		return handleQueryErr[*IncidentInvestigationRecord](err, "incident investigation")
 	}
 
+	if lease <= 0 {
+		lease = defaultInvestigationLease
+	}
 	now := time.Now().UTC()
 	res, err := s.db.NewUpdate().Model((*models.IncidentInvestigation)(nil)).
 		Set("status = ?", IncidentInvestigationStatusAssigned).
@@ -258,6 +271,7 @@ func (s *pgIncidentInvestigationStore) ClaimPendingIncidentInvestigation(ctx con
 		Set("agent_name = ?", agentName).
 		Set("agent_type = ?", agentType).
 		Set("started_at = ?", now).
+		Set("lease_until = ?", now.Add(lease)).
 		Set("updated_at = ?", now).
 		Where("id = ?", inv.ID).
 		Where("status = ?", IncidentInvestigationStatusPending).
@@ -388,6 +402,85 @@ func createIncidentInvestigationUpdate(ctx context.Context, db bun.IDB, incident
 
 	if _, err := db.NewInsert().Model(m).Exec(ctx); err != nil {
 		return fmt.Errorf("failed to create incident investigation update: %w", err)
+	}
+	return nil
+}
+
+// ExpireIncidentInvestigationLeases requeues assigned/investigating rows whose
+// dispatch lease has lapsed and returns their public ids. The conditional
+// UPDATE is atomic: the status guard is re-evaluated at write time, so rows an
+// agent completes concurrently are never clobbered.
+func (s *pgIncidentInvestigationStore) ExpireIncidentInvestigationLeases(ctx context.Context) ([]string, error) {
+	ctx, cancel := pgctx(ctx)
+	defer cancel()
+
+	now := time.Now().UTC()
+	var ids []string
+	err := s.db.NewUpdate().Model((*models.IncidentInvestigation)(nil)).
+		Set("status = ?", IncidentInvestigationStatusPending).
+		Set("agent_id = ''").
+		Set("agent_name = ''").
+		Set("agent_type = ''").
+		Set("started_at = NULL").
+		Set("lease_until = NULL").
+		Set("updated_at = ?", now).
+		Where("status IN (?)", bun.List([]string{IncidentInvestigationStatusAssigned, IncidentInvestigationStatusInvestigating})).
+		Where("lease_until IS NOT NULL AND lease_until < ?", now).
+		Returning("public_id").
+		Scan(ctx, &ids)
+	if err != nil {
+		return nil, fmt.Errorf("failed to expire incident investigation leases: %w", err)
+	}
+	return ids, nil
+}
+
+// RenewIncidentInvestigationLeases extends the lease of every investigating
+// row owned by the agent. Called from the agent heartbeat; assigned rows are
+// deliberately NOT renewed so a connected-but-unresponsive agent's dispatch is
+// re-prompted by expiry.
+func (s *pgIncidentInvestigationStore) RenewIncidentInvestigationLeases(ctx context.Context, agentID string, lease time.Duration) error {
+	if lease <= 0 {
+		lease = defaultInvestigationLease
+	}
+	ctx, cancel := pgctx(ctx)
+	defer cancel()
+
+	now := time.Now().UTC()
+	_, err := s.db.NewUpdate().Model((*models.IncidentInvestigation)(nil)).
+		Set("lease_until = ?", now.Add(lease)).
+		Set("updated_at = ?", now).
+		Where("agent_id = ?", agentID).
+		Where("status = ?", IncidentInvestigationStatusInvestigating).
+		Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to renew incident investigation leases: %w", err)
+	}
+	return nil
+}
+
+// ExpireIncidentInvestigationLeasesByAgent shortens the leases of an agent's
+// active rows after a disconnect: assigned rows lapse immediately, investigating
+// rows get one reconnect grace window. Paused rows are untouched.
+func (s *pgIncidentInvestigationStore) ExpireIncidentInvestigationLeasesByAgent(ctx context.Context, agentID string, investigatingGrace time.Duration) error {
+	ctx, cancel := pgctx(ctx)
+	defer cancel()
+
+	now := time.Now().UTC()
+	if _, err := s.db.NewUpdate().Model((*models.IncidentInvestigation)(nil)).
+		Set("lease_until = ?", now).
+		Set("updated_at = ?", now).
+		Where("agent_id = ?", agentID).
+		Where("status = ?", IncidentInvestigationStatusAssigned).
+		Exec(ctx); err != nil {
+		return fmt.Errorf("failed to expire assigned incident investigation leases by agent: %w", err)
+	}
+	if _, err := s.db.NewUpdate().Model((*models.IncidentInvestigation)(nil)).
+		Set("lease_until = ?", now.Add(investigatingGrace)).
+		Set("updated_at = ?", now).
+		Where("agent_id = ?", agentID).
+		Where("status = ?", IncidentInvestigationStatusInvestigating).
+		Exec(ctx); err != nil {
+		return fmt.Errorf("failed to expire investigating incident investigation leases by agent: %w", err)
 	}
 	return nil
 }

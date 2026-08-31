@@ -20,6 +20,47 @@ func IsValidTransition(from, to string) bool {
 	return slices.Contains(available, to)
 }
 
+// actionTransitions is the single authority for the lifecycle actions every
+// mutation path (operator API, agent tools, workers, scheduler auto-ack) must
+// enforce. Each entry's from→to pair is validated against validTransitions by
+// TestActionTransitionsMatchLifecycleMap, so the two maps cannot drift.
+var actionTransitions = map[string]struct {
+	from []string
+	to   string
+}{
+	"acknowledge":  {from: []string{"detected"}, to: "active"},
+	"begin-triage": {from: []string{"detected"}, to: "triaging"},
+	"promote":      {from: []string{"triaging"}, to: "active"},
+	"mitigate":     {from: []string{"active"}, to: "mitigated"},
+	"resolve":      {from: []string{"active", "mitigated"}, to: "resolved"},
+	"close":        {from: []string{"resolved"}, to: "closed"},
+	"reopen":       {from: []string{"mitigated", "resolved", "closed"}, to: "active"},
+	"cancel":       {from: []string{"detected", "triaging", "active"}, to: "cancelled"},
+}
+
+// ActionSources returns the legal source statuses for the named lifecycle
+// action, for use as the from-status list of the store's optimistic
+// concurrency guard. Unknown actions return nil, which the store treats as
+// "no guard" — callers must only pass the fixed action names above.
+func ActionSources(action string) []string {
+	entry, ok := actionTransitions[action]
+	if !ok {
+		return nil
+	}
+	out := make([]string, len(entry.from))
+	copy(out, entry.from)
+	return out
+}
+
+// ActionTarget returns the target status of the named lifecycle action.
+func ActionTarget(action string) string {
+	entry, ok := actionTransitions[action]
+	if !ok {
+		return ""
+	}
+	return entry.to
+}
+
 func AvailableTransitions(status string) []string {
 	available, ok := validTransitions[status]
 	if !ok {

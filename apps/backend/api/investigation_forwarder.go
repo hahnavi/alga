@@ -115,31 +115,3 @@ func (f *DefaultInvestigationForwarder) AgentOnline(agentIDHex string) bool {
 	}
 	return false
 }
-
-func (f *DefaultInvestigationForwarder) BackfillThreadToAgent(ctx context.Context, agentIDHex, ownerType, ownerID string, threadStore store.InvestigationThreadStore) {
-	if f.AgentSSE == nil || threadStore == nil {
-		return
-	}
-	thread, _, err := threadStore.GetThreadByOwner(ctx, ownerType, ownerID, 200, 0)
-	if err != nil || thread == nil {
-		return
-	}
-	chatID := platform.BuildOwnerChatID(ownerType, ownerID)
-	for _, msg := range thread.Messages {
-		event := sse.Event{
-			Type: "message",
-			Data: map[string]any{
-				"type":        "message",
-				"message_id":  msg.ID.String(),
-				"chat_id":     chatID,
-				"text":        msg.Message,
-				"sender_id":   msg.UserID,
-				"sender_name": msg.Username,
-				"trigger":     "observe",
-			},
-		}
-		if err := f.AgentSSE.PublishToAgent(agentIDHex, event); err != nil {
-			logger.Warn("failed to backfill thread message to agent", "agent_id", agentIDHex, "message_id", msg.ID, "error", err)
-		}
-	}
-}

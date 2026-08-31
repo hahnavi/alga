@@ -2,6 +2,7 @@ package webhook
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"testing"
 
@@ -11,6 +12,7 @@ import (
 type ackCancelStateFake struct {
 	hSetFields map[string]string
 	zRemCalls  []string
+	pending    map[string]float64
 }
 
 func (f *ackCancelStateFake) HSet(_ context.Context, key, field, value string) error {
@@ -23,7 +25,16 @@ func (f *ackCancelStateFake) HSet(_ context.Context, key, field, value string) e
 
 func (f *ackCancelStateFake) ZRem(_ context.Context, key, member string) error {
 	f.zRemCalls = append(f.zRemCalls, key+"#"+member)
+	delete(f.pending, member)
 	return nil
+}
+
+func (f *ackCancelStateFake) ZScore(_ context.Context, _, member string) (float64, error) {
+	score, ok := f.pending[member]
+	if !ok {
+		return 0, fmt.Errorf("member %q not in set", member)
+	}
+	return score, nil
 }
 
 type ackCancelTimelineFake struct {
@@ -56,7 +67,7 @@ func (s *ackCancelAlertStore) GetIncidentsByAlertNumber(context.Context, int64) 
 // contract documented in docs/on-call/escalation-policies.md ("via the UI,
 // Slack, or the API").
 func TestSlackAckCancelsPendingEscalations(t *testing.T) {
-	vk := &ackCancelStateFake{}
+	vk := &ackCancelStateFake{pending: map[string]float64{"101": 1, "102": 1, "103": 1}}
 	timeline := &ackCancelTimelineFake{}
 	h := &SlackWebhookHandler{
 		alertStore: &ackCancelAlertStore{

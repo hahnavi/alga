@@ -128,13 +128,21 @@ type AlertInvestigationStore interface {
 	UpdateAlertInvestigationStatus(ctx context.Context, id string, status string) error
 	GetAlertInvestigationByAlertNumber(ctx context.Context, alertNumber int64) (*AlertInvestigationRecord, error)
 	ListPendingAlertInvestigations(ctx context.Context, limit int64) ([]AlertInvestigationRecord, error)
-	ClaimPendingAlertInvestigation(ctx context.Context, id string, agentID string, agentName string, agentType string) (*AlertInvestigationRecord, error)
+	ClaimPendingAlertInvestigation(ctx context.Context, id string, agentID string, agentName string, agentType string, lease time.Duration) (*AlertInvestigationRecord, error)
 	TransitionAlertInvestigationStatus(ctx context.Context, id string, fromStatuses []string, toStatus string) error
 	PatchAlertInvestigationOutcome(ctx context.Context, id string, rootCause *string, resolution *string) error
 	UpdateAlertInvestigationAgent(ctx context.Context, id string, agentID string, agentName string, agentType string) error
 	SetAlertInvestigationAssignee(ctx context.Context, id string, assigneeType string, assigneeID *uuid.UUID) error
-	ResetInvestigatingByAgent(ctx context.Context, agentID string) error
-	ResetAssignedByAgent(ctx context.Context, agentID string) error
+	// ExpireAlertInvestigationLeases requeues assigned/investigating rows whose
+	// dispatch lease has lapsed and returns their public ids.
+	ExpireAlertInvestigationLeases(ctx context.Context) ([]string, error)
+	// RenewAlertInvestigationLeases extends the lease of every investigating
+	// row owned by the agent (heartbeat keep-alive).
+	RenewAlertInvestigationLeases(ctx context.Context, agentID string, lease time.Duration) error
+	// ExpireAlertInvestigationLeasesByAgent shortens the leases of an agent's
+	// active rows after a disconnect: assigned rows lapse immediately,
+	// investigating rows get one reconnect grace window.
+	ExpireAlertInvestigationLeasesByAgent(ctx context.Context, agentID string, investigatingGrace time.Duration) error
 	CountActiveByAgent(ctx context.Context, agentID string) (int, error)
 	CountActiveByAgents(ctx context.Context, agentIDs []string) (map[string]int, error)
 	DeleteAlertInvestigation(ctx context.Context, id string) error
@@ -148,8 +156,6 @@ type AlertInvestigationStore interface {
 	FindSimilarAlertInvestigations(ctx context.Context, q SimilarAlertInvestigationsQuery) ([]AlertInvestigationRecord, error)
 	ListStalledAssignedAlertInvestigations(ctx context.Context, threshold time.Duration) ([]AlertInvestigationRecord, error)
 	ListStalledInvestigatingAlertInvestigations(ctx context.Context, threshold time.Duration) ([]AlertInvestigationRecord, error)
-	ResetStalledAssignedAlertInvestigations(timeout time.Duration) ([]string, error)
-	ResetStalledInvestigatingAlertInvestigations(timeout time.Duration) ([]string, error)
 }
 
 type SimilarAlertInvestigationsQuery struct {

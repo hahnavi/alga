@@ -105,8 +105,13 @@ func TestActionItemSweepSignals(t *testing.T) {
 		}
 	}
 done:
-	if !sawGlobal || !sawUser {
+	// The sweep broadcasts once; the assignee is NOT also sent a targeted
+	// duplicate of the same event (they receive the in-app notification below).
+	if !sawGlobal {
 		t.Fatalf("SSE signals missing: global=%v user=%v", sawGlobal, sawUser)
+	}
+	if sawUser {
+		t.Fatalf("assignee received a duplicate targeted SSE event")
 	}
 
 	// In-app notification for the assignee.
@@ -285,10 +290,7 @@ func TestActionItemSweepSignalsOncePerDedupWindow(t *testing.T) {
 	if len(notifications.created) != 1 {
 		t.Fatalf("second tick: notifications = %d, want still 1 (dedup)", len(notifications.created))
 	}
-	if len(userCh) == 0 {
-		t.Fatal("first tick: expected a user SSE event")
-	}
-	// Drain SSE events from the first tick.
+	// Drain SSE events from the first tick (broadcast only — no targeted copy).
 	for len(userCh) > 0 {
 		<-userCh
 	}

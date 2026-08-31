@@ -26,6 +26,7 @@ type IncidentInvestigation struct {
 	Evidence                   []EvidenceItem         `bun:"evidence,type:jsonb"`
 	CompletedAt                *time.Time             `bun:"completed_at"`
 	StartedAt                  *time.Time             `bun:"started_at"`
+	LeaseUntil                 *time.Time             `bun:"lease_until"`
 	InvestigatingDurationMs    int64                  `bun:"investigating_duration_ms,default:0"`
 	ParentInvestigationID      *uuid.UUID             `bun:"parent_investigation_id"`
 	AssigneeType               string                 `bun:"assignee_type,notnull,default:'agent'"`

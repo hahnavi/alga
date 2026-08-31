@@ -17,6 +17,7 @@ import (
 
 	"alga/escalation"
 	"alga/ics"
+	"alga/incident"
 	"alga/logger"
 	"alga/metrics"
 	"alga/rabbitmq"
@@ -45,7 +46,7 @@ func (s *Server) handleAcknowledgeIncident(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if err := s.incidentStore.TransitionIncidentStatus(r.Context(), mustParseIncidentNumber(incidentID), []string{"detected"}, "active"); err != nil {
+	if err := s.incidentStore.TransitionIncidentStatus(r.Context(), mustParseIncidentNumber(incidentID), incident.ActionSources("acknowledge"), incident.ActionTarget("acknowledge")); err != nil {
 		if errors.Is(err, store.ErrIncidentStatusConflict) {
 			writeConflict(w, "incident status changed concurrently")
 			return
@@ -81,7 +82,7 @@ func (s *Server) handleMitigateIncident(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	if err := s.incidentStore.TransitionIncidentStatus(r.Context(), mustParseIncidentNumber(incidentID), []string{"detected", "active"}, "mitigated"); err != nil {
+	if err := s.incidentStore.TransitionIncidentStatus(r.Context(), mustParseIncidentNumber(incidentID), incident.ActionSources("mitigate"), incident.ActionTarget("mitigate")); err != nil {
 		if errors.Is(err, store.ErrIncidentStatusConflict) {
 			writeConflict(w, "incident status changed concurrently")
 			return
@@ -168,7 +169,7 @@ func (s *Server) handleResolveIncident(w http.ResponseWriter, r *http.Request, i
 		return
 	}
 
-	if err := s.incidentStore.TransitionIncidentStatus(r.Context(), mustParseIncidentNumber(incidentID), []string{"detected", "active", "mitigated"}, "resolved"); err != nil {
+	if err := s.incidentStore.TransitionIncidentStatus(r.Context(), mustParseIncidentNumber(incidentID), incident.ActionSources("resolve"), incident.ActionTarget("resolve")); err != nil {
 		if errors.Is(err, store.ErrIncidentStatusConflict) {
 			writeConflict(w, "incident status changed concurrently")
 			return
@@ -215,7 +216,7 @@ func (s *Server) handleCloseIncident(w http.ResponseWriter, r *http.Request, inc
 		return
 	}
 
-	if err := s.incidentStore.TransitionIncidentStatus(r.Context(), mustParseIncidentNumber(incidentID), []string{"resolved"}, "closed"); err != nil {
+	if err := s.incidentStore.TransitionIncidentStatus(r.Context(), mustParseIncidentNumber(incidentID), incident.ActionSources("close"), incident.ActionTarget("close")); err != nil {
 		if errors.Is(err, store.ErrIncidentStatusConflict) {
 			writeConflict(w, "incident status changed concurrently")
 			return
@@ -298,7 +299,7 @@ func (s *Server) handleReopenIncident(w http.ResponseWriter, r *http.Request, in
 		return
 	}
 
-	if err := s.incidentStore.TransitionIncidentStatus(r.Context(), mustParseIncidentNumber(incidentID), []string{"mitigated", "resolved", "closed"}, "active"); err != nil {
+	if err := s.incidentStore.TransitionIncidentStatus(r.Context(), mustParseIncidentNumber(incidentID), incident.ActionSources("reopen"), incident.ActionTarget("reopen")); err != nil {
 		if errors.Is(err, store.ErrIncidentStatusConflict) {
 			writeConflict(w, "incident status changed concurrently")
 			return
@@ -357,7 +358,7 @@ func (s *Server) handleCancelIncident(w http.ResponseWriter, r *http.Request, in
 		return
 	}
 
-	if err := s.incidentStore.TransitionIncidentStatus(r.Context(), mustParseIncidentNumber(incidentID), []string{"detected", "active"}, "cancelled"); err != nil {
+	if err := s.incidentStore.TransitionIncidentStatus(r.Context(), mustParseIncidentNumber(incidentID), incident.ActionSources("cancel"), incident.ActionTarget("cancel")); err != nil {
 		if errors.Is(err, store.ErrIncidentStatusConflict) {
 			writeConflict(w, "incident status changed concurrently")
 			return

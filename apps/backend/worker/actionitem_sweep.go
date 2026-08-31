@@ -117,16 +117,12 @@ func (w *ActionItemSweepWorker) signalOverdue(ctx context.Context, item store.Ac
 	}
 
 	if w.ssePublisher != nil {
+		// Broadcast once. The assignee used to also receive a targeted copy
+		// of the same event — a duplicate, since Publish reaches everyone.
 		w.ssePublisher.Publish(sse.Event{
 			Type: "action_item_overdue",
 			Data: data,
 		})
-		if item.AssigneeID != nil {
-			w.ssePublisher.PublishToUser(item.AssigneeID.String(), sse.Event{
-				Type: "action_item_overdue",
-				Data: data,
-			})
-		}
 		signaled = true
 	}
 

@@ -229,7 +229,7 @@ func (e *AgentToolExecutor) performMitigateIncident(ctx context.Context, agentRe
 	if e.incidentStore == nil {
 		return errors.New("incident store not configured")
 	}
-	if err := e.incidentStore.TransitionIncidentStatus(ctx, incidentNumber, []string{"detected", "triaging", "active"}, "mitigated"); err != nil {
+	if err := e.incidentStore.TransitionIncidentStatus(ctx, incidentNumber, incident.ActionSources("mitigate"), incident.ActionTarget("mitigate")); err != nil {
 		return fmt.Errorf("transition to mitigated: %w", err)
 	}
 	if reason == "" {
@@ -278,7 +278,7 @@ func (e *AgentToolExecutor) performResolveIncident(ctx context.Context, agentRec
 	}
 	// Match the operator state machine: triaging can only be left via promote
 	// (spec 05 E3), so agents must not resolve a triaging incident directly.
-	if err := e.incidentStore.TransitionIncidentStatus(ctx, incidentNumber, []string{"detected", "active", "mitigated"}, "resolved"); err != nil {
+	if err := e.incidentStore.TransitionIncidentStatus(ctx, incidentNumber, incident.ActionSources("resolve"), incident.ActionTarget("resolve")); err != nil {
 		return fmt.Errorf("transition to resolved: %w", err)
 	}
 	metrics.IncidentsResolvedTotal.Add(1)
@@ -498,7 +498,7 @@ func (e *AgentToolExecutor) performBeginTriage(ctx context.Context, agentRec *st
 	if e.incidentStore == nil {
 		return errors.New("incident store not configured")
 	}
-	if err := e.incidentStore.TransitionIncidentStatus(ctx, incidentNumber, []string{"detected"}, "triaging"); err != nil {
+	if err := e.incidentStore.TransitionIncidentStatus(ctx, incidentNumber, incident.ActionSources("begin-triage"), incident.ActionTarget("begin-triage")); err != nil {
 		return fmt.Errorf("transition to triaging: %w", err)
 	}
 	_ = e.incidentStore.AddTimelineEntry(ctx, &store.IncidentTimelineEntryRecord{
@@ -528,7 +528,7 @@ func (e *AgentToolExecutor) performPromoteIncident(ctx context.Context, agentRec
 	if e.incidentStore == nil {
 		return errors.New("incident store not configured")
 	}
-	if err := e.incidentStore.TransitionIncidentStatus(ctx, incidentNumber, []string{"triaging"}, "active"); err != nil {
+	if err := e.incidentStore.TransitionIncidentStatus(ctx, incidentNumber, incident.ActionSources("promote"), incident.ActionTarget("promote")); err != nil {
 		return fmt.Errorf("promote incident: %w", err)
 	}
 	_ = e.incidentStore.AddTimelineEntry(ctx, &store.IncidentTimelineEntryRecord{
@@ -706,6 +706,11 @@ func (e *AgentToolExecutor) performPromoteToIncident(ctx context.Context, agentR
 	if e.ssePublisher != nil {
 		e.ssePublisher.Publish(sse.Event{Type: "incident_created", Data: created})
 	}
+
+	// Mirror the API and worker creation paths so the gauges count
+	// agent-promoted incidents too (resolve decrements for every path).
+	metrics.IncidentsCreatedTotal.Add(1)
+	metrics.IncidentsActive.Add(1)
 
 	return promotedIncidentOutcome{
 		IncidentNumber:          created.IncidentNumber,

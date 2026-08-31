@@ -324,7 +324,7 @@ func (s *pgAlertInvestigationStore) UpdateAlertInvestigationAgent(ctx context.Co
 	return nil
 }
 
-func (s *pgAlertInvestigationStore) ClaimPendingAlertInvestigation(ctx context.Context, id string, agentID string, agentName string, agentType string) (*AlertInvestigationRecord, error) {
+func (s *pgAlertInvestigationStore) ClaimPendingAlertInvestigation(ctx context.Context, id string, agentID string, agentName string, agentType string, lease time.Duration) (*AlertInvestigationRecord, error) {
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
@@ -333,6 +333,9 @@ func (s *pgAlertInvestigationStore) ClaimPendingAlertInvestigation(ctx context.C
 		return nil, fmt.Errorf("invalid alert investigation id: %w", err)
 	}
 
+	if lease <= 0 {
+		lease = 10 * time.Minute
+	}
 	now := time.Now().UTC()
 	res, err := s.db.NewUpdate().Model((*models.AlertInvestigation)(nil)).
 		Set("status = ?", AlertInvestigationStatusAssigned).
@@ -340,6 +343,7 @@ func (s *pgAlertInvestigationStore) ClaimPendingAlertInvestigation(ctx context.C
 		Set("agent_name = ?", agentName).
 		Set("agent_type = ?", agentType).
 		Set("started_at = ?", now).
+		Set("lease_until = ?", now.Add(lease)).
 		Set("updated_at = ?", now).
 		Where("id = ?", invUUID).
 		Where("status = ?", AlertInvestigationStatusPending).

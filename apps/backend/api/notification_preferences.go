@@ -119,7 +119,17 @@ func (s *Server) handleTestNotification(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	s.publishToUser(user.ID.String(), "notification_new", created)
+	// Same event type as the dispatch worker; the payload is the dispatch
+	// shape so the frontend keeps one handler for both producers.
+	s.publishToUser(user.ID.String(), "notification", map[string]any{
+		"id":            created.ID,
+		"type":          created.Type,
+		"title":         created.Title,
+		"message":       created.Message,
+		"resource_type": created.ResourceType,
+		"resource_id":   created.ResourceID,
+		"created_at":    created.CreatedAt,
+	})
 
 	logger.InfoCtx(r.Context(), "test notification sent", "component", "api", "user_id", user.ID.String())
 

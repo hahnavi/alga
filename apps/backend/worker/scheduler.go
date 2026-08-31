@@ -115,8 +115,6 @@ type InvestigationScheduler struct {
 	backoffMu sync.Mutex
 	backoff   map[string]time.Time
 
-	nudged sync.Map
-
 	dispatchMu       sync.Mutex
 	dispatchAttempts map[string]dispatchAttempt
 

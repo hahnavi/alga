@@ -38,43 +38,42 @@ func (s *InvestigationScheduler) OnAgentOnline(agentIDHex string) {
 	s.NotifyPending()
 }
 
-// OnAgentOffline is called by the SSE handlers when an agent fully
-// disconnects. It runs a two-stage reset:
+// OnAgentOffline is called when an agent fully disconnects (the event fires on
+// every replica, including the one that hosted the sessions). It shortens the
+// agent's dispatch leases instead of resetting rows directly:
 //
-//  1. "assigned" investigations (not yet acked by the agent) are reset to
-//     "pending" immediately. The agent never started work on them so it's
-//     always safe to re-queue.
-//  2. "investigating" investigations (the agent had picked them up) are
-//     reset only after the configured disconnect grace, and only if the
-//     agent is still offline at that point. This protects against transient
-//     network blips where the SSE reconnects within seconds.
+//  1. "assigned" investigations (not yet acked by the agent) lapse
+//     immediately, so the lease sweeper requeues them within a tick.
+//  2. "investigating" investigations get one disconnect-grace lease window.
+//     If the agent reconnects within the grace, its heartbeat renews the
+//     lease and the work survives; otherwise the sweeper requeues it.
 //
-// The grace timer is fenced by a Valkey SET NX lock keyed on agentID so
-// only one backend replica runs the deferred reset even if multiple
-// replicas saw the same offline event.
-//
-// If s.valkeyClient is nil (HA-disabled single-replica deploy),
-// acquireDisconnectLock returns true unconditionally and the deferred
-// reset proceeds without fencing.
+// "paused" rows are deliberately untouched: the agent paused them on purpose.
+// The grace timer retained below only tears down the agent's ICS roles after
+// the grace, still fenced by a Valkey SET NX lock so only one replica runs it.
 func (s *InvestigationScheduler) OnAgentOffline(agentIDHex string) {
 	if agentIDHex == "" {
 		return
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	if err := s.alertInvestigationStore.ResetAssignedByAgent(ctx, agentIDHex); err != nil {
-		logger.Error("Failed to reset assigned investigations for agent", "component", "scheduler", "agent_id", agentIDHex, "error", err)
+	grace := s.disconnectGrace
+	if grace <= 0 {
+		grace = defaultDisconnectGrace
+	}
+	if err := s.alertInvestigationStore.ExpireAlertInvestigationLeasesByAgent(ctx, agentIDHex, grace); err != nil {
+		logger.Error("Failed to expire alert investigation leases for agent", "component", "scheduler", "agent_id", agentIDHex, "error", err)
 	} else {
 		s.NotifyPending()
+	}
+	if s.incidentInvestigationStore != nil {
+		if err := s.incidentInvestigationStore.ExpireIncidentInvestigationLeasesByAgent(ctx, agentIDHex, grace); err != nil {
+			logger.Error("Failed to expire incident investigation leases for agent", "component", "scheduler", "agent_id", agentIDHex, "error", err)
+		}
 	}
 
 	if !s.acquireDisconnectLock(ctx, agentIDHex) {
 		return
-	}
-
-	grace := s.disconnectGrace
-	if grace <= 0 {
-		grace = defaultDisconnectGrace
 	}
 
 	// Guard against sync.WaitGroup misuse: Add must not run concurrently with
@@ -99,17 +98,9 @@ func (s *InvestigationScheduler) OnAgentOffline(agentIDHex string) {
 		case <-time.After(grace):
 		}
 		if s.agentReturnedOnline(agentIDHex) {
-			logger.Info("Agent reconnected within grace; skipping investigating-reset", "component", "scheduler", "agent_id", agentIDHex)
+			logger.Info("Agent reconnected within grace; skipping ICS role teardown", "component", "scheduler", "agent_id", agentIDHex)
 			return
 		}
-		resetCtx, resetCancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer resetCancel()
-		if err := s.alertInvestigationStore.ResetInvestigatingByAgent(resetCtx, agentIDHex); err != nil {
-			logger.Error("Failed to reset investigating for agent after grace", "component", "scheduler", "agent_id", agentIDHex, "error", err)
-			return
-		}
-		logger.Info("Reset investigating investigations for absent agent after grace", "component", "scheduler", "agent_id", agentIDHex)
-		s.NotifyPending()
 		if agentUID, parseErr := uuid.Parse(agentIDHex); parseErr == nil {
 			s.endAgentRolesOnDisconnect(context.Background(), agentUID)
 		}

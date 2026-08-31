@@ -1,8 +1,7 @@
 // scheduler_sweep.go contains the long-running background loops and their
-// per-tick helpers: stale-alert sweep, stalled-investigation resets, nudge
-// re-dispatch, data-retention prune, incident sweep, summary sweep, on-call
-// handoff tick, the dispatch-attempt map purge, and the prompt/label helper
-// functions that feed them.
+// helpers: stale-alert sweep, data-retention prune, incident sweep, summary
+// sweep, on-call handoff tick, the dispatch-attempt map purge, and the
+// prompt/label helper functions that feed them.
 package worker
 
 import (
@@ -43,10 +42,6 @@ func (s *InvestigationScheduler) runMapPurge() {
 						logger.Error("scheduler tick panicked", "component", "scheduler", "tick", "map_purge", "panic", r, "stack", string(debug.Stack()))
 					}
 				}()
-				s.nudged.Range(func(key, _ any) bool {
-					s.nudged.Delete(key)
-					return true
-				})
 				now := time.Now()
 				s.purgeDispatchAttempts()
 				s.backoffMu.Lock()
@@ -77,39 +72,6 @@ func (s *InvestigationScheduler) purgeDispatchAttempts() {
 		}
 	}
 	s.dispatchMu.Unlock()
-}
-
-func (s *InvestigationScheduler) resetStalledByStatus(resetFn func(time.Duration) ([]string, error), label string) {
-	timeout := s.investigationTimeout
-	if timeout <= 0 {
-		timeout = 10 * time.Minute
-	}
-	ids, err := resetFn(timeout)
-	if err != nil {
-		logger.Error("Scheduler failed to sweep stalled investigations", "component", "scheduler", "status", label, "error", err)
-		return
-	}
-	if len(ids) > 0 {
-		for _, id := range ids {
-			s.nudged.Delete(id)
-			s.clearBackoff(id)
-		}
-		s.dispatchMu.Lock()
-		for _, id := range ids {
-			delete(s.dispatchAttempts, id)
-		}
-		s.dispatchMu.Unlock()
-		logger.Info("Scheduler reset stalled investigations", "component", "scheduler", "count", len(ids), "status", label, "timeout", timeout)
-		s.NotifyPending()
-	}
-}
-
-func (s *InvestigationScheduler) sweepStalledAssigned() {
-	s.resetStalledByStatus(s.alertInvestigationStore.ResetStalledAssignedAlertInvestigations, "assigned")
-}
-
-func (s *InvestigationScheduler) sweepStalledInvestigating() {
-	s.resetStalledByStatus(s.alertInvestigationStore.ResetStalledInvestigatingAlertInvestigations, "investigating")
 }
 
 // runStaleSweep is the long-running goroutine that periodically sweeps for
@@ -538,6 +500,12 @@ func (s *InvestigationScheduler) incidentSweepTick(ctx context.Context) {
 
 	metrics.SchedulerIncidentSweepTickTotal.Add(1)
 
+	// Auto-complete pending/assigned/investigating investigations whose alerts
+	// all resolved. The lifecycle service already completes these when alert
+	// resolution flows through it; this 5-minute pass is the backstop for
+	// missed callbacks, so it deliberately does NOT run on the 5s tick.
+	s.completeResolvedInvestigations(ctx, nil)
+
 	if s.incidentStore == nil || s.incidentInvestigationStore == nil {
 		return
 	}
@@ -790,63 +758,6 @@ func (s *InvestigationScheduler) setStaleCooldown(ctx context.Context, key, inve
 	}
 }
 
-func (s *InvestigationScheduler) nudgeStalled(ctx context.Context) {
-	if s.resolver == nil {
-		return
-	}
-
-	assignedNudge := s.investigationTimeout / 2
-	if assignedNudge < time.Minute {
-		assignedNudge = time.Minute
-	}
-	investigatingNudge := s.investigationTimeout * 3 / 4
-	if investigatingNudge < time.Minute {
-		investigatingNudge = time.Minute
-	}
-
-	s.nudgeAssigned(ctx, assignedNudge)
-	s.nudgeInvestigating(ctx, investigatingNudge)
-}
-
-func (s *InvestigationScheduler) nudgeByStatus(ctx context.Context, listFn func(ctx context.Context, threshold time.Duration) ([]store.AlertInvestigationRecord, error), label string, threshold time.Duration) {
-	stalled, err := listFn(ctx, threshold)
-	if err != nil {
-		logger.Error("Scheduler failed to list stalled investigations for nudge", "component", "scheduler", "status", label, "error", err)
-		return
-	}
-
-	for _, inv := range stalled {
-		if s.alertStore != nil && len(inv.Alerts) > 0 && !hasCurrentActiveAlert(s.alertStore, inv.Alerts) {
-			continue
-		}
-
-		if _, loaded := s.nudged.LoadOrStore(inv.AlertInvestigationID, struct{}{}); loaded {
-			continue
-		}
-
-		if inv.AgentID == "" || !s.resolver.AgentOnline(inv.AgentID) {
-			continue
-		}
-
-		var elapsed time.Duration
-		if inv.StartedAt != nil {
-			elapsed = time.Since(*inv.StartedAt).Truncate(time.Second)
-		}
-		input := prompt.FromAlertInvestigationRecord(&inv)
-		s.enrichWithOpsTeam(ctx, &input)
-		p := s.buildDispatchPrompt(ctx, input)
-		sc := s.buildDispatchSystemContext(input)
-		if err := s.resolver.ForwardDispatchToAgent(inv.AgentID, inv.AlertInvestigationID, "system", "System", p, sc); err != nil {
-			logger.Warn("Scheduler failed to re-dispatch investigation to agent", "component", "scheduler", "status", label, "alert_investigation_id", inv.AlertInvestigationID, "agent_name", inv.AgentName, "error", err)
-			s.nudged.Delete(inv.AlertInvestigationID)
-			continue
-		}
-
-		metrics.SchedulerNudgeTotal.Add(1)
-		logger.Info("Scheduler re-dispatched investigation to agent", "component", "scheduler", "status", label, "alert_investigation_id", inv.AlertInvestigationID, "agent_name", inv.AgentName, "elapsed", elapsed)
-	}
-}
-
 func (s *InvestigationScheduler) buildDispatchPrompt(ctx context.Context, input prompt.DispatchInput) string {
 	p := prompt.BuildDispatchPromptWithKnowledge(ctx, input, s.knowledge)
 	if s.playbookEnricher != nil && len(input.Alerts) > 0 {
@@ -864,14 +775,6 @@ func (s *InvestigationScheduler) buildDispatchPrompt(ctx context.Context, input 
 
 func (s *InvestigationScheduler) buildDispatchSystemContext(input prompt.DispatchInput) string {
 	return prompt.BuildDispatchSystemContext(input)
-}
-
-func (s *InvestigationScheduler) nudgeAssigned(ctx context.Context, threshold time.Duration) {
-	s.nudgeByStatus(ctx, s.alertInvestigationStore.ListStalledAssignedAlertInvestigations, "assigned", threshold)
-}
-
-func (s *InvestigationScheduler) nudgeInvestigating(ctx context.Context, threshold time.Duration) {
-	s.nudgeByStatus(ctx, s.alertInvestigationStore.ListStalledInvestigatingAlertInvestigations, "investigating", threshold)
 }
 
 // computeSpecificity scores label selectors so more specific selectors win.

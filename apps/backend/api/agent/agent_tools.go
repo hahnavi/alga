@@ -80,6 +80,7 @@ type promotedIncidentOutcome struct {
 
 type AgentToolExecutor struct {
 	alertInvestigationStore    store.AlertInvestigationStore
+	agentTokenStore            store.AgentTokenStore
 	threadStore                store.InvestigationThreadStore
 	mmClient                   *mattermost.Client
 	slackClient                *slack.Client
@@ -143,6 +144,13 @@ func NewAgentToolExecutor(
 		agentDMStore:            agentDMStore,
 		chatSyncSem:             make(chan struct{}, 16),
 	}
+}
+
+// SetAgentTokenStore wires the store used to validate reassignment targets in
+// the assign_investigation tool. Fail-closed: without it the tool refuses to
+// reassign.
+func (e *AgentToolExecutor) SetAgentTokenStore(ts store.AgentTokenStore) {
+	e.agentTokenStore = ts
 }
 
 func (e *AgentToolExecutor) requireCapability(agent agentTokenContext, cap string) error {
@@ -569,7 +577,24 @@ func (e *AgentToolExecutor) ExecuteInvTool(ctx context.Context, agentRec *store.
 		if inv.AgentID != agentRec.ID.String() {
 			return InvToolOutcome{ChatID: chatID, Ok: false, Op: op, Error: "only the assigned agent can reassign"}
 		}
-		if err := e.alertInvestigationStore.UpdateAlertInvestigationAgent(ctx, inv.ID.String(), targetAgentID, "", ""); err != nil {
+		targetUUID, parseErr := uuid.Parse(targetAgentID)
+		if parseErr != nil {
+			return InvToolOutcome{ChatID: chatID, Ok: false, Op: op, Error: "target_agent_id must be a valid agent id"}
+		}
+		if e.agentTokenStore == nil {
+			return InvToolOutcome{ChatID: chatID, Ok: false, Op: op, Error: "agent store not configured"}
+		}
+		target, lookupErr := e.agentTokenStore.GetActiveAgentTokenByID(targetUUID)
+		if lookupErr != nil {
+			return InvToolOutcome{ChatID: chatID, Ok: false, Op: op, Error: "failed to look up target agent"}
+		}
+		if target == nil || !target.Enabled {
+			return InvToolOutcome{ChatID: chatID, Ok: false, Op: op, Error: "target agent is not active"}
+		}
+		if !capability.Has(target.Capabilities, capability.Investigate) {
+			return InvToolOutcome{ChatID: chatID, Ok: false, Op: op, Error: "target agent lacks the investigate capability"}
+		}
+		if err := e.alertInvestigationStore.UpdateAlertInvestigationAgent(ctx, inv.ID.String(), targetAgentID, target.Name, string(target.AgentType)); err != nil {
 			return InvToolOutcome{ChatID: chatID, Ok: false, Op: op, Error: fmt.Sprintf("reassign: %v", err)}
 		}
 		if e.investigationForwarder != nil {

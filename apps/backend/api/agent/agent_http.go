@@ -15,6 +15,7 @@ import (
 	"alga/capability"
 	"alga/config"
 	"alga/ics"
+	"alga/incident"
 	"alga/logger"
 	"alga/sse"
 	"alga/store"
@@ -1045,13 +1046,30 @@ func (s *Service) handleAgentTyping(w http.ResponseWriter, r *http.Request) {
 	platform.WriteStatus(w, "ok")
 }
 
+// handleAgentHeartbeat is the agent keep-alive. Beyond answering "ok" (all
+// SDKs poll it every 30s), it renews the dispatch leases of the agent's
+// in-flight investigations so the scheduler's lease sweeper does not requeue
+// work for a connected, working agent. Assigned rows are deliberately not
+// renewed: a connected agent that never acts on a dispatch gets a fresh
+// prompt when its lease lapses.
 func (s *Service) handleAgentHeartbeat(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
 		return
 	}
-	if _, ok := platform.RequireAgent(w, r); !ok {
+	agentRec, ok := platform.RequireAgent(w, r)
+	if !ok {
 		return
+	}
+	if s.exec != nil && s.exec.alertInvestigationStore != nil {
+		if err := s.exec.alertInvestigationStore.RenewAlertInvestigationLeases(r.Context(), agentRec.ID.String(), s.cfg.InvestigationTimeout); err != nil {
+			logger.WarnCtx(r.Context(), "Agent heartbeat failed to renew alert investigation leases", "agent_id", agentRec.ID.String(), "error", err)
+		}
+	}
+	if s.incidentInvestigationStore != nil {
+		if err := s.incidentInvestigationStore.RenewIncidentInvestigationLeases(r.Context(), agentRec.ID.String(), s.cfg.InvestigationTimeout); err != nil {
+			logger.WarnCtx(r.Context(), "Agent heartbeat failed to renew incident investigation leases", "agent_id", agentRec.ID.String(), "error", err)
+		}
 	}
 	platform.WriteStatus(w, "ok")
 }
@@ -1060,6 +1078,7 @@ var capabilityDescriptions = map[string]string{
 	capability.Investigate: "Investigate alerts and produce root-cause analysis",
 	capability.Communicate: "Send messages and updates to channels",
 	capability.Command:     "Coordinate incident command decisions and escalation",
+	capability.Secrets:     "Fetch shared integration credentials at runtime",
 }
 
 func (s *Service) handleAgentCapabilities(w http.ResponseWriter, r *http.Request) {
@@ -1112,7 +1131,7 @@ func (s *Service) handleTriageResponse(w http.ResponseWriter, r *http.Request, a
 		return
 	}
 	if inc.Status == "detected" {
-		if err := s.incidentStore.TransitionIncidentStatus(r.Context(), incidentNumber, []string{"detected"}, "triaging"); err != nil {
+		if err := s.incidentStore.TransitionIncidentStatus(r.Context(), incidentNumber, incident.ActionSources("begin-triage"), incident.ActionTarget("begin-triage")); err != nil {
 			logger.Warn("Failed to transition incident to triaging", "incident_number", incidentID, "error", err)
 		}
 		_ = s.incidentStore.AddTimelineEntry(r.Context(), &store.IncidentTimelineEntryRecord{

@@ -31,6 +31,7 @@ type AlertInvestigation struct {
 	CompletedByID                   string                     `bun:"completed_by_id"`
 	CompletedByName                 string                     `bun:"completed_by_name"`
 	StartedAt                       *time.Time                 `bun:"started_at"`
+	LeaseUntil                      *time.Time                 `bun:"lease_until"`
 	InvestigatingDurationMs         int64                      `bun:"investigating_duration_ms,default:0"`
 	PrimaryAlertFingerprint         string                     `bun:"primary_alert_fingerprint"`
 	PrimaryAlertNumber              int64                      `bun:"primary_alert_number"`

@@ -1221,6 +1221,33 @@ func (s *pgAlertStore) ResolveAlertsByIncident(ctx context.Context, incidentNumb
 		}
 	}
 
+	// Alerts co-linked to another still-active incident must not be resolved
+	// by this incident's cascade. Fetch the co-linked set in one batched query
+	// instead of probing per alert.
+	linkedIDs := make([]uuid.UUID, 0, len(linked))
+	for i := range linked {
+		linkedIDs = append(linkedIDs, linked[i].ID)
+	}
+	coLinked := make(map[uuid.UUID]struct{})
+	if len(linkedIDs) > 0 {
+		var coLinkedIDs []uuid.UUID
+		err := s.db.NewSelect().
+			ColumnExpr("DISTINCT ia.alert_id").
+			TableExpr("incident_alerts ia").
+			Join("JOIN incidents inc ON inc.id = ia.incident_id").
+			Where("ia.alert_id IN (?)", bun.List(linkedIDs)).
+			Where("inc.incident_number != ?", incidentNumber).
+			Where("inc.deleted_at IS NULL").
+			Where("inc.status NOT IN (?)", bun.List([]string{"resolved", "closed", "cancelled"})).
+			Scan(ctx, &coLinkedIDs)
+		if err != nil {
+			return AlertCascadeResult{}, fmt.Errorf("failed to check co-linked incidents for cascade: %w", err)
+		}
+		for _, id := range coLinkedIDs {
+			coLinked[id] = struct{}{}
+		}
+	}
+
 	now := time.Now().UTC()
 	result := AlertCascadeResult{
 		Resolved: make([]AlertRecord, 0),
@@ -1231,6 +1258,10 @@ func (s *pgAlertStore) ResolveAlertsByIncident(ctx context.Context, incidentNumb
 		a := &linked[i]
 		ref := AlertRef{AlertNumber: a.AlertNumber, Fingerprint: a.Fingerprint}
 		if a.Status == "resolved" {
+			result.Skipped = append(result.Skipped, ref)
+			continue
+		}
+		if _, shared := coLinked[a.ID]; shared {
 			result.Skipped = append(result.Skipped, ref)
 			continue
 		}

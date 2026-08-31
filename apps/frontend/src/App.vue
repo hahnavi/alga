@@ -38,12 +38,9 @@ useSessionKeepAlive();
 const { handleGlobalSearchKeydown, closeGlobalSearch } = useGlobalSearch();
 const notificationSSE = useSSE("/api/v1/events", {
   // `notification` — dispatch-worker events (escalations, handoffs, action
-  // items). `notification_new` — API-side test sends with the full record.
+  // items) and the API test-send, unified on one event name.
   notification: (data: unknown) => {
     notificationStore.handleSSEEvent("notification", data);
-  },
-  notification_new: (data: unknown) => {
-    notificationStore.handleSSEEvent("notification_new", data);
   },
   notification_unread_count: (data: unknown) => {
     notificationStore.handleSSEEvent("notification_unread_count", data);

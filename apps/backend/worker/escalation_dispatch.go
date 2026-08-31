@@ -128,17 +128,10 @@ func (d *escalationDispatcher) dispatchEscalation(
 			}
 		}
 
-		if d.ssePublisher != nil {
-			d.ssePublisher.PublishToUser(uid.String(), sse.Event{
-				Type: "escalation_notification",
-				Data: map[string]any{
-					"incident_number": incidentNumber,
-					"policy_id":       policyID.String(),
-					"level":           level,
-					"channels":        channels,
-				},
-			})
-		}
+		// No direct escalation_notification SSE here: the notification dispatch
+		// above already produces a per-user `notification` event (the only one
+		// the frontend consumes), so a second event for the same escalation
+		// was pure duplication.
 	}
 
 	if d.incidentStore != nil && incidentNumber > 0 {

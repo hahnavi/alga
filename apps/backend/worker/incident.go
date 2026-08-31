@@ -41,6 +41,14 @@ type IncidentWorker struct {
 	userStore                  store.UserStore
 	escalationPublisher        *rabbitmq.Publisher
 	notifier                   InvestigationNotifier
+	auditStore                 store.AuditStore
+}
+
+// SetAuditStore wires fire-and-forget auditing for the worker creation path.
+// Nil (unwired) skips auditing; correlation-created incidents must be audited
+// like every other creation path when the store is available.
+func (w *IncidentWorker) SetAuditStore(a store.AuditStore) {
+	w.auditStore = a
 }
 
 func NewIncidentWorker(
@@ -208,7 +216,7 @@ func (w *IncidentWorker) Handle(ctx context.Context, d amqp.Delivery) {
 		logger.Warn("Failed to add timeline entry for incident", "component", "incident-worker", "incident_number", created.IncidentNumber, "error", err)
 	}
 
-	if err := w.incidentStore.TransitionIncidentStatus(ctx, created.IncidentNumber, []string{"detected"}, "active"); err != nil {
+	if err := w.incidentStore.TransitionIncidentStatus(ctx, created.IncidentNumber, incident.ActionSources("acknowledge"), incident.ActionTarget("acknowledge")); err != nil {
 		logger.Warn("Failed to transition incident from detected to active", "component", "incident-worker", "incident_number", created.IncidentNumber, "error", err)
 	} else {
 		if err := w.incidentStore.AddTimelineEntry(ctx, &store.IncidentTimelineEntryRecord{
@@ -232,6 +240,15 @@ func (w *IncidentWorker) Handle(ctx context.Context, d amqp.Delivery) {
 		})
 	}
 
+	if w.auditStore != nil {
+		w.auditStore.Log(store.AuditIncidentCreated, nil, "System", "", "", true, map[string]any{
+			"incident_number":    created.IncidentNumber,
+			"correlation_key":    msg.CorrelationKey,
+			"incident_type":      created.IncidentType,
+			"source":             "correlation",
+			"linked_alert_count": len(msg.Alerts),
+		})
+	}
 	metrics.IncidentsCreatedTotal.Add(1)
 	// Mirror the API create path so the active gauge counts correlation-created
 	// incidents too (resolve/cancel decrement it for every creation path).

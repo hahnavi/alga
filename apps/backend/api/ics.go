@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"alga/ics"
+	"alga/incident"
 	"alga/rbac"
 	"alga/store"
 
@@ -571,7 +572,7 @@ func (s *Server) handleBeginTriage(w http.ResponseWriter, r *http.Request) {
 		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "incident must be in 'detected' status to begin triage")
 		return
 	}
-	if err := s.incidentStore.TransitionIncidentStatus(r.Context(), mustParseIncidentNumber(incidentID), []string{"detected"}, "triaging"); err != nil {
+	if err := s.incidentStore.TransitionIncidentStatus(r.Context(), mustParseIncidentNumber(incidentID), incident.ActionSources("begin-triage"), incident.ActionTarget("begin-triage")); err != nil {
 		if errors.Is(err, store.ErrIncidentStatusConflict) {
 			writeConflict(w, "incident status changed concurrently")
 			return
@@ -617,7 +618,7 @@ func (s *Server) handlePromote(w http.ResponseWriter, r *http.Request) {
 		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "incident must be in 'triaging' status to promote")
 		return
 	}
-	if err := s.incidentStore.TransitionIncidentStatus(r.Context(), mustParseIncidentNumber(incidentID), []string{"triaging"}, "active"); err != nil {
+	if err := s.incidentStore.TransitionIncidentStatus(r.Context(), mustParseIncidentNumber(incidentID), incident.ActionSources("promote"), incident.ActionTarget("promote")); err != nil {
 		if errors.Is(err, store.ErrIncidentStatusConflict) {
 			writeConflict(w, "incident status changed concurrently")
 			return

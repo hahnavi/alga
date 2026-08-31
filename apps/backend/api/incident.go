@@ -238,6 +238,11 @@ func (s *Server) handleCreateIncident(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(linkedAlerts) > 0 {
 		record.Status = "active"
+		// The insert bypasses the acknowledge transition, so stamp the SLA
+		// response clock here to match every other path into `active`
+		// (applyStatusTimestampsBun stamps it on the transition).
+		now := time.Now().UTC()
+		record.SLAAcknowledgedAt = &now
 		if strings.TrimSpace(record.Description) == "" {
 			record.Description = incidentDescriptionFromAlert(linkedAlerts[0])
 		}

@@ -4,8 +4,6 @@ import { api, type NotificationRecord } from "@/lib/api";
 import { MAX_NOTIFICATIONS } from "@/lib/threadLimits";
 import {
   notificationDispatchEventSchema,
-  notificationNewEventSchema,
-  notificationRecordSchema,
   notificationUnreadCountEventSchema,
   validate,
 } from "@/lib/validation";
@@ -92,34 +90,23 @@ export const useNotificationStore = defineStore("notifications", () => {
   }
 
   function handleSSEEvent(eventType: string, data: unknown) {
-    if (eventType === "notification_new" || eventType === "notification") {
+    if (eventType === "notification") {
       let n: NotificationRecord | null = null;
       try {
-        if (eventType === "notification") {
-          // Dispatch-worker payload omits user-scoped fields; the event only
-          // ever arrives on the owning user's stream and is born unread.
-          const d = validate(notificationDispatchEventSchema, data);
-          n = {
-            id: d.id,
-            user_id: "",
-            type: d.type,
-            title: d.title,
-            message: d.message,
-            read: false,
-            resource_type: d.resource_type,
-            resource_id: d.resource_id,
-            created_at: d.created_at,
-          };
-        } else {
-          const envelope = validate(notificationNewEventSchema, data);
-          // The backend has historically emitted the record at the top level;
-          // also accept the wrapped `{notification: ...}` shape.
-          if ((envelope as { notification?: NotificationRecord }).notification) {
-            n = (envelope as { notification: NotificationRecord }).notification;
-          } else {
-            n = validate(notificationRecordSchema, data);
-          }
-        }
+        // The payload omits user-scoped fields; the event only ever arrives
+        // on the owning user's stream and is born unread.
+        const d = validate(notificationDispatchEventSchema, data);
+        n = {
+          id: d.id,
+          user_id: "",
+          type: d.type,
+          title: d.title,
+          message: d.message,
+          read: false,
+          resource_type: d.resource_type,
+          resource_id: d.resource_id,
+          created_at: d.created_at,
+        };
       } catch {
         return; // malformed event — drop instead of corrupting UI state
       }

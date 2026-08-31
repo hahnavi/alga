@@ -211,17 +211,26 @@ func (h *AgentSSEHandler) checkOrigin(r *http.Request) bool {
 	return origin == ""
 }
 
+// PublishToAgent delivers an event to every live session of the agent: the
+// local broker plus the Valkey fan-out (peer replicas loop it back to their
+// local sessions). It returns an error only when the event could not reach
+// any session: no local subscriber, no Valkey, and presence confirms the
+// agent has no session anywhere. Dispatchers rely on this to requeue work
+// instead of crediting a phantom delivery to a disconnected agent.
 func (h *AgentSSEHandler) PublishToAgent(agentTokenID string, event sse.Event) error {
-	var localErr error
-	if err := h.broker.PublishToAgent(agentTokenID, event); err != nil {
-		localErr = err
-	}
+	localErr := h.broker.PublishToAgent(agentTokenID, event)
 	if h.vkClient != nil {
 		if err := sse.PublishToValkeyAgent(context.Background(), h.vkClient.Client(), agentTokenID, event); err != nil {
 			logger.Error("Failed to publish SSE event to Valkey for agent", "agent_id", agentTokenID, "error", err)
 		}
 	}
-	if localErr != nil && h.vkClient == nil {
+	if localErr == nil {
+		return nil
+	}
+	if h.presence != nil && h.presence.Available() && !h.presence.IsAgentOnline(context.Background(), agentTokenID) {
+		return fmt.Errorf("agent %s has no connected SSE session", agentTokenID)
+	}
+	if h.vkClient == nil {
 		return localErr
 	}
 	return nil

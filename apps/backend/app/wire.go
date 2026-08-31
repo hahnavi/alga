@@ -61,17 +61,23 @@ type alertEventPublisher struct {
 	vkClient *valkey.Client
 }
 
+// PublishAlertEvent delivers alert SSE events exactly once: through the Valkey
+// fan-out when it is configured (every replica's broker — including this one —
+// receives the loopback and re-publishes locally), and directly to the local
+// broker only when Valkey is absent. Publishing on both paths delivered every
+// alert event twice to local clients.
 func (p *alertEventPublisher) PublishAlertEvent(action string, record store.AlertRecord) {
 	event := sse.Event{
 		Type: action,
 		Data: record,
 	}
-	p.broker.Publish(event)
 	if p.vkClient != nil {
 		if err := sse.PublishToValkey(context.Background(), p.vkClient.Client(), event); err != nil {
 			logger.Error("Failed to publish alert event to Valkey", "error", err)
 		}
+		return
 	}
+	p.broker.Publish(event)
 }
 
 func (a *App) wire() error {
@@ -283,6 +289,7 @@ func (a *App) wire() error {
 
 	agentChatRouter := whReceiver.ChatRouter()
 	agentExecutor := agent.NewAgentToolExecutor(a.stores.AlertInvestigation, mmClient, slackClient, a.stores.AgentDM, agentChatRouter)
+	agentExecutor.SetAgentTokenStore(a.stores.AgentToken)
 
 	a.sseBroker = sse.NewBroker()
 	if a.valkeyClient != nil {
@@ -552,9 +559,9 @@ func (a *App) wire() error {
 					case valkey.AgentEventOnline:
 						a.scheduler.OnAgentOnline(ev.AgentID)
 					case valkey.AgentEventOffline:
-						if ev.Replica == replicaID {
-							return
-						}
+						// Process our own offline events too: the replica that
+						// hosted the sessions is often the only one that saw them
+						// end, and lease expiry is idempotent across replicas.
 						a.scheduler.OnAgentOffline(ev.AgentID)
 					}
 				}); err != nil {
@@ -582,6 +589,7 @@ func (a *App) wire() error {
 
 	if a.workerSet != nil && publisher != nil {
 		incidentWorker := worker.NewIncidentWorker(a.stores.Incident, a.stores.IncidentInvestigation, a.stores.Alert, publisher, &sse.DualPublisher{Broker: a.sseBroker, VKClient: a.valkeyClient}, a.valkeyClient, a.stores.ICSRole, publisher, a.stores.Service, onCallResolver, a.stores.OnCall, a.stores.Escalation, a.stores.User, publisher)
+		incidentWorker.SetAuditStore(a.stores.Audit)
 		if a.scheduler != nil {
 			incidentWorker.SetNotifier(a.scheduler)
 		}

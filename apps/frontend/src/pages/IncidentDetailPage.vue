@@ -59,13 +59,13 @@ import IncidentDocSectionCard from "@/components/incident/IncidentDocSectionCard
 import IncidentThreadSummaryCard from "@/components/incident/IncidentThreadSummaryCard.vue";
 import IncidentTimeline from "@/components/incident/IncidentTimeline.vue";
 import IncidentCoordinationStream from "@/components/incident/IncidentCoordinationStream.vue";
+import IncidentLinkAlertDialog from "@/components/incident/IncidentLinkAlertDialog.vue";
 import StatusUpdateFeed from "@/components/incident/StatusUpdateFeed.vue";
 import ICSRoleBoard from "@/components/incident/ICSRoleBoard.vue";
 import OwnerThreadPanel from "@/components/thread/OwnerThreadPanel.vue";
 import Card from "@/components/ui/Card.vue";
 import Button from "@/components/ui/Button.vue";
 import Input from "@/components/ui/Input.vue";
-import NumberInput from "@/components/ui/NumberInput.vue";
 import Textarea from "@/components/ui/Textarea.vue";
 import Select from "@/components/ui/Select.vue";
 import FormLabel from "@/components/ui/FormLabel.vue";
@@ -122,6 +122,10 @@ const editor = useIncidentEditor(
 );
 
 const thread = useIncidentThread(incidentNumber, { scheduleReload });
+
+const linkedAlertNumbers = computed(() =>
+  alerts.value.map((a) => a.alert_number).filter((n): n is number => typeof n === "number"),
+);
 
 // Mention targets: the agent list needs `tokens:manage` and the user list
 // `users:manage` — both operator permissions an `incidents` viewer may lack,
@@ -1355,43 +1359,15 @@ onBeforeUnmount(() => {
         </template>
       </Modal>
 
-      <Modal
+      <IncidentLinkAlertDialog
         :open="editor.showLinkAlertDialog"
-        title="Link Alert"
-        max-width="lg"
-        :prevent-close="editor.linkAlertSubmitting"
-        @update:open="!$event && (editor.showLinkAlertDialog = false)"
-        @close="editor.showLinkAlertDialog = false"
-      >
-        <form class="space-y-4" @submit.prevent="editor.submitLinkAlert">
-          <ErrorBanner :message="editor.linkAlertError" />
-          <div>
-            <FormLabel for="link-alert-number" required>Alert Number</FormLabel>
-            <NumberInput
-              id="link-alert-number"
-              v-model="editor.linkAlertNumber"
-              required
-              :disabled="editor.linkAlertSubmitting"
-              placeholder="e.g. 42"
-            />
-          </div>
-        </form>
-        <template #footer>
-          <Button
-            variant="outline"
-            :disabled="editor.linkAlertSubmitting"
-            @click="editor.showLinkAlertDialog = false"
-            >Cancel</Button
-          >
-          <Button
-            variant="primary"
-            :loading="editor.linkAlertSubmitting"
-            @click="editor.submitLinkAlert"
-          >
-            Link
-          </Button>
-        </template>
-      </Modal>
+        :submitting="editor.linkAlertSubmitting"
+        :error="editor.linkAlertError"
+        :linked-alert-numbers="linkedAlertNumbers"
+        @update:open="(v: boolean) => (editor.showLinkAlertDialog = v)"
+        @pick-alert="(n: number) => (editor.linkAlertPickerStaged = n)"
+        @submit="editor.submitStagedLink"
+      />
 
       <Modal
         :open="editor.showAddTimelineDialog"

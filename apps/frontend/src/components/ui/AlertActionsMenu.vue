@@ -10,7 +10,6 @@ const props = withDefaults(
     canWrite: boolean;
     canDelete: boolean;
     canCreateIncident: boolean;
-    showAckButton: boolean;
     icon?: "vertical" | "horizontal";
   }>(),
   {
@@ -35,7 +34,9 @@ type Item = {
 
 const items = computed<Item[]>(() => {
   const out: Item[] = [];
-  if (props.canWrite && !props.showAckButton) {
+  // Resolve/reopen mirror the backend's only precondition (status), not the
+  // ack state — a firing unacked alert is resolvable via the API.
+  if (props.canWrite) {
     if (props.workflowStatus === "open") {
       out.push({
         label: "Mark resolved",

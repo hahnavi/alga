@@ -85,11 +85,13 @@ export function alertSeverityLabel(labels: Record<string, string> | undefined): 
 
 /**
  * Single source of truth for the four severity buckets (critical / high /
- * warning / default). Both `severityBadgeClass` and `severityBorderColor`
- * route through this so the gradient stays consistent. Free-form label
+ * warning / default). `severityBadgeClass` and `severityBorderColor` route
+ * through this so the gradient stays consistent, and callers that need to
+ * map a free-form severity label onto the incident `Severity` enum reuse it
+ * so the badge shown and the severity stored never disagree. Free-form label
  * values fall back via substring matching.
  */
-function severityBucket(
+export function severityBucket(
   level: Severity | string | null | undefined,
 ): "critical" | "high" | "warning" | "default" {
   const raw = (level ?? "").toString().toLowerCase();
@@ -127,6 +129,17 @@ const SEVERITY_BORDER_VAR: Record<ReturnType<typeof severityBucket>, string> = {
  */
 export function severityBadgeClass(level: Severity | string): string {
   return SEVERITY_BADGE_CLASS[severityBucket(level)];
+}
+
+/**
+ * Maps a bucketed alert severity label onto the incident `Severity` enum
+ * (`info` for the un-classified bucket, which has no alert-side color).
+ * Creating an incident from an alert routes through this so the severity
+ * badge the operator saw matches the severity that gets stored.
+ */
+export function incidentSeverityFromLabel(level: string | null | undefined): Severity {
+  const bucket = severityBucket(level);
+  return bucket === "default" ? "info" : bucket;
 }
 
 export function investigationStatusBadgeClass(status: string): string {

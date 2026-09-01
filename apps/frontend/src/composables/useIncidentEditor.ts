@@ -61,7 +61,6 @@ export function useIncidentEditor(
 
   const showUnlinkChannelConfirm = ref(false);
 
-  const unlinkAlertTarget = ref<AlertRecord | null>(null);
   const unlinkAlertSubmitting = ref(false);
 
   // Add-timeline-entry dialog.
@@ -313,13 +312,16 @@ export function useIncidentEditor(
     }
   }
 
-  async function confirmUnlinkAlert() {
-    const target = unlinkAlertTarget.value;
-    if (!target || !incident.value || unlinkAlertSubmitting.value) return;
+  /**
+   * Unlinks the given alert. The confirm dialog state (which alert is being
+   * unlinked, and whether the dialog is open) is owned by the page; this only
+   * performs the API call and the local list removal.
+   */
+  async function confirmUnlinkAlert(target: AlertRecord) {
+    if (!incident.value || unlinkAlertSubmitting.value) return;
     const num = target.alert_number;
     if (!num) {
       push("Cannot unlink alert without alert number", "error");
-      unlinkAlertTarget.value = null;
       return;
     }
     unlinkAlertSubmitting.value = true;
@@ -331,7 +333,6 @@ export function useIncidentEditor(
       push(getErrorMessage(err, "Failed to unlink alert"), "error");
     } finally {
       unlinkAlertSubmitting.value = false;
-      unlinkAlertTarget.value = null;
     }
   }
 
@@ -399,7 +400,6 @@ export function useIncidentEditor(
     linkAlertSubmitting,
     linkAlertError,
     showUnlinkChannelConfirm,
-    unlinkAlertTarget,
     unlinkAlertSubmitting,
     showAddTimelineDialog,
     timelineMessage,

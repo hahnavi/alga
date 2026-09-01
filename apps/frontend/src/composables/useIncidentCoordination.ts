@@ -4,21 +4,20 @@ import { getErrorMessage } from "@/lib/error";
 import { useToast } from "@/lib/toast";
 import { useStickToBottom } from "@/composables/useStickToBottom";
 import { useTypingIndicator } from "@/composables/useTypingIndicator";
-import { useUsers } from "@/composables/useUsers";
+import { useAuthStore } from "@/stores/auth";
 import { getAgentAvatarSrc } from "@/lib/agentAvatar";
+import {
+  addThreadParticipant,
+  participantLabel,
+  type ThreadParticipant,
+} from "@/lib/incidentEvents";
 import { MAX_THREAD_MESSAGES } from "@/lib/threadLimits";
-
-type ThreadParticipant = {
-  key: string;
-  name: string;
-  avatarSrc?: string;
-};
 
 /**
  * Owns the coordination stream on the incident detail page:
  *   - the chat messages
  *   - the agent-typing indicator
- *   - the editor (text / kind / submitting)
+ *   - the editor (text / submitting)
  *   - the status-update feed
  *   - the participants computed list
  *
@@ -27,7 +26,7 @@ type ThreadParticipant = {
  */
 export function useIncidentCoordination(incidentNumber: Ref<number>) {
   const { push } = useToast();
-  const { loadUsers } = useUsers();
+  const auth = useAuthStore();
 
   const coordinationMessages = shallowRef<IncidentCoordinationMessage[]>([]);
   const statusUpdates = ref<IncidentCoordinationMessage[]>([]);
@@ -36,7 +35,6 @@ export function useIncidentCoordination(incidentNumber: Ref<number>) {
 
   const coordinationText = ref("");
   const coordinationSubmitting = ref(false);
-  const coordinationKind = ref<"chat" | "decision" | "action">("chat");
 
   const coordinationThreadEl = ref<HTMLElement | null>(null);
   const { stickToBottom: stickCoordinationToBottom, scrollToBottom: scrollCoordinationToBottom } =
@@ -61,20 +59,6 @@ export function useIncidentCoordination(incidentNumber: Ref<number>) {
     return "User";
   }
 
-  function addParticipant(
-    map: Map<string, ThreadParticipant>,
-    key: string | undefined,
-    fallbackKey: string,
-    name: string,
-    avatarSrc?: string,
-  ) {
-    const normalizedName = name.trim() || "User";
-    const normalizedKey = (key?.trim() || normalizedName).toLowerCase();
-    if (!map.has(normalizedKey)) {
-      map.set(normalizedKey, { key: fallbackKey, name: normalizedName, avatarSrc });
-    }
-  }
-
   const coordinationParticipants = computed<ThreadParticipant[]>(() => {
     const map = new Map<string, ThreadParticipant>();
     for (const message of coordinationMessages.value) {
@@ -85,7 +69,7 @@ export function useIncidentCoordination(incidentNumber: Ref<number>) {
           ? message.metadata.agent_type
           : undefined;
       const avatar = isAgent ? getAgentAvatarSrc(agentType) : undefined;
-      addParticipant(
+      addThreadParticipant(
         map,
         message.actor_id ?? coordinationDisplayName(message),
         message.id,
@@ -96,27 +80,25 @@ export function useIncidentCoordination(incidentNumber: Ref<number>) {
     return [...map.values()];
   });
 
-  function participantLabel(participants: ThreadParticipant[], fallback: string): string {
-    if (participants.length === 0) return fallback;
-    if (participants.length === 1) return participants[0].name;
-    const others = participants.length - 1;
-    return `${participants[0].name} and ${others} ${others === 1 ? "other" : "others"}`;
-  }
-
   const coordinationParticipantLabel = computed(() =>
     participantLabel(coordinationParticipants.value, "No participants yet"),
   );
 
+  let messageSeq = 0;
+
   async function loadCoordinationMessages() {
+    const seq = ++messageSeq;
     try {
       const messages = await api.getIncidentCoordinationMessages(incidentNumber.value, {
         limit: 200,
       });
+      if (seq !== messageSeq) return;
       // The API returns newest-first (spec 05 coordination R1); the chat view
       // renders chronological, so flip the page before storing. New messages
       // are appended at the end by submit and SSE reloads.
       coordinationMessages.value = [...messages].reverse();
     } catch (err) {
+      if (seq !== messageSeq) return;
       coordinationMessages.value = [];
       push(getErrorMessage(err, "Failed to load coordination messages"), "error");
     }
@@ -136,15 +118,23 @@ export function useIncidentCoordination(incidentNumber: Ref<number>) {
     }
   }
 
-  async function loadMentionTargets(editorValue: unknown) {
-    void editorValue;
+  /**
+   * Loads agent mention targets for the coordination editor. Listing agent
+   * tokens needs `tokens:manage` — an operator permission the page cannot
+   * assume an `incidents:write` user holds, so the fetch is skipped when the
+   * caller lacks it. Users are loaded separately by the page.
+   */
+  async function loadMentionTargets() {
+    if (!auth.hasPermission("tokens:manage")) {
+      agents.value = [];
+      return;
+    }
     try {
       agents.value = await api.getAgentTokens();
     } catch (err) {
       agents.value = [];
       push(getErrorMessage(err, "Failed to load agents for mentions"), "error");
     }
-    await loadUsers();
   }
 
   function extractCoordinationMentions(editorValue: unknown): string[] {
@@ -158,7 +148,7 @@ export function useIncidentCoordination(incidentNumber: Ref<number>) {
     coordinationSubmitting.value = true;
     try {
       const created = await api.addIncidentCoordinationMessage(incidentNumber.value, {
-        kind: coordinationKind.value,
+        kind: "chat",
         body,
         internal,
         mentions: extractCoordinationMentions(editorValue),
@@ -167,7 +157,6 @@ export function useIncidentCoordination(incidentNumber: Ref<number>) {
         -MAX_THREAD_MESSAGES,
       );
       coordinationText.value = "";
-      coordinationKind.value = "chat";
       await scrollCoordinationToBottom();
       const e = editorValue as { focus?: () => void } | null;
       e?.focus?.();
@@ -179,12 +168,12 @@ export function useIncidentCoordination(incidentNumber: Ref<number>) {
   }
 
   function reset() {
+    messageSeq++;
     coordinationMessages.value = [];
     statusUpdates.value = [];
     statusUpdatesError.value = null;
     statusUpdatesLoading.value = true;
     coordinationText.value = "";
-    coordinationKind.value = "chat";
     clearCoordinationTyping();
   }
 
@@ -195,7 +184,6 @@ export function useIncidentCoordination(incidentNumber: Ref<number>) {
     statusUpdatesError,
     coordinationText,
     coordinationSubmitting,
-    coordinationKind,
     coordinationThreadEl,
     coordinationTyping,
     coordinationTypingSource,

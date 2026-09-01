@@ -75,6 +75,11 @@ export function useIncidentDocumentSections(
     const res = documentSections.value.find((s) => s.section === "resolution");
     resolutionContent.value = unescapeDocContent(res?.content ?? "");
     resolutionVersion.value = res?.version ?? 0;
+
+    // The executive summary is a top-level incident field, not a document
+    // section; keep the display copy in sync so the rendered card shows the
+    // saved value (not just the editor draft) after load and SSE refreshes.
+    summaryContent.value = unescapeDocContent(incident.value?.summary ?? "");
   }
 
   function startEditSummary() {
@@ -90,6 +95,7 @@ export function useIncidentDocumentSections(
         summary: summaryContent.value,
       });
       setIncident(updated);
+      summaryContent.value = unescapeDocContent(updated.summary ?? summaryContent.value);
       summaryEditing.value = false;
       push("Summary saved", "success");
     } catch (err) {
@@ -127,7 +133,7 @@ export function useIncidentDocumentSections(
         { content: impactContent.value, version: impactVersion.value },
       );
       impactVersion.value = updated.version;
-      impactContent.value = updated.content;
+      impactContent.value = unescapeDocContent(updated.content);
       impactEditing.value = false;
       push("Impact assessment saved", "success");
     } catch (err) {
@@ -147,7 +153,7 @@ export function useIncidentDocumentSections(
         { content: rootCauseContent.value, version: rootCauseVersion.value },
       );
       rootCauseVersion.value = updated.version;
-      rootCauseContent.value = updated.content;
+      rootCauseContent.value = unescapeDocContent(updated.content);
       rootCauseEditing.value = false;
       push("Root cause saved", "success");
     } catch (err) {
@@ -167,7 +173,7 @@ export function useIncidentDocumentSections(
         { content: resolutionContent.value, version: resolutionVersion.value },
       );
       resolutionVersion.value = updated.version;
-      resolutionContent.value = updated.content;
+      resolutionContent.value = unescapeDocContent(updated.content);
       resolutionEditing.value = false;
       push("Resolution saved", "success");
     } catch (err) {
@@ -190,6 +196,7 @@ export function useIncidentDocumentSections(
     resolutionEditing.value = false;
     summaryContent.value = "";
     summaryEditing.value = false;
+    summarySaving.value = false;
   }
 
   return {

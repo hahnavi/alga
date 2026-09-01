@@ -26,3 +26,57 @@ export const ACCOUNT_MENU_ITEM_CLASS = `flex min-h-11 w-full cursor-pointer item
 
 export const MOBILE_MORE_USER_ACTION_CLASS =
   "flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]";
+
+// Filled (solid-background) badge classes for incident priority / severity /
+// impact chips. Detail pages render the literal value (e.g. "P1") inside a
+// colored pill; the muted default is shared by all three maps.
+
+export const FILLED_BADGE_MUTED_CLASS =
+  "rounded bg-[var(--bg-tertiary)] px-2 py-0.5 text-xs font-semibold text-[var(--text-primary)]";
+
+const FILLED_BADGE_BASE = "rounded px-2 py-0.5 text-xs font-semibold text-white";
+
+export function incidentPriorityBadgeClass(priority: string): string {
+  switch (priority) {
+    case "P1":
+      return `${FILLED_BADGE_BASE} bg-red-500`;
+    case "P2":
+      return `${FILLED_BADGE_BASE} bg-orange-500`;
+    case "P3":
+      return `${FILLED_BADGE_BASE} bg-amber-500`;
+    case "P4":
+      return `${FILLED_BADGE_BASE} bg-blue-500`;
+    case "P5":
+      return `${FILLED_BADGE_BASE} bg-slate-500`;
+    default:
+      return FILLED_BADGE_MUTED_CLASS;
+  }
+}
+
+export function incidentSeverityBadgeClass(severity: string): string {
+  switch (severity) {
+    case "critical":
+      return `${FILLED_BADGE_BASE} bg-red-500`;
+    case "high":
+      return `${FILLED_BADGE_BASE} bg-orange-500`;
+    case "warning":
+      return `${FILLED_BADGE_BASE} bg-amber-500`;
+    case "info":
+      return `${FILLED_BADGE_BASE} bg-sky-500`;
+    default:
+      return FILLED_BADGE_MUTED_CLASS;
+  }
+}
+
+export function incidentImpactBadgeClass(impact: string): string {
+  switch (impact) {
+    case "high":
+      return `${FILLED_BADGE_BASE} bg-red-500`;
+    case "medium":
+      return `${FILLED_BADGE_BASE} bg-amber-500`;
+    case "low":
+      return `${FILLED_BADGE_BASE} bg-sky-500`;
+    default:
+      return FILLED_BADGE_MUTED_CLASS;
+  }
+}

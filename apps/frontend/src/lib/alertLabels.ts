@@ -303,6 +303,10 @@ export function postMortemStatusBadgeClass(status: string): string {
   return postMortemStatusDisplay(status).badge;
 }
 
+export function postMortemStatusLabel(status: string): string {
+  return postMortemStatusDisplay(status).label;
+}
+
 export function actionItemTypeBadgeClass(type: string): string {
   return actionItemTypeDisplay(type).badge;
 }

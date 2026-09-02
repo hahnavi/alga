@@ -354,14 +354,14 @@ jobs:
         # GHAS-enabled. The real gate is the blocking scan below.
         if: always() && needs.changes.outputs.backend == 'true' && hashFiles('trivy-backend-results.sarif') != ''
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28  # v4.37.8
+        uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938  # v4.37.9
         with:
           sarif_file: trivy-backend-results.sarif
           category: trivy-backend
       - name: Upload Trivy frontend SARIF
         if: always() && needs.changes.outputs.frontend == 'true' && hashFiles('trivy-frontend-results.sarif') != ''
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28  # v4.37.8
+        uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938  # v4.37.9
         with:
           sarif_file: trivy-frontend-results.sarif
           category: trivy-frontend
@@ -528,7 +528,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
         with:
-          python-version: "3.12"
+          python-version: "3.14"
           cache: pip
           cache-dependency-path: integrations/alga-hermes-agent-plugin/requirements.txt
       - name: Install dependencies

@@ -1,6 +1,6 @@
 ---
 title: Alga Agent
-description: Alga's first-party Go-based AI SRE agent — dual-channel Telegram + Alga investigation threads, 29 Alga tools, shell and web search, and two-way MCP integration.
+description: Alga's first-party Go-based AI SRE agent — dual-channel Telegram + Alga investigation threads, 20+ Alga tools, shell and web search, and two-way MCP integration.
 ---
 
 # Alga Agent
@@ -13,7 +13,7 @@ Unlike the [Hermes](/agents/hermes) and [OpenClaw](/agents/openclaw) plugins, wh
 
 - **Dual-channel** — Telegram (long polling or webhook) + Alga SSE investigation threads
 - **8 LLM providers** — OpenRouter (default), OpenAI, OpenCode Zen, OpenCode Go, Z.AI, Z.AI Coding Plan, Alibaba (DashScope), Alibaba Coding Plan, plus any custom OpenAI-compatible endpoint
-- **25 Alga tools** — alerts, investigations, incidents, knowledge, memory, services, on-call, and coordination messages
+- **20+ Alga tools** — alerts, investigations, incidents, knowledge, memory, services, on-call, and coordination messages
 - **MCP both ways** — expose every agent tool as an MCP server for Claude Desktop, Cursor, and other MCP clients; consume external MCP servers (filesystem, GitHub, database, in-house) as agent tools
 - **Shell tool** — allowlisted command execution (not a sandbox — restrict the list)
 - **Web search** — DuckDuckGo (default), Brave, or Tavily

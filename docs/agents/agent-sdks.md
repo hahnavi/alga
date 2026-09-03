@@ -204,7 +204,7 @@ Key features: events received by implementing the **`EventHandler` trait** (all 
 In addition to these SDKs, Alga ships ready-made agents and adapters:
 
 - **[Alga Agent](/agents/alga-agent)** — the native first-party Go agent, built on the Go SDK.
-- **[OpenClaw plugin](/agents/openclaw)** — 30+ agent tools for the OpenClaw channel.
-- **[Hermes agent plugin](/agents/hermes)** (`integrations/alga-hermes-agent-plugin`) — 31 agent tools for the Nous Research Hermes platform.
+- **[OpenClaw plugin](/agents/openclaw)** — 30-odd agent tools for the OpenClaw channel.
+- **[Hermes agent plugin](/agents/hermes)** (`integrations/alga-hermes-agent-plugin`) — 30-odd agent tools for the Nous Research Hermes platform.
 
 For details on the investigation pipeline, scheduling, and agent capabilities, see [AI Investigation](/core-features/investigation).

@@ -1,85 +1,51 @@
 ---
 title: Teams
-description: Teams group users and link escalation policies and on-call schedules for incident response — the organizational backbone of on-call management.
+description: How teams, rotas, and escalation fit together — what you see and click.
 ---
 
 # Teams
 
-Teams group users together and serve as the organizational backbone for incident response in Alga. A team links members, [escalation policies](/on-call/escalation-policies), and [on-call schedules](/on-call/schedules) so that when an incident fires, the right people are notified through the right channels.
+Teams group people together so the right person gets paged when something breaks.
 
-## How Teams Fit In
-
-Teams connect several Alga concepts together:
+## How It Fits Together
 
 ```
-  Team ──────── Members (users with lead/member roles)
-    │
-    ├── On-Call Schedule ── one auto-provisioned schedule per team
-    │       (rotating coverage: who's on call right now)
-    │
-    └── Services ── team owns specific services in the catalog
+Team (people with lead / member labels)
+  ├── Rota — one per team, created automatically (who's on call right now)
+  └── Services — services the team looks after
 ```
 
-Escalation policies are configured separately and **target** teams (or individual users) as escalation targets — a team is not directly "linked" to a policy. When an alert becomes an incident on a service, Alga loads the service's [escalation policy](/on-call/escalation-policies), and any level that targets a team resolves to whoever is currently on call for that team's schedule. The resolved responder is then paged through the channels they configured in their [notification preferences](/on-call/notification-preferences).
+When an incident fires on a service, Alga checks that service's escalation policy. If a level points at a team, whoever is currently on call for that team's rota gets paged, through the channels they chose in their notification preferences.
 
-## Team Structure
+Each team gets **one rota automatically** when the team is created — you don't create it yourself, you just set up its rotation layers. Lead and member are descriptive labels on the roster, not different permission levels.
 
-A team has a unique **name** and an optional **description**, plus:
-
-- **Members** — users assigned to the team (`user_id` + `role`), each with a role:
-  - **Lead** — the team's lead. The creator of the auto-provisioned schedule is designated lead by default; other members can be promoted via the member-role update endpoint.
-  - **Member** — the default role; appears in the team's roster and can be targeted by escalation.
-
-  Member roles are descriptive designations, not permission levels — all team management actions are gated by the same `oncall:write` permission.
-
-- **On-Call Schedule** — exactly one schedule, auto-provisioned when the team is created. Its display name is derived from the team, and its rotating coverage is defined by [layers](/on-call/schedules)
+> Note: connecting an escalation policy to a service is done through the API — there's no picker for it in the web app yet. Ask your admin or use the API if you need to change which policy a service uses.
 
 ## Creating a Team
 
-1. Go to **On-Call → Teams → Create Team**
-2. Give the team a **name** (unique) and optional description
-3. **Add members** by searching for users and assigning roles
+1. Go to **On-Call → Teams → Create Team**.
+2. Give the team a name and optional description.
+3. Add members by searching for people. Mark someone as lead if they're the team's point person.
 
-Creating a team automatically provisions its on-call schedule (one per team). You then configure that schedule's rotation layers separately. Escalation policies are created independently and reference the team (or its members) as targets.
+Creating the team also creates its rota. Next, set up the rota's layers (who rotates and how often).
 
-## Common Patterns
+## Common Setups
 
 ### Small Team (1–5 people)
 
-A single team with one escalation policy that targets the on-call schedule, then loops back. Members rotate through a weekly schedule.
+One team, one rota with a weekly rotation. The escalation policy pages whoever's on call first, then loops back if nobody responds.
 
-### Multi-Region Follow-the-Sun
+### Follow-the-Sun
 
-Create separate teams per region (e.g., `sre-americas`, `sre-emea`, `sre-apac`), each with their own schedule. A top-level escalation policy pages the current region's on-call first, then escalates to the next region if unacknowledged.
+Create one team per region (for example, Americas, EMEA, APAC), each with its own rota. The escalation policy pages the current region first, then the next region if nobody picks up.
 
-### Service-Oriented Teams
+### Service-Oriented
 
-Map teams to your service ownership. The `payments-team` owns payment services and has its own escalation policy with payment-domain experts. The `platform-team` owns infrastructure. Incidents route to the owning team based on the service's team assignment.
-
-## API Endpoints
-
-### Team Management
-
-| Method   | Path                 | Auth    | Permission     | Description |
-| -------- | -------------------- | ------- | -------------- | ----------- |
-| `GET`    | `/api/v1/teams`      | Session | `oncall:read`  | List teams  |
-| `POST`   | `/api/v1/teams`      | Session | `oncall:write` | Create team |
-| `GET`    | `/api/v1/teams/{id}` | Session | `oncall:read`  | Get team    |
-| `PATCH`  | `/api/v1/teams/{id}` | Session | `oncall:write` | Update team |
-| `DELETE` | `/api/v1/teams/{id}` | Session | `oncall:write` | Delete team |
-
-### Team Members
-
-| Method   | Path                                  | Auth    | Permission     | Description                |
-| -------- | ------------------------------------- | ------- | -------------- | -------------------------- |
-| `GET`    | `/api/v1/teams/{id}/members`          | Session | `oncall:read`  | List members with roles    |
-| `POST`   | `/api/v1/teams/{id}/members`          | Session | `oncall:write` | Add member (user_id, role) |
-| `PATCH`  | `/api/v1/teams/{id}/members/{userId}` | Session | `oncall:write` | Update member role         |
-| `DELETE` | `/api/v1/teams/{id}/members/{userId}` | Session | `oncall:write` | Remove member              |
+Match teams to what they own — payments team owns payment services, platform team owns infrastructure. Incidents go to the owning team based on the service.
 
 ## See Also
 
-- [On-Call Schedules](/on-call/schedules) — rotating coverage and overrides
-- [Escalation Policies](/on-call/escalation-policies) — multi-tier escalation chains
-- [Notification Preferences](/on-call/notification-preferences) — per-user channel rules
-- [Incident Management](/incident-management/) — how incidents trigger escalation
+- [On-Call Schedules](/on-call/schedules) — rotas, layers, and time off
+- [Escalation Policies](/on-call/escalation-policies) — who gets paged and when
+- [Notification Preferences](/on-call/notification-preferences) — choose how you get paged
+- [Incident Management](/incident-management/) — how incidents trigger paging

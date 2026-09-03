@@ -1,108 +1,73 @@
 ---
 title: Incident Lifecycle & States
-description: The incident state machine — detected, triaging, active, mitigated, resolved, closed, cancelled — with transitions, automatic timestamps, and API endpoints.
+description: What each incident status means and which buttons move you forward.
 ---
 
 # Incident Lifecycle & States
 
-Incidents follow a strict state machine that coordinates team response from creation through closure.
+Incidents move forward one step at a time so nothing gets skipped.
 
-## State Machine
+## The Steps
 
 ```
 detected → triaging → active → mitigated → resolved → closed
-detected → active (acknowledge)
-detected/active → mitigated
-detected/active/mitigated → resolved
-mitigated/resolved/closed → active (reopen)
-detected/active → cancelled
 ```
 
-`resolved`, `closed`, and `cancelled` are terminal states. Deletion is a soft delete via a `deleted_at` tombstone — rows are never hard-deleted.
+Plus two side paths:
 
-## States
+- **Cancelled:** for false alarms. You can cancel from detected, triaging, or active.
+- **Reopen:** if the problem comes back, you can reopen it and it goes back to active.
 
-| Status      | Description                                          | Typical Trigger                                          |
-| ----------- | ---------------------------------------------------- | -------------------------------------------------------- |
-| `detected`  | Initial creation, awaiting triage or acknowledgement | Manual creation or promotion from an alert investigation |
-| `triaging`  | Undergoing triage assessment                         | `POST /api/v1/incidents/{id}/begin-triage`               |
-| `active`    | Acknowledged, active response underway               | `acknowledge`, or `promote` from triaging                |
-| `mitigated` | Contained/fix in place, monitoring                   | `POST /api/v1/incidents/{id}/mitigate`                   |
-| `resolved`  | Fully resolved (terminal)                            | `POST /api/v1/incidents/{id}/resolve`                    |
-| `closed`    | Finalized after resolution (terminal)                | `POST /api/v1/incidents/{id}/close`                      |
-| `cancelled` | False alarm (terminal)                               | `POST /api/v1/incidents/{id}/cancel`                     |
+## What Each Status Means
 
-## Optimistic Concurrency
+| Status    | What it means                                         | What you do                                     |
+| --------- | ----------------------------------------------------- | ----------------------------------------------- |
+| Detected  | Just arrived, waiting for someone to check it         | Click **Begin triage**                          |
+| Triaging  | Someone is checking if it's real and how urgent it is | Click **Promote** to make it active             |
+| Active    | Confirmed, response is underway                       | Work it, then click **Mitigate** when contained |
+| Mitigated | Contained or fix is in place, you're watching it      | Click **Resolve** when you're sure it's fixed   |
+| Resolved  | Fixed                                                 | Click **Close** to wrap up                      |
+| Closed    | Wrapped up                                            | Done (you can still reopen if needed)           |
+| Cancelled | Wasn't a real incident                                | Done                                            |
 
-Every transition goes through `TransitionIncidentStatus`, which guards the update with `WHERE status IN (fromStatuses)`. If the incident is no longer in an allowed source state, the update affects zero rows and the API returns a conflict (`incident status changed concurrently`) instead of corrupting state. This makes concurrent commands safe.
+## You Can't Skip Steps
 
-## Transitions
+The buttons only work in order:
 
-Each row lists the source states accepted by the action and the resulting state.
+- **Mitigate** only works from active.
+- **Resolve** only works from active or mitigated.
+- **Close** only works from resolved.
+- **Cancel** works from detected, triaging, or active.
 
-| Action       | From                              | To          | Notes                                                                             |
-| ------------ | --------------------------------- | ----------- | --------------------------------------------------------------------------------- |
-| Begin Triage | `detected`                        | `triaging`  | Initializes the incident document sections                                        |
-| Promote      | `triaging`                        | `active`    | Propagates service status                                                         |
-| Acknowledge  | `detected`                        | `active`    | Sets `sla_acknowledged_at`, stops escalation                                      |
-| Mitigate     | `detected`, `active`              | `mitigated` | Sets `mitigated_at`, propagates service status                                    |
-| Resolve      | `detected`, `active`, `mitigated` | `resolved`  | Requires resolution docs (see below); cascades `resolved` to linked firing alerts |
-| Close        | `resolved`                        | `closed`    | Sets `closed_at`                                                                  |
-| Reopen       | `mitigated`, `resolved`, `closed` | `active`    | Returns incident to active response                                               |
-| Cancel       | `detected`, `active`              | `cancelled` | Terminal false-alarm state                                                        |
+If a button is greyed out, the incident isn't at the right step yet.
 
-### Resolution Requirements
+### What You Need Before Resolving
 
-`resolve` is rejected unless the incident has a non-empty `summary` and the following incident-document sections are filled in:
+The **Resolve** button won't work until you've filled in:
 
-- `impact_assessment`
-- `root_cause`
-- `resolution`
+- A short summary on the incident
+- Impact (what was affected)
+- Root cause (why it happened)
+- Resolution (how you fixed it)
 
-If any are missing, the API returns a validation error listing the missing fields.
+You'll see a message listing what's missing.
 
-## Automatic Timestamps
+## If Two People Click at Once
 
-`applyStatusTimestamps` stamps lifecycle fields as each transition lands:
+If two people click a status button at the same time, one change wins. The other person sees a "changed concurrently" message. Just refresh the page to see the latest status and try again.
 
-| Transition To | Timestamp(s) Set                    |
-| ------------- | ----------------------------------- |
-| `triaging`    | `triaged_at`                        |
-| `active`      | `sla_acknowledged_at`               |
-| `mitigated`   | `mitigated_at`                      |
-| `resolved`    | `resolved_at` and `sla_resolved_at` |
-| `closed`      | `closed_at`                         |
+## What Happens Automatically
 
-These timestamps drive the SLA metrics (MTTA, MTTR, MTTM) reported by the metrics API.
+When the status changes, Alga:
 
-## Side Effects
-
-Beyond timestamps, transitions trigger:
-
-- **Timeline entries** — each action records a structured timeline entry (with an ICS event type for triage/promote/document changes)
-- **Service status propagation** — promote, mitigate, resolve, and reopen update the affected service status
-- **Alert cascade** — resolving an incident cascades `resolved` to linked firing alerts
-- **Audit events** — every transition writes a fire-and-forget audit event
-- **Incident channel updates** — when Slack incident channels are enabled, status changes are posted to the incident channel
-- **SLA escalation** — the SLA worker triggers escalation on a response breach; acknowledgement stops it
-
-## API Endpoints
-
-| Action       | Method | Path                                  | Permission          |
-| ------------ | ------ | ------------------------------------- | ------------------- |
-| Begin Triage | `POST` | `/api/v1/incidents/{id}/begin-triage` | `incidents:command` |
-| Promote      | `POST` | `/api/v1/incidents/{id}/promote`      | `incidents:command` |
-| Acknowledge  | `POST` | `/api/v1/incidents/{id}/acknowledge`  | `incidents:command` |
-| Mitigate     | `POST` | `/api/v1/incidents/{id}/mitigate`     | `incidents:command` |
-| Resolve      | `POST` | `/api/v1/incidents/{id}/resolve`      | `incidents:command` |
-| Close        | `POST` | `/api/v1/incidents/{id}/close`        | `incidents:command` |
-| Reopen       | `POST` | `/api/v1/incidents/{id}/reopen`       | `incidents:command` |
-| Cancel       | `POST` | `/api/v1/incidents/{id}/cancel`       | `incidents:command` |
-| Escalate     | `POST` | `/api/v1/incidents/{id}/escalate`     | `incidents:command` |
+- Adds a note to the timeline so everyone can see what happened
+- Updates the linked service's health color
+- Clearing a resolved incident also clears its linked firing alerts
+- Stops pending pages when you acknowledge, resolve, close, or cancel
 
 ## See Also
 
-- [Incident Overview](/incident-management/) — creation, linking, and management
-- [ICS Roles](/incident-management/ics-roles) — ICS role assignments
-- [SLA Tracking](/incident-management/sla) — SLA configuration and breach detection
-- [Post-Mortems](/incident-management/post-mortems) — structured post-incident review
+- [Incident Overview](/incident-management/) — creating and working with incidents
+- [ICS Roles](/incident-management/ics-roles) — who does what during response
+- [SLA Tracking](/incident-management/sla) — response and resolution countdowns
+- [Post-Mortems](/incident-management/post-mortems) — review after it's fixed

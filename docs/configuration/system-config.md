@@ -20,7 +20,7 @@ Runtime settings can be managed via the System Configuration API, overriding env
 curl -b cookies.txt http://localhost:8080/api/v1/system/config
 ```
 
-Returns all configurable fields with their current values. Secrets (`google_client_secret`, `oidc_client_secret`) are never returned; instead, `google_client_secret_set` and `oidc_client_secret_set` booleans indicate whether a secret is configured. The response includes `updated_at` (RFC 3339) when config has been modified via PUT.
+Returns all configurable fields with their current values. The Google secret (`google_client_secret`) is never returned; instead, a `google_client_secret_set` boolean indicates whether a secret is configured. The response includes `updated_at` (RFC 3339) when config has been modified via PUT.
 
 ## Update Configuration
 
@@ -40,7 +40,7 @@ curl -b cookies.txt -X PUT http://localhost:8080/api/v1/system/config \
 - Empty or omitted fields are left unchanged (partial update).
 - If no recognized fields are set, the response is `"no changes"`.
 - `log_level` re-initializes the logger immediately on change.
-- Auth secrets (`google_client_secret`, `oidc_client_secret`) are encrypted via AES-256-GCM before database persistence. An empty string means "leave unchanged" since secrets are never returned on GET.
+- Auth secrets (`google_client_secret`) are encrypted via AES-256-GCM before database persistence. An empty string means "leave unchanged" since secrets are never returned on GET.
 - Each successful PUT writes an audit log entry (`system_config_updated`).
 - API overrides take precedence over environment variables and persist across restarts (loaded from DB on startup).
 
@@ -93,13 +93,7 @@ curl -b cookies.txt -X PUT http://localhost:8080/api/v1/system/config \
 
 ### Authentication — OIDC
 
-| Field                | Type   | Constraints         | Description                                |
-| -------------------- | ------ | ------------------- | ------------------------------------------ |
-| `oidc_enabled`       | bool   | —                   | Enable generic OIDC SSO                    |
-| `oidc_issuer_url`    | string | —                   | OIDC issuer discovery URL                  |
-| `oidc_client_id`     | string | —                   | OIDC client ID                             |
-| `oidc_client_secret` | string | Non-empty to update | OIDC client secret (never returned on GET) |
-| `oidc_scopes`        | string | —                   | Space-separated OIDC scopes                |
+There are no single `oidc_*` settings here. Alga supports **multiple login providers** (Okta, Keycloak, Google, Auth0, …), managed as a list via `GET/POST /api/v1/oidc/providers` (needs the `oidc:manage` permission) from the **SSO Providers** page (`/sso`). See [OIDC SSO](/integrations/oidc-sso) for setup.
 
 ## Duration Format
 

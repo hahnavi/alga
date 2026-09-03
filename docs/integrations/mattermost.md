@@ -52,9 +52,9 @@ Use `openssl rand -base64 32` to generate a secure `MATTERMOST_WEBHOOK_SECRET`. 
 
 ### YAML / Integrations API Configuration
 
-| Field                 | Default | Description                                                                                                         |
-| --------------------- | ------- | ------------------------------------------------------------------------------------------------------------------- |
-| `MATTERMOST_DISABLED` | `false` | Disable Mattermost delivery. Only configurable through YAML config or the Integrations API — **not** as an env var. |
+| Field                 | Default | Description                                                                                                                                              |
+| --------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MATTERMOST_DISABLED` | `false` | Disable Mattermost delivery. Set via env (`MATTERMOST_DISABLED`), config file, or the Integrations page — setting the env var locks the field in the UI. |
 
 ## Plugin Installation
 
@@ -127,10 +127,11 @@ Per-user Mattermost DMs are **not shipped**: there is no Mattermost account bind
 
 ## Disabling
 
-Disable Mattermost in either of two ways:
+Disable Mattermost in any of three ways (they all do the same thing):
 
+- **Environment** — set `MATTERMOST_DISABLED=true` (this locks the toggle in the UI)
 - **Integrations page** — toggle `provider_enabled` off in the Alga UI
-- **YAML config** — set `mattermost_disabled: true` (note: this is not an env var)
+- **Config file** — set `mattermost_disabled: true`
 
 When disabled, Alga stops posting to Mattermost immediately. Existing threads remain in Mattermost but are no longer synced.
 

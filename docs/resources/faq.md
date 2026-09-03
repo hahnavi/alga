@@ -44,7 +44,8 @@ See [Quick Start Guide](/getting-started/) for details.
 - RAM: 4 GB
 - Disk: 20 GB
 - Go 1.27+
-- Node.js 18+
+- Node.js 26+
+- pnpm 12+
 
 **Recommended for production:**
 
@@ -144,16 +145,11 @@ MATTERMOST_DEFAULT_CHANNEL="alerts"
 
 ### Can I use both Slack and Mattermost simultaneously?
 
-Yes! Multi-platform routing:
+Yes! Send critical alerts to both chat tools at once — configure this in the **Routes** page (illustrative sketch, not literal config):
 
 ```yaml
-routes:
-  - name: Critical Alerts
-    destinations:
-      - channel: "#incidents"
-        provider: slack
-      - channel: "ops-team"
-        provider: mattermost
+# Illustrative: critical alerts
+#   send to: Slack #incidents + Mattermost ops-team
 ```
 
 ## Features & Usage
@@ -239,7 +235,7 @@ Playbooks are **structured response procedures** that are automatically matched 
 
 ### What are dead-lettered investigations?
 
-When an investigation fails repeatedly, it passes through Alga's RabbitMQ retry topology (three retry queues with exponential backoff). If it exhausts all retry attempts, it is **dead-lettered** — moved to a terminal state where it will no longer be retried automatically. Dead-lettered investigations are visible via `GET /api/v1/investigations?status=dead_lettered` and can be manually retried with `POST /api/v1/investigations/{id}/retry`. Reviewing dead-lettered investigations helps identify systemic issues like misconfigured agents or unreachable external services.
+When an investigation keeps failing, it is retried automatically in four stages (after ~1 minute, ~5 minutes, ~15 minutes, then ~1 hour). If it still fails, it is **dead-lettered** — parked so it stops using resources. There is no self-serve retry button and no `?status=dead_lettered` list filter. **Ask an admin to look**: admins can list parked investigations via `GET /api/v1/investigations/dead-lettered`, but the first step is always fixing the underlying cause (agent offline, unreachable service, bad config) — otherwise a retry would just fail again.
 
 ### How do handoffs work?
 

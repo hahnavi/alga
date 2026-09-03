@@ -1,102 +1,42 @@
 ---
 title: Status Pages
-description: Public and internal status pages that surface service health to viewers, composed of components linked to your service catalog and active incidents.
+description: Share service health with your team or customers in one place.
 ---
 
 # Status Pages
 
-Status pages surface the health of your services to viewers — either internally (operators) or publicly (customers/stakeholders). Each page is composed of **components** (optionally linked to services in your [catalog](/service-management/)) and automatically shows active incidents affecting them.
-
-## Why Status Pages?
-
-When an incident is active, stakeholders want answers: _What's affected? How bad is it? When will it be fixed?_ A status page gives them a single URL to check, so your team can focus on resolving the incident instead of answering "is it down?" questions in chat.
+A status page is one link where people can check "is it down?" — so your team can fix the problem instead of answering the same question in chat.
 
 ## Concepts
 
-- **Status Page** — a named page with a unique slug, optional description, visibility setting, an `enabled` toggle, and an owning team
-- **Component** — a trackable item on the page (e.g., "API", "Web Dashboard", "Database"). Each component has its own status and can optionally reference a [service](/service-management/) via `service_id`
-- **Overall status** — derived automatically as the **worst** component status on the page
+- **Status page** — a named page like "Production status," shared internally with your team or publicly with customers.
+- **Component** — one line on the page, like "API," "Web dashboard," or "Database."
+- **Overall status** — the worst status of any component. If one thing is red, the whole page shows red.
 
-## Component Statuses
+## What viewers see
 
-Components use these statuses, ordered from least to most severe:
+Each component shows green, yellow, or red:
 
-| Status           | Rank | Meaning                                      |
-| ---------------- | ---- | -------------------------------------------- |
-| `operational`    | 0    | Everything is working normally               |
-| `maintenance`    | 1    | Scheduled maintenance in progress            |
-| `degraded`       | 2    | Some functionality is impaired but available |
-| `partial_outage` | 3    | A subset of the component is down            |
-| `major_outage`   | 4    | The component is completely down             |
+- **Green** — working normally
+- **Yellow** — degraded or under maintenance, but still up
+- **Red** — part or all of it is down
 
-The page-level overall status is the highest-ranked (worst) component status. This means if even one component is at `major_outage`, the entire page shows `major_outage`.
+If an incident is affecting the page, viewers also see which incident is active.
 
-::: tip Component status is manual (for now)
-Component statuses are set explicitly via the API or UI. Linking a component to a service (`service_id`) creates a reference for operators — it doesn't automatically propagate the service's status to the component yet.
-:::
+For now, viewers need to log in to see status pages, even pages marked public.
 
-## Visibility
+## Creating a status page
 
-Each page carries a `visibility` of `internal` (default) or `public`. This marks the page's intended audience:
+1. Go to **Status Pages → Create Status Page**.
+2. Give it a name and a short web address (slug), like `prod-status`.
+3. Choose who it's for: **internal** (your team) or **public** (customers).
+4. Add components like "API" and "Database," optionally linked to services you already track.
 
-| Visibility | Intended Audience        | Use Case                                            |
-| ---------- | ------------------------ | --------------------------------------------------- |
-| `internal` | Operators                | Internal operations dashboard, team-awareness pages |
-| `public`   | Customers / stakeholders | Customer-facing status page, stakeholder updates    |
+## Updating during an incident
 
-::: warning Public access is not yet unauthenticated
-All status page API routes currently require authentication (a session or personal access token) and the `statuspages:read` permission. The `public` visibility is a classification marker; Alga does not yet serve an unauthenticated public endpoint for `public` pages.
-:::
+When something breaks, open the status page, find the affected component, and change its color to yellow or red. When the incident is fixed, set it back to green.
 
-## Creating a Status Page
-
-1. Go to **Status Pages → Create Status Page**
-2. Set the **name** and **slug** (the URL path — e.g., `status.example.com/pages/prod-status`)
-3. Choose **visibility** (`internal` or `public`)
-4. Assign an **owning team**
-5. **Add components**:
-   - Name each component (e.g., "API", "Web Dashboard")
-   - Optionally link to a service via `service_id`
-   - Set the initial status (defaults to `operational`)
-6. Save
-
-### Slug Rules
-
-Slugs must be 2–64 characters: lowercase letters, digits, and hyphens (no leading/trailing hyphen). Regex: `^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$`. Slugs are unique across all status pages.
-
-## Updating Component Status During an Incident
-
-During an active incident, update the affected components to reflect reality:
-
-```sh
-curl -b cookies.txt -X PATCH http://localhost:8080/api/v1/status-pages/1/components/1 \
-  -H "Content-Type: application/json" \
-  -d '{"status": "degraded"}'
-```
-
-When the incident is resolved, set components back to `operational`.
-
-## API
-
-### Status Pages
-
-| Method                     | Path                               | Permission                   | Description                                                           |
-| -------------------------- | ---------------------------------- | ---------------------------- | --------------------------------------------------------------------- |
-| `GET`                      | `/api/v1/status-pages`             | `statuspages:read`           | List status pages                                                     |
-| `POST`                     | `/api/v1/status-pages`             | `statuspages:write`          | Create status page                                                    |
-| `GET`                      | `/api/v1/status-pages/slug/{slug}` | `statuspages:read`           | View page by slug (with overall status, components, active incidents) |
-| `GET` / `PATCH` / `DELETE` | `/api/v1/status-pages/{id}`        | `statuspages:read` / `write` | Manage a page                                                         |
-
-### Components
-
-| Method                     | Path                                                  | Permission          | Description        |
-| -------------------------- | ----------------------------------------------------- | ------------------- | ------------------ |
-| `GET`                      | `/api/v1/status-pages/{id}/components`                | `statuspages:read`  | List components    |
-| `POST`                     | `/api/v1/status-pages/{id}/components`                | `statuspages:write` | Create component   |
-| `GET` / `PATCH` / `DELETE` | `/api/v1/status-pages/{id}/components/{component_id}` | `statuspages:*`     | Manage a component |
-
-## See Also
+## See also
 
 - [Service Catalog](/service-management/) — link components to services
-- [Incident Management](/incident-management/) — incidents drive status page updates
-- [Teams](/on-call/) — team ownership of status pages
+- [Incident Management](/incident-management/) — incidents that drive status updates

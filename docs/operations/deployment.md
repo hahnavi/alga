@@ -12,7 +12,7 @@ Production deployments use the base compose file with the production overlay, wh
 ```sh
 git clone https://github.com/hahnavi/alga.git && cd alga
 ./setup.sh
-# Edit .env — set DOMAIN, and verify the generated secrets
+# Edit .env — set DOMAIN (production overlay only), and verify the generated secrets
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
@@ -20,22 +20,22 @@ The UI is served on `https://${DOMAIN}`. The nginx-based frontend image proxies 
 
 ### Environment Variables
 
-| Variable               | Default      | Required | Description                                                                  |
-| ---------------------- | ------------ | -------- | ---------------------------------------------------------------------------- |
-| `ALGA_VERSION`         | `latest`     | No       | Image tag for `ghcr.io/hahnavi/alga-{backend,frontend}`                      |
-| `DOMAIN`               | `localhost`  | **Yes**  | Public hostname for Caddy TLS                                                |
-| `SECURE_COOKIES`       | `false`      | No       | Set `true` only behind HTTPS (TLS-terminating proxy)                         |
-| `POSTGRES_USER`        | `alga`       | No       | PostgreSQL user                                                              |
-| `POSTGRES_PASS`        | —            | **Yes**  | PostgreSQL password                                                          |
-| `POSTGRES_DB`          | `alga`       | No       | PostgreSQL database name                                                     |
-| `VALKEY_PASSWORD`      | —            | **Yes**  | Valkey requirepass                                                           |
-| `RABBITMQ_USER`        | `alga`       | No       | RabbitMQ user                                                                |
-| `RABBITMQ_PASS`        | —            | **Yes**  | RabbitMQ password                                                            |
-| `ENCRYPTION_KEYS`      | —            | **Yes**  | Comma-separated `kid:base64(32-byte key)` pairs (startup fails without this) |
-| `SECRET_PEPPER`        | —            | **Yes**  | HMAC pepper for token hashing (startup fails without this)                   |
-| `LOG_LEVEL`            | `info`       | No       | Backend log level                                                            |
-| `ENVIRONMENT`          | `production` | No       | Runtime environment label                                                    |
-| `SESSION_EXPIRY_HOURS` | `24`         | No       | Session lifetime in hours                                                    |
+| Variable               | Default      | Required                        | Description                                                                                                           |
+| ---------------------- | ------------ | ------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `ALGA_VERSION`         | `latest`     | No                              | Image tag for `ghcr.io/hahnavi/alga-{backend,frontend}`                                                               |
+| `DOMAIN`               | `localhost`  | Only for the production overlay | Public hostname for Caddy TLS (used by `docker-compose.prod.yml` only — not a backend setting, not in `.env.example`) |
+| `SECURE_COOKIES`       | `false`      | No                              | Set `true` only behind HTTPS (TLS-terminating proxy)                                                                  |
+| `POSTGRES_USER`        | `alga`       | No                              | PostgreSQL user                                                                                                       |
+| `POSTGRES_PASS`        | —            | **Yes**                         | PostgreSQL password                                                                                                   |
+| `POSTGRES_DB`          | `alga`       | No                              | PostgreSQL database name                                                                                              |
+| `VALKEY_PASSWORD`      | —            | **Yes**                         | Valkey requirepass                                                                                                    |
+| `RABBITMQ_USER`        | `alga`       | No                              | RabbitMQ user                                                                                                         |
+| `RABBITMQ_PASS`        | —            | **Yes**                         | RabbitMQ password                                                                                                     |
+| `ENCRYPTION_KEYS`      | —            | **Yes**                         | Comma-separated `kid:base64(32-byte key)` pairs (startup fails without this)                                          |
+| `SECRET_PEPPER`        | —            | **Yes**                         | HMAC pepper for token hashing (startup fails without this)                                                            |
+| `LOG_LEVEL`            | `info`       | No                              | Backend log level                                                                                                     |
+| `ENVIRONMENT`          | `production` | No                              | Runtime environment label                                                                                             |
+| `SESSION_EXPIRY_HOURS` | `24`         | No                              | Session lifetime in hours                                                                                             |
 
 `setup.sh` generates all required secrets automatically. To generate them manually:
 

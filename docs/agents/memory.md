@@ -68,7 +68,7 @@ Both the LLM and embedding endpoints accept any OpenAI-compatible API — OpenAI
 | ------------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `MEMORY_AUTO_EXTRACT`          | `false` | Auto-extract on investigation completion (forced `true` when `MEMORY_LLM_URL` is set)                                                             |
 | `MEMORY_MAX_PER_INVESTIGATION` | `10`    | Maximum memories extracted per investigation                                                                                                      |
-| `MEMORY_SIMILARITY_THRESHOLD`  | `0`     | Minimum cosine similarity for search results (accepted and validated, but not currently applied as a filter — search returns top-K by similarity) |
+| `MEMORY_SIMILARITY_THRESHOLD`  | `0`     | Minimum similarity score (0–1) for a memory to show up in results. Applied as a filter on both vector and text search — `0` returns the raw top-K |
 
 ## What Gets Extracted
 
@@ -83,7 +83,7 @@ The LLM is instructed to produce discrete, self-contained memory statements (15�
 
 ## Semantic Search
 
-When an agent searches memories, Alga:
+When an agent looks up memories, Alga finds past cases that **mean the same thing, not just ones with matching keywords**. Under the hood it works like this:
 
 1. Embeds the query text using the configured embedding model
 2. Runs a pgvector cosine similarity search (`1 - (vec <=> query)`) ordered by similarity
@@ -120,12 +120,12 @@ The **Memory** page (brain icon in the sidebar) lets you browse, create, edit, a
 
 Agents interact with memories through their own bearer-scoped endpoints:
 
-| Method   | Endpoint                      | Description                                                                                                                                                                                                                                |           |
-| -------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------- |
-| `GET`    | `/api/v1/agent/memories`      | List/search memories (requires `investigate\                                                                                                                                                                                               | command`) |
-| `POST`   | `/api/v1/agent/memories`      | Create a memory (requires `investigate`; auto-stamps the calling agent's ID)                                                                                                                                                               |           |
-| `GET`    | `/api/v1/agent/memories/{id}` | Get a specific memory (requires `investigate\                                                                                                                                                                                              | command`) |
-| `DELETE` | `/api/v1/agent/memories/{id}` | Delete — requires `investigate` AND ownership; memories with no owning agent (extraction output) can only be removed by an operator via the RBAC-gated `/api/v1/memories/{id}`, and every successful delete is audited as `memory_deleted` |           |
+| Method   | Endpoint                      | Description                                                                                                                                                                                                                                |
+| -------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GET`    | `/api/v1/agent/memories`      | List/search memories (requires `investigate` command)                                                                                                                                                                                      |
+| `POST`   | `/api/v1/agent/memories`      | Create a memory (requires `investigate`; auto-stamps the calling agent's ID)                                                                                                                                                               |
+| `GET`    | `/api/v1/agent/memories/{id}` | Get a specific memory (requires `investigate` command)                                                                                                                                                                                     |
+| `DELETE` | `/api/v1/agent/memories/{id}` | Delete — requires `investigate` AND ownership; memories with no owning agent (extraction output) can only be removed by an operator via the RBAC-gated `/api/v1/memories/{id}`, and every successful delete is audited as `memory_deleted` |
 
 ## Memory Fields
 

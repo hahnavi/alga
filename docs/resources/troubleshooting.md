@@ -74,7 +74,7 @@ description: Common issues and solutions — health checks, logs, metrics, datab
 
 **Fix:**
 
-- Verify the agent token is enabled (`POST /api/v1/agent-tokens/{id}/enable`)
+- Verify the agent token is enabled — check the **Agents** page, or update it via `PUT /api/v1/agent-tokens/{id}` (there is no `/enable` endpoint)
 - Check the SSE endpoint: `GET /api/v1/agent/events` with bearer token
 - Verify network connectivity to the Alga backend
 - Check `AGENT_SSE_ALLOWED_ORIGINS` if using browser-based agents
@@ -86,22 +86,20 @@ description: Common issues and solutions — health checks, logs, metrics, datab
 **Fix:**
 
 - Ensure `RABBITMQ_URI` is configured (required for investigations)
-- Check `CORRELATION_WINDOW` is > 0 (0 disables correlation)
+- Check `CORRELATION_WINDOW` — `0` means each alert is sent for investigation immediately with no grouping delay (not "investigations off"). If related alerts should be grouped, set e.g. `CORRELATION_WINDOW=5m`
 - Verify at least one agent is online (check Agents page)
 - Check `MAX_CONCURRENT_INVESTIGATIONS` isn't reached
 
 ### Dead-Lettered Investigations
 
-**Symptom:** Investigations show `dead_lettered` status and are not retried automatically.
+**Symptom:** Investigations fail repeatedly and then stop being retried.
 
 **Fix:**
 
-- List dead-lettered investigations: `GET /api/v1/investigations?status=dead_lettered`
-- Check the investigation's error message for the root cause (e.g., agent timeout, external service unreachable)
-- Retry manually: `POST /api/v1/investigations/{id}/retry`
-- If retries keep failing, check agent health and connectivity
-- Increase retry TTL in the RabbitMQ retry topology if transient failures need more recovery time
-- Review `INVESTIGATION_TIMEOUT` — if agents are consistently timing out, increase the value
+- Failed work is retried automatically in four stages (after ~1 minute, ~5 minutes, ~15 minutes, then ~1 hour) before it is parked (dead-lettered).
+- **Ask an admin to look** — admins can list parked investigations via `GET /api/v1/investigations/dead-lettered` (admin only). There is no self-serve retry button and no `?status=dead_lettered` list filter.
+- Fix the underlying cause first (agent offline or overloaded, external service unreachable, `INVESTIGATION_TIMEOUT` too low) — otherwise a retry would just fail again.
+- Review `INVESTIGATION_TIMEOUT` — if agents are consistently timing out, increase the value.
 
 #### Broker Dead-Letter Queue (`alga.dead_letter`)
 

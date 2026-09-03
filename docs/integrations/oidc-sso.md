@@ -76,9 +76,11 @@ Once linked, the identity persists in `oidc_identities`; subsequent logins resol
 
 In addition to generic OIDC providers, Alga supports Google OAuth as a separate login method with its own configuration:
 
-| Variable               | Description                |
-| ---------------------- | -------------------------- |
-| `GOOGLE_CLIENT_ID`     | Google OAuth client ID     |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
+| Variable                    | Description                                                           |
+| --------------------------- | --------------------------------------------------------------------- |
+| `GOOGLE_CLIENT_ID`          | Google OAuth client ID                                                |
+| `GOOGLE_CLIENT_SECRET`      | Google OAuth client secret                                            |
+| `GOOGLE_OAUTH_REDIRECT_URL` | Override callback URL (auto-detected from request headers if not set) |
+| `GOOGLE_OAUTH_ENABLED`      | Set to `false` to hide the "Sign in with Google" button               |
 
 This is independent of the OIDC multi-provider system and provides a dedicated "Sign in with Google" button on the login page.

@@ -61,10 +61,14 @@ All have safe defaults; override only to tune for your deployment.
 
 ## PostgreSQL
 
-| Variable                | Default | Required | Description                                                                                                                                            |
-| ----------------------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `POSTGRES_DSN`          |         | Yes      | PostgreSQL connection string (e.g. `postgres://user:pass@localhost:5432/alga?sslmode=disable`). Production must use `sslmode=require` or `verify-full` |
-| `POSTGRES_AUTO_MIGRATE` | `false` | No       | Run goose migrations on startup (enabled in Docker Compose)                                                                                            |
+| Variable                      | Default | Required | Description                                                                                                                                            |
+| ----------------------------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `POSTGRES_DSN`                |         | Yes      | PostgreSQL connection string (e.g. `postgres://user:pass@localhost:5432/alga?sslmode=disable`). Production must use `sslmode=require` or `verify-full` |
+| `POSTGRES_AUTO_MIGRATE`       | `false` | No       | Run goose migrations on startup (enabled in Docker Compose)                                                                                            |
+| `POSTGRES_MAX_OPEN_CONNS`     | `25`    | No       | Max open DB connections in the pool — raise for busy setups with many replicas                                                                         |
+| `POSTGRES_MAX_IDLE_CONNS`     | `5`     | No       | Idle connections kept ready in the pool                                                                                                                |
+| `POSTGRES_CONN_MAX_IDLE_TIME` | `5m`    | No       | How long an idle connection is kept before closing                                                                                                     |
+| `POSTGRES_CONN_MAX_LIFETIME`  | `30m`   | No       | Max lifetime of a connection before it is recycled                                                                                                     |
 
 ## Cryptography
 
@@ -112,9 +116,11 @@ Defaults follow OWASP 2026 (m=64 MiB, t=3, p=2). Tune so a single hash takes ~25
 | `SLACK_DEFAULT_CHANNEL`    |         | No       | Default Slack channel for unmatched alerts                                                      |
 | `SLACK_DISABLED`           | `false` | No       | Disable Slack delivery                                                                          |
 | `SLACK_SIGNING_SECRET`     |         | No       | Verifies Slack Events API signatures on `/webhooks/slack`                                       |
-| `SLACK_CLIENT_ID`          |         | No       | Slack app Client ID (enables OAuth install flow)                                                |
-| `SLACK_CLIENT_SECRET`      |         | No       | Slack app Client Secret (enables OAuth install flow)                                            |
+| `SLACK_CLIENT_ID`          |         | No       | Slack app Client ID (enables workspace install via OAuth)                                       |
+| `SLACK_CLIENT_SECRET`      |         | No       | Slack app Client Secret (enables workspace install via OAuth)                                   |
 | `SLACK_OAUTH_REDIRECT_URL` |         | No       | Override OAuth callback URL (for reverse-proxy setups)                                          |
+
+To install Alga into a whole Slack workspace at once (instead of pasting a single bot token), fill in the three OAuth rows above — see [Slack OAuth Setup](/integrations/slack-oauth). When `SLACK_BOT_TOKEN` is set directly, the Integrations page fields are locked and the env value wins.
 
 ## Mattermost
 
@@ -161,9 +167,26 @@ Agent dispatch and SSE connections use bearer tokens created per-agent in the Al
 
 ## Agent SSE
 
-| Variable                    | Default | Required | Description                                                                             |
-| --------------------------- | ------- | -------- | --------------------------------------------------------------------------------------- |
-| `AGENT_SSE_ALLOWED_ORIGINS` |         | No       | Comma-separated `Origin` allowlist for the agent SSE endpoint. Empty allows all origins |
+| Variable                      | Default | Required | Description                                                                                                                                                    |
+| ----------------------------- | ------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AGENT_SSE_ALLOWED_ORIGINS`   |         | No       | Comma-separated `Origin` allowlist for the agent SSE endpoint. Empty allows all origins                                                                        |
+| `AGENT_SSE_ALLOW_QUERY_TOKEN` | `false` | No       | Temporary escape hatch: allow the agent token as `?token=` on the SSE stream. Keep off — tokens in URLs leak into logs. Use the `Authorization` header instead |
+
+## Webhook & Agent Token Escape Hatches
+
+Tokens normally travel in the `Authorization` header. These flags re-enable the old `?token=` URL fallback for senders that can't set headers. Both are off by default, log a loud warning when on, and will be removed in a future release.
+
+| Variable                      | Default | Required | Description                                                   |
+| ----------------------------- | ------- | -------- | ------------------------------------------------------------- |
+| `WEBHOOK_ALLOW_QUERY_TOKEN`   | `false` | No       | Allow webhook tokens as `?token=` on `POST /webhooks/alerts`  |
+| `AGENT_SSE_ALLOW_QUERY_TOKEN` | `false` | No       | Allow agent tokens as `?token=` on `GET /api/v1/agent/events` |
+
+## Rate Limiting
+
+| Variable                        | Default | Required | Description                                                                                                                            |
+| ------------------------------- | ------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `RATE_LIMIT_GENERAL_PER_MINUTE` | `20`    | No       | Max requests per minute per IP on public endpoints (login, webhooks, setup). Raise if a busy sender posts more than 20/min from one IP |
+| `RATE_LIMIT_AGENT_PER_MINUTE`   | `120`   | No       | Max requests per minute per agent token on agent endpoints                                                                             |
 
 ## Alert Correlation
 
@@ -315,10 +338,10 @@ Auto-creates a Google Meet space per incident for war-room coordination. Require
 
 ## Data Retention
 
-| Variable               | Default | Required | Description                                                                                                                   |
-| ---------------------- | ------- | -------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `DATA_RETENTION_DAYS`  | `90`    | No       | Days to retain resolved alerts. Set to `0` to keep forever                                                                    |
-| `AUDIT_RETENTION_DAYS` | `365`   | No       | Days to retain audit logs; pruned by the hourly retention sweeper alongside `DATA_RETENTION_DAYS`. Set to `0` to keep forever |
+| Variable               | Default | Required | Description                                                                                                                                                                    |
+| ---------------------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `DATA_RETENTION_DAYS`  | `90`    | No       | Days to keep resolved alerts plus related triage results and delivery records. Set to `0` to keep forever. (Audit history uses `AUDIT_RETENTION_DAYS` below, not this setting) |
+| `AUDIT_RETENTION_DAYS` | `365`   | No       | Days to retain audit logs; pruned by the hourly retention sweeper alongside `DATA_RETENTION_DAYS`. Set to `0` to keep forever                                                  |
 
 ## Observability (OpenTelemetry)
 

@@ -324,7 +324,7 @@ func (h *oidcHandler) createProvider(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if input.Name == "" || input.Issuer == "" || input.ClientID == "" || input.ClientSecret == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "name, issuer, client_id, and client_secret are required")
+		writeError(w, ErrorCodeValidationFailed, "name, issuer, client_id, and client_secret are required")
 		return
 	}
 

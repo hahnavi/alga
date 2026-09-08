@@ -101,7 +101,7 @@ func (s *Server) handleListIncidentAlerts(w http.ResponseWriter, r *http.Request
 		}
 		alerts = append(alerts, *rec)
 	}
-	writeData(w, http.StatusOK, alerts)
+	writeData(w, http.StatusOK, ensureSlice(alerts))
 }
 
 func (s *Server) handleLinkAlertToIncident(w http.ResponseWriter, r *http.Request, incidentID string) {
@@ -123,7 +123,7 @@ func (s *Server) handleLinkAlertToIncident(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if req.AlertNumber <= 0 {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "alert_number is required")
+		writeError(w, ErrorCodeValidationFailed, "alert_number is required")
 		return
 	}
 

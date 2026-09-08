@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -39,12 +40,16 @@ func (f *DefaultInvestigationForwarder) ForwardDispatchToAgent(agentIDHex, inves
 	logger.Info("ForwardDispatchToAgent", "agent_id", agentIDHex, "investigation_id", investigationID, "sender_id", senderID, "sender_name", senderName, "message_len", len(message))
 
 	var chatID string
+	// The forwarder interface predates context plumbing; bound the lookup
+	// queries instead of running them on an unbounded Background context.
+	lookupCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 	if f.AlertInvestigationStore != nil {
-		if inv, err := f.AlertInvestigationStore.GetAlertInvestigation(context.Background(), investigationID); err == nil && inv != nil {
+		if inv, err := f.AlertInvestigationStore.GetAlertInvestigation(lookupCtx, investigationID); err == nil && inv != nil {
 			if inv.PromotedIncidentID != nil {
 				incidentNumberStr := ""
 				if f.IncidentStore != nil {
-					if inc, err := f.IncidentStore.GetIncidentByID(context.Background(), *inv.PromotedIncidentID); err == nil && inc != nil {
+					if inc, err := f.IncidentStore.GetIncidentByID(lookupCtx, *inv.PromotedIncidentID); err == nil && inc != nil {
 						incidentNumberStr = strconv.FormatInt(inc.IncidentNumber, 10)
 					}
 				}
@@ -57,7 +62,7 @@ func (f *DefaultInvestigationForwarder) ForwardDispatchToAgent(agentIDHex, inves
 		}
 	}
 	if chatID == "" && f.IncidentInvestigationStore != nil {
-		if inv, err := f.IncidentInvestigationStore.GetIncidentInvestigation(context.Background(), investigationID); err == nil && inv != nil && inv.IncidentNumber != 0 {
+		if inv, err := f.IncidentInvestigationStore.GetIncidentInvestigation(lookupCtx, investigationID); err == nil && inv != nil && inv.IncidentNumber != 0 {
 			chatID = platform.BuildOwnerChatID(store.ThreadOwnerIncidentInvestigation, strconv.FormatInt(inv.IncidentNumber, 10))
 		}
 	}
@@ -111,7 +116,9 @@ func (f *DefaultInvestigationForwarder) AgentOnline(agentIDHex string) bool {
 		return f.AgentSSE.AgentOnline(agentIDHex)
 	}
 	if f.Presence != nil && f.Presence.Available() {
-		return f.Presence.IsAgentOnline(context.Background(), agentIDHex)
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		return f.Presence.IsAgentOnline(ctx, agentIDHex)
 	}
 	return false
 }

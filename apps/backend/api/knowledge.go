@@ -42,7 +42,7 @@ func (s *Server) handleKnowledge(w http.ResponseWriter, r *http.Request) {
 		}
 		s.createKnowledge(w, r)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -54,7 +54,7 @@ func (s *Server) handleKnowledgeByID(w http.ResponseWriter, r *http.Request) {
 	id := pathID(r, "/api/v1/knowledge/")
 	id = strings.TrimSuffix(id, "/")
 	if id == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing id")
+		writeError(w, ErrorCodeValidationFailed, "missing id")
 		return
 	}
 	switch r.Method {
@@ -103,7 +103,7 @@ func (s *Server) handleKnowledgeByID(w http.ResponseWriter, r *http.Request) {
 		})
 		writeStatus(w, "deleted")
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -185,7 +185,7 @@ func (s *Server) handleAgentKnowledge(w http.ResponseWriter, r *http.Request) {
 		}
 		s.createAgentKnowledge(w, r)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -199,7 +199,7 @@ func (s *Server) handleAgentKnowledgeByID(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if r.Method != http.MethodGet {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 	agent := platform.AgentFromContext(r.Context())
@@ -216,7 +216,7 @@ func (s *Server) handleAgentKnowledgeByID(w http.ResponseWriter, r *http.Request
 	id := pathID(r, "/api/v1/agent/knowledge/")
 	id = strings.TrimSuffix(id, "/")
 	if id == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing id")
+		writeError(w, ErrorCodeValidationFailed, "missing id")
 		return
 	}
 	note, err := s.knowledgeStore.Get(r.Context(), id)
@@ -242,11 +242,11 @@ func (s *Server) createAgentKnowledge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.TrimSpace(req.SourceInvestigationID) == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "source_investigation_id is required for agent-authored notes")
+		writeError(w, ErrorCodeValidationFailed, "source_investigation_id is required for agent-authored notes")
 		return
 	}
 	if req.Confidence == nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "confidence is required for agent-authored notes")
+		writeError(w, ErrorCodeValidationFailed, "confidence is required for agent-authored notes")
 		return
 	}
 	note := knowledgeNoteFromRequest(req)

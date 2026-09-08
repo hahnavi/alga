@@ -94,7 +94,7 @@ func (s *Server) handleEscalationPolicies(w http.ResponseWriter, r *http.Request
 	case http.MethodPost:
 		s.handleCreateEscalationPolicy(w, r)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -148,25 +148,25 @@ func (s *Server) handleCreateEscalationPolicy(w http.ResponseWriter, r *http.Req
 		return
 	}
 	if strings.TrimSpace(req.Name) == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "name is required")
+		writeError(w, ErrorCodeValidationFailed, "name is required")
 		return
 	}
 	if req.RepeatCount < 0 {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "repeat_count must be non-negative")
+		writeError(w, ErrorCodeValidationFailed, "repeat_count must be non-negative")
 		return
 	}
 
 	levels, err := parseEscalationLevels(req.Levels)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, err.Error())
+		writeError(w, ErrorCodeValidationFailed, err.Error())
 		return
 	}
 	if len(levels) == 0 {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "at least one level is required")
+		writeError(w, ErrorCodeValidationFailed, "at least one level is required")
 		return
 	}
 	if err := s.validateEscalationTargetsExist(r.Context(), levels); err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, err.Error())
+		writeError(w, ErrorCodeValidationFailed, err.Error())
 		return
 	}
 
@@ -199,7 +199,7 @@ func (s *Server) handleCreateEscalationPolicy(w http.ResponseWriter, r *http.Req
 func (s *Server) handleEscalationPolicyRoutes(w http.ResponseWriter, r *http.Request) {
 	suffix := pathID(r, "/api/v1/escalation-policies/")
 	if suffix == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing policy id")
+		writeError(w, ErrorCodeValidationFailed, "missing policy id")
 		return
 	}
 
@@ -211,14 +211,14 @@ func (s *Server) handleEscalationPolicyRoutes(w http.ResponseWriter, r *http.Req
 	case http.MethodDelete:
 		s.handleDeleteEscalationPolicy(w, r, suffix)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
 func (s *Server) getPolicyOrError(w http.ResponseWriter, r *http.Request, id string) (*store.EscalationPolicyRecord, bool) {
 	uid, err := uuid.Parse(id)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid policy id")
+		writeError(w, ErrorCodeValidationFailed, "invalid policy id")
 		return nil, false
 	}
 	record, err := s.escalationStore.GetPolicy(r.Context(), uid)
@@ -257,7 +257,7 @@ func (s *Server) handlePatchEscalationPolicy(w http.ResponseWriter, r *http.Requ
 
 	uid, err := uuid.Parse(id)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid policy id")
+		writeError(w, ErrorCodeValidationFailed, "invalid policy id")
 		return
 	}
 
@@ -283,7 +283,7 @@ func (s *Server) handlePatchEscalationPolicy(w http.ResponseWriter, r *http.Requ
 
 	if req.Name != nil {
 		if strings.TrimSpace(*req.Name) == "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "name must not be empty")
+			writeError(w, ErrorCodeValidationFailed, "name must not be empty")
 			return
 		}
 		current.Name = *req.Name
@@ -293,7 +293,7 @@ func (s *Server) handlePatchEscalationPolicy(w http.ResponseWriter, r *http.Requ
 	}
 	if req.RepeatCount != nil {
 		if *req.RepeatCount < 0 {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "repeat_count must be non-negative")
+			writeError(w, ErrorCodeValidationFailed, "repeat_count must be non-negative")
 			return
 		}
 		current.RepeatCount = *req.RepeatCount
@@ -301,15 +301,15 @@ func (s *Server) handlePatchEscalationPolicy(w http.ResponseWriter, r *http.Requ
 	if req.Levels != nil {
 		levels, perr := parseEscalationLevels(req.Levels)
 		if perr != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, perr.Error())
+			writeError(w, ErrorCodeValidationFailed, perr.Error())
 			return
 		}
 		if len(levels) == 0 {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "at least one level is required")
+			writeError(w, ErrorCodeValidationFailed, "at least one level is required")
 			return
 		}
 		if terr := s.validateEscalationTargetsExist(r.Context(), levels); terr != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, terr.Error())
+			writeError(w, ErrorCodeValidationFailed, terr.Error())
 			return
 		}
 		current.Levels = levels
@@ -343,7 +343,7 @@ func (s *Server) handleDeleteEscalationPolicy(w http.ResponseWriter, r *http.Req
 
 	uid, err := uuid.Parse(id)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid policy id")
+		writeError(w, ErrorCodeValidationFailed, "invalid policy id")
 		return
 	}
 

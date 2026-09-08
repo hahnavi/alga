@@ -1,16 +1,13 @@
 package models
 
 import (
-	"time"
-
 	"github.com/google/uuid"
-	"github.com/uptrace/bun"
+	"time"
 )
 
 type ScheduleLayer struct {
-	bun.BaseModel `bun:"table:schedule_layers"`
+	BaseModel `bun:"table:schedule_layers"`
 
-	ID uuid.UUID `bun:"id,pk"`
 	// ScheduleID references the owning on_call_schedules row.
 	ScheduleID uuid.UUID `bun:"schedule_id,notnull"`
 	Name       string    `bun:"name,notnull,default:''"`
@@ -26,6 +23,4 @@ type ScheduleLayer struct {
 	DaysOfWeek       []string   `bun:"days_of_week,type:jsonb,notnull,default:'[]'"`
 	Priority         int        `bun:"priority,notnull,default:0"`
 	UserIDs          []string   `bun:"user_ids,type:jsonb,notnull,default:'[]'"`
-	CreatedAt        time.Time  `bun:"created_at,notnull,default:current_timestamp"`
-	UpdatedAt        time.Time  `bun:"updated_at,notnull,default:current_timestamp"`
 }

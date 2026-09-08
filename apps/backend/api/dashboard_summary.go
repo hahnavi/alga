@@ -57,6 +57,13 @@ func (d *DailySummaryScheduler) Stop() {
 
 func (d *DailySummaryScheduler) run() {
 	defer d.wg.Done()
+	defer func() {
+		// Startup generation runs unrecovered below; guard the whole loop so a
+		// panic in the first generateIfStale cannot crash the process.
+		if r := recover(); r != nil {
+			logger.Error("daily summary scheduler panicked", "component", "dashboard_summary", "panic", r, "stack", string(debug.Stack()))
+		}
+	}()
 
 	d.generateIfStale(context.Background())
 
@@ -200,7 +207,7 @@ func (s *Server) handleDailySummary(w http.ResponseWriter, r *http.Request) {
 		}
 		s.handlePostDailySummary(w, r)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 

@@ -103,7 +103,7 @@ func WithIdempotency(store IdempotencyStore, ttl time.Duration, scope string, ne
 			return
 		}
 		if len(key) > maxIdempotencyKeyLen {
-			WriteErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "Idempotency-Key header too long")
+			WriteError(w, ErrorCodeValidationFailed, "Idempotency-Key header too long")
 			return
 		}
 

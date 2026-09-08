@@ -34,7 +34,7 @@ func (s *Server) handleListAuditEvents(w http.ResponseWriter, r *http.Request) {
 	}
 	if v := strings.TrimSpace(q.Get("entity_id")); v != "" {
 		if _, err := uuid.Parse(v); err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid entity_id (use a UUID)")
+			writeError(w, ErrorCodeValidationFailed, "invalid entity_id (use a UUID)")
 			return
 		}
 		filter["entity_id"] = v

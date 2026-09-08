@@ -240,7 +240,7 @@ func (s *pgKnowledgeStore) Update(ctx context.Context, id string, patch *Knowled
 
 	uid, err := uuid.Parse(id)
 	if err != nil {
-		return nil, fmt.Errorf("invalid id: %w", err)
+		return nil, fmt.Errorf("%w: %v", ErrInvalidID, err)
 	}
 
 	upd := s.db.NewUpdate().Model((*models.KnowledgeNote)(nil)).
@@ -281,7 +281,7 @@ func (s *pgKnowledgeStore) Update(ctx context.Context, id string, patch *Knowled
 		return nil, fmt.Errorf("failed to update knowledge note: %w", err)
 	}
 	if n == 0 {
-		return nil, errors.New("knowledge note not found")
+		return nil, fmt.Errorf("knowledge note %w", ErrNotFound)
 	}
 
 	var m models.KnowledgeNote
@@ -295,7 +295,7 @@ func (s *pgKnowledgeStore) Update(ctx context.Context, id string, patch *Knowled
 func (s *pgKnowledgeStore) Delete(ctx context.Context, id string) error {
 	uid, err := uuid.Parse(id)
 	if err != nil {
-		return fmt.Errorf("invalid id: %w", err)
+		return fmt.Errorf("%w: %v", ErrInvalidID, err)
 	}
 
 	res, err := s.db.NewDelete().Model((*models.KnowledgeNote)(nil)).Where("id = ?", uid).Exec(ctx)
@@ -307,7 +307,7 @@ func (s *pgKnowledgeStore) Delete(ctx context.Context, id string) error {
 		return fmt.Errorf("failed to delete knowledge note: %w", err)
 	}
 	if n == 0 {
-		return errors.New("knowledge note not found")
+		return fmt.Errorf("knowledge note %w", ErrNotFound)
 	}
 	return nil
 }
@@ -315,7 +315,7 @@ func (s *pgKnowledgeStore) Delete(ctx context.Context, id string) error {
 func (s *pgKnowledgeStore) Get(ctx context.Context, id string) (*KnowledgeNote, error) {
 	uid, err := uuid.Parse(id)
 	if err != nil {
-		return nil, fmt.Errorf("invalid id: %w", err)
+		return nil, fmt.Errorf("%w: %v", ErrInvalidID, err)
 	}
 
 	var m models.KnowledgeNote

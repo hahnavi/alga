@@ -244,8 +244,8 @@ func TestWithIdempotency_OversizedKeyRejected(t *testing.T) {
 	if calls != 0 {
 		t.Fatalf("handler calls = %d, want 0 (oversized key rejected)", calls)
 	}
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
+	if rec.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusUnprocessableEntity)
 	}
 }
 

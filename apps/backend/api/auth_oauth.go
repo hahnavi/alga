@@ -57,12 +57,12 @@ func (s *Server) handleOIDCProviderRoutes(w http.ResponseWriter, r *http.Request
 	rest := strings.TrimPrefix(r.URL.Path, "/api/v1/oidc/providers/")
 	rest = strings.TrimSuffix(rest, "/")
 	if rest == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing provider id")
+		writeError(w, ErrorCodeValidationFailed, "missing provider id")
 		return
 	}
 	id, err := uuid.Parse(rest)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid provider id")
+		writeError(w, ErrorCodeValidationFailed, "invalid provider id")
 		return
 	}
 	switch r.Method {
@@ -73,7 +73,7 @@ func (s *Server) handleOIDCProviderRoutes(w http.ResponseWriter, r *http.Request
 	case http.MethodDelete:
 		s.oidcHandler.deleteProvider(w, r, id)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -94,7 +94,7 @@ func (s *Server) handleOIDCAuthorize(w http.ResponseWriter, r *http.Request) {
 	idStr = strings.TrimSuffix(idStr, "/authorize")
 	providerID, err := uuid.Parse(idStr)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid provider id")
+		writeError(w, ErrorCodeValidationFailed, "invalid provider id")
 		return
 	}
 	s.oidcHandler.authorize(w, r, providerID)

@@ -17,6 +17,12 @@ import (
 	"github.com/uptrace/bun"
 )
 
+// handleQueryErr maps a query error to the store's Get contract: a missing
+// row becomes (nil, nil) — callers treat a nil record as "not found" (handlers
+// map it to 404). Any other failure is wrapped with the entity name. Update/
+// Delete paths instead return wrapped ErrNotFound sentinels so callers can
+// errors.Is them; both contracts are intentional, do not mix them in one
+// method.
 func handleQueryErr[T any](err error, entity string) (T, error) {
 	var zero T
 	if errors.Is(err, sql.ErrNoRows) {
@@ -53,6 +59,17 @@ func pgctx(ctx context.Context) (context.Context, context.CancelFunc) {
 		ctx = context.Background()
 	}
 	return context.WithTimeout(ctx, 5*time.Second)
+}
+
+// pgctxLong is pgctx with a wider 10s budget for list/bulk reads (audit
+// pages capped at 1000 rows, full alert queries, token listings) where the
+// standard 5s window has historically been too tight on large datasets.
+// Multi-write flows keep their explicit wider deadlines.
+func pgctxLong(ctx context.Context) (context.Context, context.CancelFunc) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return context.WithTimeout(ctx, 10*time.Second)
 }
 
 func pgIsDuplicateKey(err error) bool {

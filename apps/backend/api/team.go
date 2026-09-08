@@ -20,7 +20,7 @@ func (s *Server) handleTeams(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		s.handleCreateTeam(w, r)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -57,7 +57,7 @@ func (s *Server) handleCreateTeam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.TrimSpace(req.Name) == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "name is required")
+		writeError(w, ErrorCodeValidationFailed, "name is required")
 		return
 	}
 
@@ -69,6 +69,10 @@ func (s *Server) handleCreateTeam(w http.ResponseWriter, r *http.Request) {
 	created, err := s.teamStore.CreateTeam(r.Context(), record)
 	if err != nil {
 		logger.ErrorCtx(r.Context(), "failed to create team", "component", "api", "error", err)
+		if store.IsDuplicateKey(err) {
+			writeConflict(w, "a team with this name already exists")
+			return
+		}
 		writeInternalError(w, err, "failed to create team")
 		return
 	}
@@ -107,7 +111,7 @@ func (s *Server) handleCreateTeam(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleTeamRoutes(w http.ResponseWriter, r *http.Request) {
 	suffix := pathID(r, "/api/v1/teams/")
 	if suffix == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing team id")
+		writeError(w, ErrorCodeValidationFailed, "missing team id")
 		return
 	}
 
@@ -120,7 +124,7 @@ func (s *Server) handleTeamRoutes(w http.ResponseWriter, r *http.Request) {
 		case http.MethodDelete:
 			s.handleRemoveTeamMember(w, r, teamID, userID)
 		default:
-			writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+			writeMethodNotAllowed(w)
 		}
 		return
 	}
@@ -131,7 +135,7 @@ func (s *Server) handleTeamRoutes(w http.ResponseWriter, r *http.Request) {
 			teamID = ""
 		}
 		if teamID == "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing team id")
+			writeError(w, ErrorCodeValidationFailed, "missing team id")
 			return
 		}
 		switch r.Method {
@@ -140,7 +144,7 @@ func (s *Server) handleTeamRoutes(w http.ResponseWriter, r *http.Request) {
 		case http.MethodPost:
 			s.handleAddTeamMember(w, r, teamID)
 		default:
-			writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+			writeMethodNotAllowed(w)
 		}
 		return
 	}
@@ -153,14 +157,14 @@ func (s *Server) handleTeamRoutes(w http.ResponseWriter, r *http.Request) {
 	case http.MethodDelete:
 		s.handleDeleteTeam(w, r, suffix)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
 func (s *Server) getTeamOrError(w http.ResponseWriter, r *http.Request, id string) (*store.TeamRecord, bool) {
 	uid, err := uuid.Parse(id)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid team id")
+		writeError(w, ErrorCodeValidationFailed, "invalid team id")
 		return nil, false
 	}
 	record, err := s.teamStore.GetTeam(r.Context(), uid)
@@ -199,7 +203,7 @@ func (s *Server) handlePatchTeam(w http.ResponseWriter, r *http.Request, id stri
 
 	uid, err := uuid.Parse(id)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid team id")
+		writeError(w, ErrorCodeValidationFailed, "invalid team id")
 		return
 	}
 
@@ -255,7 +259,7 @@ func (s *Server) handleDeleteTeam(w http.ResponseWriter, r *http.Request, id str
 
 	uid, err := uuid.Parse(id)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid team id")
+		writeError(w, ErrorCodeValidationFailed, "invalid team id")
 		return
 	}
 
@@ -288,7 +292,7 @@ func (s *Server) handleListTeamMembers(w http.ResponseWriter, r *http.Request, t
 
 	uid, err := uuid.Parse(teamID)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid team id")
+		writeError(w, ErrorCodeValidationFailed, "invalid team id")
 		return
 	}
 
@@ -310,7 +314,7 @@ func (s *Server) handleAddTeamMember(w http.ResponseWriter, r *http.Request, tea
 
 	teamUID, err := uuid.Parse(teamID)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid team id")
+		writeError(w, ErrorCodeValidationFailed, "invalid team id")
 		return
 	}
 
@@ -322,13 +326,13 @@ func (s *Server) handleAddTeamMember(w http.ResponseWriter, r *http.Request, tea
 		return
 	}
 	if req.UserID == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "user_id is required")
+		writeError(w, ErrorCodeValidationFailed, "user_id is required")
 		return
 	}
 
 	userUID, err := uuid.Parse(req.UserID)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid user_id")
+		writeError(w, ErrorCodeValidationFailed, "invalid user_id")
 		return
 	}
 
@@ -363,12 +367,12 @@ func (s *Server) handleUpdateTeamMemberRole(w http.ResponseWriter, r *http.Reque
 
 	teamUID, err := uuid.Parse(teamID)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid team id")
+		writeError(w, ErrorCodeValidationFailed, "invalid team id")
 		return
 	}
 	userUID, err := uuid.Parse(userID)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid user id")
+		writeError(w, ErrorCodeValidationFailed, "invalid user id")
 		return
 	}
 
@@ -379,7 +383,7 @@ func (s *Server) handleUpdateTeamMemberRole(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if req.Role == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "role is required")
+		writeError(w, ErrorCodeValidationFailed, "role is required")
 		return
 	}
 
@@ -409,12 +413,12 @@ func (s *Server) handleRemoveTeamMember(w http.ResponseWriter, r *http.Request, 
 
 	teamUID, err := uuid.Parse(teamID)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid team id")
+		writeError(w, ErrorCodeValidationFailed, "invalid team id")
 		return
 	}
 	userUID, err := uuid.Parse(userID)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid user id")
+		writeError(w, ErrorCodeValidationFailed, "invalid user id")
 		return
 	}
 

@@ -43,7 +43,7 @@ func (s *Server) handleAddIncidentTimelineEntry(w http.ResponseWriter, r *http.R
 		return
 	}
 	if strings.TrimSpace(req.Message) == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "message is required")
+		writeError(w, ErrorCodeValidationFailed, "message is required")
 		return
 	}
 
@@ -65,5 +65,10 @@ func (s *Server) handleAddIncidentTimelineEntry(w http.ResponseWriter, r *http.R
 		writeInternalError(w, err, "failed to add timeline entry")
 		return
 	}
+	s.audit(r, store.AuditIncidentUpdated, map[string]any{
+		"timeline_entry":  true,
+		"event_type":      req.EventType,
+		"incident_number": entry.IncidentNumber,
+	})
 	writeData(w, http.StatusCreated, entry)
 }

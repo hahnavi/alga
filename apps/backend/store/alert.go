@@ -753,7 +753,7 @@ func (s *pgAlertStore) ExpungeSoftDeletedAlertsChildren(ctx context.Context) (in
 }
 
 func (s *pgAlertStore) QueryAlerts(filter map[string]any) ([]AlertRecord, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := pgctxLong(context.Background())
 	defer cancel()
 
 	var alerts []models.Alert

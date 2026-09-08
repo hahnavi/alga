@@ -2,7 +2,6 @@ package store
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -291,7 +290,7 @@ func (s *pgTeamStore) UpdateMemberRole(ctx context.Context, teamID, userID uuid.
 	}
 	n, _ := res.RowsAffected()
 	if n == 0 {
-		return errors.New("team member not found")
+		return fmt.Errorf("team member %w", ErrNotFound)
 	}
 	return nil
 }
@@ -309,7 +308,7 @@ func (s *pgTeamStore) RemoveMember(ctx context.Context, teamID, userID uuid.UUID
 	}
 	n, _ := res.RowsAffected()
 	if n == 0 {
-		return errors.New("team member not found")
+		return fmt.Errorf("team member %w", ErrNotFound)
 	}
 	return nil
 }

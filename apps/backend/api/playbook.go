@@ -20,7 +20,7 @@ func (s *Server) handlePlaybooks(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		s.handleCreatePlaybook(w, r)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -92,7 +92,7 @@ func (s *Server) handleCreatePlaybook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if strings.TrimSpace(req.Title) == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "title is required")
+		writeError(w, ErrorCodeValidationFailed, "title is required")
 		return
 	}
 	kind := strings.TrimSpace(req.Kind)
@@ -101,7 +101,7 @@ func (s *Server) handleCreatePlaybook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := validatePlaybookLabelSelectors(req.LabelSelectors); err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, err.Error())
+		writeError(w, ErrorCodeValidationFailed, err.Error())
 		return
 	}
 
@@ -153,7 +153,7 @@ func (s *Server) handleCreatePlaybook(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handlePlaybookRoutes(w http.ResponseWriter, r *http.Request) {
 	suffix := pathID(r, "/api/v1/playbooks/")
 	if suffix == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing playbook id")
+		writeError(w, ErrorCodeValidationFailed, "missing playbook id")
 		return
 	}
 
@@ -165,13 +165,13 @@ func (s *Server) handlePlaybookRoutes(w http.ResponseWriter, r *http.Request) {
 	if strings.HasSuffix(suffix, "/reorder") {
 		playbookID := strings.TrimSuffix(suffix, "/reorder")
 		if playbookID == "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing playbook id")
+			writeError(w, ErrorCodeValidationFailed, "missing playbook id")
 			return
 		}
 		if r.Method == http.MethodPost {
 			s.handleReorderPlaybookSteps(w, r, playbookID)
 		} else {
-			writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+			writeMethodNotAllowed(w)
 		}
 		return
 	}
@@ -184,7 +184,7 @@ func (s *Server) handlePlaybookRoutes(w http.ResponseWriter, r *http.Request) {
 	case http.MethodDelete:
 		s.handleDeletePlaybook(w, r, suffix)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -199,7 +199,7 @@ func (s *Server) handleGetPlaybook(w http.ResponseWriter, r *http.Request, id st
 
 	uid, err := uuid.Parse(id)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid playbook id")
+		writeError(w, ErrorCodeValidationFailed, "invalid playbook id")
 		return
 	}
 
@@ -230,7 +230,7 @@ func (s *Server) handleUpdatePlaybook(w http.ResponseWriter, r *http.Request, id
 
 	uid, err := uuid.Parse(id)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid playbook id")
+		writeError(w, ErrorCodeValidationFailed, "invalid playbook id")
 		return
 	}
 
@@ -274,7 +274,7 @@ func (s *Server) handleUpdatePlaybook(w http.ResponseWriter, r *http.Request, id
 	}
 	if req.LabelSelectors != nil {
 		if err := validatePlaybookLabelSelectors(req.LabelSelectors); err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, err.Error())
+			writeError(w, ErrorCodeValidationFailed, err.Error())
 			return
 		}
 		existing.LabelSelectors = req.LabelSelectors
@@ -310,7 +310,7 @@ func (s *Server) handleDeletePlaybook(w http.ResponseWriter, r *http.Request, id
 
 	uid, err := uuid.Parse(id)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid playbook id")
+		writeError(w, ErrorCodeValidationFailed, "invalid playbook id")
 		return
 	}
 
@@ -333,26 +333,26 @@ func (s *Server) handlePlaybookStepRoutes(w http.ResponseWriter, r *http.Request
 	if strings.HasSuffix(suffix, "/steps") {
 		playbookID := strings.TrimSuffix(suffix, "/steps")
 		if playbookID == "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing playbook id")
+			writeError(w, ErrorCodeValidationFailed, "missing playbook id")
 			return
 		}
 		if r.Method == http.MethodPost {
 			s.handleAddPlaybookStep(w, r, playbookID)
 		} else {
-			writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+			writeMethodNotAllowed(w)
 		}
 		return
 	}
 
 	idx := strings.Index(suffix, "/steps/")
 	if idx < 0 {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid step path")
+		writeError(w, ErrorCodeValidationFailed, "invalid step path")
 		return
 	}
 	playbookID := suffix[:idx]
 	stepID := suffix[idx+len("/steps/"):]
 	if playbookID == "" || stepID == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing playbook id or step id")
+		writeError(w, ErrorCodeValidationFailed, "missing playbook id or step id")
 		return
 	}
 
@@ -362,7 +362,7 @@ func (s *Server) handlePlaybookStepRoutes(w http.ResponseWriter, r *http.Request
 	case http.MethodDelete:
 		s.handleDeletePlaybookStep(w, r, stepID)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -377,7 +377,7 @@ func (s *Server) handleAddPlaybookStep(w http.ResponseWriter, r *http.Request, p
 
 	pid, err := uuid.Parse(playbookID)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid playbook id")
+		writeError(w, ErrorCodeValidationFailed, "invalid playbook id")
 		return
 	}
 
@@ -397,7 +397,7 @@ func (s *Server) handleAddPlaybookStep(w http.ResponseWriter, r *http.Request, p
 		return
 	}
 	if strings.TrimSpace(req.Title) == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "title is required")
+		writeError(w, ErrorCodeValidationFailed, "title is required")
 		return
 	}
 
@@ -441,7 +441,7 @@ func (s *Server) handleUpdatePlaybookStep(w http.ResponseWriter, r *http.Request
 
 	sid, err := uuid.Parse(stepID)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid step id")
+		writeError(w, ErrorCodeValidationFailed, "invalid step id")
 		return
 	}
 
@@ -496,7 +496,7 @@ func (s *Server) handleDeletePlaybookStep(w http.ResponseWriter, r *http.Request
 
 	sid, err := uuid.Parse(stepID)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid step id")
+		writeError(w, ErrorCodeValidationFailed, "invalid step id")
 		return
 	}
 
@@ -519,7 +519,7 @@ func (s *Server) handleReorderPlaybookSteps(w http.ResponseWriter, r *http.Reque
 
 	pid, err := uuid.Parse(playbookID)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid playbook id")
+		writeError(w, ErrorCodeValidationFailed, "invalid playbook id")
 		return
 	}
 
@@ -535,7 +535,7 @@ func (s *Server) handleReorderPlaybookSteps(w http.ResponseWriter, r *http.Reque
 	for _, item := range req {
 		id, err := uuid.Parse(item.ID)
 		if err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid step id: "+item.ID)
+			writeError(w, ErrorCodeValidationFailed, "invalid step id: "+item.ID)
 			return
 		}
 		order = append(order, store.StepOrder{ID: id, StepNumber: item.StepNumber})

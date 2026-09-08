@@ -688,10 +688,12 @@ func (a *App) wire() error {
 		a.loginLimiter = valkey.NewLoginRateLimiter(a.valkeyClient, 5, 15*time.Minute, 30*time.Minute)
 		a.rateLimiter = valkey.NewRateLimiter(a.valkeyClient, a.cfg.RateLimitGeneralPerMinute)
 		a.agentRateLimiter = valkey.NewRateLimiter(a.valkeyClient, a.cfg.RateLimitAgentPerMinute)
+		a.authedRateLimiter = valkey.NewRateLimiter(a.valkeyClient, a.cfg.RateLimitAuthenticatedPerMinute)
 	} else {
 		a.loginLimiter = api.NewLoginRateLimiter(5, 15*time.Minute, 30*time.Minute)
 		a.rateLimiter = api.NewRateLimiter(a.cfg.RateLimitGeneralPerMinute, time.Minute)
 		a.agentRateLimiter = api.NewRateLimiter(a.cfg.RateLimitAgentPerMinute, time.Minute)
+		a.authedRateLimiter = api.NewRateLimiter(a.cfg.RateLimitAuthenticatedPerMinute, time.Minute)
 	}
 
 	a.apiServer = api.NewServer(a.cfg, a.stores.Alert, a.stores.WebhookToken, a.stores.AgentToken, a.stores.User, sessionStore, a.stores.Audit, a.stores.Integration, a.stores.RouteRules, sessionExpiry, mmClient, slackClient, twilioClient, telnyxClient, whReceiver.SetRoutingEngine, a.loginLimiter, a.rateLimiter, a.stores.AlertInvestigation, a.stores.IncidentInvestigation, a.stores.InvestigationThread, a.stores.Notification, a.stores.Dashboard, a.stores.PersonalToken)
@@ -749,6 +751,7 @@ func (a *App) wire() error {
 	)
 	a.apiServer.SetAgentService(agentService)
 	a.apiServer.SetAgentRateLimiter(a.agentRateLimiter)
+	a.apiServer.SetAuthedRateLimiter(a.authedRateLimiter)
 	a.apiServer.SetKnowledgeStore(a.stores.Knowledge)
 	a.apiServer.SetSystemConfigStore(a.stores.SystemConfig)
 	if loadedSysCfg != nil {

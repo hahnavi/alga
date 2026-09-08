@@ -119,7 +119,7 @@ func (s *pgAgentDMStore) ListMessages(agentTokenHex string, beforeID *uuid.UUID,
 		return nil, false, fmt.Errorf("invalid agent_token_id: %w", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := pgctxLong(context.Background())
 	defer cancel()
 
 	var msgs []models.AgentDMMessage
@@ -189,7 +189,7 @@ func (s *pgAgentDMStore) UpdateMessageBody(agentTokenHex, messageIDHex, body str
 		return fmt.Errorf("failed to update agent dm message: %w", err)
 	}
 	if n == 0 {
-		return errors.New("message not found")
+		return fmt.Errorf("message %w", ErrNotFound)
 	}
 	return nil
 }
@@ -219,7 +219,7 @@ func (s *pgAgentDMStore) DeleteMessage(agentTokenHex, messageIDHex string) error
 		return fmt.Errorf("failed to delete agent dm message: %w", err)
 	}
 	if n == 0 {
-		return errors.New("message not found")
+		return fmt.Errorf("message %w", ErrNotFound)
 	}
 	return nil
 }

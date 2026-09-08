@@ -157,7 +157,7 @@ func (s *pgTriageRuleStore) Update(ctx context.Context, id string, patch *Triage
 	}
 	uid, err := uuid.Parse(id)
 	if err != nil {
-		return nil, fmt.Errorf("invalid id: %w", err)
+		return nil, fmt.Errorf("%w: %v", ErrInvalidID, err)
 	}
 
 	q := s.db.NewUpdate().Model((*models.TriageRule)(nil)).
@@ -200,7 +200,7 @@ func (s *pgTriageRuleStore) Update(ctx context.Context, id string, patch *Triage
 	}
 	n, _ := res.RowsAffected()
 	if n == 0 {
-		return nil, errors.New("triage rule not found")
+		return nil, fmt.Errorf("triage rule %w", ErrNotFound)
 	}
 
 	// Re-fetch to return the updated record
@@ -214,7 +214,7 @@ func (s *pgTriageRuleStore) Update(ctx context.Context, id string, patch *Triage
 func (s *pgTriageRuleStore) Delete(ctx context.Context, id string) error {
 	uid, err := uuid.Parse(id)
 	if err != nil {
-		return fmt.Errorf("invalid id: %w", err)
+		return fmt.Errorf("%w: %v", ErrInvalidID, err)
 	}
 	res, err := s.db.NewDelete().Model((*models.TriageRule)(nil)).Where("id = ?", uid).Exec(ctx)
 	if err != nil {
@@ -222,7 +222,7 @@ func (s *pgTriageRuleStore) Delete(ctx context.Context, id string) error {
 	}
 	n, _ := res.RowsAffected()
 	if n == 0 {
-		return errors.New("triage rule not found")
+		return fmt.Errorf("triage rule %w", ErrNotFound)
 	}
 	return nil
 }
@@ -230,7 +230,7 @@ func (s *pgTriageRuleStore) Delete(ctx context.Context, id string) error {
 func (s *pgTriageRuleStore) Get(ctx context.Context, id string) (*TriageRuleRecord, error) {
 	uid, err := uuid.Parse(id)
 	if err != nil {
-		return nil, fmt.Errorf("invalid id: %w", err)
+		return nil, fmt.Errorf("%w: %v", ErrInvalidID, err)
 	}
 	var r models.TriageRule
 	err = s.db.NewSelect().Model(&r).Where("id = ?", uid).Scan(ctx)

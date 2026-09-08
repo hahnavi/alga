@@ -144,6 +144,12 @@ func (s *Server) SetAgentRateLimiter(rl RateLimiting) {
 	s.agentRateLimiter = rl
 }
 
+// SetAuthedRateLimiter wires the per-IP limiter applied to authenticated
+// operator routes inside authMiddleware. Nil disables the limit.
+func (s *Server) SetAuthedRateLimiter(rl RateLimiting) {
+	s.authedRateLimiter = rl
+}
+
 // SetInvestigationForwarder wires default-agent forwarding for API-sourced investigation comments.
 func (s *Server) SetInvestigationForwarder(f webhook.InvestigationAgentForwarder) {
 	s.mu.Lock()

@@ -26,11 +26,10 @@ func (c *ChatSyncService) Rebuild(mm *mattermost.Client, sl *slack.Client) {
 	c.slClient = sl
 }
 
-func (c *ChatSyncService) PostToMattermostThread(threadID, msg string) string {
+func (c *ChatSyncService) PostToMattermostThread(ctx context.Context, threadID, msg string) string {
 	if c.mmClient == nil || !c.mmClient.Enabled() || threadID == "" {
 		return ""
 	}
-	ctx := context.Background() // phase 1: ChatSyncService has no caller ctx yet
 	postID, err := c.mmClient.ReplyToPost(ctx, threadID, msg, nil)
 	if err != nil {
 		logger.Warn("Failed to sync to Mattermost thread", "thread_id", threadID, "error", err)
@@ -39,11 +38,10 @@ func (c *ChatSyncService) PostToMattermostThread(threadID, msg string) string {
 	return postID
 }
 
-func (c *ChatSyncService) postToSlackThread(channelID, threadTS, msg string) string {
+func (c *ChatSyncService) postToSlackThread(ctx context.Context, channelID, threadTS, msg string) string {
 	if c.slClient == nil || !c.slClient.Enabled() || threadTS == "" || channelID == "" {
 		return ""
 	}
-	ctx := context.Background() // phase 1: ChatSyncService has no caller ctx yet
 	ts, err := c.slClient.PostThreadReply(ctx, channelID, threadTS, msg)
 	if err != nil {
 		logger.Warn("Failed to sync to Slack thread", "channel_id", channelID, "thread_ts", threadTS, "error", err)
@@ -52,11 +50,10 @@ func (c *ChatSyncService) postToSlackThread(channelID, threadTS, msg string) str
 	return ts
 }
 
-func (c *ChatSyncService) PostToSlackThreadWithCustomize(channelID, threadTS, msg string, customize *slack.PostCustomize) string {
+func (c *ChatSyncService) PostToSlackThreadWithCustomize(ctx context.Context, channelID, threadTS, msg string, customize *slack.PostCustomize) string {
 	if c.slClient == nil || !c.slClient.Enabled() || channelID == "" {
 		return ""
 	}
-	ctx := context.Background() // phase 1: ChatSyncService has no caller ctx yet
 	var ts string
 	var err error
 	if customize != nil {
@@ -85,7 +82,7 @@ type ChatSyncOptions struct {
 	saveSlackTS    func(ts string)
 }
 
-func (c *ChatSyncService) postToInvestigationThread(record *store.AlertInvestigationRecord, mmMsg, slMsg string, opts *ChatSyncOptions) {
+func (c *ChatSyncService) postToInvestigationThread(ctx context.Context, record *store.AlertInvestigationRecord, mmMsg, slMsg string, opts *ChatSyncOptions) {
 	if record == nil {
 		return
 	}
@@ -96,13 +93,12 @@ func (c *ChatSyncService) postToInvestigationThread(record *store.AlertInvestiga
 	}
 
 	if mmThread != "" {
-		if postID := c.PostToMattermostThread(mmThread, mmMsg); postID != "" && opts != nil && opts.saveMMPostID != nil {
+		if postID := c.PostToMattermostThread(ctx, mmThread, mmMsg); postID != "" && opts != nil && opts.saveMMPostID != nil {
 			opts.saveMMPostID(postID)
 		}
 	}
 
 	if record.SlackChannelID != "" && record.SlackThreadTS != "" {
-		ctx := context.Background() // phase 1: ChatSyncService has no caller ctx yet
 		effectiveMsg := slMsg
 		var customize *slack.PostCustomize
 		if opts != nil {
@@ -112,7 +108,7 @@ func (c *ChatSyncService) postToInvestigationThread(record *store.AlertInvestiga
 		if customize != nil {
 			ts, _ = c.slClient.PostThreadReply(ctx, record.SlackChannelID, record.SlackThreadTS, effectiveMsg, *customize)
 		} else {
-			ts = c.postToSlackThread(record.SlackChannelID, record.SlackThreadTS, effectiveMsg)
+			ts = c.postToSlackThread(ctx, record.SlackChannelID, record.SlackThreadTS, effectiveMsg)
 		}
 		if ts != "" && opts != nil && opts.saveSlackTS != nil {
 			opts.saveSlackTS(ts)
@@ -120,7 +116,7 @@ func (c *ChatSyncService) postToInvestigationThread(record *store.AlertInvestiga
 	}
 }
 
-func (c *ChatSyncService) UserSlackThreadMessage(user *store.UserRecord, text string) (string, *slack.PostCustomize) {
+func (c *ChatSyncService) UserSlackThreadMessage(ctx context.Context, user *store.UserRecord, text string) (string, *slack.PostCustomize) {
 	if user == nil || user.SlackUserID == "" {
 		displayName := "User"
 		if user != nil {
@@ -142,7 +138,7 @@ func (c *ChatSyncService) UserSlackThreadMessage(user *store.UserRecord, text st
 
 	iconURL := ""
 	if c.slClient != nil && c.slClient.Enabled() {
-		iconURL = c.slClient.GetUserAvatarURL(context.Background(), user.SlackUserID) // phase 1: no caller ctx yet
+		iconURL = c.slClient.GetUserAvatarURL(ctx, user.SlackUserID)
 	}
 	if iconURL == "" {
 		iconURL = fmt.Sprintf("https://api.dicebear.com/9.x/initials/png?seed=%s&size=128", url.QueryEscape(user.SlackUserID))
@@ -154,11 +150,10 @@ func (c *ChatSyncService) UserSlackThreadMessage(user *store.UserRecord, text st
 	}
 }
 
-func (c *ChatSyncService) syncAgentMessage(investigationID, updateID, senderName, text string, record *store.AlertInvestigationRecord) {
+func (c *ChatSyncService) syncAgentMessage(ctx context.Context, investigationID, updateID, senderName, text string, record *store.AlertInvestigationRecord) {
 	if record == nil {
 		return
 	}
-	ctx := context.Background() // phase 1: ChatSyncService has no caller ctx yet
 	canSave := investigationID != "" && updateID != ""
 	mmThread := record.PrimaryThreadID
 	if mmThread == "" {
@@ -170,7 +165,7 @@ func (c *ChatSyncService) syncAgentMessage(investigationID, updateID, senderName
 		if postID, err := c.mmClient.ReplyToPost(ctx, mmThread, displayText, nil); err != nil {
 			logger.Warn("agent Mattermost post failed for investigation", "investigation_id", investigationID, "error", err)
 		} else if postID != "" && canSave {
-			if err := c.alertInvestigationStore.SetAlertInvestigationUpdateMMPostID(context.Background(), investigationID, updateID, postID); err != nil {
+			if err := c.alertInvestigationStore.SetAlertInvestigationUpdateMMPostID(ctx, investigationID, updateID, postID); err != nil {
 				logger.Warn("Failed to save MM post ID for update in investigation", "update_id", updateID, "investigation_id", investigationID, "error", err)
 			}
 		}
@@ -184,7 +179,7 @@ func (c *ChatSyncService) syncAgentMessage(investigationID, updateID, senderName
 		if ts, err := c.slClient.PostThreadReply(ctx, record.SlackChannelID, record.SlackThreadTS, slackText, cz); err != nil {
 			logger.Warn("agent Slack post failed for investigation", "investigation_id", investigationID, "error", err)
 		} else if ts != "" && canSave {
-			if err := c.alertInvestigationStore.SetAlertInvestigationUpdateSlackMessageTS(context.Background(), investigationID, updateID, ts); err != nil {
+			if err := c.alertInvestigationStore.SetAlertInvestigationUpdateSlackMessageTS(ctx, investigationID, updateID, ts); err != nil {
 				logger.Warn("Failed to save Slack message TS for update in investigation", "update_id", updateID, "investigation_id", investigationID, "error", err)
 			}
 		}

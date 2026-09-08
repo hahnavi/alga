@@ -513,11 +513,18 @@ func (c *Correlator) Start() {
 			case <-c.stopCh:
 				return
 			case <-ticker.C:
-				ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-				if err := c.Flush(ctx); err != nil {
-					logger.Error("Correlator sweep failed", "component", "correlator", "error", err)
-				}
-				cancel()
+				func() {
+					defer func() {
+						if r := recover(); r != nil {
+							logger.Error("correlator sweep panicked", "component", "correlator", "panic", r)
+						}
+					}()
+					ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+					defer cancel()
+					if err := c.Flush(ctx); err != nil {
+						logger.Error("Correlator sweep failed", "component", "correlator", "error", err)
+					}
+				}()
 			}
 		}
 	}()

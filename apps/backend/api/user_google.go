@@ -34,7 +34,7 @@ func newUserGoogleHandler(cfg *config.Config, userStore store.UserStore, auditSt
 
 func (h *userGoogleHandler) handleAuthorize(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -45,12 +45,12 @@ func (h *userGoogleHandler) handleAuthorize(w http.ResponseWriter, r *http.Reque
 	}
 
 	if !GoogleOAuthEnabled(h.cfg) {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "Google Sign-In is not configured")
+		writeError(w, ErrorCodeValidationFailed, "Google Sign-In is not configured")
 		return
 	}
 
 	if user.GoogleID != "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "Google account is already linked")
+		writeError(w, ErrorCodeValidationFailed, "Google account is already linked")
 		return
 	}
 
@@ -80,7 +80,7 @@ func (h *userGoogleHandler) handleAuthorize(w http.ResponseWriter, r *http.Reque
 
 func (h *userGoogleHandler) handleCallback(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -197,7 +197,7 @@ func (h *userGoogleHandler) handleCallback(w http.ResponseWriter, r *http.Reques
 
 func (h *userGoogleHandler) handleDisconnect(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 

@@ -42,7 +42,7 @@ func (s *Server) handleCredentialProviders(w http.ResponseWriter, r *http.Reques
 		}
 		s.createCredentialProvider(w, r)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -93,7 +93,7 @@ func (s *Server) handleCredentialProviderByID(w http.ResponseWriter, r *http.Req
 		s.audit(r, store.AuditCredentialProviderDeleted, map[string]any{"provider_id": id.String()})
 		writeStatus(w, "deleted")
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -124,7 +124,7 @@ func (s *Server) createCredentialProvider(w http.ResponseWriter, r *http.Request
 	}
 	name := strings.TrimSpace(derefString(req.Name))
 	if name == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "name is required")
+		writeError(w, ErrorCodeValidationFailed, "name is required")
 		return
 	}
 	pt := store.CredentialProviderTypeInternal
@@ -132,7 +132,7 @@ func (s *Server) createCredentialProvider(w http.ResponseWriter, r *http.Request
 		pt = strings.TrimSpace(*req.Type)
 	}
 	if !store.IsValidCredentialProviderType(pt) {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid provider type")
+		writeError(w, ErrorCodeValidationFailed, "invalid provider type")
 		return
 	}
 	enabled := true
@@ -174,7 +174,7 @@ func (s *Server) updateCredentialProvider(w http.ResponseWriter, r *http.Request
 	if req.Type != nil {
 		pt := strings.TrimSpace(*req.Type)
 		if pt != "" && !store.IsValidCredentialProviderType(pt) {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid provider type")
+			writeError(w, ErrorCodeValidationFailed, "invalid provider type")
 			return
 		}
 		patch.Type = pt
@@ -239,7 +239,7 @@ func (s *Server) handleSharedSecrets(w http.ResponseWriter, r *http.Request) {
 		}
 		s.createSharedSecret(w, r)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -283,7 +283,7 @@ func (s *Server) handleSharedSecretByID(w http.ResponseWriter, r *http.Request) 
 		s.audit(r, store.AuditSharedSecretDeleted, map[string]any{"secret_id_ref": id.String()})
 		writeStatus(w, "deleted")
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -329,28 +329,28 @@ func (s *Server) createSharedSecret(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.ProviderID == nil || strings.TrimSpace(*req.ProviderID) == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "provider_id is required")
+		writeError(w, ErrorCodeValidationFailed, "provider_id is required")
 		return
 	}
 	providerID, err := uuid.Parse(strings.TrimSpace(*req.ProviderID))
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid provider_id")
+		writeError(w, ErrorCodeValidationFailed, "invalid provider_id")
 		return
 	}
 	if s.credentialProviderStore != nil {
 		prov, err := s.credentialProviderStore.GetProvider(r.Context(), providerID)
 		if err != nil || prov == nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "provider_id does not reference an existing provider")
+			writeError(w, ErrorCodeValidationFailed, "provider_id does not reference an existing provider")
 			return
 		}
 		if !prov.Enabled {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "provider is disabled")
+			writeError(w, ErrorCodeValidationFailed, "provider is disabled")
 			return
 		}
 	}
 	name := strings.TrimSpace(derefString(req.Name))
 	if name == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "name is required")
+		writeError(w, ErrorCodeValidationFailed, "name is required")
 		return
 	}
 	// secret_id is always server-generated so agents fetch by an unpredictable
@@ -447,7 +447,7 @@ func (s *Server) handleAgentSecretByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method != http.MethodGet {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 	agent, ok := requireAgent(w, r)
@@ -467,7 +467,7 @@ func (s *Server) handleAgentSecretByID(w http.ResponseWriter, r *http.Request) {
 	}
 	secretID := strings.TrimSuffix(pathID(r, "/api/v1/agent/secrets/"), "/")
 	if secretID == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing secret_id")
+		writeError(w, ErrorCodeValidationFailed, "missing secret_id")
 		return
 	}
 
@@ -556,7 +556,7 @@ func parseUUIDPath(w http.ResponseWriter, r *http.Request, prefix string) (uuid.
 	raw := strings.TrimSuffix(pathID(r, prefix), "/")
 	id, err := uuid.Parse(raw)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid id")
+		writeError(w, ErrorCodeValidationFailed, "invalid id")
 		return uuid.Nil, false
 	}
 	return id, true
@@ -581,7 +581,7 @@ func parseAgentIDList(w http.ResponseWriter, raw *[]string) ([]uuid.UUID, bool) 
 		}
 		id, err := uuid.Parse(s)
 		if err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid allowed_agent_ids entry: "+s)
+			writeError(w, ErrorCodeValidationFailed, "invalid allowed_agent_ids entry: "+s)
 			return nil, false
 		}
 		out = append(out, id)

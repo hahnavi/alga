@@ -63,6 +63,10 @@ const (
 	ErrorCodeConflict         ErrorCode = "conflict"
 	ErrorCodeRateLimited      ErrorCode = "rate_limited"
 	ErrorCodeInternal         ErrorCode = "internal"
+	// ErrorCodeMethodNotAllowed is emitted by multi-method dispatchers when the
+	// request method has no branch. Carries the canonical 405 status instead of
+	// mislabeling the response as an internal error.
+	ErrorCodeMethodNotAllowed ErrorCode = "method_not_allowed"
 )
 
 // ErrorDetail carries field-level validation context for an error. It is empty
@@ -100,6 +104,8 @@ func (c ErrorCode) HTTPStatus() int {
 		return http.StatusConflict
 	case ErrorCodeRateLimited:
 		return http.StatusTooManyRequests
+	case ErrorCodeMethodNotAllowed:
+		return http.StatusMethodNotAllowed
 	case ErrorCodeInternal:
 		return http.StatusInternalServerError
 	}

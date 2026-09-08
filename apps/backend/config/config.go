@@ -165,6 +165,11 @@ type Config struct {
 	// RateLimitAgentPerMinute caps agent-bearer requests per token per
 	// minute across both limiter backends. Default 120.
 	RateLimitAgentPerMinute int `yaml:"rate_limit_agent_per_minute"`
+	// RateLimitAuthenticatedPerMinute caps authenticated operator routes
+	// (session cookie or PAT) per IP per minute. Generous by design: it
+	// bounds abuse of valid credentials without throttling dashboard
+	// polling. Default 600.
+	RateLimitAuthenticatedPerMinute int `yaml:"rate_limit_authenticated_per_minute"`
 
 	// StaleAlertThreshold is the minimum age a firing alert must reach before
 	// the scheduler considers it "stale" (no investigation). Alerts younger
@@ -753,6 +758,9 @@ func Load() (*Config, error) {
 	if cfg.RateLimitAgentPerMinute == 0 {
 		cfg.RateLimitAgentPerMinute = 120
 	}
+	if cfg.RateLimitAuthenticatedPerMinute == 0 {
+		cfg.RateLimitAuthenticatedPerMinute = 600
+	}
 	if v := os.Getenv("RATE_LIMIT_GENERAL_PER_MINUTE"); v != "" {
 		if parsed, err := strconv.Atoi(v); err == nil && parsed > 0 {
 			cfg.RateLimitGeneralPerMinute = parsed
@@ -761,6 +769,11 @@ func Load() (*Config, error) {
 	if v := os.Getenv("RATE_LIMIT_AGENT_PER_MINUTE"); v != "" {
 		if parsed, err := strconv.Atoi(v); err == nil && parsed > 0 {
 			cfg.RateLimitAgentPerMinute = parsed
+		}
+	}
+	if v := os.Getenv("RATE_LIMIT_AUTHENTICATED_PER_MINUTE"); v != "" {
+		if parsed, err := strconv.Atoi(v); err == nil && parsed > 0 {
+			cfg.RateLimitAuthenticatedPerMinute = parsed
 		}
 	}
 	if v := os.Getenv("STALE_ALERT_THRESHOLD"); v != "" {

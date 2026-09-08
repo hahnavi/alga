@@ -67,7 +67,7 @@ func (s *Server) handleRoutes(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if err := validateRouteConfigs(req.Routes); err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, err.Error())
+			writeError(w, ErrorCodeValidationFailed, err.Error())
 			return
 		}
 
@@ -92,18 +92,18 @@ func (s *Server) handleRoutes(w http.ResponseWriter, r *http.Request) {
 
 		writeStatus(w, "updated")
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
 func (s *Server) handleChannels(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 	p := s.chatRouter.Provider("mattermost")
 	if p == nil || !p.Enabled() {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "mattermost integration not configured")
+		writeError(w, ErrorCodeValidationFailed, "mattermost integration not configured")
 		return
 	}
 	channels, err := p.ListChannels(r.Context())
@@ -111,12 +111,12 @@ func (s *Server) handleChannels(w http.ResponseWriter, r *http.Request) {
 		writeInternalError(w, err, "failed to list channels")
 		return
 	}
-	writeData(w, http.StatusOK, channels)
+	writeData(w, http.StatusOK, ensureSlice(channels))
 }
 
 func (s *Server) handleDestinations(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 	provider := r.URL.Query().Get("provider")
@@ -127,7 +127,7 @@ func (s *Server) handleDestinations(w http.ResponseWriter, r *http.Request) {
 		resolvedProvider = "mattermost"
 	}
 	if p == nil || !p.Enabled() {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, resolvedProvider+" integration not configured")
+		writeError(w, ErrorCodeValidationFailed, resolvedProvider+" integration not configured")
 		return
 	}
 	channels, err := p.ListChannels(r.Context())
@@ -135,7 +135,7 @@ func (s *Server) handleDestinations(w http.ResponseWriter, r *http.Request) {
 		writeInternalError(w, err, "failed to list channels")
 		return
 	}
-	writeData(w, http.StatusOK, channels)
+	writeData(w, http.StatusOK, ensureSlice(channels))
 }
 
 func (s *Server) handleIntegrations(w http.ResponseWriter, r *http.Request) {
@@ -145,7 +145,7 @@ func (s *Server) handleIntegrations(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPut:
 		s.handlePutIntegrations(w, r)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -623,24 +623,24 @@ func (s *Server) handlePutIntegrations(w http.ResponseWriter, r *http.Request) {
 	switch requestedProvider {
 	case "telnyx":
 		if req.Twilio.ProviderEnabled != nil && *req.Twilio.ProviderEnabled {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "Twilio is not the active voice provider; switch voice_provider to \"twilio\" first.")
+			writeError(w, ErrorCodeValidationFailed, "Twilio is not the active voice provider; switch voice_provider to \"twilio\" first.")
 			return
 		}
 		twilioDisabled = true
 	case "twilio":
 		if req.Telnyx.ProviderEnabled != nil && *req.Telnyx.ProviderEnabled {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "Telnyx is not the active voice provider; switch voice_provider to \"telnyx\" first.")
+			writeError(w, ErrorCodeValidationFailed, "Telnyx is not the active voice provider; switch voice_provider to \"telnyx\" first.")
 			return
 		}
 		telnyxDisabled = true
 	}
 
 	if !mmDisabled && mmIsConfigured && mmDefaultChannel == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "default_channel is required for mattermost when the integration is configured")
+		writeError(w, ErrorCodeValidationFailed, "default_channel is required for mattermost when the integration is configured")
 		return
 	}
 	if !slackDisabled && slackIsConfigured && slackDefaultChannel == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "default_channel is required for slack when the integration is configured")
+		writeError(w, ErrorCodeValidationFailed, "default_channel is required for slack when the integration is configured")
 		return
 	}
 
@@ -756,7 +756,7 @@ func (s *Server) handlePutIntegrations(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleTestIntegration(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -774,14 +774,14 @@ func (s *Server) handleTestIntegration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.Provider == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "provider is required")
+		writeError(w, ErrorCodeValidationFailed, "provider is required")
 		return
 	}
 
 	switch req.Provider {
 	case "mattermost":
 		if s.mmClient == nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "mattermost not configured")
+			writeError(w, ErrorCodeValidationFailed, "mattermost not configured")
 			return
 		}
 		mmURL := req.Mattermost.URL
@@ -790,23 +790,23 @@ func (s *Server) handleTestIntegration(w http.ResponseWriter, r *http.Request) {
 			mmURL, mmSecret, _, _, _ = s.loadIntegrationState()
 		}
 		if mmURL == "" || mmSecret == "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "mattermost not fully configured")
+			writeError(w, ErrorCodeValidationFailed, "mattermost not fully configured")
 			return
 		}
 		if isPrivateURL(mmURL) {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "URLs pointing to private networks are not allowed")
+			writeError(w, ErrorCodeValidationFailed, "URLs pointing to private networks are not allowed")
 			return
 		}
 		testClient := mattermost.NewClient(mmURL, mmSecret, "")
 		if err := testClient.TestConnection(r.Context()); err != nil {
 			logger.Warn("mattermost connection test failed", "component", "integration-test", "provider", "mattermost", "error", err)
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "mattermost connection test failed")
+			writeError(w, ErrorCodeValidationFailed, "mattermost connection test failed")
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "message": "Mattermost connection successful"})
 	case "slack":
 		if s.slackClient == nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "slack not configured")
+			writeError(w, ErrorCodeValidationFailed, "slack not configured")
 			return
 		}
 		botToken := req.Slack.BotToken
@@ -814,18 +814,18 @@ func (s *Server) handleTestIntegration(w http.ResponseWriter, r *http.Request) {
 			_, _, _, botToken, _ = s.loadIntegrationState()
 		}
 		if botToken == "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "slack bot token not configured")
+			writeError(w, ErrorCodeValidationFailed, "slack bot token not configured")
 			return
 		}
 		testClient := slack.NewClient(botToken)
 		if err := testClient.TestConnection(r.Context()); err != nil {
 			logger.Warn("slack connection test failed", "component", "integration-test", "provider", "slack", "error", err)
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "slack connection test failed")
+			writeError(w, ErrorCodeValidationFailed, "slack connection test failed")
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "message": "Slack connection successful"})
 	default:
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "provider must be one of: mattermost, slack")
+		writeError(w, ErrorCodeValidationFailed, "provider must be one of: mattermost, slack")
 	}
 }
 

@@ -1,6 +1,9 @@
 package slack
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestMrkdwn_Bold(t *testing.T) {
 	got := Mrkdwn("this is **bold** text")
@@ -55,7 +58,7 @@ func TestMrkdwn_MixedAgentMessage(t *testing.T) {
 	input := "## Summary\n\nI've investigated **INV-20**.\n\n### Results\n\n- No failure found\n- System is __normal__\n\n```\nsome code\n```\n\n1. Step one\n2. Step two"
 	got := Mrkdwn(input)
 	for _, s := range []string{"*Summary*", "*INV-20*", "*Results*", "- No failure found", "_normal_", "1. Step one"} {
-		if !contains(got, s) {
+		if !strings.Contains(got, s) {
 			t.Fatalf("got %q, missing expected %q", got, s)
 		}
 	}
@@ -72,22 +75,9 @@ func TestMrkdwn_AlreadySlackBold(t *testing.T) {
 
 func containsAll(s string, subs []string) bool {
 	for _, sub := range subs {
-		if !contains(s, sub) {
+		if !strings.Contains(s, sub) {
 			return false
 		}
 	}
 	return true
-}
-
-func contains(s, sub string) bool {
-	return len(s) >= len(sub) && (s == sub || len(sub) == 0 || containsStr(s, sub))
-}
-
-func containsStr(s, sub string) bool {
-	for i := 0; i <= len(s)-len(sub); i++ {
-		if s[i:i+len(sub)] == sub {
-			return true
-		}
-	}
-	return false
 }

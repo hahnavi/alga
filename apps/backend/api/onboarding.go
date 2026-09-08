@@ -8,7 +8,7 @@ import (
 
 func (s *Server) handleOnboardingStatus(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -29,7 +29,7 @@ func (s *Server) handleOnboardingStatus(w http.ResponseWriter, r *http.Request) 
 
 func (s *Server) handleOnboardingComplete(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 

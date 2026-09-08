@@ -62,7 +62,7 @@ Review as a production code reviewer. Findings first, ordered by severity, with 
 - Missing audit on a create/update/delete/command/state-transition handler.
 - Duplicated not-found sentinel errors overlapping `store.ErrNotFound`.
 - Legacy Go: `interface{}`, `for i := 0; i < n; i++` where `range` fits, manual min/max, hand-rolled slice contain/sort where `slices.*` fits, `fmt.Println`/`log.Printf` debug output.
-- Missing `rollbackTx` on a multi-write transaction, or context stored in a struct.
+- Missing transaction safety on a multi-write path (use Bun `RunInTx`, which auto-rolls back), or context stored in a struct.
 
 ### Backend resource & performance red flags
 

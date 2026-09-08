@@ -24,7 +24,7 @@ const maxIVRGatherAttempts = 2
 
 func (s *Server) handleTelnyxCallback(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -51,7 +51,7 @@ func (s *Server) handleTelnyxCallback(w http.ResponseWriter, r *http.Request) {
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(body, &ev); err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid payload")
+		writeError(w, ErrorCodeValidationFailed, "invalid payload")
 		return
 	}
 

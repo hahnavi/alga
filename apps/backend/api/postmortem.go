@@ -31,7 +31,7 @@ func (s *Server) handlePostMortemRoutes(w http.ResponseWriter, r *http.Request, 
 		case http.MethodDelete:
 			s.deletePostMortem(w, r, incidentID)
 		default:
-			writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+			writeMethodNotAllowed(w)
 		}
 		return
 	}
@@ -56,7 +56,7 @@ func (s *Server) handlePostMortemRoutes(w http.ResponseWriter, r *http.Request, 
 	// lifecycle transition on the post-mortem itself.
 	if strings.HasSuffix(suffix, "/submit-review") {
 		if r.Method != http.MethodPost {
-			writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+			writeMethodNotAllowed(w)
 			return
 		}
 		s.updatePostMortemStatus(w, r, incidentID, "in_review")
@@ -65,7 +65,7 @@ func (s *Server) handlePostMortemRoutes(w http.ResponseWriter, r *http.Request, 
 
 	if strings.HasSuffix(suffix, "/revert-to-draft") {
 		if r.Method != http.MethodPost {
-			writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+			writeMethodNotAllowed(w)
 			return
 		}
 		s.updatePostMortemStatus(w, r, incidentID, "draft")
@@ -74,7 +74,7 @@ func (s *Server) handlePostMortemRoutes(w http.ResponseWriter, r *http.Request, 
 
 	if strings.HasSuffix(suffix, "/revert-to-review") {
 		if r.Method != http.MethodPost {
-			writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+			writeMethodNotAllowed(w)
 			return
 		}
 		s.updatePostMortemStatus(w, r, incidentID, "in_review")
@@ -83,7 +83,7 @@ func (s *Server) handlePostMortemRoutes(w http.ResponseWriter, r *http.Request, 
 
 	if strings.HasSuffix(suffix, "/approve") {
 		if r.Method != http.MethodPost {
-			writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+			writeMethodNotAllowed(w)
 			return
 		}
 		s.updatePostMortemStatusWithApprover(w, r, incidentID, "approved")
@@ -92,7 +92,7 @@ func (s *Server) handlePostMortemRoutes(w http.ResponseWriter, r *http.Request, 
 
 	if strings.HasSuffix(suffix, "/publish") {
 		if r.Method != http.MethodPost {
-			writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+			writeMethodNotAllowed(w)
 			return
 		}
 		s.updatePostMortemStatus(w, r, incidentID, "published")
@@ -481,12 +481,12 @@ func (s *Server) updatePostMortemStatus(w http.ResponseWriter, r *http.Request, 
 	// author has not confirmed the review focuses on systems, not people,
 	// cannot enter the review/publish pipeline.
 	if status == "in_review" && !existing.BlamelessConfirmed {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "blameless_confirmed must be set before submitting for review")
+		writeError(w, ErrorCodeValidationFailed, "blameless_confirmed must be set before submitting for review")
 		return
 	}
 
 	if !isValidPostMortemTransition(existing.Status, status) {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, fmt.Sprintf("cannot transition post-mortem from %s to %s", existing.Status, status))
+		writeError(w, ErrorCodeValidationFailed, fmt.Sprintf("cannot transition post-mortem from %s to %s", existing.Status, status))
 		return
 	}
 
@@ -556,7 +556,7 @@ func (s *Server) updatePostMortemStatusWithApprover(w http.ResponseWriter, r *ht
 	}
 
 	if !isValidPostMortemTransition(existing.Status, status) {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, fmt.Sprintf("cannot transition post-mortem from %s to %s", existing.Status, status))
+		writeError(w, ErrorCodeValidationFailed, fmt.Sprintf("cannot transition post-mortem from %s to %s", existing.Status, status))
 		return
 	}
 
@@ -607,14 +607,14 @@ func (s *Server) handleActionItemRoutes(w http.ResponseWriter, r *http.Request, 
 		case http.MethodPost:
 			s.createActionItem(w, r, incidentID)
 		default:
-			writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+			writeMethodNotAllowed(w)
 		}
 		return
 	}
 
 	aiID := afterActionItems[0]
 	if aiID == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing action item id")
+		writeError(w, ErrorCodeValidationFailed, "missing action item id")
 		return
 	}
 
@@ -624,7 +624,7 @@ func (s *Server) handleActionItemRoutes(w http.ResponseWriter, r *http.Request, 
 	case http.MethodDelete:
 		s.deleteActionItem(w, r, incidentID, aiID)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -654,7 +654,7 @@ var (
 func (s *Server) validateActionItemAssignee(w http.ResponseWriter, r *http.Request, raw string) (uuid.UUID, bool) {
 	uid, err := uuid.Parse(raw)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "assignee_id must be a valid UUID")
+		writeError(w, ErrorCodeValidationFailed, "assignee_id must be a valid UUID")
 		return uuid.Nil, false
 	}
 	if s.userStore == nil {
@@ -667,7 +667,7 @@ func (s *Server) validateActionItemAssignee(w http.ResponseWriter, r *http.Reque
 		return uuid.Nil, false
 	}
 	if user == nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "assignee_id does not reference an existing user")
+		writeError(w, ErrorCodeValidationFailed, "assignee_id does not reference an existing user")
 		return uuid.Nil, false
 	}
 	return uid, true
@@ -761,15 +761,15 @@ func (s *Server) createActionItem(w http.ResponseWriter, r *http.Request, incide
 		return
 	}
 	if strings.TrimSpace(req.Description) == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "description is required")
+		writeError(w, ErrorCodeValidationFailed, "description is required")
 		return
 	}
 	if req.Priority != "" && !slices.Contains(validActionItemPriorities, req.Priority) {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "priority must be one of low, medium, high")
+		writeError(w, ErrorCodeValidationFailed, "priority must be one of low, medium, high")
 		return
 	}
 	if req.Type != "" && !slices.Contains(validActionItemTypes, req.Type) {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "type must be one of prevent, mitigate, detect, investigate")
+		writeError(w, ErrorCodeValidationFailed, "type must be one of prevent, mitigate, detect, investigate")
 		return
 	}
 
@@ -786,7 +786,7 @@ func (s *Server) createActionItem(w http.ResponseWriter, r *http.Request, incide
 	if req.DueDate != nil && strings.TrimSpace(*req.DueDate) != "" {
 		t, parseErr := parseActionItemDueDate(strings.TrimSpace(*req.DueDate))
 		if parseErr != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, parseErr.Error())
+			writeError(w, ErrorCodeValidationFailed, parseErr.Error())
 			return
 		}
 		dueDate = t
@@ -834,7 +834,7 @@ func (s *Server) createActionItem(w http.ResponseWriter, r *http.Request, incide
 func (s *Server) resolveActionItemForIncident(w http.ResponseWriter, r *http.Request, target postMortemIncidentTarget, aiID string) (*store.ActionItemRecord, bool) {
 	id, err := uuid.Parse(aiID)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid action item id")
+		writeError(w, ErrorCodeValidationFailed, "invalid action item id")
 		return nil, false
 	}
 	pmID, err := s.resolveActionItemPostMortemID(r.Context(), target)
@@ -906,28 +906,28 @@ func (s *Server) updateActionItem(w http.ResponseWriter, r *http.Request, incide
 
 	if req.Description != nil {
 		if strings.TrimSpace(*req.Description) == "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "description cannot be empty")
+			writeError(w, ErrorCodeValidationFailed, "description cannot be empty")
 			return
 		}
 		existing.Description = *req.Description
 	}
 	if req.Status != nil {
 		if !slices.Contains(validActionItemStatuses, *req.Status) {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "status must be one of open, in_progress, completed, cancelled")
+			writeError(w, ErrorCodeValidationFailed, "status must be one of open, in_progress, completed, cancelled")
 			return
 		}
 		existing.Status = *req.Status
 	}
 	if req.Priority != nil {
 		if !slices.Contains(validActionItemPriorities, *req.Priority) {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "priority must be one of low, medium, high")
+			writeError(w, ErrorCodeValidationFailed, "priority must be one of low, medium, high")
 			return
 		}
 		existing.Priority = *req.Priority
 	}
 	if req.Type != nil {
 		if !slices.Contains(validActionItemTypes, *req.Type) {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "type must be one of prevent, mitigate, detect, investigate")
+			writeError(w, ErrorCodeValidationFailed, "type must be one of prevent, mitigate, detect, investigate")
 			return
 		}
 		existing.Type = *req.Type
@@ -949,7 +949,7 @@ func (s *Server) updateActionItem(w http.ResponseWriter, r *http.Request, incide
 		} else {
 			t, parseErr := parseActionItemDueDate(strings.TrimSpace(*req.DueDate))
 			if parseErr != nil {
-				writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, parseErr.Error())
+				writeError(w, ErrorCodeValidationFailed, parseErr.Error())
 				return
 			}
 			existing.DueDate = t
@@ -1032,7 +1032,7 @@ func (s *Server) deleteActionItem(w http.ResponseWriter, r *http.Request, incide
 
 func (s *Server) handleGlobalActionItems(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -1053,7 +1053,7 @@ func (s *Server) handleGlobalActionItems(w http.ResponseWriter, r *http.Request)
 
 func (s *Server) handlePostMortemsList(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 

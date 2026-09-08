@@ -406,7 +406,13 @@ func (c *Client) CreateChannel(ctx context.Context, name string, isPrivate bool)
 		return "", fmt.Errorf("slack conversations.create failed: %w", err)
 	}
 	if !res.OK {
-		return "", fmt.Errorf("slack conversations.create failed: %s", res.Error)
+		err := mapSlackSubError("slack conversations.create", res.Error)
+		if errors.Is(err, ErrChannelNameTaken) {
+			// Typed sentinel: callers retry with a suffixed channel name on
+			// this specific error instead of matching the message text.
+			return "", fmt.Errorf("slack conversations.create failed: %w", err)
+		}
+		return "", err
 	}
 	return res.Channel.ID, nil
 }
@@ -447,6 +453,28 @@ func (c *Client) SetChannelPurpose(ctx context.Context, channelID, purpose strin
 	return nil
 }
 
+// Typed sentinels for known Slack API sub-errors so callers branch with
+// errors.Is instead of matching message text.
+var (
+	ErrChannelNameTaken = errors.New("slack channel name already taken")
+	ErrAlreadyInChannel = errors.New("slack user already in channel")
+	ErrSlackNoSuchUser  = errors.New("slack user does not exist or is not invitable")
+)
+
+// mapSlackSubError converts a recognized Slack API `error` string into a
+// typed sentinel; unrecognized errors fall through as plain messages.
+func mapSlackSubError(prefix, slackErr string) error {
+	switch slackErr {
+	case "name_taken":
+		return ErrChannelNameTaken
+	case "already_in_channel":
+		return ErrAlreadyInChannel
+	case "no_such_user":
+		return ErrSlackNoSuchUser
+	}
+	return fmt.Errorf("%s failed: %s", prefix, slackErr)
+}
+
 func (c *Client) InviteUsers(ctx context.Context, channelID string, userIDs []string) error {
 	var res struct {
 		OK    bool   `json:"ok"`
@@ -460,7 +488,7 @@ func (c *Client) InviteUsers(ctx context.Context, channelID string, userIDs []st
 		return fmt.Errorf("slack conversations.invite failed: %w", err)
 	}
 	if !res.OK {
-		return fmt.Errorf("slack conversations.invite failed: %s", res.Error)
+		return mapSlackSubError("slack conversations.invite", res.Error)
 	}
 	return nil
 }

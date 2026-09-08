@@ -159,7 +159,7 @@ func AuthMiddleware(deps AuthDeps, next http.HandlerFunc, perms ...rbac.Permissi
 		}
 
 		if user.LockedUntil != nil && time.Now().Before(*user.LockedUntil) {
-			deps.AuditStore.Log(store.AuditLoginFailed, &user.ID, user.Email, deps.IPExtractor.ClientIP(r), r.UserAgent(), false, map[string]any{
+			auditAuthEvent(deps, store.AuditLoginFailed, user, r, map[string]any{
 				"reason":       "account_locked",
 				"locked_until": user.LockedUntil,
 			})
@@ -168,7 +168,7 @@ func AuthMiddleware(deps AuthDeps, next http.HandlerFunc, perms ...rbac.Permissi
 		}
 
 		if len(perms) > 0 && !rbac.HasAnyPermission(user.Role, perms...) {
-			deps.AuditStore.Log(store.AuditLoginFailed, &user.ID, user.Email, deps.IPExtractor.ClientIP(r), r.UserAgent(), false, map[string]any{
+			auditAuthEvent(deps, store.AuditLoginFailed, user, r, map[string]any{
 				"reason":               "insufficient_permissions",
 				"required_permissions": perms,
 			})
@@ -186,6 +186,15 @@ func AuthMiddleware(deps AuthDeps, next http.HandlerFunc, perms ...rbac.Permissi
 		ctx = logger.WithUser(ctx, user.ID.String())
 		next(w, r.WithContext(ctx))
 	}
+}
+
+// auditAuthEvent records an auth-path audit event, tolerating a nil audit
+// store (minimal/test wiring) without dropping the request.
+func auditAuthEvent(deps AuthDeps, event store.AuditEvent, user *store.UserRecord, r *http.Request, details map[string]any) {
+	if deps.AuditStore == nil || user == nil {
+		return
+	}
+	deps.AuditStore.Log(event, &user.ID, user.Email, deps.IPExtractor.ClientIP(r), r.UserAgent(), false, details)
 }
 
 // AgentBearerMiddleware validates a "Bearer <agent-token>" Authorization

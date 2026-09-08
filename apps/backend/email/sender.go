@@ -116,12 +116,18 @@ func dialSMTP(ctx context.Context, addr, host string, skipTLSVerify bool) (net.C
 	}
 	ch := make(chan dialResult, 1)
 	go func() {
+		defer func() {
+			// The dial runs against a deadline-bearing conn; a panic here must
+			// not take down the process waiting on ch.
+			_ = recover()
+		}()
 		conn, err := net.DialTimeout("tcp", addr, smtpDialTimeout)
 		ch <- dialResult{conn, err}
 	}()
 	select {
 	case <-ctx.Done():
 		go func() {
+			defer func() { _ = recover() }()
 			if r := <-ch; r.conn != nil {
 				_ = r.conn.Close()
 			}

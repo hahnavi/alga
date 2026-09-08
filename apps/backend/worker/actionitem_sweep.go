@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -142,7 +143,7 @@ func (w *ActionItemSweepWorker) signalOverdue(ctx context.Context, item store.Ac
 			// Frontend notification clicks route by resource type + id; the
 			// incident number is the only deep-linkable id for a post-mortem.
 			record.ResourceType = "incident"
-			record.ResourceID = fmt.Sprintf("%d", incidentNumber)
+			record.ResourceID = strconv.FormatInt(incidentNumber, 10)
 		}
 		if _, err := w.notificationStore.Create(ctx, record); err != nil {
 			logger.Error("Failed to create overdue action-item notification",

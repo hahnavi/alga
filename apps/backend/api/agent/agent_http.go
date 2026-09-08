@@ -72,11 +72,11 @@ func (s *Service) agentOnline(idHex string) bool {
 // package does not depend on package api for the /api/v1/agent-tokens handler.
 func validateTokenName(w http.ResponseWriter, name string) bool {
 	if name == "" {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "name is required")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "name is required")
 		return false
 	}
 	if len(name) > maxTokenNameLength {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, fmt.Sprintf("name must be at most %d characters", maxTokenNameLength))
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, fmt.Sprintf("name must be at most %d characters", maxTokenNameLength))
 		return false
 	}
 	return true
@@ -87,9 +87,9 @@ func parseAndValidateExpiry(w http.ResponseWriter, raw string) (*time.Time, bool
 	expPtr, err := parseOptionalExpiry(raw)
 	if err != nil {
 		if err == errExpiryInPast {
-			platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "expires_at must be in the future")
+			platform.WriteError(w, platform.ErrorCodeValidationFailed, "expires_at must be in the future")
 		} else {
-			platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "invalid expires_at (use RFC3339)")
+			platform.WriteError(w, platform.ErrorCodeValidationFailed, "invalid expires_at (use RFC3339)")
 		}
 		return nil, false
 	}
@@ -163,7 +163,7 @@ func serializeAgentTokenOpts(t store.AgentTokenRecord, idHex string, online bool
 
 func (s *Service) handleAgentAlerts(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
+		platform.WriteError(w, platform.ErrorCodeMethodNotAllowed, "method not allowed")
 		return
 	}
 	act, ok := platform.RequireAgent(w, r)
@@ -220,13 +220,13 @@ func (s *Service) handleAgentTokens(w http.ResponseWriter, r *http.Request) {
 			scope = "all"
 		}
 		if scope != "all" && scope != "labels" {
-			platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "scope must be \"all\" or \"labels\"")
+			platform.WriteError(w, platform.ErrorCodeValidationFailed, "scope must be \"all\" or \"labels\"")
 			return
 		}
 		record, err := s.agentTokenStore.CreateToken(req.Name, expPtr, req.AgentType, caps)
 		if err != nil {
 			if errors.Is(err, store.ErrInvalidAgentType) {
-				platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, err.Error())
+				platform.WriteError(w, platform.ErrorCodeValidationFailed, err.Error())
 				return
 			}
 			platform.WriteInternalError(w, err, "failed to create agent token")
@@ -247,14 +247,14 @@ func (s *Service) handleAgentTokens(w http.ResponseWriter, r *http.Request) {
 		idHex := record.ID.String()
 		platform.WriteJSON(w, http.StatusCreated, serializeAgentToken(*record, idHex, s.agentOnline(idHex), scope, req.LabelSelectors, caps))
 	default:
-		platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
+		platform.WriteError(w, platform.ErrorCodeMethodNotAllowed, "method not allowed")
 	}
 }
 
 func (s *Service) handleAgentTokenByID(w http.ResponseWriter, r *http.Request) {
 	suffix := platform.PathID(r, "/api/v1/agent-tokens/")
 	if suffix == "" {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "missing token id")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "missing token id")
 		return
 	}
 	if strings.Contains(suffix, "/chat/") {
@@ -264,17 +264,17 @@ func (s *Service) handleAgentTokenByID(w http.ResponseWriter, r *http.Request) {
 	const regenerateTail = "/regenerate"
 	if strings.HasSuffix(suffix, regenerateTail) {
 		if r.Method != http.MethodPost {
-			platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
+			platform.WriteError(w, platform.ErrorCodeMethodNotAllowed, "method not allowed")
 			return
 		}
 		idHex := strings.TrimSuffix(suffix, regenerateTail)
 		if idHex == "" || strings.Contains(idHex, "/") {
-			platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "invalid token id")
+			platform.WriteError(w, platform.ErrorCodeValidationFailed, "invalid token id")
 			return
 		}
 		id, err := uuid.Parse(idHex)
 		if err != nil {
-			platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "invalid token id")
+			platform.WriteError(w, platform.ErrorCodeValidationFailed, "invalid token id")
 			return
 		}
 		record, err := s.agentTokenStore.RegenerateToken(id)
@@ -297,12 +297,12 @@ func (s *Service) handleAgentTokenByID(w http.ResponseWriter, r *http.Request) {
 	}
 	if r.Method == http.MethodPut {
 		if strings.Contains(suffix, "/") {
-			platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "invalid token id")
+			platform.WriteError(w, platform.ErrorCodeValidationFailed, "invalid token id")
 			return
 		}
 		id, err := uuid.Parse(suffix)
 		if err != nil {
-			platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "invalid token id")
+			platform.WriteError(w, platform.ErrorCodeValidationFailed, "invalid token id")
 			return
 		}
 		var req struct {
@@ -319,7 +319,7 @@ func (s *Service) handleAgentTokenByID(w http.ResponseWriter, r *http.Request) {
 			scope = "all"
 		}
 		if scope != "all" && scope != "labels" {
-			platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "scope must be \"all\" or \"labels\"")
+			platform.WriteError(w, platform.ErrorCodeValidationFailed, "scope must be \"all\" or \"labels\"")
 			return
 		}
 		selectors := platform.EnsureSlice(req.LabelSelectors)
@@ -359,15 +359,15 @@ func (s *Service) handleAgentTokenByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method != http.MethodDelete {
-		platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
+		platform.WriteError(w, platform.ErrorCodeMethodNotAllowed, "method not allowed")
 		return
 	}
 	if strings.Contains(suffix, "/") {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "invalid token id")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "invalid token id")
 		return
 	}
 	if _, err := uuid.Parse(suffix); err != nil {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "invalid token id")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "invalid token id")
 		return
 	}
 	if s.revokeTokenByID == nil {
@@ -417,18 +417,18 @@ func (s *Service) handleAgentAlertByFingerprint(w http.ResponseWriter, r *http.R
 
 	suffix := platform.PathID(r, "/api/v1/agent/alerts/")
 	if suffix == "" {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "missing fingerprint")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "missing fingerprint")
 		return
 	}
 
 	if strings.HasSuffix(suffix, "/resolve") {
 		if r.Method != http.MethodPost {
-			platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
+			platform.WriteError(w, platform.ErrorCodeMethodNotAllowed, "method not allowed")
 			return
 		}
 		fingerprint := strings.TrimSuffix(suffix, "/resolve")
 		if fingerprint == "" {
-			platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "missing fingerprint")
+			platform.WriteError(w, platform.ErrorCodeValidationFailed, "missing fingerprint")
 			return
 		}
 		if err := s.authorizeAgentAlertMutation(r.Context(), *act, fingerprint); err != nil {
@@ -445,12 +445,12 @@ func (s *Service) handleAgentAlertByFingerprint(w http.ResponseWriter, r *http.R
 
 	if strings.HasSuffix(suffix, "/reopen") {
 		if r.Method != http.MethodPost {
-			platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
+			platform.WriteError(w, platform.ErrorCodeMethodNotAllowed, "method not allowed")
 			return
 		}
 		fingerprint := strings.TrimSuffix(suffix, "/reopen")
 		if fingerprint == "" {
-			platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "missing fingerprint")
+			platform.WriteError(w, platform.ErrorCodeValidationFailed, "missing fingerprint")
 			return
 		}
 		if err := s.authorizeAgentAlertMutation(r.Context(), *act, fingerprint); err != nil {
@@ -466,7 +466,7 @@ func (s *Service) handleAgentAlertByFingerprint(w http.ResponseWriter, r *http.R
 	}
 
 	if r.Method != http.MethodGet {
-		platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
+		platform.WriteError(w, platform.ErrorCodeMethodNotAllowed, "method not allowed")
 		return
 	}
 	fingerprint := suffix
@@ -487,18 +487,18 @@ func (s *Service) handleAgentTokenChat(w http.ResponseWriter, r *http.Request, s
 	const sep = "/chat/"
 	idx := strings.Index(suffix, sep)
 	if idx <= 0 {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "invalid chat path")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "invalid chat path")
 		return
 	}
 	idHex := suffix[:idx]
 	if strings.Contains(idHex, "/") {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "invalid token id")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "invalid token id")
 		return
 	}
 	tail := strings.TrimPrefix(suffix[idx:], sep)
 	tokenOID, err := uuid.Parse(idHex)
 	if err != nil {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "invalid token id")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "invalid token id")
 		return
 	}
 	if s.agentDMStore == nil {
@@ -526,7 +526,7 @@ func (s *Service) handleAgentTokenChat(w http.ResponseWriter, r *http.Request, s
 			if strings.TrimSpace(beforeQ) != "" {
 				oid, err := uuid.Parse(strings.TrimSpace(beforeQ))
 				if err != nil {
-					platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "invalid before cursor")
+					platform.WriteError(w, platform.ErrorCodeValidationFailed, "invalid before cursor")
 					return
 				}
 				beforePtr = &oid
@@ -551,7 +551,7 @@ func (s *Service) handleAgentTokenChat(w http.ResponseWriter, r *http.Request, s
 			}
 			body := strings.TrimSpace(req.Message)
 			if body == "" {
-				platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "message is required")
+				platform.WriteError(w, platform.ErrorCodeValidationFailed, "message is required")
 				return
 			}
 			user := platform.UserFromContext(r.Context())
@@ -592,11 +592,11 @@ func (s *Service) handleAgentTokenChat(w http.ResponseWriter, r *http.Request, s
 			}
 			platform.WriteData(w, http.StatusOK, msg)
 		default:
-			platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
+			platform.WriteError(w, platform.ErrorCodeMethodNotAllowed, "method not allowed")
 		}
 	case "typing":
 		if r.Method != http.MethodPost {
-			platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
+			platform.WriteError(w, platform.ErrorCodeMethodNotAllowed, "method not allowed")
 			return
 		}
 		if s.sse != nil {
@@ -611,7 +611,7 @@ func (s *Service) handleAgentTokenChat(w http.ResponseWriter, r *http.Request, s
 		}
 		platform.WriteStatus(w, "ok")
 	default:
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "unknown chat resource")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "unknown chat resource")
 	}
 }
 
@@ -640,7 +640,7 @@ type agentMessagePayload struct {
 
 func (s *Service) handleAgentSendMessage(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
+		platform.WriteError(w, platform.ErrorCodeMethodNotAllowed, "method not allowed")
 		return
 	}
 	if s.exec == nil {
@@ -660,11 +660,11 @@ func (s *Service) handleAgentSendMessage(w http.ResponseWriter, r *http.Request)
 	chatID := strings.TrimSpace(body.ChatID)
 	kind := strings.TrimSpace(body.Kind)
 	if chatID == "" {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "chat_id is required")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "chat_id is required")
 		return
 	}
 	if kind == "" {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "kind is required (use \"text\", \"tool_call\", \"inv_tool\", \"incident_summary\", \"triage_response\", \"command_decision\", or \"status_update\")")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "kind is required (use \"text\", \"tool_call\", \"inv_tool\", \"incident_summary\", \"triage_response\", \"command_decision\", or \"status_update\")")
 		return
 	}
 
@@ -686,14 +686,14 @@ func (s *Service) handleAgentSendMessage(w http.ResponseWriter, r *http.Request)
 			}
 		}
 		if body.Command != nil {
-			platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "command must be omitted when kind is \"text\"")
+			platform.WriteError(w, platform.ErrorCodeValidationFailed, "command must be omitted when kind is \"text\"")
 			return
 		}
 		if strings.TrimSpace(body.Text) == "" {
-			platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "text is required when kind is \"text\"")
+			platform.WriteError(w, platform.ErrorCodeValidationFailed, "text is required when kind is \"text\"")
 			return
 		}
-		updateID, err := s.exec.HandleIncomingMessage(agentRec, chatID, body.Text, body.SenderID, body.SenderName, body.Mentions, body.ReplyToMessageID)
+		updateID, err := s.exec.HandleIncomingMessage(r.Context(), agentRec, chatID, body.Text, body.SenderID, body.SenderName, body.Mentions, body.ReplyToMessageID)
 		if err != nil {
 			logger.Error("Failed to handle agent message", "error", err)
 			platform.WriteInternalError(w, err, "failed to handle message")
@@ -762,15 +762,15 @@ func (s *Service) handleAgentSendMessage(w http.ResponseWriter, r *http.Request)
 			return
 		}
 		if body.Text != "" {
-			platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "text must be omitted when kind is \"inv_tool\"")
+			platform.WriteError(w, platform.ErrorCodeValidationFailed, "text must be omitted when kind is \"inv_tool\"")
 			return
 		}
 		if body.Command == nil {
-			platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "command is required when kind is \"inv_tool\"")
+			platform.WriteError(w, platform.ErrorCodeValidationFailed, "command is required when kind is \"inv_tool\"")
 			return
 		}
 		if strings.TrimSpace(body.Command.Op) == "" {
-			platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "command.op is required")
+			platform.WriteError(w, platform.ErrorCodeValidationFailed, "command.op is required")
 			return
 		}
 		cmd := *body.Command
@@ -807,12 +807,12 @@ func (s *Service) handleAgentSendMessage(w http.ResponseWriter, r *http.Request)
 			return
 		}
 		if strings.TrimSpace(body.Text) == "" {
-			platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "text is required when kind is \"incident_summary\"")
+			platform.WriteError(w, platform.ErrorCodeValidationFailed, "text is required when kind is \"incident_summary\"")
 			return
 		}
 		incidentID, incidentChatOK := incidentNumberFromIncidentChatIDRaw(chatID)
 		if !incidentChatOK {
-			platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "chat_id must use \"incident_coord_{id}\" or \"incident_inv_{id}\" format")
+			platform.WriteError(w, platform.ErrorCodeValidationFailed, "chat_id must use \"incident_coord_{id}\" or \"incident_inv_{id}\" format")
 			return
 		}
 		if s.postIncidentSummaryFromAgent == nil {
@@ -849,7 +849,7 @@ func (s *Service) handleAgentSendMessage(w http.ResponseWriter, r *http.Request)
 
 	case "tool_call":
 		if store.IsAlgaAgentDMChatID(chatID) {
-			platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "kind \"tool_call\" is not supported for DM chats")
+			platform.WriteError(w, platform.ErrorCodeValidationFailed, "kind \"tool_call\" is not supported for DM chats")
 			return
 		}
 		ownerType, _ := parseOwnerFromChatID(chatID)
@@ -864,15 +864,15 @@ func (s *Service) handleAgentSendMessage(w http.ResponseWriter, r *http.Request)
 			return
 		}
 		if body.Command != nil {
-			platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "command must be omitted when kind is \"tool_call\"")
+			platform.WriteError(w, platform.ErrorCodeValidationFailed, "command must be omitted when kind is \"tool_call\"")
 			return
 		}
 		toolName := strings.TrimSpace(body.Text)
 		if toolName == "" {
-			platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "text is required when kind is \"tool_call\" (the tool name)")
+			platform.WriteError(w, platform.ErrorCodeValidationFailed, "text is required when kind is \"tool_call\" (the tool name)")
 			return
 		}
-		updateID, err := s.exec.HandleToolCallMessage(agentRec, chatID, toolName)
+		updateID, err := s.exec.HandleToolCallMessage(r.Context(), agentRec, chatID, toolName)
 		if err != nil {
 			logger.Error("Failed to handle agent tool_call message", "error", err)
 			platform.WriteInternalError(w, err, "failed to handle tool_call message")
@@ -885,13 +885,13 @@ func (s *Service) handleAgentSendMessage(w http.ResponseWriter, r *http.Request)
 		platform.WriteData(w, http.StatusOK, resp)
 
 	default:
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, fmt.Sprintf("unsupported message kind: %q (use \"text\", \"tool_call\", \"inv_tool\", \"incident_summary\", \"triage_response\", \"command_decision\", or \"status_update\")", kind))
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, fmt.Sprintf("unsupported message kind: %q (use \"text\", \"tool_call\", \"inv_tool\", \"incident_summary\", \"triage_response\", \"command_decision\", or \"status_update\")", kind))
 	}
 }
 
 func (s *Service) handleAgentMessageRoute(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut && r.Method != http.MethodDelete {
-		platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
+		platform.WriteError(w, platform.ErrorCodeMethodNotAllowed, "method not allowed")
 		return
 	}
 	if s.exec == nil {
@@ -906,7 +906,7 @@ func (s *Service) handleAgentMessageRoute(w http.ResponseWriter, r *http.Request
 	path := r.URL.Path
 	messageID := strings.TrimPrefix(path, "/api/v1/agent/messages/")
 	if messageID == "" {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "missing message_id")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "missing message_id")
 		return
 	}
 
@@ -920,10 +920,10 @@ func (s *Service) handleAgentMessageRoute(w http.ResponseWriter, r *http.Request
 			return
 		}
 		if body.ChatID == "" {
-			platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "chat_id is required")
+			platform.WriteError(w, platform.ErrorCodeValidationFailed, "chat_id is required")
 			return
 		}
-		if err := s.exec.HandleDeleteMessage(body.ChatID, messageID, agentRec); err != nil {
+		if err := s.exec.HandleDeleteMessage(r.Context(), body.ChatID, messageID, agentRec); err != nil {
 			logger.Error("Failed to handle agent delete", "error", err)
 			platform.WriteInternalError(w, err, "failed to delete message")
 			return
@@ -943,19 +943,19 @@ func (s *Service) handleAgentMessageRoute(w http.ResponseWriter, r *http.Request
 	}
 	kind := strings.TrimSpace(body.Kind)
 	if kind == "" {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "kind is required (only \"text\" is supported)")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "kind is required (only \"text\" is supported)")
 		return
 	}
 	if kind != "text" {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, fmt.Sprintf("unsupported edit kind: %q (only \"text\" is supported)", kind))
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, fmt.Sprintf("unsupported edit kind: %q (only \"text\" is supported)", kind))
 		return
 	}
 	if body.ChatID == "" || body.Text == "" {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "chat_id and text are required")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "chat_id and text are required")
 		return
 	}
 
-	if err := s.exec.HandleEditMessage(body.ChatID, messageID, body.Text, agentRec); err != nil {
+	if err := s.exec.HandleEditMessage(r.Context(), body.ChatID, messageID, body.Text, agentRec); err != nil {
 		logger.Error("Failed to handle agent edit", "error", err)
 		platform.WriteInternalError(w, err, "failed to edit message")
 		return
@@ -966,7 +966,7 @@ func (s *Service) handleAgentMessageRoute(w http.ResponseWriter, r *http.Request
 
 func (s *Service) handleAgentDraft(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
+		platform.WriteError(w, platform.ErrorCodeMethodNotAllowed, "method not allowed")
 		return
 	}
 	if s.exec == nil {
@@ -989,16 +989,16 @@ func (s *Service) handleAgentDraft(w http.ResponseWriter, r *http.Request) {
 	chatID := strings.TrimSpace(body.ChatID)
 	draftID := strings.TrimSpace(body.DraftID)
 	if chatID == "" {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "chat_id is required")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "chat_id is required")
 		return
 	}
 	if draftID == "" {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "draft_id is required")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "draft_id is required")
 		return
 	}
 
 	agentRec := &store.AgentTokenRecord{ID: act.ID, Name: act.Name, AgentType: act.AgentType, Capabilities: act.Capabilities}
-	if !s.exec.HandleAgentDraft(agentRec, chatID, draftID, body.Text) {
+	if !s.exec.HandleAgentDraft(r.Context(), agentRec, chatID, draftID, body.Text) {
 		platform.WriteError(w, platform.ErrorCodeForbidden, "agent is not authorized for this chat")
 		return
 	}
@@ -1008,7 +1008,7 @@ func (s *Service) handleAgentDraft(w http.ResponseWriter, r *http.Request) {
 
 func (s *Service) handleAgentTyping(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
+		platform.WriteError(w, platform.ErrorCodeMethodNotAllowed, "method not allowed")
 		return
 	}
 	if s.exec == nil {
@@ -1028,7 +1028,7 @@ func (s *Service) handleAgentTyping(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if body.ChatID == "" {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "chat_id is required")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "chat_id is required")
 		return
 	}
 
@@ -1038,7 +1038,7 @@ func (s *Service) handleAgentTyping(w http.ResponseWriter, r *http.Request) {
 	}
 
 	agentRec := &store.AgentTokenRecord{ID: act.ID, Name: act.Name, AgentType: act.AgentType, Capabilities: act.Capabilities}
-	if !s.exec.HandleAgentTyping(agentRec, body.ChatID, active) {
+	if !s.exec.HandleAgentTyping(r.Context(), agentRec, body.ChatID, active) {
 		platform.WriteError(w, platform.ErrorCodeForbidden, "agent is not authorized for this chat")
 		return
 	}
@@ -1054,7 +1054,7 @@ func (s *Service) handleAgentTyping(w http.ResponseWriter, r *http.Request) {
 // prompt when its lease lapses.
 func (s *Service) handleAgentHeartbeat(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
+		platform.WriteError(w, platform.ErrorCodeMethodNotAllowed, "method not allowed")
 		return
 	}
 	agentRec, ok := platform.RequireAgent(w, r)
@@ -1083,7 +1083,7 @@ var capabilityDescriptions = map[string]string{
 
 func (s *Service) handleAgentCapabilities(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
+		platform.WriteError(w, platform.ErrorCodeMethodNotAllowed, "method not allowed")
 		return
 	}
 	out := make([]map[string]string, 0, len(capability.All))
@@ -1112,13 +1112,13 @@ func (s *Service) handleTriageResponse(w http.ResponseWriter, r *http.Request, a
 		if payload.Command != nil && payload.Command.IncidentNumber != 0 {
 			incidentID = strconv.FormatInt(payload.Command.IncidentNumber, 10)
 		} else {
-			platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "incident_number is required (via chat_id or command)")
+			platform.WriteError(w, platform.ErrorCodeValidationFailed, "incident_number is required (via chat_id or command)")
 			return
 		}
 	}
 	incidentNumber, parseErr := strconv.ParseInt(incidentID, 10, 64)
 	if parseErr != nil {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "invalid incident number")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "invalid incident number")
 		return
 	}
 	inc, err := s.incidentStore.GetIncident(r.Context(), incidentNumber)
@@ -1171,13 +1171,13 @@ func (s *Service) handleCommandDecision(w http.ResponseWriter, r *http.Request, 
 		if payload.Command != nil && payload.Command.IncidentNumber != 0 {
 			incidentID = strconv.FormatInt(payload.Command.IncidentNumber, 10)
 		} else {
-			platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "incident_number is required")
+			platform.WriteError(w, platform.ErrorCodeValidationFailed, "incident_number is required")
 			return
 		}
 	}
 	incidentNumber, parseErr := strconv.ParseInt(incidentID, 10, 64)
 	if parseErr != nil {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "invalid incident number")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "invalid incident number")
 		return
 	}
 	decision := ""
@@ -1209,12 +1209,12 @@ func (s *Service) handleStatusUpdate(w http.ResponseWriter, r *http.Request, age
 	chatID := payload.ChatID
 	incidentID, incidentChatOK := incidentNumberFromIncidentChatIDRaw(chatID)
 	if !incidentChatOK {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "chat_id must use incident_coord_{id} or incident_inv_{id} format")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "chat_id must use incident_coord_{id} or incident_inv_{id} format")
 		return
 	}
 	incidentNumber, parseErr := strconv.ParseInt(incidentID, 10, 64)
 	if parseErr != nil {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "invalid incident number")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "invalid incident number")
 		return
 	}
 	if s.icsRoleStore == nil {
@@ -1245,7 +1245,7 @@ func (s *Service) handleStatusUpdate(w http.ResponseWriter, r *http.Request, age
 	}
 	text := strings.TrimSpace(payload.Text)
 	if text == "" {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "text is required for status_update")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "text is required for status_update")
 		return
 	}
 	if s.incidentStore == nil {
@@ -1366,12 +1366,12 @@ func (s *Service) handleAgentIncidentRoutes(w http.ResponseWriter, r *http.Reque
 	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/v1/agent/incidents/"), "/")
 	incidentID := parts[0]
 	if incidentID == "" {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "incident ID is required")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "incident ID is required")
 		return
 	}
 	incidentNumber, parseErr := strconv.ParseInt(incidentID, 10, 64)
 	if parseErr != nil {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "invalid incident number")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "invalid incident number")
 		return
 	}
 	if r.Method == http.MethodPost && len(parts) > 1 && parts[1] == "timeline" {
@@ -1391,7 +1391,7 @@ func (s *Service) handleAgentIncidentRoutes(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if r.Method != http.MethodGet {
-		platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
+		platform.WriteError(w, platform.ErrorCodeMethodNotAllowed, "method not allowed")
 		return
 	}
 	inc, err := s.incidentStore.GetIncident(r.Context(), incidentNumber)
@@ -1502,7 +1502,7 @@ func (s *Service) handleAgentAddIncidentTimeline(w http.ResponseWriter, r *http.
 		return
 	}
 	if req.Message == "" {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "message is required")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "message is required")
 		return
 	}
 	eventType := req.EventType
@@ -1595,7 +1595,7 @@ func (s *Service) handleAgentPatchIncident(w http.ResponseWriter, r *http.Reques
 
 func (s *Service) handleAgentServices(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
+		platform.WriteError(w, platform.ErrorCodeMethodNotAllowed, "method not allowed")
 		return
 	}
 	act, ok := platform.RequireAgent(w, r)
@@ -1621,7 +1621,7 @@ func (s *Service) handleAgentServices(w http.ResponseWriter, r *http.Request) {
 
 func (s *Service) handleAgentOnCallCurrent(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
+		platform.WriteError(w, platform.ErrorCodeMethodNotAllowed, "method not allowed")
 		return
 	}
 	act, ok := platform.RequireAgent(w, r)
@@ -1649,20 +1649,31 @@ func (s *Service) handleAgentOnCallCurrent(w http.ResponseWriter, r *http.Reques
 		UserName     string `json:"user_name,omitempty"`
 	}
 	var results []OnCallEntry
+	// Cache display names across schedules: many schedules resolve to the same
+	// few responders, so avoid a userStore.GetByID per (schedule, user) pair.
+	names := make(map[uuid.UUID]string)
+	userName := func(id uuid.UUID) string {
+		if n, ok := names[id]; ok {
+			return n
+		}
+		n := ""
+		if s.userStore != nil {
+			if u, userErr := s.userStore.GetByID(id); userErr == nil && u != nil {
+				n = u.DisplayName()
+				if n == "" {
+					n = u.Email
+				}
+			}
+		}
+		names[id] = n
+		return n
+	}
 	for _, sched := range schedules {
 		userID, resolveErr := s.onCallResolver.ResolveWhoIsOnCall(r.Context(), sched.ID, now)
 		if resolveErr != nil || userID == nil {
 			continue
 		}
-		name := ""
-		if s.userStore != nil {
-			if u, userErr := s.userStore.GetByID(*userID); userErr == nil && u != nil {
-				name = u.DisplayName()
-				if name == "" {
-					name = u.Email
-				}
-			}
-		}
+		name := userName(*userID)
 		scheduleName := "On-Call"
 		if s.scheduleDisplayName != nil {
 			scheduleName = s.scheduleDisplayName(r.Context(), &sched)
@@ -1682,7 +1693,7 @@ func (s *Service) handleAgentOnCallCurrent(w http.ResponseWriter, r *http.Reques
 
 func (s *Service) handleAgentPlaybooks(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
+		platform.WriteError(w, platform.ErrorCodeMethodNotAllowed, "method not allowed")
 		return
 	}
 

@@ -53,7 +53,7 @@ func (s *Server) handleIncidentCoordinationMessages(w http.ResponseWriter, r *ht
 	case http.MethodPost:
 		s.handleCreateIncidentCoordinationMessage(w, r, incidentID)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -80,7 +80,7 @@ func (s *Server) handleCreateIncidentCoordinationMessage(w http.ResponseWriter, 
 	}
 	body := strings.TrimSpace(req.Body)
 	if body == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "body is required")
+		writeError(w, ErrorCodeValidationFailed, "body is required")
 		return
 	}
 	kind := strings.TrimSpace(req.Kind)
@@ -95,7 +95,7 @@ func (s *Server) handleCreateIncidentCoordinationMessage(w http.ResponseWriter, 
 	switch kind {
 	case store.IncidentCoordinationKindChat, store.IncidentCoordinationKindDecision, store.IncidentCoordinationKindAction:
 	default:
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid kind: must be chat, decision, or action")
+		writeError(w, ErrorCodeValidationFailed, "invalid kind: must be chat, decision, or action")
 		return
 	}
 	user := userFromContext(r.Context())

@@ -31,7 +31,7 @@ func (s *Server) handleIncidents(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		s.handleCreateIncident(w, r)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -86,50 +86,53 @@ func (s *Server) handleListIncidents(w http.ResponseWriter, r *http.Request) {
 		writeInternalError(w, err, "failed to list incidents")
 		return
 	}
-	writePaginatedJSON(w, records, total)
+	writePaginatedJSON(w, ensureSlice(records), total)
 }
 
-func (s *Server) handleCreateIncident(w http.ResponseWriter, r *http.Request) {
-	if !s.checkPermission(w, r, rbac.IncidentsWrite) {
-		return
-	}
-	if !s.requireIncidentStore(w) {
-		return
-	}
+// createIncidentRequest is the POST /incidents body.
+type createIncidentRequest struct {
+	Title              string         `json:"title"`
+	Description        string         `json:"description,omitempty"`
+	Severity           string         `json:"severity,omitempty"`
+	ImpactLevel        string         `json:"impact_level,omitempty"`
+	Priority           string         `json:"priority,omitempty"`
+	IncidentType       string         `json:"incident_type,omitempty"`
+	CommanderID        *string        `json:"commander_id,omitempty"`
+	CommunicatorID     *string        `json:"communicator_id,omitempty"`
+	OnCallResponderID  *string        `json:"on_call_responder_id,omitempty"`
+	ServiceID          *string        `json:"service_id,omitempty"`
+	ConferenceURL      string         `json:"conference_url,omitempty"`
+	Tags               []string       `json:"tags,omitempty"`
+	CustomFields       map[string]any `json:"custom_fields,omitempty"`
+	SLATargetRespondAt *string        `json:"sla_target_respond_at,omitempty"`
+	SLATargetResolveAt *string        `json:"sla_target_resolve_at,omitempty"`
+	AlertNumbers       []int64        `json:"alert_numbers,omitempty"`
+}
 
-	var req struct {
-		Title              string         `json:"title"`
-		Description        string         `json:"description,omitempty"`
-		Severity           string         `json:"severity,omitempty"`
-		ImpactLevel        string         `json:"impact_level,omitempty"`
-		Priority           string         `json:"priority,omitempty"`
-		IncidentType       string         `json:"incident_type,omitempty"`
-		CommanderID        *string        `json:"commander_id,omitempty"`
-		CommunicatorID     *string        `json:"communicator_id,omitempty"`
-		OnCallResponderID  *string        `json:"on_call_responder_id,omitempty"`
-		ServiceID          *string        `json:"service_id,omitempty"`
-		ConferenceURL      string         `json:"conference_url,omitempty"`
-		Tags               []string       `json:"tags,omitempty"`
-		CustomFields       map[string]any `json:"custom_fields,omitempty"`
-		SLATargetRespondAt *string        `json:"sla_target_respond_at,omitempty"`
-		SLATargetResolveAt *string        `json:"sla_target_resolve_at,omitempty"`
-		AlertNumbers       []int64        `json:"alert_numbers,omitempty"`
+// parseUUIDRef validates an optional entity reference from the request body.
+func parseUUIDRef(raw *string, field string) (*uuid.UUID, error) {
+	if raw == nil || *raw == "" {
+		return nil, nil
 	}
-	if !decodeJSON(w, r, &req) {
-		return
+	uid, err := uuid.Parse(*raw)
+	if err != nil {
+		return nil, errors.New("invalid " + field)
 	}
+	return &uid, nil
+}
+
+// buildIncidentRecord validates the create request and assembles the store
+// record (without an incident number, which is reserved by the caller).
+// It returns the linked alerts resolved from the request.
+func (s *Server) buildIncidentRecord(req createIncidentRequest) (*store.IncidentRecord, []store.AlertRecord, error) {
 	if strings.TrimSpace(req.Title) == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "title is required")
-		return
+		return nil, nil, errors.New("title is required")
 	}
-
 	if req.Severity != "" && !incident.ValidSeverity(req.Severity) {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid severity: must be critical, high, warning, or info")
-		return
+		return nil, nil, errors.New("invalid severity: must be critical, high, warning, or info")
 	}
 	if req.ImpactLevel != "" && !incident.ValidImpact(req.ImpactLevel) {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid impact_level: must be high, medium, or low")
-		return
+		return nil, nil, errors.New("invalid impact_level: must be high, medium, or low")
 	}
 	if req.Severity == "" {
 		req.Severity = "warning"
@@ -138,71 +141,50 @@ func (s *Server) handleCreateIncident(w http.ResponseWriter, r *http.Request) {
 		req.ImpactLevel = "medium"
 	}
 	if req.IncidentType != "" && !incident.ValidIncidentType(req.IncidentType) {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid incident_type: must be real, alert, or degradation")
-		return
+		return nil, nil, errors.New("invalid incident_type: must be real, alert, or degradation")
 	}
 	if req.Priority == "" {
 		req.Priority = incident.ComputePriority(req.Severity, req.ImpactLevel)
 	} else if !incident.ValidPriority(req.Priority) {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid priority: must be P1, P2, P3, P4, or P5")
-		return
+		return nil, nil, errors.New("invalid priority: must be P1, P2, P3, P4, or P5")
 	}
 
-	incidentNumber, err := s.incidentStore.ReserveIncidentNumber(r.Context())
+	commanderID, err := parseUUIDRef(req.CommanderID, "commander_id")
 	if err != nil {
-		writeInternalError(w, err, "failed to reserve incident number")
-		return
+		return nil, nil, err
+	}
+	communicatorID, err := parseUUIDRef(req.CommunicatorID, "communicator_id")
+	if err != nil {
+		return nil, nil, err
+	}
+	responderID, err := parseUUIDRef(req.OnCallResponderID, "on_call_responder_id")
+	if err != nil {
+		return nil, nil, err
+	}
+	serviceID, err := parseUUIDRef(req.ServiceID, "service_id")
+	if err != nil {
+		return nil, nil, err
 	}
 
 	now := time.Now().UTC()
 	record := &store.IncidentRecord{
-		IncidentNumber: incidentNumber,
-		Title:          strings.TrimSpace(req.Title),
-		Description:    req.Description,
-		Status:         "detected",
-		Severity:       req.Severity,
-		ImpactLevel:    req.ImpactLevel,
-		Priority:       req.Priority,
-		IncidentType:   req.IncidentType,
-		ConferenceURL:  req.ConferenceURL,
-		Tags:           req.Tags,
-		CustomFields:   req.CustomFields,
-		StartedAt:      &now,
-		CreatedAt:      now,
-		UpdatedAt:      now,
-	}
-
-	if req.CommanderID != nil && *req.CommanderID != "" {
-		uid, err := uuid.Parse(*req.CommanderID)
-		if err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid commander_id")
-			return
-		}
-		record.CommanderID = &uid
-	}
-	if req.CommunicatorID != nil && *req.CommunicatorID != "" {
-		uid, err := uuid.Parse(*req.CommunicatorID)
-		if err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid communicator_id")
-			return
-		}
-		record.CommunicatorID = &uid
-	}
-	if req.OnCallResponderID != nil && *req.OnCallResponderID != "" {
-		uid, err := uuid.Parse(*req.OnCallResponderID)
-		if err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid on_call_responder_id")
-			return
-		}
-		record.OnCallResponderID = &uid
-	}
-	if req.ServiceID != nil && *req.ServiceID != "" {
-		uid, err := uuid.Parse(*req.ServiceID)
-		if err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid service_id")
-			return
-		}
-		record.ServiceID = &uid
+		Title:             strings.TrimSpace(req.Title),
+		Description:       req.Description,
+		Status:            "detected",
+		Severity:          req.Severity,
+		ImpactLevel:       req.ImpactLevel,
+		Priority:          req.Priority,
+		IncidentType:      req.IncidentType,
+		ConferenceURL:     req.ConferenceURL,
+		Tags:              req.Tags,
+		CustomFields:      req.CustomFields,
+		StartedAt:         &now,
+		CreatedAt:         now,
+		UpdatedAt:         now,
+		CommanderID:       commanderID,
+		CommunicatorID:    communicatorID,
+		OnCallResponderID: responderID,
+		ServiceID:         serviceID,
 	}
 	if req.SLATargetRespondAt != nil {
 		if t, err := time.Parse(time.RFC3339, *req.SLATargetRespondAt); err == nil {
@@ -214,7 +196,6 @@ func (s *Server) handleCreateIncident(w http.ResponseWriter, r *http.Request) {
 			record.SLATargetResolveAt = &t
 		}
 	}
-
 	if record.SLATargetRespondAt == nil || record.SLATargetResolveAt == nil {
 		respondDuration, resolveDuration := worker.PriorityToSLATargets(record.Priority)
 		if record.SLATargetRespondAt == nil {
@@ -226,6 +207,7 @@ func (s *Server) handleCreateIncident(w http.ResponseWriter, r *http.Request) {
 			record.SLATargetResolveAt = &resolveAt
 		}
 	}
+
 	linkedAlerts := make([]store.AlertRecord, 0, len(req.AlertNumbers))
 	if len(req.AlertNumbers) > 0 && s.alertStore != nil {
 		for _, num := range req.AlertNumbers {
@@ -241,60 +223,38 @@ func (s *Server) handleCreateIncident(w http.ResponseWriter, r *http.Request) {
 		// The insert bypasses the acknowledge transition, so stamp the SLA
 		// response clock here to match every other path into `active`
 		// (applyStatusTimestampsBun stamps it on the transition).
-		now := time.Now().UTC()
-		record.SLAAcknowledgedAt = &now
+		ack := time.Now().UTC()
+		record.SLAAcknowledgedAt = &ack
 		if strings.TrimSpace(record.Description) == "" {
 			record.Description = incidentDescriptionFromAlert(linkedAlerts[0])
 		}
 	}
 
-	created, err := s.incidentStore.CreateIncident(r.Context(), record)
-	if err != nil {
-		writeInternalError(w, err, "failed to create incident")
-		return
-	}
+	return record, linkedAlerts, nil
+}
 
+// finalizeIncidentCreation runs the post-create fan-out: alert linking,
+// auto-investigation, timeline, IC auto-assign, ICS provisioning, Slack
+// channel, metrics, SSE, and audit. Side effects are best-effort; a failure
+// never fails the already-persisted incident.
+func (s *Server) finalizeIncidentCreation(r *http.Request, created *store.IncidentRecord, linkedAlerts []store.AlertRecord, title string) {
+	ctx := r.Context()
 	for _, rec := range linkedAlerts {
-		if err := s.alertStore.LinkAlertToIncident(r.Context(), rec.Fingerprint, created.IncidentNumber); err != nil {
+		if err := s.alertStore.LinkAlertToIncident(ctx, rec.Fingerprint, created.IncidentNumber); err != nil {
 			logger.Warn("Failed to link alert to incident during create", "component", "api", "incident_number", created.IncidentNumber, "fingerprint", rec.Fingerprint, "error", err)
 		}
-		s.postAlertIncidentHandoffMessage(r.Context(), rec.AlertNumber, strconv.FormatInt(created.IncidentNumber, 10))
+		s.postAlertIncidentHandoffMessage(ctx, rec.AlertNumber, strconv.FormatInt(created.IncidentNumber, 10))
 	}
 	if len(linkedAlerts) > 0 && s.alertInvestigationStore != nil {
-		primary := linkedAlerts[0]
-		existing, listErr := s.alertInvestigationStore.ListAlertInvestigationsByAlertNumber(r.Context(), primary.AlertNumber)
-		switch {
-		case listErr != nil:
-			// Cannot tell whether an investigation exists; creating one here
-			// could duplicate it. Skip and let the alert pipeline proceed.
-			logger.WarnCtx(r.Context(), "failed to list alert investigations during incident create; skipping auto-investigation", "incident_number", created.IncidentNumber, "alert_number", primary.AlertNumber, "error", listErr)
-		case len(existing) == 0:
-			correlated := make([]rabbitmq.CorrelatedAlert, 0, len(linkedAlerts))
-			for _, rec := range linkedAlerts {
-				correlated = append(correlated, correlatedAlertFromRecord(rec))
-			}
-			_, createErr := s.alertInvestigationStore.CreateAlertInvestigation(r.Context(), store.AlertInvestigationRecord{
-				Alerts:                  correlated,
-				CorrelationKey:          strconv.FormatInt(created.IncidentNumber, 10),
-				Status:                  store.AlertInvestigationStatusPending,
-				PromotedIncidentID:      &created.ID,
-				PrimaryAlertFingerprint: primary.Fingerprint,
-				PrimaryAlertNumber:      primary.AlertNumber,
-			})
-			if createErr != nil {
-				logger.WarnCtx(r.Context(), "failed to queue incident-scoped alert investigation", "incident_number", created.IncidentNumber, "error", createErr)
-			} else if s.pendingNotifier != nil {
-				s.pendingNotifier.NotifyPending()
-			}
-		}
+		s.autoCreateIncidentInvestigation(ctx, created, linkedAlerts)
 	}
 
-	user := userFromContext(r.Context())
+	user := userFromContext(ctx)
 	actorID := ""
 	if user != nil {
 		actorID = user.ID.String()
 	}
-	if err := s.incidentStore.AddTimelineEntry(r.Context(), &store.IncidentTimelineEntryRecord{
+	if err := s.incidentStore.AddTimelineEntry(ctx, &store.IncidentTimelineEntryRecord{
 		IncidentNumber: created.IncidentNumber,
 		EventType:      "created",
 		ActorID:        parseUUIDPtr(actorID),
@@ -303,10 +263,10 @@ func (s *Server) handleCreateIncident(w http.ResponseWriter, r *http.Request) {
 	}); err != nil {
 		logger.Warn("Failed to add incident-created timeline entry", "component", "api", "incident_number", created.IncidentNumber, "error", err)
 	}
-	s.ensureIncidentInvestigation(r.Context(), created)
+	s.ensureIncidentInvestigation(ctx, created)
 	if s.rabbitmqPublisher != nil {
 		s.autoAssignICOnPromote(r, created)
-		_ = s.rabbitmqPublisher.PublishICSProvision(r.Context(), rabbitmq.ICSProvisionMessage{IncidentNumber: created.IncidentNumber})
+		_ = s.rabbitmqPublisher.PublishICSProvision(ctx, rabbitmq.ICSProvisionMessage{IncidentNumber: created.IncidentNumber})
 	}
 
 	metrics.IncidentsCreatedTotal.Add(1)
@@ -315,10 +275,78 @@ func (s *Server) handleCreateIncident(w http.ResponseWriter, r *http.Request) {
 	s.tryAutoCreateSlackChannel(r, created)
 	s.audit(r, store.AuditIncidentCreated, map[string]any{
 		"incident_number": created.IncidentNumber,
-		"title":           req.Title,
+		"title":           title,
 	})
 
 	s.invalidateDashboardCache(r)
+}
+
+// autoCreateIncidentInvestigation queues a pending alert investigation for a
+// manually created incident that was linked to alerts, so the scheduler treats
+// it like any correlated alert set. Skipped when an investigation already
+// exists for the primary alert.
+func (s *Server) autoCreateIncidentInvestigation(ctx context.Context, created *store.IncidentRecord, linkedAlerts []store.AlertRecord) {
+	primary := linkedAlerts[0]
+	existing, listErr := s.alertInvestigationStore.ListAlertInvestigationsByAlertNumber(ctx, primary.AlertNumber)
+	switch {
+	case listErr != nil:
+		// Cannot tell whether an investigation exists; creating one here
+		// could duplicate it. Skip and let the alert pipeline proceed.
+		logger.WarnCtx(ctx, "failed to list alert investigations during incident create; skipping auto-investigation", "incident_number", created.IncidentNumber, "alert_number", primary.AlertNumber, "error", listErr)
+	case len(existing) == 0:
+		correlated := make([]rabbitmq.CorrelatedAlert, 0, len(linkedAlerts))
+		for _, rec := range linkedAlerts {
+			correlated = append(correlated, correlatedAlertFromRecord(rec))
+		}
+		_, createErr := s.alertInvestigationStore.CreateAlertInvestigation(ctx, store.AlertInvestigationRecord{
+			Alerts:                  correlated,
+			CorrelationKey:          strconv.FormatInt(created.IncidentNumber, 10),
+			Status:                  store.AlertInvestigationStatusPending,
+			PromotedIncidentID:      &created.ID,
+			PrimaryAlertFingerprint: primary.Fingerprint,
+			PrimaryAlertNumber:      primary.AlertNumber,
+		})
+		if createErr != nil {
+			logger.WarnCtx(ctx, "failed to queue incident-scoped alert investigation", "incident_number", created.IncidentNumber, "error", createErr)
+		} else if s.pendingNotifier != nil {
+			s.pendingNotifier.NotifyPending()
+		}
+	}
+}
+
+func (s *Server) handleCreateIncident(w http.ResponseWriter, r *http.Request) {
+	if !s.checkPermission(w, r, rbac.IncidentsWrite) {
+		return
+	}
+	if !s.requireIncidentStore(w) {
+		return
+	}
+
+	var req createIncidentRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+
+	record, linkedAlerts, err := s.buildIncidentRecord(req)
+	if err != nil {
+		writeError(w, ErrorCodeValidationFailed, err.Error())
+		return
+	}
+
+	incidentNumber, err := s.incidentStore.ReserveIncidentNumber(r.Context())
+	if err != nil {
+		writeInternalError(w, err, "failed to reserve incident number")
+		return
+	}
+	record.IncidentNumber = incidentNumber
+
+	created, err := s.incidentStore.CreateIncident(r.Context(), record)
+	if err != nil {
+		writeInternalError(w, err, "failed to create incident")
+		return
+	}
+
+	s.finalizeIncidentCreation(r, created, linkedAlerts, req.Title)
 	writeData(w, http.StatusCreated, created)
 }
 
@@ -359,7 +387,7 @@ func parseUUIDPtr(s string) *uuid.UUID {
 func (s *Server) handleIncidentRoutes(w http.ResponseWriter, r *http.Request) {
 	suffix := pathID(r, "/api/v1/incidents/")
 	if suffix == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing incident id")
+		writeError(w, ErrorCodeValidationFailed, "missing incident id")
 		return
 	}
 
@@ -378,7 +406,7 @@ func (s *Server) handleIncidentRoutes(w http.ResponseWriter, r *http.Request) {
 		suffixStr := "/" + action
 		if strings.HasSuffix(suffix, suffixStr) {
 			if r.Method != http.MethodPost {
-				writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+				writeMethodNotAllowed(w)
 				return
 			}
 			incidentID := strings.TrimSuffix(suffix, suffixStr)
@@ -393,7 +421,7 @@ func (s *Server) handleIncidentRoutes(w http.ResponseWriter, r *http.Request) {
 			incidentID = ""
 		}
 		if incidentID == "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing incident id")
+			writeError(w, ErrorCodeValidationFailed, "missing incident id")
 			return
 		}
 		s.handleIncidentCoordinationMessages(w, r, incidentID)
@@ -406,7 +434,7 @@ func (s *Server) handleIncidentRoutes(w http.ResponseWriter, r *http.Request) {
 			incidentID = ""
 		}
 		if incidentID == "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing incident id")
+			writeError(w, ErrorCodeValidationFailed, "missing incident id")
 			return
 		}
 		s.handleIncidentStatusUpdates(w, r, incidentID)
@@ -419,7 +447,7 @@ func (s *Server) handleIncidentRoutes(w http.ResponseWriter, r *http.Request) {
 			incidentID = ""
 		}
 		if incidentID == "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing incident id")
+			writeError(w, ErrorCodeValidationFailed, "missing incident id")
 			return
 		}
 		switch r.Method {
@@ -428,7 +456,7 @@ func (s *Server) handleIncidentRoutes(w http.ResponseWriter, r *http.Request) {
 		case http.MethodDelete:
 			s.handleDeleteSlackChannel(w, r, incidentID)
 		default:
-			writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+			writeMethodNotAllowed(w)
 		}
 		return
 	}
@@ -439,7 +467,7 @@ func (s *Server) handleIncidentRoutes(w http.ResponseWriter, r *http.Request) {
 			incidentID = ""
 		}
 		if incidentID == "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing incident id")
+			writeError(w, ErrorCodeValidationFailed, "missing incident id")
 			return
 		}
 		switch r.Method {
@@ -448,21 +476,21 @@ func (s *Server) handleIncidentRoutes(w http.ResponseWriter, r *http.Request) {
 		case http.MethodDelete:
 			s.handleUnlinkGoogleMeet(w, r, incidentID)
 		default:
-			writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+			writeMethodNotAllowed(w)
 		}
 		return
 	}
 
 	if idx := strings.Index(suffix, "/alerts/"); idx != -1 {
 		if r.Method != http.MethodDelete {
-			writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+			writeMethodNotAllowed(w)
 			return
 		}
 		incidentID := suffix[:idx]
 		numStr := suffix[idx+len("/alerts/"):]
 		alertNumber, err := strconv.ParseInt(numStr, 10, 64)
 		if err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid alert number")
+			writeError(w, ErrorCodeValidationFailed, "invalid alert number")
 			return
 		}
 		s.handleUnlinkAlertFromIncident(w, r, incidentID, alertNumber)
@@ -475,7 +503,7 @@ func (s *Server) handleIncidentRoutes(w http.ResponseWriter, r *http.Request) {
 			incidentID = ""
 		}
 		if incidentID == "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing incident id")
+			writeError(w, ErrorCodeValidationFailed, "missing incident id")
 			return
 		}
 		switch r.Method {
@@ -484,7 +512,7 @@ func (s *Server) handleIncidentRoutes(w http.ResponseWriter, r *http.Request) {
 		case http.MethodPost:
 			s.handleLinkAlertToIncident(w, r, incidentID)
 		default:
-			writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+			writeMethodNotAllowed(w)
 		}
 		return
 	}
@@ -495,7 +523,7 @@ func (s *Server) handleIncidentRoutes(w http.ResponseWriter, r *http.Request) {
 			incidentID = ""
 		}
 		if incidentID == "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing incident id")
+			writeError(w, ErrorCodeValidationFailed, "missing incident id")
 			return
 		}
 		switch r.Method {
@@ -504,7 +532,7 @@ func (s *Server) handleIncidentRoutes(w http.ResponseWriter, r *http.Request) {
 		case http.MethodPost:
 			s.handleAddIncidentTimelineEntry(w, r, incidentID)
 		default:
-			writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+			writeMethodNotAllowed(w)
 		}
 		return
 	}
@@ -515,7 +543,7 @@ func (s *Server) handleIncidentRoutes(w http.ResponseWriter, r *http.Request) {
 			incidentID = ""
 		}
 		if incidentID == "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing incident id")
+			writeError(w, ErrorCodeValidationFailed, "missing incident id")
 			return
 		}
 		switch r.Method {
@@ -524,7 +552,7 @@ func (s *Server) handleIncidentRoutes(w http.ResponseWriter, r *http.Request) {
 		case http.MethodPost:
 			s.handleCreateIncidentInvestigation(w, r, incidentID)
 		default:
-			writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+			writeMethodNotAllowed(w)
 		}
 		return
 	}
@@ -532,7 +560,7 @@ func (s *Server) handleIncidentRoutes(w http.ResponseWriter, r *http.Request) {
 	if strings.Contains(suffix, "post-mortem") {
 		incidentID := extractIncidentIDBeforePostMortem(suffix)
 		if incidentID == "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing incident id")
+			writeError(w, ErrorCodeValidationFailed, "missing incident id")
 			return
 		}
 		s.handlePostMortemRoutes(w, r, incidentID)
@@ -547,14 +575,14 @@ func (s *Server) handleIncidentRoutes(w http.ResponseWriter, r *http.Request) {
 	case http.MethodDelete:
 		s.handleDeleteIncident(w, r, suffix)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
 func (s *Server) getIncidentOrError(w http.ResponseWriter, r *http.Request, incidentID string) (*store.IncidentRecord, bool) {
 	incidentNumber, err := strconv.ParseInt(incidentID, 10, 64)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid incident number")
+		writeError(w, ErrorCodeValidationFailed, "invalid incident number")
 		return nil, false
 	}
 	record, err := s.incidentStore.GetIncident(r.Context(), incidentNumber)
@@ -660,19 +688,19 @@ func (s *Server) handlePatchIncident(w http.ResponseWriter, r *http.Request, inc
 	}
 
 	if req.Severity != nil && !incident.ValidSeverity(*req.Severity) {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid severity: must be critical, high, warning, or info")
+		writeError(w, ErrorCodeValidationFailed, "invalid severity: must be critical, high, warning, or info")
 		return
 	}
 	if req.ImpactLevel != nil && !incident.ValidImpact(*req.ImpactLevel) {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid impact_level: must be high, medium, or low")
+		writeError(w, ErrorCodeValidationFailed, "invalid impact_level: must be high, medium, or low")
 		return
 	}
 	if req.Priority != nil && *req.Priority != "" && !incident.ValidPriority(*req.Priority) {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid priority: must be P1, P2, P3, P4, or P5")
+		writeError(w, ErrorCodeValidationFailed, "invalid priority: must be P1, P2, P3, P4, or P5")
 		return
 	}
 	if req.IncidentType != nil && !incident.ValidIncidentType(*req.IncidentType) {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid incident_type: must be real, alert, or degradation")
+		writeError(w, ErrorCodeValidationFailed, "invalid incident_type: must be real, alert, or degradation")
 		return
 	}
 	if (req.Severity != nil || req.ImpactLevel != nil) && (req.Priority == nil || *req.Priority == "") {

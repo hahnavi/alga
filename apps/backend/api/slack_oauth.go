@@ -145,13 +145,13 @@ func newSlackOAuthHandler(cfg *config.Config, integrationStore store.Integration
 
 func (h *slackOAuthHandler) handleAuthorize(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 
 	clientID, clientSecret := h.getSlackAppCredentials()
 	if clientID == "" || clientSecret == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "Slack app credentials (client_id and client_secret) are not configured")
+		writeError(w, ErrorCodeValidationFailed, "Slack app credentials (client_id and client_secret) are not configured")
 		return
 	}
 
@@ -182,7 +182,7 @@ func (h *slackOAuthHandler) handleAuthorize(w http.ResponseWriter, r *http.Reque
 
 func (h *slackOAuthHandler) handleCallback(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 

@@ -42,7 +42,7 @@ func (s *Server) handleAcknowledgeIncident(w http.ResponseWriter, r *http.Reques
 	}
 
 	if record.Status != "detected" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "incident must be in 'detected' status to acknowledge")
+		writeError(w, ErrorCodeValidationFailed, "incident must be in 'detected' status to acknowledge")
 		return
 	}
 
@@ -165,7 +165,7 @@ func (s *Server) handleResolveIncident(w http.ResponseWriter, r *http.Request, i
 		return
 	}
 	if len(missing) > 0 {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "incident resolution requires: "+strings.Join(missing, ", "))
+		writeError(w, ErrorCodeValidationFailed, "incident resolution requires: "+strings.Join(missing, ", "))
 		return
 	}
 
@@ -407,7 +407,7 @@ func (s *Server) handleEscalateIncident(w http.ResponseWriter, r *http.Request, 
 	// Terminal incidents cannot page anyone: reject instead of re-arming the
 	// escalation sweep on a dead incident.
 	if escalation.IsTerminalIncidentStatus(record.Status) {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "cannot escalate an incident in '"+record.Status+"' status")
+		writeError(w, ErrorCodeValidationFailed, "cannot escalate an incident in '"+record.Status+"' status")
 		return
 	}
 

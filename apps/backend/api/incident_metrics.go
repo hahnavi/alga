@@ -9,7 +9,7 @@ import (
 
 func (s *Server) handleIncidentMetrics(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 	if !s.checkPermission(w, r, rbac.IncidentsRead) {

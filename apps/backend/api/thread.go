@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -25,7 +26,7 @@ type createThreadMessageRequest struct {
 
 func (s *Server) handleAlertThread(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 	alertNumber, ok := alertNumberFromThreadPath(w, r, "/thread")
@@ -37,7 +38,7 @@ func (s *Server) handleAlertThread(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleAlertThreadTyping(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 	alertNumber, ok := alertNumberFromThreadPath(w, r, "/thread/typing")
@@ -50,7 +51,7 @@ func (s *Server) handleAlertThreadTyping(w http.ResponseWriter, r *http.Request)
 
 func (s *Server) handleAlertThreadMessages(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 	alertNumber, ok := alertNumberFromThreadPath(w, r, "/thread/messages")
@@ -65,12 +66,12 @@ func (s *Server) handleAlertThreadMessages(w http.ResponseWriter, r *http.Reques
 
 func (s *Server) handleIncidentThread(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 	incidentID := ownerIDFromThreadPath(r, "incident_id", "/api/v1/incidents/", "/thread")
 	if incidentID == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing incident id")
+		writeError(w, ErrorCodeValidationFailed, "missing incident id")
 		return
 	}
 	s.writeOwnerThread(w, r, store.ThreadOwnerIncidentInvestigation, incidentID, http.StatusOK)
@@ -78,12 +79,12 @@ func (s *Server) handleIncidentThread(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleIncidentThreadMessages(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 	incidentID := ownerIDFromThreadPath(r, "incident_id", "/api/v1/incidents/", "/thread/messages")
 	if incidentID == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing incident id")
+		writeError(w, ErrorCodeValidationFailed, "missing incident id")
 		return
 	}
 	if !s.createOwnerThreadMessage(w, r, store.ThreadOwnerIncidentInvestigation, incidentID) {
@@ -126,7 +127,7 @@ func (s *Server) createOwnerThreadMessage(w http.ResponseWriter, r *http.Request
 	}
 	messageText := strings.TrimSpace(req.Message)
 	if messageText == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "message is required")
+		writeError(w, ErrorCodeValidationFailed, "message is required")
 		return false
 	}
 
@@ -170,9 +171,9 @@ func (s *Server) createOwnerThreadMessage(w http.ResponseWriter, r *http.Request
 		})
 	}
 
-	s.syncThreadMessageToExternalChat(ownerType, ownerID, messageText, userFromContext(r.Context()))
+	s.syncThreadMessageToExternalChat(r.Context(), ownerType, ownerID, messageText, userFromContext(r.Context()))
 
-	s.forwardOwnerThreadMessageToAgent(ownerType, ownerID, messageText, userFromContext(r.Context()), req.Mentions, msgRec.ReplyToMessageID, replyToText, replyToAuthor)
+	s.forwardOwnerThreadMessageToAgent(r.Context(), ownerType, ownerID, messageText, userFromContext(r.Context()), req.Mentions, msgRec.ReplyToMessageID, replyToText, replyToAuthor)
 
 	s.publishMentionNotifications(r.Context(), ownerType, ownerID, userFromContext(r.Context()), messageText, req.Mentions)
 
@@ -261,11 +262,11 @@ func (s *Server) publishMentionNotifications(ctx context.Context, ownerType, own
 func alertNumberFromThreadPath(w http.ResponseWriter, r *http.Request, routeSuffix string) (string, bool) {
 	alertNumber := ownerIDFromThreadPath(r, "alert_number", "/api/v1/alerts/", routeSuffix)
 	if alertNumber == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing alert number")
+		writeError(w, ErrorCodeValidationFailed, "missing alert number")
 		return "", false
 	}
 	if _, err := strconv.ParseInt(alertNumber, 10, 64); err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid alert number")
+		writeError(w, ErrorCodeValidationFailed, "invalid alert number")
 		return "", false
 	}
 	return alertNumber, true
@@ -279,11 +280,10 @@ func ownerIDFromThreadPath(r *http.Request, pathValueKey string, routePrefix str
 	return strings.TrimSuffix(ownerID, routeSuffix)
 }
 
-func (s *Server) syncThreadMessageToExternalChat(ownerType, ownerID, messageText string, user *store.UserRecord) {
+func (s *Server) syncThreadMessageToExternalChat(ctx context.Context, ownerType, ownerID, messageText string, user *store.UserRecord) {
 	if s.chatSync == nil {
 		return
 	}
-	ctx := context.Background()
 
 	switch ownerType {
 	case store.ThreadOwnerAlert:
@@ -298,8 +298,8 @@ func (s *Server) syncThreadMessageToExternalChat(ownerType, ownerID, messageText
 		for i := len(investigations) - 1; i >= 0; i-- {
 			inv := investigations[i]
 			if inv.SlackChannelID != "" && inv.SlackThreadTS != "" {
-				slMsg, cz := s.chatSync.UserSlackThreadMessage(user, messageText)
-				s.chatSync.PostToSlackThreadWithCustomize(inv.SlackChannelID, inv.SlackThreadTS, slMsg, cz)
+				slMsg, cz := s.chatSync.UserSlackThreadMessage(ctx, user, messageText)
+				s.chatSync.PostToSlackThreadWithCustomize(ctx, inv.SlackChannelID, inv.SlackThreadTS, slMsg, cz)
 				return
 			}
 			mmThread := inv.PrimaryThreadID
@@ -315,7 +315,7 @@ func (s *Server) syncThreadMessageToExternalChat(ownerType, ownerID, messageText
 					}
 				}
 				mmMsg := "**" + displayName + "**: " + messageText
-				s.chatSync.PostToMattermostThread(mmThread, mmMsg)
+				s.chatSync.PostToMattermostThread(ctx, mmThread, mmMsg)
 				return
 			}
 		}
@@ -325,13 +325,16 @@ func (s *Server) syncThreadMessageToExternalChat(ownerType, ownerID, messageText
 		if err != nil {
 			return
 		}
+		if s.incidentStore == nil {
+			return
+		}
 		inc, err := s.incidentStore.GetIncident(ctx, incidentNumber)
 		if err != nil || inc == nil {
 			return
 		}
 		if inc.SlackChannelID != "" {
-			slMsg, cz := s.chatSync.UserSlackThreadMessage(user, messageText)
-			s.chatSync.PostToSlackThreadWithCustomize(inc.SlackChannelID, "", slMsg, cz)
+			slMsg, cz := s.chatSync.UserSlackThreadMessage(ctx, user, messageText)
+			s.chatSync.PostToSlackThreadWithCustomize(ctx, inc.SlackChannelID, "", slMsg, cz)
 			return
 		}
 		investigations, err := s.incidentInvestigationStore.ListIncidentInvestigationsByIncident(ctx, incidentNumber)
@@ -341,8 +344,8 @@ func (s *Server) syncThreadMessageToExternalChat(ownerType, ownerID, messageText
 		for i := len(investigations) - 1; i >= 0; i-- {
 			inv := investigations[i]
 			if inv.SlackChannelID != "" && inv.SlackThreadTS != "" {
-				slMsg, cz := s.chatSync.UserSlackThreadMessage(user, messageText)
-				s.chatSync.PostToSlackThreadWithCustomize(inv.SlackChannelID, inv.SlackThreadTS, slMsg, cz)
+				slMsg, cz := s.chatSync.UserSlackThreadMessage(ctx, user, messageText)
+				s.chatSync.PostToSlackThreadWithCustomize(ctx, inv.SlackChannelID, inv.SlackThreadTS, slMsg, cz)
 				return
 			}
 			mmThread := inv.PrimaryThreadID
@@ -358,7 +361,7 @@ func (s *Server) syncThreadMessageToExternalChat(ownerType, ownerID, messageText
 					}
 				}
 				mmMsg := "**" + displayName + "**: " + messageText
-				s.chatSync.PostToMattermostThread(mmThread, mmMsg)
+				s.chatSync.PostToMattermostThread(ctx, mmThread, mmMsg)
 				return
 			}
 		}
@@ -426,12 +429,11 @@ func (s *Server) resolveReplyToMessage(messages []store.InvestigationThreadMessa
 	return "", ""
 }
 
-func (s *Server) forwardOwnerThreadMessageToAgent(ownerType, ownerID, messageText string, user *store.UserRecord, mentions []string, replyToMessageID, replyToText, replyToAuthor string) {
+func (s *Server) forwardOwnerThreadMessageToAgent(ctx context.Context, ownerType, ownerID, messageText string, user *store.UserRecord, mentions []string, replyToMessageID, replyToText, replyToAuthor string) {
 	if s.agentSSE == nil {
 		return
 	}
 
-	ctx := context.Background()
 	agentIDs := s.resolveThreadAgentIDs(ctx, ownerType, ownerID)
 	if len(agentIDs) == 0 {
 		return
@@ -478,12 +480,16 @@ func (s *Server) forwardOwnerThreadMessageToAgent(ownerType, ownerID, messageTex
 	}
 }
 
+// forwardOwnerThreadTypingToAgent forwards a user's typing indicator to the
+// agents watching the owner thread. The lookup contexts are bounded because
+// typing signals must never block or leak past the POST that triggered them.
 func (s *Server) forwardOwnerThreadTypingToAgent(ownerType, ownerID string) {
 	if s.agentSSE == nil {
 		return
 	}
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 	var agentIDHex string
 
 	switch ownerType {

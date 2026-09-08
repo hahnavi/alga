@@ -60,7 +60,7 @@ func (s *Server) ensurePostMortemDraft(ctx context.Context, incident *store.Inci
 
 func (s *Server) handleRequestSummary(w http.ResponseWriter, r *http.Request, incidentID string) {
 	if r.Method != http.MethodPost {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 	if !s.checkPermission(w, r, rbac.IncidentsCommand) {
@@ -91,11 +91,11 @@ func (s *Server) handleRequestSummary(w http.ResponseWriter, r *http.Request, in
 
 	activeStatuses := map[string]bool{"detected": true, "active": true, "mitigated": true}
 	if !activeStatuses[inc.Status] {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, fmt.Sprintf("cannot request summary for incident in %s status", inc.Status))
+		writeError(w, ErrorCodeValidationFailed, fmt.Sprintf("cannot request summary for incident in %s status", inc.Status))
 		return
 	}
 	if inc.SlackChannelID == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "incident has no Slack channel")
+		writeError(w, ErrorCodeValidationFailed, "incident has no Slack channel")
 		return
 	}
 
@@ -114,12 +114,12 @@ func (s *Server) handleRequestSummary(w http.ResponseWriter, r *http.Request, in
 		}
 	}
 	if agentIDHex == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "no assigned agent found for this incident")
+		writeError(w, ErrorCodeValidationFailed, "no assigned agent found for this incident")
 		return
 	}
 
 	if !s.investigationForwarder.AgentOnline(agentIDHex) {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "assigned agent is currently offline")
+		writeError(w, ErrorCodeValidationFailed, "assigned agent is currently offline")
 		return
 	}
 

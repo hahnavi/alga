@@ -63,6 +63,7 @@ const (
 	AuditMaintenanceWindowCreated           AuditEvent = "maintenance_window_created"
 	AuditMaintenanceWindowUpdated           AuditEvent = "maintenance_window_updated"
 	AuditMaintenanceWindowDeleted           AuditEvent = "maintenance_window_deleted"
+	AuditSystemConfigUpdated                AuditEvent = "system_config_updated"
 	AuditTriageCompleted                    AuditEvent = "triage_completed"
 	AuditTriageOverridden                   AuditEvent = "triage_overridden"
 	AuditTriageRuleCreated                  AuditEvent = "triage_rule_created"
@@ -118,6 +119,8 @@ const (
 	AuditActionItemUpdated                  AuditEvent = "action_item_updated"
 	AuditActionItemDeleted                  AuditEvent = "action_item_deleted"
 	AuditNotifPrefsUpdated                  AuditEvent = "notification_preferences_updated"
+	AuditNotificationRead                   AuditEvent = "notification_read"
+	AuditNotificationsReadAll               AuditEvent = "notifications_read_all"
 	AuditGoogleLoginSuccess                 AuditEvent = "google_login_success"
 	AuditGoogleLoginFailed                  AuditEvent = "google_login_failed"
 	AuditSlackLoginSuccess                  AuditEvent = "slack_login_success"
@@ -363,7 +366,7 @@ func (s *pgAuditStore) GetRecentEvents(limit int) ([]AuditRecord, error) {
 		limit = 1000
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := pgctxLong(context.Background())
 	defer cancel()
 
 	var logs []models.AuditLog

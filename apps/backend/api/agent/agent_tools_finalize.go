@@ -72,7 +72,7 @@ func (e *AgentToolExecutor) finalizeAlertInvestigation(ctx context.Context, inv 
 		return err
 	}
 	inv.Status = targetStatus
-	e.publishInvestigationStatusChange(investigationID, targetStatus)
+	e.publishInvestigationStatusChange(ctx, investigationID, targetStatus)
 	e.extractMemories(inv)
 	if inv.PromotedIncidentID != nil && e.incidentStore != nil {
 		e.recordIncidentInvestigationCompletion(ctx, inv, investigationID, actorName, actorID)

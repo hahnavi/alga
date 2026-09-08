@@ -109,11 +109,11 @@ func (s *Server) handleCreateStatusPage(w http.ResponseWriter, r *http.Request) 
 	name := strings.TrimSpace(req.Name)
 	slug := strings.ToLower(strings.TrimSpace(req.Slug))
 	if name == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "name is required")
+		writeError(w, ErrorCodeValidationFailed, "name is required")
 		return
 	}
 	if !validStatusPageSlug.MatchString(slug) {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "slug must be 2-64 chars: lowercase letters, digits, and hyphens (no leading/trailing hyphen)")
+		writeError(w, ErrorCodeValidationFailed, "slug must be 2-64 chars: lowercase letters, digits, and hyphens (no leading/trailing hyphen)")
 		return
 	}
 	visibility := strings.TrimSpace(req.Visibility)
@@ -121,7 +121,7 @@ func (s *Server) handleCreateStatusPage(w http.ResponseWriter, r *http.Request) 
 		visibility = store.StatusPageVisibilityInternal
 	}
 	if !validPageVisibilities[visibility] {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid visibility (expected internal or public)")
+		writeError(w, ErrorCodeValidationFailed, "invalid visibility (expected internal or public)")
 		return
 	}
 
@@ -138,7 +138,7 @@ func (s *Server) handleCreateStatusPage(w http.ResponseWriter, r *http.Request) 
 	if req.OwnerTeamID != "" {
 		uid, err := uuid.Parse(req.OwnerTeamID)
 		if err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid owner_team_id")
+			writeError(w, ErrorCodeValidationFailed, "invalid owner_team_id")
 			return
 		}
 		record.OwnerTeamID = &uid
@@ -207,7 +207,7 @@ func (s *Server) handleStatusPageViewBySlug(w http.ResponseWriter, r *http.Reque
 	}
 	slug := strings.ToLower(strings.TrimSpace(r.PathValue("slug")))
 	if slug == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing slug")
+		writeError(w, ErrorCodeValidationFailed, "missing slug")
 		return
 	}
 	page, err := s.statusPageStore.GetPageBySlug(r.Context(), slug)
@@ -290,7 +290,7 @@ func (s *Server) handleStatusPageRoutes(w http.ResponseWriter, r *http.Request) 
 	parts := strings.SplitN(rest, "/", 3)
 	pageID, err := uuid.Parse(parts[0])
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid status page id")
+		writeError(w, ErrorCodeValidationFailed, "invalid status page id")
 		return
 	}
 
@@ -301,7 +301,7 @@ func (s *Server) handleStatusPageRoutes(w http.ResponseWriter, r *http.Request) 
 		}
 		componentID, err := uuid.Parse(parts[2])
 		if err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid component id")
+			writeError(w, ErrorCodeValidationFailed, "invalid component id")
 			return
 		}
 		s.handleStatusPageComponentItem(w, r, pageID, componentID)
@@ -348,7 +348,7 @@ func (s *Server) handleStatusPageRoutes(w http.ResponseWriter, r *http.Request) 
 		s.audit(r, store.AuditStatusPageDeleted, map[string]any{"status_page_id": pageID.String()})
 		writeStatus(w, "deleted")
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -359,12 +359,12 @@ func (s *Server) updateStatusPage(w http.ResponseWriter, r *http.Request, pageID
 	}
 	visibility := strings.TrimSpace(req.Visibility)
 	if visibility != "" && !validPageVisibilities[visibility] {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid visibility (expected internal or public)")
+		writeError(w, ErrorCodeValidationFailed, "invalid visibility (expected internal or public)")
 		return
 	}
 	slug := strings.ToLower(strings.TrimSpace(req.Slug))
 	if slug != "" && !validStatusPageSlug.MatchString(slug) {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid slug format")
+		writeError(w, ErrorCodeValidationFailed, "invalid slug format")
 		return
 	}
 
@@ -377,7 +377,7 @@ func (s *Server) updateStatusPage(w http.ResponseWriter, r *http.Request, pageID
 	if req.OwnerTeamID != "" {
 		uid, err := uuid.Parse(req.OwnerTeamID)
 		if err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid owner_team_id")
+			writeError(w, ErrorCodeValidationFailed, "invalid owner_team_id")
 			return
 		}
 		patch.OwnerTeamID = &uid
@@ -425,7 +425,7 @@ func (s *Server) handleStatusPageComponentsCollection(w http.ResponseWriter, r *
 		}
 		s.createStatusPageComponent(w, r, pageID)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -436,7 +436,7 @@ func (s *Server) createStatusPageComponent(w http.ResponseWriter, r *http.Reques
 	}
 	name := strings.TrimSpace(req.Name)
 	if name == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "name is required")
+		writeError(w, ErrorCodeValidationFailed, "name is required")
 		return
 	}
 	status := strings.TrimSpace(req.Status)
@@ -444,7 +444,7 @@ func (s *Server) createStatusPageComponent(w http.ResponseWriter, r *http.Reques
 		status = store.StatusComponentOperational
 	}
 	if !validComponentStat[status] {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid status")
+		writeError(w, ErrorCodeValidationFailed, "invalid status")
 		return
 	}
 
@@ -460,7 +460,7 @@ func (s *Server) createStatusPageComponent(w http.ResponseWriter, r *http.Reques
 	if req.ServiceID != "" {
 		uid, err := uuid.Parse(req.ServiceID)
 		if err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid service_id")
+			writeError(w, ErrorCodeValidationFailed, "invalid service_id")
 			return
 		}
 		record.ServiceID = &uid
@@ -517,7 +517,7 @@ func (s *Server) handleStatusPageComponentItem(w http.ResponseWriter, r *http.Re
 		})
 		writeStatus(w, "deleted")
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -528,7 +528,7 @@ func (s *Server) updateStatusPageComponent(w http.ResponseWriter, r *http.Reques
 	}
 	status := strings.TrimSpace(req.Status)
 	if status != "" && !validComponentStat[status] {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid status")
+		writeError(w, ErrorCodeValidationFailed, "invalid status")
 		return
 	}
 
@@ -544,7 +544,7 @@ func (s *Server) updateStatusPageComponent(w http.ResponseWriter, r *http.Reques
 	if req.ServiceID != "" {
 		uid, err := uuid.Parse(req.ServiceID)
 		if err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid service_id")
+			writeError(w, ErrorCodeValidationFailed, "invalid service_id")
 			return
 		}
 		patch.ServiceID = &uid

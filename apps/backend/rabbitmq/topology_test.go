@@ -3,6 +3,7 @@ package rabbitmq
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -40,7 +41,7 @@ func TestInjectTraceHeaders(t *testing.T) {
 	if tp == "" {
 		t.Fatal("traceparent header not injected")
 	}
-	if !contains(tp, "4bf92f3577b34da6a3ce929d0e0e4736") {
+	if !strings.Contains(tp, "4bf92f3577b34da6a3ce929d0e0e4736") {
 		t.Errorf("traceparent = %q, want it to carry the trace id", tp)
 	}
 
@@ -53,15 +54,6 @@ func TestInjectTraceHeaders(t *testing.T) {
 	if NewAMQPCarrier(merged).Get("traceparent") == "" {
 		t.Error("traceparent not injected alongside existing headers")
 	}
-}
-
-func contains(s, sub string) bool {
-	for i := 0; i+len(sub) <= len(s); i++ {
-		if s[i:i+len(sub)] == sub {
-			return true
-		}
-	}
-	return false
 }
 
 func mustTraceID(t *testing.T, s string) oteltrace.TraceID {

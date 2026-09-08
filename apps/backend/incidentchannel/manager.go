@@ -75,7 +75,7 @@ func (m *Manager) CreateIncidentChannel(
 		if err == nil {
 			break
 		}
-		if strings.Contains(err.Error(), "name_taken") {
+		if errors.Is(err, slack.ErrChannelNameTaken) {
 			continue
 		}
 		return fmt.Errorf("failed to create slack channel: %w", err)
@@ -97,9 +97,7 @@ func (m *Manager) CreateIncidentChannel(
 	userIDs := m.collectSlackUserIDs(ctx, incident)
 	if len(userIDs) > 0 {
 		if err := m.slackClient.InviteUsers(ctx, channelID, userIDs); err != nil {
-			errStr := err.Error()
-			if strings.Contains(errStr, "already_in_channel") ||
-				strings.Contains(errStr, "no_such_user") {
+			if errors.Is(err, slack.ErrAlreadyInChannel) || errors.Is(err, slack.ErrSlackNoSuchUser) {
 				logger.WarnCtx(ctx, "slack invite skipped some users", "component", "incidentchannel", "error", err)
 			} else {
 				logger.WarnCtx(ctx, "failed to invite users to slack channel", "component", "incidentchannel", "error", err)

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -50,7 +51,7 @@ func (s *Server) handleTriageRules(w http.ResponseWriter, r *http.Request) {
 		}
 		s.createTriageRule(w, r)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -61,14 +62,14 @@ func (s *Server) handleTriageRuleByID(w http.ResponseWriter, r *http.Request) {
 	id := pathID(r, "/api/v1/triage/rules/")
 	id = strings.TrimSuffix(id, "/")
 	if id == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing id")
+		writeError(w, ErrorCodeValidationFailed, "missing id")
 		return
 	}
 	switch r.Method {
 	case http.MethodGet:
 		rec, err := s.triageRuleStore.Get(r.Context(), id)
 		if err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, err.Error())
+			s.writeTriageRuleStoreError(w, err)
 			return
 		}
 		if rec == nil {
@@ -102,23 +103,25 @@ func (s *Server) handleTriageRuleByID(w http.ResponseWriter, r *http.Request) {
 		}
 		out, err := s.triageRuleStore.Update(r.Context(), id, patch)
 		if err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, err.Error())
+			s.writeTriageRuleStoreError(w, err)
 			return
 		}
 		logger.InfoCtx(r.Context(), "triage rule updated", "component", "api", "rule_id", id)
+		s.audit(r, store.AuditTriageRuleUpdated, map[string]any{"rule_id": id})
 		writeData(w, http.StatusOK, out)
 	case http.MethodDelete:
 		if !s.checkPermission(w, r, rbac.TriageWrite) {
 			return
 		}
 		if err := s.triageRuleStore.Delete(r.Context(), id); err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, err.Error())
+			s.writeTriageRuleStoreError(w, err)
 			return
 		}
 		logger.InfoCtx(r.Context(), "triage rule deleted", "component", "api", "rule_id", id)
+		s.audit(r, store.AuditTriageRuleDeleted, map[string]any{"rule_id": id})
 		writeStatus(w, "deleted")
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -127,7 +130,7 @@ func (s *Server) handleTriageRulesReorder(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if r.Method != http.MethodPut {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 	if !s.checkPermission(w, r, rbac.TriageWrite) {
@@ -140,14 +143,15 @@ func (s *Server) handleTriageRulesReorder(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if len(req.IDs) == 0 {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "ids is required")
+		writeError(w, ErrorCodeValidationFailed, "ids is required")
 		return
 	}
 	if err := s.triageRuleStore.Reorder(r.Context(), req.IDs); err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, err.Error())
+		s.writeTriageRuleStoreError(w, err)
 		return
 	}
 	logger.InfoCtx(r.Context(), "triage rules reordered", "component", "api", "count", len(req.IDs))
+	s.audit(r, store.AuditTriageRuleUpdated, map[string]any{"reordered_ids": req.IDs})
 	writeStatus(w, "reordered")
 }
 
@@ -156,7 +160,7 @@ func (s *Server) handleTriageResults(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method != http.MethodGet {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 	s.listTriageResults(w, r)
@@ -169,14 +173,14 @@ func (s *Server) handleTriageResultByID(w http.ResponseWriter, r *http.Request) 
 	id := pathID(r, "/api/v1/triage/results/")
 	id = strings.TrimSuffix(id, "/")
 	if id == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing id")
+		writeError(w, ErrorCodeValidationFailed, "missing id")
 		return
 	}
 	switch r.Method {
 	case http.MethodGet:
 		rec, err := s.triageResultStore.Get(r.Context(), id)
 		if err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, err.Error())
+			s.writeTriageResultStoreError(w, err)
 			return
 		}
 		if rec == nil {
@@ -196,7 +200,7 @@ func (s *Server) handleTriageResultByID(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 		if !validTriageDecision(req.Decision) {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "decision must be one of: investigate, auto_resolve, suppress, escalate, enrich_only")
+			writeError(w, ErrorCodeValidationFailed, "decision must be one of: investigate, auto_resolve, suppress, escalate, enrich_only")
 			return
 		}
 		now := time.Now().UTC()
@@ -212,7 +216,7 @@ func (s *Server) handleTriageResultByID(w http.ResponseWriter, r *http.Request) 
 		}
 		out, err := s.triageResultStore.Update(r.Context(), id, patch)
 		if err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, err.Error())
+			s.writeTriageResultStoreError(w, err)
 			return
 		}
 		s.audit(r, store.AuditTriageOverridden, map[string]any{
@@ -223,7 +227,20 @@ func (s *Server) handleTriageResultByID(w http.ResponseWriter, r *http.Request) 
 		logger.InfoCtx(r.Context(), "triage result overridden", "component", "api", "result_id", id, "decision", req.Decision)
 		writeData(w, http.StatusOK, out)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
+	}
+}
+
+// writeTriageResultStoreError maps triage-result store failures to canonical
+// error responses without leaking internal messages.
+func (s *Server) writeTriageResultStoreError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, store.ErrNotFound):
+		writeError(w, ErrorCodeNotFound, "triage result not found")
+	case errors.Is(err, store.ErrInvalidID):
+		writeError(w, ErrorCodeValidationFailed, "invalid id")
+	default:
+		writeInternalError(w, err, "triage result operation failed")
 	}
 }
 
@@ -232,7 +249,7 @@ func (s *Server) handleTriageStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method != http.MethodGet {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 	confirmed, overridden, pending, err := s.triageResultStore.CountByOutcome(r.Context())
@@ -313,7 +330,7 @@ func (s *Server) createTriageRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.TrimSpace(req.Name) == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "name is required")
+		writeError(w, ErrorCodeValidationFailed, "name is required")
 		return
 	}
 	record := &store.TriageRuleRecord{
@@ -335,11 +352,26 @@ func (s *Server) createTriageRule(w http.ResponseWriter, r *http.Request) {
 	}
 	out, err := s.triageRuleStore.Create(r.Context(), record)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, err.Error())
+		s.writeTriageRuleStoreError(w, err)
 		return
 	}
 	logger.InfoCtx(r.Context(), "triage rule created", "component", "api", "rule_id", out.ID.String(), "name", req.Name)
+	s.audit(r, store.AuditTriageRuleCreated, map[string]any{"rule_id": out.ID.String(), "name": req.Name})
 	writeData(w, http.StatusCreated, out)
+}
+
+// writeTriageRuleStoreError maps triage store failures to canonical error
+// responses without leaking internal messages: unparseable ids to 400,
+// missing rules to 404, everything else to a generic 500.
+func (s *Server) writeTriageRuleStoreError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, store.ErrNotFound):
+		writeError(w, ErrorCodeNotFound, "triage rule not found")
+	case errors.Is(err, store.ErrInvalidID):
+		writeError(w, ErrorCodeValidationFailed, "invalid id")
+	default:
+		writeInternalError(w, err, "triage rule operation failed")
+	}
 }
 
 func (s *Server) listTriageResults(w http.ResponseWriter, r *http.Request) {

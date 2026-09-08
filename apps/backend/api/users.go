@@ -34,16 +34,16 @@ func (s *Server) handleUsers(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if req.Email == "" || req.Password == "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "email and password are required")
+			writeError(w, ErrorCodeValidationFailed, "email and password are required")
 			return
 		}
 		if !rbac.ValidRole(req.Role) {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "role must be 'admin', 'operator', or 'viewer'")
+			writeError(w, ErrorCodeValidationFailed, "role must be 'admin', 'operator', or 'viewer'")
 			return
 		}
 
 		if err := validatePasswordPolicy(req.Password); err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, err.Error())
+			writeError(w, ErrorCodeValidationFailed, err.Error())
 			return
 		}
 
@@ -79,7 +79,7 @@ func (s *Server) handleUsers(w http.ResponseWriter, r *http.Request) {
 		writeData(w, http.StatusCreated, record)
 
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -87,7 +87,7 @@ func (s *Server) handleUserByID(w http.ResponseWriter, r *http.Request) {
 	idHex := pathID(r, "/api/v1/users/")
 	id, err := uuid.Parse(idHex)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid user id")
+		writeError(w, ErrorCodeValidationFailed, "invalid user id")
 		return
 	}
 
@@ -109,7 +109,7 @@ func (s *Server) handleUserByID(w http.ResponseWriter, r *http.Request) {
 		updates := map[string]any{}
 		if req.Role != "" {
 			if !rbac.ValidRole(req.Role) {
-				writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "role must be 'admin', 'operator', or 'viewer'")
+				writeError(w, ErrorCodeValidationFailed, "role must be 'admin', 'operator', or 'viewer'")
 				return
 			}
 			if req.Role != "admin" {
@@ -125,7 +125,7 @@ func (s *Server) handleUserByID(w http.ResponseWriter, r *http.Request) {
 						return
 					}
 					if adminCount <= 1 {
-						writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "cannot demote the last admin")
+						writeError(w, ErrorCodeValidationFailed, "cannot demote the last admin")
 						return
 					}
 				}
@@ -134,7 +134,7 @@ func (s *Server) handleUserByID(w http.ResponseWriter, r *http.Request) {
 		}
 		if req.Password != "" {
 			if err := validatePasswordPolicy(req.Password); err != nil {
-				writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, err.Error())
+				writeError(w, ErrorCodeValidationFailed, err.Error())
 				return
 			}
 			updates["password"] = req.Password // will be hashed in UpdateUser
@@ -148,7 +148,7 @@ func (s *Server) handleUserByID(w http.ResponseWriter, r *http.Request) {
 		if req.Phone != nil {
 			normalized, err := validatePhoneNumber(*req.Phone)
 			if err != nil {
-				writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, err.Error())
+				writeError(w, ErrorCodeValidationFailed, err.Error())
 				return
 			}
 			updates["phone"] = normalized
@@ -165,7 +165,7 @@ func (s *Server) handleUserByID(w http.ResponseWriter, r *http.Request) {
 			}
 			resolved, err := validatePhoneCountry(strings.ToUpper(strings.TrimSpace(*req.PhoneCountry)), phoneForCheck)
 			if err != nil {
-				writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, err.Error())
+				writeError(w, ErrorCodeValidationFailed, err.Error())
 				return
 			}
 			updates["phone_country"] = resolved
@@ -175,7 +175,7 @@ func (s *Server) handleUserByID(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if len(updates) == 0 {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "no fields to update")
+			writeError(w, ErrorCodeValidationFailed, "no fields to update")
 			return
 		}
 
@@ -207,7 +207,7 @@ func (s *Server) handleUserByID(w http.ResponseWriter, r *http.Request) {
 	case http.MethodDelete:
 		currentUser := userFromContext(r.Context())
 		if currentUser != nil && currentUser.ID == id {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "cannot delete yourself")
+			writeError(w, ErrorCodeValidationFailed, "cannot delete yourself")
 			return
 		}
 
@@ -224,7 +224,7 @@ func (s *Server) handleUserByID(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			if adminCount <= 1 {
-				writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "cannot delete the last admin")
+				writeError(w, ErrorCodeValidationFailed, "cannot delete the last admin")
 				return
 			}
 		}
@@ -245,7 +245,7 @@ func (s *Server) handleUserByID(w http.ResponseWriter, r *http.Request) {
 		writeStatus(w, "deleted")
 
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 

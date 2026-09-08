@@ -278,7 +278,7 @@ func (e *AgentToolExecutor) ExecuteInvTool(ctx context.Context, agentRec *store.
 			return InvToolOutcome{ChatID: chatID, Ok: false, Op: op, Error: "investigation status conflict, will be rescheduled"}
 		}
 		inv.Status = "investigating"
-		e.publishInvestigationStatusChange(investigationID, "investigating")
+		e.publishInvestigationStatusChange(ctx, investigationID, "investigating")
 	}
 	switch op {
 	case "resolve_alert", "reopen_alert":
@@ -345,7 +345,7 @@ func (e *AgentToolExecutor) ExecuteInvTool(ctx context.Context, agentRec *store.
 					if err := e.alertInvestigationStore.TransitionAlertInvestigationStatus(ctx, investigationUUID, slices.Concat(store.InvestigationTerminalStatuses, []string{"paused"}), "investigating"); err != nil {
 						logger.WarnCtx(ctx, "inv_tool: reopen transition to investigating failed", "investigation_id", investigationID, "error", err)
 					} else {
-						e.publishInvestigationStatusChange(investigationID, "investigating")
+						e.publishInvestigationStatusChange(ctx, investigationID, "investigating")
 					}
 					event := sse.Event{
 						Type: "investigation_resume",
@@ -375,7 +375,7 @@ func (e *AgentToolExecutor) ExecuteInvTool(ctx context.Context, agentRec *store.
 						if e.pendingNotifier != nil {
 							e.pendingNotifier.NotifyPending()
 						}
-						e.publishInvestigationStatusChange(investigationID, "pending")
+						e.publishInvestigationStatusChange(ctx, investigationID, "pending")
 					}
 				}
 			}
@@ -412,7 +412,7 @@ func (e *AgentToolExecutor) ExecuteInvTool(ctx context.Context, agentRec *store.
 				e.updateIncidentFromOutcome(ctx, inc.IncidentNumber, investigationID, cmd.RootCause, cmd.Resolution)
 			}
 		}
-		e.publishInvestigationPatch(investigationID)
+		e.publishInvestigationPatch(ctx, investigationID)
 		e.logAudit("set_outcome", actor.Username, investigationID, "")
 
 		if ownerType != "" && ownerID != "" {
@@ -499,7 +499,7 @@ func (e *AgentToolExecutor) ExecuteInvTool(ctx context.Context, agentRec *store.
 		}
 		humanMsg := fmt.Sprintf("🚨 *%s* promoted the alert investigation to incident [**#%d**](/incidents/%d). The incident will be investigated by the incident response team in its own investigation thread.", actor.Username, promo.IncidentNumber, promo.IncidentNumber)
 		e.postCommandUpdate(ctx, investigationID, inv, humanMsg, actor)
-		e.publishInvestigationStatusChange(investigationID, "promoted")
+		e.publishInvestigationStatusChange(ctx, investigationID, "promoted")
 		e.logAudit("promote_to_incident", actor.Username, investigationID, "")
 
 		if ownerType != "" && ownerID != "" {

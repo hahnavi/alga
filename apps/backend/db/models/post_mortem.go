@@ -1,16 +1,13 @@
 package models
 
 import (
-	"time"
-
 	"github.com/google/uuid"
-	"github.com/uptrace/bun"
+	"time"
 )
 
 type PostMortem struct {
-	bun.BaseModel `bun:"table:post_mortems"`
+	BaseModel `bun:"table:post_mortems"`
 
-	ID                  uuid.UUID        `bun:"id,pk"`
 	IncidentID          uuid.UUID        `bun:"incident_id,notnull,unique"`
 	Title               string           `bun:"title,notnull,default:''"`
 	Status              string           `bun:"status,notnull,default:'draft'"`
@@ -26,6 +23,4 @@ type PostMortem struct {
 	BlamelessNotes      string           `bun:"blameless_notes,notnull,default:''"`
 	ApprovedByID        *uuid.UUID       `bun:"approved_by_id"`
 	PublishedAt         *time.Time       `bun:"published_at"`
-	CreatedAt           time.Time        `bun:"created_at,notnull,default:current_timestamp"`
-	UpdatedAt           time.Time        `bun:"updated_at,notnull,default:current_timestamp"`
 }

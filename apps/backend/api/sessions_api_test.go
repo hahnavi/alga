@@ -183,8 +183,8 @@ func TestHandleRevokeSession_CurrentRejected(t *testing.T) {
 	w := httptest.NewRecorder()
 	s.handleRevokeSession(w, req)
 
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want 400", w.Code)
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("status = %d, want 422", w.Code)
 	}
 	if len(st.deleted) != 0 {
 		t.Fatalf("deleted = %v, want none", st.deleted)

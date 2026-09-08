@@ -23,25 +23,26 @@ import (
 )
 
 type App struct {
-	cfg              *config.Config
-	dbCli            *db.Client
-	valkeyClient     *valkey.Client
-	rabbitClient     *rabbitmq.Client
-	sseBroker        *sse.Broker
-	scheduler        *worker.InvestigationScheduler
-	workerSet        *worker.WorkerSet
-	correlator       *correlator.Correlator
-	server           *http.Server
-	stores           *store.Stores
-	shutdownCtx      context.Context
-	shutdownCancel   context.CancelFunc
-	loginLimiter     api.LoginRateLimiting
-	rateLimiter      api.RateLimiting
-	agentRateLimiter api.RateLimiting
-	apiServer        *api.Server
-	cache            *valkey.Cache
-	cancelSet        *valkey.CancelSet
-	idempotency      *valkey.IdempotencyCache
+	cfg               *config.Config
+	dbCli             *db.Client
+	valkeyClient      *valkey.Client
+	rabbitClient      *rabbitmq.Client
+	sseBroker         *sse.Broker
+	scheduler         *worker.InvestigationScheduler
+	workerSet         *worker.WorkerSet
+	correlator        *correlator.Correlator
+	server            *http.Server
+	stores            *store.Stores
+	shutdownCtx       context.Context
+	shutdownCancel    context.CancelFunc
+	loginLimiter      api.LoginRateLimiting
+	rateLimiter       api.RateLimiting
+	agentRateLimiter  api.RateLimiting
+	authedRateLimiter api.RateLimiting
+	apiServer         *api.Server
+	cache             *valkey.Cache
+	cancelSet         *valkey.CancelSet
+	idempotency       *valkey.IdempotencyCache
 	// otelShutdown flushes and stops the OpenTelemetry TracerProvider. It is a
 	// no-op when tracing is disabled (the default). Set in wire().
 	otelShutdown func(context.Context) error
@@ -137,6 +138,9 @@ func (a *App) Shutdown(ctx context.Context) error {
 	}
 	if a.agentRateLimiter != nil {
 		a.agentRateLimiter.Stop()
+	}
+	if a.authedRateLimiter != nil {
+		a.authedRateLimiter.Stop()
 	}
 
 	if a.server != nil {

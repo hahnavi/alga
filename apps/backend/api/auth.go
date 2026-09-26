@@ -78,7 +78,22 @@ func userFromContext(ctx context.Context) *store.UserRecord {
 // AuthDeps from the *Server fields. The canonical implementation lives in the
 // platform package.
 func (s *Server) authMiddleware(next http.HandlerFunc, perms ...rbac.Permission) http.HandlerFunc {
-	return platform.AuthMiddleware(s.PlatformAuthDeps(), next, perms...)
+	// Authenticated routes are per-IP rate limited with a much higher budget
+	// than the public surface: this bounds abuse of valid credentials (and
+	// unauthenticated hammering) without throttling normal dashboard traffic.
+	// Nil limiter is a pass-through (e.g. tests that wire no limiter).
+	handler := next
+	if s.authedRateLimiter != nil {
+		inner := next
+		handler = func(w http.ResponseWriter, r *http.Request) {
+			if !s.authedRateLimiter.Allow(s.ipExtractor.clientIP(r)) {
+				platform.WriteRateLimitExceeded(w, "60")
+				return
+			}
+			inner(w, r)
+		}
+	}
+	return platform.AuthMiddleware(s.PlatformAuthDeps(), handler, perms...)
 }
 
 // checkPermission is a thin wrapper around platform.CheckPermission.
@@ -93,7 +108,7 @@ func (s *Server) validateCSRFToken(r *http.Request) bool {
 
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -123,7 +138,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.Email == "" || req.Password == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "email and password are required")
+		writeError(w, ErrorCodeValidationFailed, "email and password are required")
 		return
 	}
 
@@ -216,7 +231,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -248,7 +263,7 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleGetCurrentUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -310,7 +325,7 @@ func (s *Server) requireCurrentSession(w http.ResponseWriter, r *http.Request) (
 	}
 	currentHash := platform.SessionIDHashFromContext(r.Context())
 	if currentHash == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "session management is only available for cookie sessions")
+		writeError(w, ErrorCodeValidationFailed, "session management is only available for cookie sessions")
 		return nil, "", false
 	}
 	return user, currentHash, true
@@ -318,7 +333,7 @@ func (s *Server) requireCurrentSession(w http.ResponseWriter, r *http.Request) (
 
 func (s *Server) handleListSessions(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -350,7 +365,7 @@ func (s *Server) handleListSessions(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleRevokeSession(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -361,14 +376,14 @@ func (s *Server) handleRevokeSession(w http.ResponseWriter, r *http.Request) {
 
 	targetID := pathID(r, "/api/v1/auth/sessions/")
 	if targetID == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "session id is required")
+		writeError(w, ErrorCodeValidationFailed, "session id is required")
 		return
 	}
 	if targetID == currentHash {
 		s.auditStore.Log(store.AuditSessionRevoked, &user.ID, user.Email, s.ipExtractor.clientIP(r), r.UserAgent(), false, map[string]any{
 			"reason": "current_session_rejected",
 		})
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "cannot revoke the current session; sign out instead")
+		writeError(w, ErrorCodeValidationFailed, "cannot revoke the current session; sign out instead")
 		return
 	}
 
@@ -411,7 +426,7 @@ func (s *Server) handleRevokeSession(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleRevokeOtherSessions(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -446,7 +461,7 @@ func (s *Server) handleRevokeOtherSessions(w http.ResponseWriter, r *http.Reques
 
 func (s *Server) handleRefreshSession(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -545,7 +560,7 @@ func (s *Server) finishSessionRefresh(w http.ResponseWriter, r *http.Request, se
 
 func (s *Server) handleChangePassword(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -569,7 +584,7 @@ func (s *Server) handleChangePassword(w http.ResponseWriter, r *http.Request) {
 			"reason": "password_policy_violation",
 			"error":  err.Error(),
 		})
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, err.Error())
+		writeError(w, ErrorCodeValidationFailed, err.Error())
 		return
 	}
 
@@ -607,7 +622,7 @@ func (s *Server) handleChangePassword(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleChangeEmail(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -626,7 +641,7 @@ func (s *Server) handleChangeEmail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.Password == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "password is required")
+		writeError(w, ErrorCodeValidationFailed, "password is required")
 		return
 	}
 
@@ -641,7 +656,7 @@ func (s *Server) handleChangeEmail(w http.ResponseWriter, r *http.Request) {
 
 	email := strings.TrimSpace(req.Email)
 	if email == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "email is required")
+		writeError(w, ErrorCodeValidationFailed, "email is required")
 		return
 	}
 
@@ -678,7 +693,7 @@ func (s *Server) handleChangeEmail(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -699,14 +714,14 @@ func (s *Server) handleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 
 	normalized, err := validatePhoneNumber(strings.TrimSpace(req.Phone))
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, err.Error())
+		writeError(w, ErrorCodeValidationFailed, err.Error())
 		return
 	}
 
 	phoneCountry := strings.ToUpper(strings.TrimSpace(req.PhoneCountry))
 	resolvedCountry, err := validatePhoneCountry(phoneCountry, normalized)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, err.Error())
+		writeError(w, ErrorCodeValidationFailed, err.Error())
 		return
 	}
 
@@ -728,7 +743,7 @@ func (s *Server) handleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleForgotPassword(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -745,7 +760,7 @@ func (s *Server) handleForgotPassword(w http.ResponseWriter, r *http.Request) {
 	}
 	email := strings.TrimSpace(req.Email)
 	if email == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "email is required")
+		writeError(w, ErrorCodeValidationFailed, "email is required")
 		return
 	}
 
@@ -796,7 +811,7 @@ func (s *Server) handleForgotPassword(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleResetPassword(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -808,12 +823,12 @@ func (s *Server) handleResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.Token == "" || req.NewPassword == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "token and new_password are required")
+		writeError(w, ErrorCodeValidationFailed, "token and new_password are required")
 		return
 	}
 
 	if err := validatePasswordPolicy(req.NewPassword); err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, err.Error())
+		writeError(w, ErrorCodeValidationFailed, err.Error())
 		return
 	}
 
@@ -824,21 +839,21 @@ func (s *Server) handleResetPassword(w http.ResponseWriter, r *http.Request) {
 
 	resetToken, err := s.passwordResetStore.GetByTokenHash(ctx, tokenHash)
 	if err != nil || resetToken == nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid or expired reset token")
+		writeError(w, ErrorCodeValidationFailed, "invalid or expired reset token")
 		return
 	}
 	if resetToken.Used {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "reset token has already been used")
+		writeError(w, ErrorCodeValidationFailed, "reset token has already been used")
 		return
 	}
 	if time.Now().After(resetToken.ExpiresAt) {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "reset token has expired")
+		writeError(w, ErrorCodeValidationFailed, "reset token has expired")
 		return
 	}
 
 	user, err := s.userStore.GetByID(resetToken.UserID)
 	if err != nil || user == nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid or expired reset token")
+		writeError(w, ErrorCodeValidationFailed, "invalid or expired reset token")
 		return
 	}
 

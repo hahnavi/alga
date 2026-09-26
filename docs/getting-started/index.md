@@ -14,9 +14,9 @@ cd alga
 docker compose up -d
 ```
 
-This pulls pre-built images from GitHub Container Registry — no compilation required. Open `http://localhost:3000`. When no users exist in the database, Alga automatically redirects to the setup wizard — create the initial admin account by entering an email, password, and full name. The setup wizard is only available the first time, before any admin exists, so complete it before logging in.
+This pulls ready-to-run images — no building or coding needed. Open `http://localhost:3000`. Since this is the first time, you'll see a setup wizard — just enter your email, full name, and a password to create your admin account. You'll only see this screen once.
 
-After the initial admin account is created, your first login triggers the [Onboarding Wizard](/getting-started/onboarding), which walks you through changing the admin password, connecting integrations, and configuring your first routing rules.
+When you log in for the first time, a friendly [Onboarding Wizard](/getting-started/onboarding) shows you around: what Alga does, where to connect your tools, and then you're off to your dashboard.
 
 ## Next Steps
 
@@ -32,7 +32,7 @@ After the initial admin account is created, your first login triggers the [Onboa
 - **Services** — Service catalog with status tracking and dependency management
 - **On-Call** — Multi-layer schedules with overrides and escalation policies
 - **Teams** — Group users and link to escalation policies
-- **AI Investigation** — Automated root cause analysis with Hermes/OpenClaw agents
+- **AI Investigation** — Automated root cause analysis with the built-in Alga Agent, Hermes, or OpenClaw
 - **Knowledge Base** — Shared notes for operators and agents with vector search
 - **Routing** — Flexible alert routing to Slack, Mattermost, email, or voice
 
@@ -55,6 +55,6 @@ docker compose pull
 docker compose up -d
 ```
 
-Alga auto-migrates the database schema on startup when `POSTGRES_AUTO_MIGRATE=true` (enabled by default in Docker Compose). Pin a specific version by setting `ALGA_VERSION=v1.2.3` in `.env`.
+Alga updates the database on its own when it starts (this is turned on by default). To use a specific version, set `ALGA_VERSION=v1.2.3` in `.env`.
 
 For manual migrations: `./alga db migrate`

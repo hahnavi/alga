@@ -175,8 +175,8 @@ func TestSubmitReviewRequiresBlamelessConfirmation(t *testing.T) {
 	w := httptest.NewRecorder()
 	s.handlePostMortemRoutes(w, pmRequest(http.MethodPost, "/api/v1/incidents/7/post-mortem/submit-review", `{}`), "7")
 
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want 400 (body=%s)", w.Code, w.Body.String())
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("status = %d, want 422 (body=%s)", w.Code, w.Body.String())
 	}
 	if st.updated != nil {
 		t.Fatal("UpdateStatus must not run when the blameless gate fails")
@@ -268,8 +268,8 @@ func TestCreateActionItemDueDateFormats(t *testing.T) {
 	// Invalid format 400s instead of silently clearing the due date.
 	w = httptest.NewRecorder()
 	s.handlePostMortemRoutes(w, pmRequest(http.MethodPost, "/api/v1/incidents/3/post-mortem/action-items", `{"description":"patch","due_date":"next tuesday"}`), "3")
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("invalid: status = %d, want 400 (body=%s)", w.Code, w.Body.String())
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("invalid: status = %d, want 422 (body=%s)", w.Code, w.Body.String())
 	}
 }
 
@@ -297,8 +297,8 @@ func TestCreateActionItemRejectsUnknownAssignee(t *testing.T) {
 	s.actionItemStore = freshStore
 	w = httptest.NewRecorder()
 	s.handlePostMortemRoutes(w, pmRequest(http.MethodPost, "/api/v1/incidents/4/post-mortem/action-items", `{"description":"patch","assignee_id":"`+uuid.NewString()+`"}`), "4")
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("unknown assignee: status = %d, want 400 (body=%s)", w.Code, w.Body.String())
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("unknown assignee: status = %d, want 422 (body=%s)", w.Code, w.Body.String())
 	}
 	if freshStore.created != nil {
 		t.Fatal("Create must not run for an unknown assignee")
@@ -324,8 +324,8 @@ func TestUpdateActionItemValidatesEnums(t *testing.T) {
 	} {
 		w := httptest.NewRecorder()
 		s.handlePostMortemRoutes(w, pmRequest(http.MethodPatch, "/api/v1/incidents/5/post-mortem/action-items/"+item.ID.String(), body), "5")
-		if w.Code != http.StatusBadRequest {
-			t.Fatalf("%s: status = %d, want 400 (body=%s)", name, w.Code, w.Body.String())
+		if w.Code != http.StatusUnprocessableEntity {
+			t.Fatalf("%s: status = %d, want 422 (body=%s)", name, w.Code, w.Body.String())
 		}
 		if aiSt2.updated != nil {
 			t.Fatalf("%s: Update must not run for an invalid enum", name)

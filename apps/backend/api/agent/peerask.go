@@ -45,7 +45,7 @@ func (s *Service) handleAgentPeerAsk(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		s.createAgentPeerAsk(w, r)
 	default:
-		platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
+		platform.WriteError(w, platform.ErrorCodeMethodNotAllowed, "method not allowed")
 	}
 }
 
@@ -59,7 +59,7 @@ func (s *Service) handleAgentPeerAskByID(w http.ResponseWriter, r *http.Request)
 	path := platform.PathID(r, "/api/v1/agent/peer-ask/")
 	path = strings.Trim(path, "/")
 	if path == "" {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "missing ask id")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "missing ask id")
 		return
 	}
 	parts := strings.SplitN(path, "/", 2)
@@ -72,7 +72,7 @@ func (s *Service) handleAgentPeerAskByID(w http.ResponseWriter, r *http.Request)
 	switch action {
 	case "":
 		if r.Method != http.MethodGet {
-			platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
+			platform.WriteError(w, platform.ErrorCodeMethodNotAllowed, "method not allowed")
 			return
 		}
 		ask, err := s.agentAskStore.Get(r.Context(), id)
@@ -87,13 +87,13 @@ func (s *Service) handleAgentPeerAskByID(w http.ResponseWriter, r *http.Request)
 		platform.WriteData(w, http.StatusOK, ask)
 	case "reply":
 		if r.Method != http.MethodPost {
-			platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
+			platform.WriteError(w, platform.ErrorCodeMethodNotAllowed, "method not allowed")
 			return
 		}
 		s.replyAgentPeerAsk(w, r, id)
 	case "cancel":
 		if r.Method != http.MethodPost {
-			platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
+			platform.WriteError(w, platform.ErrorCodeMethodNotAllowed, "method not allowed")
 			return
 		}
 		s.cancelAgentPeerAsk(w, r, id)
@@ -141,17 +141,17 @@ func (s *Service) createAgentPeerAsk(w http.ResponseWriter, r *http.Request) {
 	}
 	question := strings.TrimSpace(req.Question)
 	if len(question) < peerAskMinQuestion {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "question is too short")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "question is too short")
 		return
 	}
 	if len(question) > peerAskMaxQuestion {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "question is too long")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "question is too long")
 		return
 	}
 	toType := strings.TrimSpace(strings.ToLower(req.ToAgentType))
 	toID := strings.TrimSpace(req.ToAgentID)
 	if toID == "" && toType == "" {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "either to_agent_id or to_agent_type is required")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "either to_agent_id or to_agent_type is required")
 		return
 	}
 
@@ -175,7 +175,7 @@ func (s *Service) createAgentPeerAsk(w http.ResponseWriter, r *http.Request) {
 	if toID != "" {
 		oid, err := uuid.Parse(toID)
 		if err != nil {
-			platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "invalid to_agent_id")
+			platform.WriteError(w, platform.ErrorCodeValidationFailed, "invalid to_agent_id")
 			return
 		}
 		rec.ToAgentID = &oid
@@ -239,11 +239,11 @@ func (s *Service) replyAgentPeerAsk(w http.ResponseWriter, r *http.Request, askI
 	}
 	reply := strings.TrimSpace(req.Reply)
 	if reply == "" {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "reply is required")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "reply is required")
 		return
 	}
 	if len(reply) > peerAskMaxReply {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "reply is too long")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "reply is too long")
 		return
 	}
 

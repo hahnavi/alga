@@ -33,7 +33,7 @@ func (s *stubOverrideTriageStore) Update(_ context.Context, id string, patch *st
 // TestHandleTriageResultOverridePersistsReason pins the override
 // endpoint persists the reason it accepts (previously dropped), records who
 // and when overrode, and audits the state transition. An unknown decision is
-// rejected with 400 before touching the store.
+// rejected with 422 before touching the store.
 func TestHandleTriageResultOverridePersistsReason(t *testing.T) {
 	t.Parallel()
 
@@ -115,8 +115,8 @@ func TestHandleTriageResultOverridePersistsReason(t *testing.T) {
 		t.Parallel()
 		st := &stubOverrideTriageStore{}
 		w := run(st, `{"decision":"page-everyone","reason":"panic"}`)
-		if w.Code != http.StatusBadRequest {
-			t.Fatalf("status = %d, want 400 (body=%s)", w.Code, w.Body.String())
+		if w.Code != http.StatusUnprocessableEntity {
+			t.Fatalf("status = %d, want 422 (body=%s)", w.Code, w.Body.String())
 		}
 		if st.patch != nil {
 			t.Error("store.Update must not be called for an unknown decision")

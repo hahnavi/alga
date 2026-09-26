@@ -61,7 +61,7 @@ func (h *AgentSSEHandler) SetAllowQueryToken(v bool) {
 func (h *AgentSSEHandler) Handler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
-			platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
+			platform.WriteError(w, platform.ErrorCodeMethodNotAllowed, "method not allowed")
 			return
 		}
 
@@ -136,14 +136,19 @@ func (h *AgentSSEHandler) Handler() http.HandlerFunc {
 		defer func() {
 			h.broker.UnsubscribeAgent(agentKey, clientID)
 
+			// The request context is already canceled by the time cleanup runs;
+			// detach but bound so presence/valkey calls cannot hang forever.
+			cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), 5*time.Second)
+			defer cancel()
+
 			var presenceEmpty bool
 			if h.presence != nil {
-				empty, err := h.presence.Unregister(context.Background(), agentKey, clientID)
+				empty, err := h.presence.Unregister(cleanupCtx, agentKey, clientID)
 				if err != nil {
 					logger.Warn("SSE agent presence unregister failed", "agent_id", agentKey, "error", err)
 				}
 				presenceEmpty = empty
-				_ = h.presence.PublishEvent(context.Background(), valkey.AgentEvent{
+				_ = h.presence.PublishEvent(cleanupCtx, valkey.AgentEvent{
 					Type:      valkey.AgentEventSessionEnded,
 					AgentID:   agentKey,
 					SessionID: clientID,
@@ -153,7 +158,7 @@ func (h *AgentSSEHandler) Handler() http.HandlerFunc {
 			if !h.broker.AgentOnline(agentKey) && (h.presence == nil || presenceEmpty) {
 				h.executor.PublishAgentPresence(agentKey, false)
 				if h.presence != nil {
-					_ = h.presence.PublishEvent(context.Background(), valkey.AgentEvent{
+					_ = h.presence.PublishEvent(cleanupCtx, valkey.AgentEvent{
 						Type:      valkey.AgentEventOffline,
 						AgentID:   agentKey,
 						SessionID: clientID,
@@ -211,17 +216,32 @@ func (h *AgentSSEHandler) checkOrigin(r *http.Request) bool {
 	return origin == ""
 }
 
+// PublishToAgent delivers an event to every live session of the agent: the
+// local broker plus the Valkey fan-out (peer replicas loop it back to their
+// local sessions). It returns an error only when the event could not reach
+// any session: no local subscriber, no Valkey, and presence confirms the
+// agent has no session anywhere. Dispatchers rely on this to requeue work
+// instead of crediting a phantom delivery to a disconnected agent.
 func (h *AgentSSEHandler) PublishToAgent(agentTokenID string, event sse.Event) error {
-	var localErr error
-	if err := h.broker.PublishToAgent(agentTokenID, event); err != nil {
-		localErr = err
-	}
+	localErr := h.broker.PublishToAgent(agentTokenID, event)
 	if h.vkClient != nil {
-		if err := sse.PublishToValkeyAgent(context.Background(), h.vkClient.Client(), agentTokenID, event); err != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := sse.PublishToValkeyAgent(ctx, h.vkClient.Client(), agentTokenID, event); err != nil {
 			logger.Error("Failed to publish SSE event to Valkey for agent", "agent_id", agentTokenID, "error", err)
 		}
 	}
-	if localErr != nil && h.vkClient == nil {
+	if localErr == nil {
+		return nil
+	}
+	if h.presence != nil && h.presence.Available() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if !h.presence.IsAgentOnline(ctx, agentTokenID) {
+			return fmt.Errorf("agent %s has no connected SSE session", agentTokenID)
+		}
+	}
+	if h.vkClient == nil {
 		return localErr
 	}
 	return nil
@@ -230,7 +250,9 @@ func (h *AgentSSEHandler) PublishToAgent(agentTokenID string, event sse.Event) e
 func (h *AgentSSEHandler) PublishToAgentAllowDrop(agentTokenID string, event sse.Event) {
 	h.broker.PublishToAgentAllowDrop(agentTokenID, event)
 	if h.vkClient != nil {
-		if err := sse.PublishToValkeyAgent(context.Background(), h.vkClient.Client(), agentTokenID, event); err != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := sse.PublishToValkeyAgent(ctx, h.vkClient.Client(), agentTokenID, event); err != nil {
 			logger.Error("Failed to publish SSE event to Valkey for agent (allow drop)", "agent_id", agentTokenID, "error", err)
 		}
 	}
@@ -245,7 +267,11 @@ func (h *AgentSSEHandler) AgentOnline(agentTokenID string) bool {
 		return true
 	}
 	if h.presence != nil && h.presence.Available() {
-		return h.presence.IsAgentOnline(context.Background(), agentTokenID)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		return h.presence.IsAgentOnline(ctx, agentTokenID)
 	}
 	return false
 }
+
+// boundedCtx removed: callers inline context.WithTimeout with defer cancel.

@@ -19,7 +19,6 @@ import {
   CheckCircle,
   ChevronRight,
   CircleAlert,
-  CircleDot,
   Clock,
   Copy,
   FileText,
@@ -47,9 +46,10 @@ import {
 import { alertRecordSchema, validate } from "@/lib/validation";
 import {
   alertSeverityLabel,
-  incidentPriorityBorderColor,
+  incidentSeverityFromLabel,
   nonHeaderLabelEntries,
   severityBadgeClass,
+  severityBucket,
 } from "@/lib/alertLabels";
 import {
   formatSlackChannelLabel,
@@ -59,7 +59,6 @@ import {
 import { getProviderIconSrc } from "@/lib/providerIcon";
 import Button from "@/components/ui/Button.vue";
 import Card from "@/components/ui/Card.vue";
-import AlertStatusBadge from "@/components/ui/AlertStatusBadge.vue";
 import ConfirmDialog from "@/components/ui/ConfirmDialog.vue";
 import ErrorBanner from "@/components/ui/ErrorBanner.vue";
 import KeyValueDisplay from "@/components/ui/KeyValueDisplay.vue";
@@ -73,19 +72,21 @@ import MessageContextMenu, { type MessageAction } from "@/components/ui/MessageC
 import TypingIndicator from "@/components/ui/TypingIndicator.vue";
 import DeletedBadge from "@/components/ui/DeletedBadge.vue";
 import { useToast } from "@/lib/toast";
+import { useAuthStore } from "@/stores/auth";
 import { usePageHeader } from "@/composables/usePageHeader";
 import { createSearchActionButton } from "@/lib/pageHeader";
 import { useEntityPermissions } from "@/composables/useEntityPermissions";
 import { useDelete } from "@/composables/useDelete";
 import AlertActionsMenu from "@/components/ui/AlertActionsMenu.vue";
-import AlertDetailsSidebar from "@/components/AlertDetailsSidebar.vue";
+import AlertDetailSidebarContent from "@/components/AlertDetailSidebarContent.vue";
 import { useAlertDetailData } from "@/composables/useAlertDetailData";
 import { useAlertSidebarState } from "@/composables/useAlertSidebarState";
 import { useLoadIntegrations } from "@/composables/useLoadIntegrations";
-import { useUsers } from "@/composables/useUsers";
+import { useUsersIfPermitted } from "@/composables/useUsers";
 import { useChatSearch } from "@/composables/useChatSearch";
 import { useChatThread } from "@/composables/useChatThread";
 import { useSSE } from "@/composables/useSSE";
+import { MAX_THREAD_MESSAGES } from "@/lib/threadLimits";
 import { useTypingIndicator } from "@/composables/useTypingIndicator";
 import { useFormSubmit } from "@/composables/useFormSubmit";
 import { useClipboard } from "@/composables/useClipboard";
@@ -93,6 +94,7 @@ import { getAgentAvatarSrc } from "@/lib/agentAvatar";
 import { resolveDisplayName } from "@/lib/userDisplay";
 import { formatTimeFull, formatDateSeparator, dateSeparatorKey } from "@/lib/time";
 import { messagePermalink as chatMessagePermalink } from "@/lib/chatMessage";
+import { displayNameWithAgent, sourceAvatarBg, sourceColor } from "@/lib/chatMessage";
 
 defineOptions({ name: "AlertDetailPage" });
 
@@ -100,6 +102,7 @@ const isDeleted = computed(() => !!alert.value?.deleted_at);
 const route = useRoute();
 const router = useRouter();
 const { push } = useToast();
+const auth = useAuthStore();
 const { canWrite: canWriteAlerts, canDelete: canDeleteAlerts } = useEntityPermissions("alerts");
 const { canWrite: canWriteIncidents } = useEntityPermissions("incidents");
 
@@ -117,7 +120,7 @@ const {
   silentReload,
 } = useAlertDetailData(alertNumber);
 
-const { users, loadUsers } = useUsers();
+const { users, loadUsers } = useUsersIfPermitted("users:manage");
 
 const investigationOutcome = computed(() => alertInvestigation.value?.summary);
 const sidebarAssignee = computed<{ name: string; isAgent: boolean; agentType?: string } | null>(
@@ -152,11 +155,14 @@ const promotedIncidentID = computed(() => alertInvestigation.value?.promoted_inc
 const investigationPromoted = computed(() =>
   Boolean(promotedIncidentID.value || relatedIncident.value),
 );
+// The investigation record carries the promoted incident's UUID, but
+// /incidents/:incident_number routes accept only the numeric incident
+// number — reachable via the related payload. A UUID link would land on
+// a guaranteed 400, so only link when the number is known.
 const promotedIncidentRoute = computed(() => {
   const num = relatedIncident.value?.incident_number;
   if (num) return `/incidents/${num}`;
-  const id = promotedIncidentID.value;
-  return id ? `/incidents/${id}` : null;
+  return null;
 });
 
 const {
@@ -276,24 +282,55 @@ function cancelChatReply() {
   chatReplyingTo.value = null;
 }
 
+// Reply contexts resolved once per message set. Rendering calls this per
+// row; scanning the whole thread per row was O(n²) per render, and the
+// thread re-renders on every streaming draft update.
+const chatReplyContexts = computed(() => {
+  const byId = new Map((chatMessages.value ?? []).map((m) => [m.id, m]));
+  const out = new Map<string, { replyToText: string; replyToAuthor: string }>();
+  for (const m of chatMessages.value ?? []) {
+    const qid = m.reply_to_message_id;
+    if (!qid) continue;
+    const found = byId.get(qid);
+    if (found) {
+      out.set(m.id, { replyToText: found.message, replyToAuthor: chatDisplayName(found) });
+    }
+  }
+  return out;
+});
+
 function chatReplyContextFor(message: OwnerThreadMessage): {
   replyToText: string;
   replyToAuthor: string;
 } {
-  const qid = message.reply_to_message_id;
-  if (!qid) return { replyToText: "", replyToAuthor: "" };
-  const found = (thread.messages.value ?? []).find((m) => m.id === qid);
-  if (!found) return { replyToText: "", replyToAuthor: "" };
-  return { replyToText: found.message, replyToAuthor: chatDisplayName(found) };
+  return chatReplyContexts.value.get(message.id) ?? { replyToText: "", replyToAuthor: "" };
 }
 
+// Mention targets: listing agent tokens needs `tokens:manage` and the user
+// list `users:manage` — operator permissions an `alerts` viewer may lack, so
+// both fetches are permission-gated to avoid error toasts on every visit.
+// Mentions only matter for writers anyway. `sidebarAssignee` still resolves
+// for permitted users; without the perm it shows the raw fallback name.
 async function loadMentionTargets() {
-  try {
-    agents.value = await api.getAgentTokens();
-  } catch {
+  if (!canWriteAlerts.value) {
     agents.value = [];
+    return;
   }
-  await loadUsers();
+  const targets: Promise<unknown>[] = [loadUsers()];
+  if (auth.hasPermission("tokens:manage")) {
+    targets.push(
+      api.getAgentTokens().then(
+        (rows) => {
+          agents.value = rows;
+        },
+        () => {
+          // intentional: mention autocomplete is optional surface
+          agents.value = [];
+        },
+      ),
+    );
+  }
+  await Promise.all(targets);
 }
 
 function extractMentions(): string[] {
@@ -307,11 +344,12 @@ const {
 } = useTypingIndicator({ timeoutMs: 6000 });
 
 // Hybrid chat: owner_thread_* events (matched by alertNumber) and
-// investigation_update / investigation_draft / investigation_typing
-// events (matched by alertInvestigationId) all land in the same
-// messages / drafts arrays. The useChatThread composable owns the
-// reducer + SSE event sources; this page just provides the
-// scope-specific extractors.
+// investigation_update events (matched by alertInvestigationId) all land in
+// the same messages array. The useChatThread composable owns the reducer +
+// SSE event sources; this page just provides the scope-specific extractors.
+// Only `investigation_update` (message) is published by the backend in this
+// family — the edited/deleted/typing/draft variants have no publisher, so
+// they are not registered (agent typing/drafts arrive via owner_thread_*).
 const thread = useChatThread<OwnerThreadMessage>({
   scope: "alert",
   targetId: toRef(() => String(alertNumber.value)),
@@ -376,11 +414,6 @@ const thread = useChatThread<OwnerThreadMessage>({
       },
       events: {
         message: "investigation_update",
-        edited: "investigation_update_edited",
-        deleted: "investigation_update_deleted",
-        typing: "investigation_typing",
-        typingStop: "investigation_typing_stop",
-        draft: "investigation_draft",
       },
       extractMessage: (data) => {
         const d = data as { update?: InvestigationUpdate };
@@ -599,18 +632,21 @@ function scheduleTypingNotify() {
 
 function handleAlertSSE(data: unknown) {
   // `data` is the wire payload. Validate shape with the alert schema so a
-  // malformed event (e.g. partial push from the server) is dropped instead
-  // of causing a needless reload. The zod-inferred type is slightly looser
-  // than `AlertRecord` (e.g. `agent_type` is a free-form string); the cast
-  // narrows the runtime-validated value to the consumer's expected type.
+  // malformed event (e.g. partial push from the server) triggers a plain
+  // reload instead of corrupting the row. The zod-inferred type is slightly
+  // looser than `AlertRecord` (e.g. `agent_type` is a free-form string); the
+  // cast narrows the runtime-validated value to the consumer's expected type.
   let rec: AlertRecord;
   try {
     rec = validate(alertRecordSchema, data) as AlertRecord;
   } catch {
-    return;
+    return scheduleReload();
   }
-  if (rec.alert_number != null && rec.alert_number !== alertNumber.value) return;
-  scheduleReload();
+  if (rec.alert_number == null) return scheduleReload();
+  if (rec.alert_number !== alertNumber.value) return;
+  // The payload is the full validated row for this alert — apply it directly
+  // instead of paying a refetch for it.
+  alert.value = rec;
 }
 
 function scrollChatToBottom() {
@@ -622,8 +658,7 @@ function scrollChatToBottom() {
 }
 
 // useChatThread owns the chat reducer + all chat-related SSE event
-// sources (owner_thread_* matched by alertNumber, and
-// investigation_update / investigation_draft / investigation_typing
+// sources (owner_thread_* matched by alertNumber, and investigation_update
 // events matched by alertInvestigationId). The remaining SSE handlers
 // here are pure reload triggers for the alert row + sidebar.
 function handleAlertDeleted(data: unknown) {
@@ -633,14 +668,38 @@ function handleAlertDeleted(data: unknown) {
   void router.push("/alerts");
 }
 
+// Investigation events are broadcast globally and most carry only the
+// investigation's id. High-frequency lifecycle events (status changes,
+// completion, agent patches) are reloaded only when they name this alert's
+// investigation — otherwise every investigation in the system would trigger
+// a three-request reload here and wipe streaming drafts.
+// `investigation_created`/`investigation_started` stay unscoped: for a
+// brand-new investigation the page holds no id to match (the worker can
+// auto-create one for this alert via the correlator while the page is open),
+// and they are one-shot, so the churn is negligible.
+function isForCurrentInvestigation(data: unknown): boolean {
+  if (typeof data !== "object" || data === null) return false;
+  const d = data as Record<string, unknown>;
+  if ("incident_number" in d || "incident_investigation_id" in d) return false;
+  if (typeof d.alert_investigation_id !== "string") return false;
+  const current = alertInvestigation.value?.alert_investigation_id;
+  return !!current && d.alert_investigation_id === current;
+}
+
 const sse = useSSE("/api/v1/events", {
   alert_updated: handleAlertSSE,
   alert_deleted: handleAlertDeleted,
   investigation_created: () => scheduleReload(),
   investigation_started: () => scheduleReload(),
-  investigation_status_changed: () => scheduleReload(),
-  investigation_complete: () => scheduleReload(),
-  investigation_patch: () => scheduleReload(),
+  investigation_status_changed: (data) => {
+    if (isForCurrentInvestigation(data)) scheduleReload();
+  },
+  investigation_complete: (data) => {
+    if (isForCurrentInvestigation(data)) scheduleReload();
+  },
+  investigation_patch: (data) => {
+    if (isForCurrentInvestigation(data)) scheduleReload();
+  },
 });
 const sseState = sse.state;
 
@@ -655,13 +714,11 @@ async function resolveAlert() {
   if (!alert.value) return;
   await withResolve(async () => {
     alert.value = await api.resolveAlert(alertNumber.value);
-    if (alertInvestigation.value) {
-      try {
-        await api.addAlertThreadMessage(alertNumber.value, { message: "/stop" });
-      } catch {
-        // best-effort
-      }
-    }
+    // Completing the linked investigation is the backend's job on resolve
+    // (CompleteIfAllAlertsResolved); refresh the dependent sections so the
+    // investigation card reflects it immediately instead of waiting for the
+    // SSE-debounced reload (which never fires when SSE is down).
+    await Promise.all([silentReload(), loadRelated(), thread.reload()]);
   }, "Alert marked resolved");
 }
 
@@ -705,16 +762,6 @@ async function handleAssignInvestigation(assigneeType: "user" | "agent", assigne
   }
 }
 
-function mapAlertSeverityToIncident(sev: string | null): "critical" | "high" | "warning" | "info" {
-  if (!sev) return "warning";
-  const l = sev.toLowerCase();
-  if (l.includes("critical") || l.includes("fatal")) return "critical";
-  if (l.includes("high") || l.includes("error") || l.includes("urgent")) return "high";
-  if (l.includes("warn") || l.includes("medium")) return "warning";
-  if (l.includes("info") || l.includes("low")) return "info";
-  return "warning";
-}
-
 async function createIncidentFromAlert() {
   if (!alert.value || createIncidentLoading.value) return;
   showCreateIncidentConfirm.value = false;
@@ -727,7 +774,7 @@ async function createIncidentFromAlert() {
       annotations.summary?.trim() ||
       annotations.description?.trim() ||
       undefined;
-    const severity = mapAlertSeverityToIncident(alertSeverityLabel(labels));
+    const severity = incidentSeverityFromLabel(alertSeverityLabel(labels));
     const created = await api.createIncident({
       title,
       description,
@@ -762,10 +809,14 @@ async function sendChatMessage() {
     });
     chatDraft.value = "";
     chatReplyingTo.value = null;
-    // The server returns the full thread; sync our reducer state to it
-    // without going through SSE (which would race the addMessage dedup).
+    // The server returns the thread capped at its page limit (50), so merge
+    // by id over the accumulated (up to MAX_THREAD_MESSAGES) rows instead of
+    // replacing them — replacing would truncate visible history on long
+    // threads. Same merge strategy as useChatThread.reload().
     if (result?.messages) {
-      thread.messages.value = result.messages;
+      const freshIds = new Set(result.messages.map((m) => m.id));
+      const preserved = chatMessages.value.filter((m) => !freshIds.has(m.id));
+      chatMessages.value = [...result.messages, ...preserved].slice(-MAX_THREAD_MESSAGES);
     }
     await nextTick();
     scrollChatToBottom();
@@ -1001,14 +1052,18 @@ const statusBadgeStyleClass = computed(() =>
 
 const severityLabel = computed(() => alertSeverityLabel(alert.value?.labels));
 
+// Filled severity chip in the header: same bucketing as the structured
+// findings badges below (via `severityBadgeClass`), with filled-variant
+// styling so it reads as a solid tag rather than an outline badge.
 const severityFilledBadgeCss = computed(() => {
-  switch (severityLabel.value?.toLowerCase()) {
+  const bucket = severityBucket(severityLabel.value);
+  switch (bucket) {
     case "critical":
       return "rounded bg-red-500 px-2 py-0.5 text-xs font-semibold text-white";
+    case "high":
+      return "rounded bg-orange-500 px-2 py-0.5 text-xs font-semibold text-white";
     case "warning":
       return "rounded bg-amber-500 px-2 py-0.5 text-xs font-semibold text-white";
-    case "info":
-      return "rounded bg-sky-500 px-2 py-0.5 text-xs font-semibold text-white";
     default:
       return "rounded bg-[var(--bg-tertiary)] px-2 py-0.5 text-xs font-semibold text-[var(--text-primary)]";
   }
@@ -1050,32 +1105,15 @@ function onDeleteFromHeader() {
   if (alert.value) confirmDelete(alert.value);
 }
 
-// Indicator chip class per chat source. Rendered as a non-rail dot in
-// ChatMessageRow's meta line — see lib/chatMessage.ts for the shared helper.
+// Indicator chip class and avatar tint per chat source come from
+// lib/chatMessage.ts; the display name additionally resolves agent messages
+// to the assigned agent's name from the investigation record.
 function chatSourceIndicatorClass(source: string): string {
-  switch (source) {
-    case "agent":
-      return "bg-purple-500/15 text-purple-700 dark:text-purple-300";
-    case "system":
-      return "bg-blue-500/15 text-blue-700 dark:text-blue-300";
-    case "mattermost":
-      return "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300";
-    case "slack":
-      return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300";
-    default:
-      return "bg-[var(--bg-online)]";
-  }
+  return sourceColor(source);
 }
 
 function chatSourceAvatarBg(source: string): string {
-  switch (source) {
-    case "agent":
-      return "bg-transparent";
-    case "system":
-      return "bg-blue-100 dark:bg-blue-900/30";
-    default:
-      return "bg-[var(--bg-secondary)]";
-  }
+  return sourceAvatarBg(source);
 }
 
 function chatAvatarSrc(msg: OwnerThreadMessage): string | undefined {
@@ -1090,10 +1128,7 @@ function chatAvatarLetter(msg: OwnerThreadMessage): string {
 }
 
 function chatDisplayName(msg: OwnerThreadMessage): string {
-  if (msg.username) return msg.username;
-  if (msg.source === "agent") return alertInvestigation.value?.agent_name ?? "Agent";
-  if (msg.source === "system") return "System";
-  return "User";
+  return displayNameWithAgent(msg, alertInvestigation.value?.agent_name);
 }
 
 onBeforeUnmount(() => {
@@ -1123,6 +1158,10 @@ function resetAlertState() {
   relatedIncident.value = null;
   thread.clearAll();
   chatReplyingTo.value = null;
+  // A half-typed draft belongs to the previous alert's thread; posting it
+  // to the new alert's thread would be surprising. Same for the typing chip.
+  chatDraft.value = "";
+  clearAgentTyping();
 }
 
 watch(alertNumber, (next, prev) => {
@@ -1130,6 +1169,7 @@ watch(alertNumber, (next, prev) => {
   if (prev !== undefined && next !== prev) {
     resetAlertState();
     void load();
+    void loadRelated();
     void thread.reload();
   }
 });
@@ -1150,10 +1190,7 @@ usePageHeader(() => {
   }
   if (
     !isDeleted.value &&
-    (!showAckButton.value ||
-      canWriteAlerts.value ||
-      canDeleteAlerts.value ||
-      canCreateIncident.value)
+    (canWriteAlerts.value || canDeleteAlerts.value || canCreateIncident.value)
   ) {
     actions.push(
       h(AlertActionsMenu, {
@@ -1162,7 +1199,6 @@ usePageHeader(() => {
         canWrite: canWriteAlerts.value,
         canDelete: canDeleteAlerts.value,
         canCreateIncident: canCreateIncident.value,
-        showAckButton: showAckButton.value,
         onResolve: () => onWorkflowStatusChange("resolved"),
         onReopen: () => onWorkflowStatusChange("open"),
         onDelete: onDeleteFromHeader,
@@ -1172,6 +1208,8 @@ usePageHeader(() => {
   }
   return { title: name, options: { titlePrefix: idPrefix, actions } };
 });
+
+let activatedOnce = false;
 
 onDeactivated(() => {
   // Unconditional KeepAlive keeps this page alive off-screen; stop the SSE
@@ -1184,12 +1222,28 @@ onDeactivated(() => {
 });
 
 onActivated(() => {
+  // KeepAlive fires onActivated after the initial mount too; skip it then so
+  // the first visit doesn't issue a second (debounced) load round on top of
+  // onMounted. Later activations only need an SSE resync + refresh.
+  if (!activatedOnce) {
+    activatedOnce = true;
+    return;
+  }
   sse.reconnect();
   scheduleReload();
 });
 
 onMounted(async () => {
-  await Promise.all([loadIntegrations(), load(), loadMentionTargets(), thread.reload()]);
+  await Promise.all([
+    loadIntegrations(),
+    load(),
+    // The related section is a separate payload with its own loader; load it
+    // here instead of waiting for the SSE-debounced scheduleReload (which
+    // used to be its only initial trigger).
+    loadRelated(),
+    loadMentionTargets(),
+    thread.reload(),
+  ]);
 });
 </script>
 
@@ -1650,7 +1704,7 @@ onMounted(async () => {
             v-if="threadLayoutOpen && !showAlertThread && !threadLeaving"
             class="min-w-0 space-y-4 pb-20 md:pb-4"
           >
-            <AlertDetailsSidebar
+            <AlertDetailSidebarContent
               :runbook-href="runbookHref"
               :delivery-targets="resolvedDeliveryTargets"
               :timeline="timeline"
@@ -1658,89 +1712,11 @@ onMounted(async () => {
               :users="users"
               :can-assign="canWriteAlert && !isDeleted && !!alertInvestigation"
               :assignee-id="alertInvestigation?.assignee_id"
+              :related-incident="relatedIncident"
+              :related-alerts="relatedAlerts"
               @open-delivery-thread="openDeliveryThreadFromResolved"
               @assign="handleAssignInvestigation"
-            >
-              <template #after-notifications>
-                <!-- Related Incident -->
-                <Card v-if="relatedIncident">
-                  <div class="mb-3 flex items-center gap-2">
-                    <h3 class="field-label mb-0">Incident</h3>
-                  </div>
-                  <component
-                    :is="relatedIncident.deleted_at ? 'div' : RouterLink"
-                    :to="
-                      relatedIncident.deleted_at
-                        ? undefined
-                        : `/incidents/${relatedIncident.incident_number}`
-                    "
-                    :class="[
-                      'flex items-center gap-3 rounded-md border border-[var(--border-primary)] px-3 py-2 transition-colors',
-                      relatedIncident.deleted_at
-                        ? 'cursor-default opacity-50 italic'
-                        : 'cursor-pointer hover:bg-[var(--bg-secondary)]',
-                    ]"
-                  >
-                    <CircleDot
-                      class="h-4 w-4 shrink-0"
-                      :style="{ color: incidentPriorityBorderColor(relatedIncident.priority) }"
-                    />
-                    <div class="min-w-0 flex-1">
-                      <span class="text-sm font-medium text-[var(--text-primary)]">
-                        #{{ relatedIncident.incident_number }}
-                        {{ relatedIncident.title }}
-                      </span>
-                    </div>
-                    <DeletedBadge
-                      v-if="relatedIncident.deleted_at"
-                      class="shrink-0"
-                      title="This incident was deleted"
-                    />
-                    <span
-                      :class="[
-                        'badge shrink-0',
-                        relatedIncident.status === 'resolved' || relatedIncident.status === 'closed'
-                          ? 'badge-green'
-                          : relatedIncident.status === 'mitigated'
-                            ? 'badge-yellow'
-                            : 'badge-red',
-                      ]"
-                    >
-                      {{ relatedIncident.status.replace("_", " ") }}
-                    </span>
-                  </component>
-                </Card>
-              </template>
-            </AlertDetailsSidebar>
-
-            <!-- Related Alerts -->
-            <Card v-if="relatedAlerts.length > 0">
-              <div class="mb-3">
-                <h3 class="field-label mb-0">Related Alerts</h3>
-                <p class="mt-0.5 text-xs text-[var(--text-muted)]">
-                  Correlated alerts from the same investigation
-                </p>
-              </div>
-              <div class="space-y-2">
-                <RouterLink
-                  v-for="ra in relatedAlerts"
-                  :key="ra.fingerprint"
-                  :to="ra.alert_number ? `/alerts/${ra.alert_number}` : `/alerts/${ra.fingerprint}`"
-                  class="flex cursor-pointer items-center gap-3 rounded-md border border-[var(--border-primary)] px-3 py-2 transition-colors hover:bg-[var(--bg-secondary)]"
-                >
-                  <CircleDot class="h-4 w-4 shrink-0 text-[var(--text-muted)]" />
-                  <div class="min-w-0 flex-1">
-                    <span class="text-sm text-[var(--text-primary)]">
-                      {{ ra.labels?.alertname || ra.fingerprint }}
-                    </span>
-                    <span v-if="ra.alert_number" class="ml-1 text-xs text-[var(--text-muted)]">
-                      #{{ ra.alert_number }}
-                    </span>
-                  </div>
-                  <AlertStatusBadge :status="ra.status" class="shrink-0" />
-                </RouterLink>
-              </div>
-            </Card>
+            />
           </aside>
         </div>
 
@@ -1793,7 +1769,7 @@ onMounted(async () => {
         v-if="!loading && alert && (!threadLayoutOpen || showAlertThread || threadLeaving)"
         :class="defaultSidebarClass"
       >
-        <AlertDetailsSidebar
+        <AlertDetailSidebarContent
           :runbook-href="runbookHref"
           :delivery-targets="resolvedDeliveryTargets"
           :timeline="timeline"
@@ -1801,89 +1777,11 @@ onMounted(async () => {
           :users="users"
           :can-assign="canWriteAlert && !isDeleted && !!alertInvestigation"
           :assignee-id="alertInvestigation?.assignee_id"
+          :related-incident="relatedIncident"
+          :related-alerts="relatedAlerts"
           @open-delivery-thread="openDeliveryThreadFromResolved"
           @assign="handleAssignInvestigation"
-        >
-          <template #after-notifications>
-            <!-- Related Incident -->
-            <Card v-if="relatedIncident">
-              <div class="mb-3 flex items-center gap-2">
-                <h3 class="field-label mb-0">Incident</h3>
-              </div>
-              <component
-                :is="relatedIncident.deleted_at ? 'div' : RouterLink"
-                :to="
-                  relatedIncident.deleted_at
-                    ? undefined
-                    : `/incidents/${relatedIncident.incident_number}`
-                "
-                :class="[
-                  'flex items-center gap-3 rounded-md border border-[var(--border-primary)] px-3 py-2 transition-colors',
-                  relatedIncident.deleted_at
-                    ? 'cursor-default opacity-50 italic'
-                    : 'cursor-pointer hover:bg-[var(--bg-secondary)]',
-                ]"
-              >
-                <CircleDot
-                  class="h-4 w-4 shrink-0"
-                  :style="{ color: incidentPriorityBorderColor(relatedIncident.priority) }"
-                />
-                <div class="min-w-0 flex-1">
-                  <span class="text-sm font-medium text-[var(--text-primary)]">
-                    #{{ relatedIncident.incident_number }}
-                    {{ relatedIncident.title }}
-                  </span>
-                </div>
-                <DeletedBadge
-                  v-if="relatedIncident.deleted_at"
-                  class="shrink-0"
-                  title="This incident was deleted"
-                />
-                <span
-                  :class="[
-                    'badge shrink-0',
-                    relatedIncident.status === 'resolved' || relatedIncident.status === 'closed'
-                      ? 'badge-green'
-                      : relatedIncident.status === 'mitigated'
-                        ? 'badge-yellow'
-                        : 'badge-red',
-                  ]"
-                >
-                  {{ relatedIncident.status.replace("_", " ") }}
-                </span>
-              </component>
-            </Card>
-          </template>
-        </AlertDetailsSidebar>
-
-        <!-- Related Alerts -->
-        <Card v-if="relatedAlerts.length > 0">
-          <div class="mb-3">
-            <h3 class="field-label mb-0">Related Alerts</h3>
-            <p class="mt-0.5 text-xs text-[var(--text-muted)]">
-              Correlated alerts from the same investigation
-            </p>
-          </div>
-          <div class="space-y-2">
-            <RouterLink
-              v-for="ra in relatedAlerts"
-              :key="ra.fingerprint"
-              :to="ra.alert_number ? `/alerts/${ra.alert_number}` : `/alerts/${ra.fingerprint}`"
-              class="flex cursor-pointer items-center gap-3 rounded-md border border-[var(--border-primary)] px-3 py-2 transition-colors hover:bg-[var(--bg-secondary)]"
-            >
-              <CircleDot class="h-4 w-4 shrink-0 text-[var(--text-muted)]" />
-              <div class="min-w-0 flex-1">
-                <span class="text-sm text-[var(--text-primary)]">
-                  {{ ra.labels?.alertname || ra.fingerprint }}
-                </span>
-                <span v-if="ra.alert_number" class="ml-1 text-xs text-[var(--text-muted)]">
-                  #{{ ra.alert_number }}
-                </span>
-              </div>
-              <AlertStatusBadge :status="ra.status" class="shrink-0" />
-            </RouterLink>
-          </div>
-        </Card>
+        />
       </aside>
     </div>
 

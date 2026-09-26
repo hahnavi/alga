@@ -15,6 +15,7 @@ import (
 
 	"alga/capability"
 	"alga/ics"
+	"alga/incident"
 	"alga/logger"
 	"alga/metrics"
 	"alga/prompt"
@@ -33,9 +34,7 @@ import (
 func (s *InvestigationScheduler) schedule(ctx context.Context) {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	s.nudgeStalled(ctx)
-	s.sweepStalledAssigned()
-	s.sweepStalledInvestigating()
+	s.expireInvestigationLeases(ctx)
 
 	agents, err := s.agentTokenStore.ListActiveAgents()
 	if err != nil {
@@ -69,7 +68,6 @@ func (s *InvestigationScheduler) schedule(ctx context.Context) {
 
 	pending = s.applyBackoff(pending)
 	pending = s.filterScope(pending)
-	s.completeResolvedInvestigations(ctx, pending)
 	pending = filterInactiveAlertInvestigations(s.alertStore, pending)
 	if len(pending) == 0 {
 		return
@@ -94,7 +92,7 @@ func (s *InvestigationScheduler) schedule(ctx context.Context) {
 		agentType := candidate.AgentType
 
 		investigation, err := s.alertInvestigationStore.ClaimPendingAlertInvestigation(
-			ctx, inv.ID.String(), agentID, agentName, agentType,
+			ctx, inv.ID.String(), agentID, agentName, agentType, s.investigationTimeout,
 		)
 		if err != nil {
 			logger.Error("Scheduler failed to claim alert investigation", "component", "scheduler", "alert_investigation_id", inv.AlertInvestigationID, "error", err)
@@ -160,7 +158,7 @@ func (s *InvestigationScheduler) scheduleIncidentInvestigations(ctx context.Cont
 		agentType := candidate.AgentType
 
 		claimed, claimErr := s.incidentInvestigationStore.ClaimPendingIncidentInvestigation(
-			ctx, inv.IncidentInvestigationID, agentID, agentName, agentType,
+			ctx, inv.IncidentInvestigationID, agentID, agentName, agentType, s.investigationTimeout,
 		)
 		if claimErr != nil {
 			logger.Error("Scheduler failed to claim incident investigation", "component", "scheduler", "incident_investigation_id", inv.IncidentInvestigationID, "error", claimErr)
@@ -474,8 +472,17 @@ func filterInactiveAlertInvestigations(checker alertFingerprintLookup, pending [
 	return out
 }
 
-func (s *InvestigationScheduler) completeResolvedInvestigations(ctx context.Context, pending []store.AlertInvestigationRecord) {
+// completeResolvedInvestigations auto-completes open investigations whose
+// linked alerts are all resolved. It loads its own pending set and is called
+// from the 5-minute incident sweep as a backstop for missed lifecycle
+// callbacks, not from the scheduling tick.
+func (s *InvestigationScheduler) completeResolvedInvestigations(ctx context.Context, _ []store.AlertInvestigationRecord) {
 	if s.alertInvestigationLifecycle == nil || s.alertStore == nil {
+		return
+	}
+	pending, err := s.alertInvestigationStore.ListPendingAlertInvestigations(ctx, 200)
+	if err != nil {
+		logger.Warn("scheduler: failed to list pending investigations for auto-complete", "component", "scheduler", "error", err)
 		return
 	}
 	for _, inv := range pending {
@@ -628,7 +635,6 @@ func (s *InvestigationScheduler) dispatch(ctx context.Context, investigation *st
 		s.dispatchMu.Lock()
 		delete(s.dispatchAttempts, invID)
 		s.dispatchMu.Unlock()
-		s.nudged.Delete(invID)
 		return false
 	}
 
@@ -675,7 +681,6 @@ func (s *InvestigationScheduler) dispatch(ctx context.Context, investigation *st
 	s.dispatchMu.Lock()
 	delete(s.dispatchAttempts, invID)
 	s.dispatchMu.Unlock()
-	s.nudged.Delete(invID)
 	logger.Info("Scheduler assigned investigation to agent", "component", "scheduler", "alert_investigation_id", invID, "agent_name", agent.Name, "agent_id", agentID, "attempt", attempts, "max_attempts", maxDispatchAttempts)
 
 	if s.ssePublisher != nil {
@@ -717,10 +722,14 @@ func (s *InvestigationScheduler) autoAcknowledge(ctx context.Context, inv *store
 	if inv.PromotedIncidentID != nil && s.incidentStore != nil {
 		ackCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		if inc, err := s.incidentStore.GetIncidentByID(ackCtx, *inv.PromotedIncidentID); err == nil && inc != nil {
-			// Align with the operator handleAcknowledgeIncident path, which
-			// transitions detected -> active. "acknowledged" is not part of
-			// the documented incident lifecycle and is never read elsewhere.
-			if err := s.incidentStore.TransitionIncidentStatus(ackCtx, inc.IncidentNumber, []string{"detected", "triaging"}, "active"); err != nil && !errors.Is(err, store.ErrIncidentStatusConflict) {
+			// Align with the operator acknowledge (detected → active) and
+			// triage promote (triaging → active) paths; both edges into
+			// active come from the lifecycle action authority.
+			if err := s.incidentStore.TransitionIncidentStatus(ackCtx, inc.IncidentNumber, incident.ActionSources("acknowledge"), incident.ActionTarget("acknowledge")); errors.Is(err, store.ErrIncidentStatusConflict) {
+				if err := s.incidentStore.TransitionIncidentStatus(ackCtx, inc.IncidentNumber, incident.ActionSources("promote"), incident.ActionTarget("promote")); err != nil && !errors.Is(err, store.ErrIncidentStatusConflict) {
+					logger.Warn("Scheduler auto-acknowledge failed for incident", "component", "scheduler", "incident_number", inc.IncidentNumber, "error", err)
+				}
+			} else if err != nil {
 				logger.Warn("Scheduler auto-acknowledge failed for incident", "component", "scheduler", "incident_number", inc.IncidentNumber, "error", err)
 			}
 		}
@@ -782,6 +791,62 @@ func (s *InvestigationScheduler) registerActiveInvestigation(ctx context.Context
 	}
 }
 
+// expireInvestigationLeases requeues assigned/investigating work whose
+// dispatch lease has lapsed. This single sweeper replaces the old nudge and
+// stalled-reset watchers: an agent renews its lease via the heartbeat endpoint
+// (or any tool call transition), so a lapsed lease means the agent is truly
+// gone or unresponsive. Assigned rows expire without renewal so a connected
+// agent that missed the dispatch gets a fresh prompt; investigating rows renew
+// on heartbeat and only lapse when the agent stops responding.
+func (s *InvestigationScheduler) expireInvestigationLeases(ctx context.Context) {
+	if ids, err := s.alertInvestigationStore.ExpireAlertInvestigationLeases(ctx); err != nil {
+		logger.Error("Scheduler failed to expire alert investigation leases", "component", "scheduler", "error", err)
+	} else if len(ids) > 0 {
+		for _, id := range ids {
+			s.CleanupCompleted(id)
+		}
+		logger.Info("Scheduler expired investigation leases", "component", "scheduler", "kind", "alert", "count", len(ids))
+		s.publishLeaseExpiry(ids)
+		s.NotifyPending()
+	}
+
+	if s.incidentInvestigationStore == nil {
+		return
+	}
+	if ids, err := s.incidentInvestigationStore.ExpireIncidentInvestigationLeases(ctx); err != nil {
+		logger.Error("Scheduler failed to expire incident investigation leases", "component", "scheduler", "error", err)
+	} else if len(ids) > 0 {
+		logger.Info("Scheduler expired investigation leases", "component", "scheduler", "kind", "incident", "count", len(ids))
+		for _, id := range ids {
+			if s.ssePublisher != nil {
+				s.ssePublisher.Publish(sse.Event{
+					Type: "investigation_status_changed",
+					Data: map[string]any{
+						"incident_investigation_id": id,
+						"status":                    store.IncidentInvestigationStatusPending,
+					},
+				})
+			}
+		}
+		s.NotifyPending()
+	}
+}
+
+func (s *InvestigationScheduler) publishLeaseExpiry(ids []string) {
+	if s.ssePublisher == nil {
+		return
+	}
+	for _, id := range ids {
+		s.ssePublisher.Publish(sse.Event{
+			Type: "investigation_status_changed",
+			Data: map[string]any{
+				"alert_investigation_id": id,
+				"status":                 store.AlertInvestigationStatusPending,
+			},
+		})
+	}
+}
+
 func (s *InvestigationScheduler) NotifyPending() {
 	select {
 	case s.notify <- struct{}{}:
@@ -790,7 +855,6 @@ func (s *InvestigationScheduler) NotifyPending() {
 }
 
 func (s *InvestigationScheduler) CleanupCompleted(investigationID string) {
-	s.nudged.Delete(investigationID)
 	s.dispatchMu.Lock()
 	delete(s.dispatchAttempts, investigationID)
 	s.dispatchMu.Unlock()

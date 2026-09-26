@@ -27,7 +27,13 @@ import { useToast } from "@/lib/toast";
  */
 export function useIncidentDetailData(
   incidentNumber: Ref<number>,
-  options: { canCreatePostMortem?: Ref<boolean> } = {},
+  options: {
+    canCreatePostMortem?: Ref<boolean>;
+    /** Skips the post-mortem status side-load when false (needs postmortems:read). */
+    canReadPostMortem?: Ref<boolean>;
+    /** Skips the mitigation-playbook side-load when false (needs playbooks:read). */
+    canReadPlaybooks?: Ref<boolean>;
+  } = {},
 ) {
   const { push } = useToast();
   const router = useRouter();
@@ -65,7 +71,7 @@ export function useIncidentDetailData(
 
   async function loadMitigationPlaybooks(inc?: IncidentRecord) {
     const target = inc ?? incident.value;
-    if (!target?.service_id) {
+    if (!target?.service_id || options.canReadPlaybooks?.value === false) {
       mitigationPlaybooks.value = [];
       return;
     }
@@ -82,7 +88,7 @@ export function useIncidentDetailData(
   }
 
   async function loadPostMortemStatus() {
-    if (!incident.value) {
+    if (!incident.value || options.canReadPostMortem?.value === false) {
       postMortemStatus.value = null;
       postMortemTitle.value = "";
       return;

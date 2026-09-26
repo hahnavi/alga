@@ -645,7 +645,7 @@ Agent capabilities like assigning roles, triggering escalation, publishing statu
 
 ## RBAC Permissions
 
-Alga defines 53 granular permissions organized by resource domain.
+Alga defines 52 granular permissions organized by resource domain.
 
 | Domain        | Permissions                                                                  |
 | ------------- | ---------------------------------------------------------------------------- |
@@ -676,8 +676,8 @@ Alga defines 53 granular permissions organized by resource domain.
 
 ## Roles
 
-| Role         | Scope                                                                                                                |
-| ------------ | -------------------------------------------------------------------------------------------------------------------- |
-| **admin**    | All 53 permissions                                                                                                   |
-| **operator** | Most read/write permissions; no delete, users:manage, tokens:manage, system:read/write, admin:access, or oidc:manage |
-| **viewer**   | Read-only permissions across all domains                                                                             |
+| Role         | Scope                                                                                                                           |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| **admin**    | All 52 permissions                                                                                                              |
+| **operator** | Most read/write permissions; no deletes at all, no users:manage, tokens:manage, system:read/write, admin:access, or oidc:manage |
+| **viewer**   | Read-only permissions across all domains                                                                                        |

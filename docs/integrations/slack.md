@@ -117,11 +117,20 @@ Individual users can link their personal Slack account to receive DM notificatio
 
 ### API Endpoints
 
-| Method | Path                                | Auth    | Description                                 |
-| ------ | ----------------------------------- | ------- | ------------------------------------------- |
-| `GET`  | `/api/v1/users/me/slack/authorize`  | Session | Initiate personal Slack account linking     |
-| `GET`  | `/api/v1/users/me/slack/callback`   | Session | OAuth callback for user-level Slack binding |
-| `POST` | `/api/v1/users/me/slack/disconnect` | Session | Disconnect personal Slack account           |
+Personal Slack linking uses two separate steps — start the link, then handle the return from Slack:
+
+| Method | Path                                | Auth    | Description                                |
+| ------ | ----------------------------------- | ------- | ------------------------------------------ |
+| `GET`  | `/api/v1/users/me/slack/authorize`  | Session | Step 1 — start personal Slack account link |
+| `GET`  | `/api/v1/users/me/slack/callback`   | Session | Step 2 — Slack returns here after approval |
+| `POST` | `/api/v1/users/me/slack/disconnect` | Session | Disconnect personal Slack account          |
+
+Workspace installation (shared bot for the whole team) uses its own pair — see [Slack OAuth Setup](/integrations/slack-oauth):
+
+| Method | Path                                         | Permission           | Description            |
+| ------ | -------------------------------------------- | -------------------- | ---------------------- |
+| `POST` | `/api/v1/integrations/slack/oauth/authorize` | `integrations:write` | Step 1 — start install |
+| `GET`  | `/api/v1/integrations/slack/oauth/callback`  | —                    | Step 2 — Slack returns |
 
 ### Setup
 
@@ -229,6 +238,10 @@ Alga supports signing in with Slack as an authentication method (separate from t
 
 - Slack has tier-based rate limits
 - Alga implements automatic retries with exponential backoff
+
+### Linking says "already linked to another user"
+
+If personal Slack linking fails with a `409` ("already linked to another user"), that Slack account is already connected to a different Alga user. Ask that person to disconnect it first (**Profile → Notification Preferences → Slack DM → Disconnect**), then try linking again. One Slack account can only belong to one Alga user.
 
 ## Disabling
 

@@ -24,13 +24,13 @@ func (s *Server) handleUserTokens(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		s.createUserPAT(w, r)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
 func (s *Server) handleUserTokenByID(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 	s.revokeUserPAT(w, r)
@@ -71,7 +71,7 @@ func (s *Server) createUserPAT(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(req.Permissions) == 0 {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "at least one permission is required")
+		writeError(w, ErrorCodeValidationFailed, "at least one permission is required")
 		return
 	}
 
@@ -82,7 +82,7 @@ func (s *Server) createUserPAT(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, p := range req.Permissions {
 		if !validSet[p] {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "permission not available for your role: "+p)
+			writeError(w, ErrorCodeValidationFailed, "permission not available for your role: "+p)
 			return
 		}
 	}
@@ -119,7 +119,7 @@ func (s *Server) revokeUserPAT(w http.ResponseWriter, r *http.Request) {
 	idHex := pathID(r, "/api/v1/user/tokens/")
 	id, err := uuid.Parse(idHex)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid token id")
+		writeError(w, ErrorCodeValidationFailed, "invalid token id")
 		return
 	}
 	if err := s.personalAccessTokenStore.RevokeToken(id, user.ID); err != nil {
@@ -138,7 +138,7 @@ func (s *Server) revokeUserPAT(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleAdminTokens(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 	tokens, err := s.personalAccessTokenStore.ListAll()
@@ -157,7 +157,7 @@ func (s *Server) handleAdminTokens(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleAdminTokenByID(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 	s.revokeAdminPAT(w, r)
@@ -167,7 +167,7 @@ func (s *Server) revokeAdminPAT(w http.ResponseWriter, r *http.Request) {
 	idHex := pathID(r, "/api/v1/admin/tokens/")
 	id, err := uuid.Parse(idHex)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid token id")
+		writeError(w, ErrorCodeValidationFailed, "invalid token id")
 		return
 	}
 	if err := s.personalAccessTokenStore.RevokeTokenAdmin(id); err != nil {

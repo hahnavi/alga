@@ -1,6 +1,9 @@
 package incident
 
-import "testing"
+import (
+	"slices"
+	"testing"
+)
 
 func TestIsValidTransition_ValidTransitions(t *testing.T) {
 	t.Parallel()
@@ -230,6 +233,48 @@ func TestFullLifecycle_DetectedToClosed(t *testing.T) {
 	for _, step := range steps {
 		if !IsValidTransition(step.from, step.to) {
 			t.Errorf("IsValidTransition(%q, %q) = false, want true", step.from, step.to)
+		}
+	}
+}
+
+// TestActionTransitionsMatchLifecycleMap pins the action authority to the
+// lifecycle map: every (from, to) pair of every lifecycle action must be a
+// legal transition, so the two maps cannot drift apart.
+func TestActionTransitionsMatchLifecycleMap(t *testing.T) {
+	t.Parallel()
+	for action, entry := range actionTransitions {
+		if entry.to == "" {
+			t.Errorf("action %q has empty target", action)
+			continue
+		}
+		if len(entry.from) == 0 {
+			t.Errorf("action %q has no source statuses", action)
+			continue
+		}
+		for _, from := range entry.from {
+			if !IsValidTransition(from, entry.to) {
+				t.Errorf("action %q: %s -> %s is not a legal transition", action, from, entry.to)
+			}
+		}
+		if got, want := ActionTarget(action), entry.to; got != want {
+			t.Errorf("ActionTarget(%q) = %q, want %q", action, got, want)
+		}
+		if got := ActionSources(action); !slices.Equal(got, entry.from) {
+			t.Errorf("ActionSources(%q) = %v, want %v", action, got, entry.from)
+		}
+	}
+}
+
+func TestActionTransitionsRejectShortcuts(t *testing.T) {
+	t.Parallel()
+	// The lifecycle has no detected→mitigated/resolved shortcuts and no
+	// triaging→mitigated edge; resolve and mitigate must only fire from the
+	// statuses the action authority declares.
+	for _, action := range []string{"mitigate", "resolve"} {
+		for _, from := range []string{"detected", "triaging"} {
+			if slices.Contains(ActionSources(action), from) {
+				t.Errorf("ActionSources(%q) must not include %q", action, from)
+			}
 		}
 	}
 }

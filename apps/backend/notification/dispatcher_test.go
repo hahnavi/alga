@@ -3,6 +3,7 @@ package notification
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -366,7 +367,7 @@ func TestDispatchChannels_IncidentBrief(t *testing.T) {
 		if len(tw.lastTitle) > incidentBriefMaxLen {
 			t.Errorf("brief not truncated: len=%d, max=%d (%q)", len(tw.lastTitle), incidentBriefMaxLen, tw.lastTitle)
 		}
-		if !contains(tw.lastTitle, "API latency spike") {
+		if !strings.Contains(tw.lastTitle, "API latency spike") {
 			t.Errorf("brief lost title content: %q", tw.lastTitle)
 		}
 	})
@@ -511,17 +512,4 @@ func TestResolveChannels(t *testing.T) {
 			}
 		})
 	}
-}
-
-func contains(s, sub string) bool {
-	return len(s) >= len(sub) && (s == sub || indexOf(s, sub) >= 0)
-}
-
-func indexOf(s, sub string) int {
-	for i := 0; i+len(sub) <= len(s); i++ {
-		if s[i:i+len(sub)] == sub {
-			return i
-		}
-	}
-	return -1
 }

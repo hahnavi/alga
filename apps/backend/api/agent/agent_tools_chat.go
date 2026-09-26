@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -49,7 +50,7 @@ func ExtractAgentMentions(text string) []string {
 	return out
 }
 
-func (e *AgentToolExecutor) HandleIncomingMessage(agentRec *store.AgentTokenRecord, chatID, text, senderID, senderName string, mentions []string, replyToMessageID string) (string, error) {
+func (e *AgentToolExecutor) HandleIncomingMessage(ctx context.Context, agentRec *store.AgentTokenRecord, chatID, text, senderID, senderName string, mentions []string, replyToMessageID string) (string, error) {
 	if chatID == "" || text == "" {
 		return "", errors.New("missing chat_id or text")
 	}
@@ -67,7 +68,7 @@ func (e *AgentToolExecutor) HandleIncomingMessage(agentRec *store.AgentTokenReco
 	}
 
 	if store.IsAlgaAgentDMChatID(chatID) && e.agentDMStore != nil {
-		return e.handleAgentDMMessage(agentRec, chatID, text, senderID, senderName)
+		return e.handleAgentDMMessage(ctx, agentRec, chatID, text, senderID, senderName)
 	}
 
 	ownerType, ownerID := parseOwnerFromChatID(chatID)
@@ -80,7 +81,7 @@ func (e *AgentToolExecutor) HandleIncomingMessage(agentRec *store.AgentTokenReco
 
 		if store.IsIncidentThreadOwner(ownerType) {
 			if ownerNum, err := strconv.ParseInt(ownerID, 10, 64); err == nil {
-				return e.handleIncidentAgentTextMessage(agentRec, ownerType, ownerNum, text, displayName, mentions, replyToMessageID)
+				return e.handleIncidentAgentTextMessage(ctx, agentRec, ownerType, ownerNum, text, displayName, mentions, replyToMessageID)
 			}
 		}
 
@@ -92,7 +93,7 @@ func (e *AgentToolExecutor) HandleIncomingMessage(agentRec *store.AgentTokenReco
 			if e.alertInvestigationStore == nil {
 				return "", errors.New("alert investigation store not configured")
 			}
-			inv, err := e.alertInvestigationStore.GetCurrentAlertInvestigationByAlertNumber(context.Background(), alertNumber)
+			inv, err := e.alertInvestigationStore.GetCurrentAlertInvestigationByAlertNumber(ctx, alertNumber)
 			if err != nil {
 				return "", fmt.Errorf("failed to get investigation: %w", err)
 			}
@@ -100,19 +101,19 @@ func (e *AgentToolExecutor) HandleIncomingMessage(agentRec *store.AgentTokenReco
 				return "", err
 			}
 			if inv.Status == store.AlertInvestigationStatusAssigned {
-				if err := e.alertInvestigationStore.TransitionAlertInvestigationStatus(context.Background(), inv.ID.String(), []string{store.AlertInvestigationStatusAssigned}, store.AlertInvestigationStatusInvestigating); err != nil {
+				if err := e.alertInvestigationStore.TransitionAlertInvestigationStatus(ctx, inv.ID.String(), []string{store.AlertInvestigationStatusAssigned}, store.AlertInvestigationStatusInvestigating); err != nil {
 					logger.Warn("agent message: assigned→investigating transition failed", "investigation_id", inv.AlertInvestigationID, "error", err)
 					return "", errors.New("investigation status conflict, will be rescheduled")
 				}
 				inv.Status = store.AlertInvestigationStatusInvestigating
-				e.publishInvestigationStatusChange(inv.AlertInvestigationID, store.AlertInvestigationStatusInvestigating)
+				e.publishInvestigationStatusChange(ctx, inv.AlertInvestigationID, store.AlertInvestigationStatusInvestigating)
 			}
 		}
 
 		if e.threadStore == nil {
 			return "", errors.New("investigation thread store not configured")
 		}
-		thread, err := e.threadStore.EnsureThread(context.Background(), ownerType, ownerID)
+		thread, err := e.threadStore.EnsureThread(ctx, ownerType, ownerID)
 		if err != nil {
 			logger.Warn("agent message: failed to ensure thread", "owner_type", ownerType, "owner_id", ownerID, "error", err)
 			return "", fmt.Errorf("failed to ensure investigation thread: %w", err)
@@ -139,7 +140,7 @@ func (e *AgentToolExecutor) HandleIncomingMessage(agentRec *store.AgentTokenReco
 		if replyToMessageID != "" {
 			threadMsg.ReplyToMessageID = replyToMessageID
 		}
-		threadMsgRec, threadErr := e.threadStore.AddMessage(context.Background(), thread.ThreadID, threadMsg)
+		threadMsgRec, threadErr := e.threadStore.AddMessage(ctx, thread.ThreadID, threadMsg)
 		if threadErr != nil {
 			logger.Warn("agent message: failed to add thread message", "owner_type", ownerType, "owner_id", ownerID, "error", threadErr)
 			return "", fmt.Errorf("failed to add investigation thread message: %w", threadErr)
@@ -148,15 +149,19 @@ func (e *AgentToolExecutor) HandleIncomingMessage(agentRec *store.AgentTokenReco
 		e.publishOwnerThreadEvent(ownerType, ownerID, "owner_thread_message", map[string]any{
 			"message": threadMsgRec,
 		})
+		// Detached from the request context (the chat sync outlives the
+		// response) but still bounded so a stuck provider cannot leak it.
+		bgCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
 		go func() {
 			defer func() {
 				if r := recover(); r != nil {
 					logger.Error("goroutine panic recovered", "panic", r, "location", "sync-owner-thread-agent-message")
 				}
+				cancel()
 			}()
 			e.chatSyncSem <- struct{}{}
 			defer func() { <-e.chatSyncSem }()
-			e.syncOwnerThreadAgentMessage(ownerType, ownerID, displayName, text)
+			e.syncOwnerThreadAgentMessage(bgCtx, ownerType, ownerID, displayName, text)
 		}()
 		return threadMsgRec.ID.String(), nil
 	}
@@ -168,7 +173,7 @@ func (e *AgentToolExecutor) HandleIncomingMessage(agentRec *store.AgentTokenReco
 // tool name only, no arguments or result) in the owner-scoped investigation
 // thread. Unlike HandleIncomingMessage it performs no status transition and
 // does not sync to Mattermost/Slack — tool calls are Alga-internal visibility.
-func (e *AgentToolExecutor) HandleToolCallMessage(agentRec *store.AgentTokenRecord, chatID, toolName string) (string, error) {
+func (e *AgentToolExecutor) HandleToolCallMessage(ctx context.Context, agentRec *store.AgentTokenRecord, chatID, toolName string) (string, error) {
 	if chatID == "" || toolName == "" {
 		return "", errors.New("missing chat_id or tool name")
 	}
@@ -179,7 +184,7 @@ func (e *AgentToolExecutor) HandleToolCallMessage(agentRec *store.AgentTokenReco
 	if e.threadStore == nil {
 		return "", errors.New("investigation thread store not configured")
 	}
-	thread, err := e.threadStore.EnsureThread(context.Background(), ownerType, ownerID)
+	thread, err := e.threadStore.EnsureThread(ctx, ownerType, ownerID)
 	if err != nil {
 		return "", fmt.Errorf("failed to ensure investigation thread: %w", err)
 	}
@@ -193,7 +198,7 @@ func (e *AgentToolExecutor) HandleToolCallMessage(agentRec *store.AgentTokenReco
 	if agentRec.ID != uuid.Nil {
 		threadMsg.UserID = agentRec.ID.String()
 	}
-	threadMsgRec, err := e.threadStore.AddMessage(context.Background(), thread.ThreadID, threadMsg)
+	threadMsgRec, err := e.threadStore.AddMessage(ctx, thread.ThreadID, threadMsg)
 	if err != nil {
 		return "", fmt.Errorf("failed to add tool_call thread message: %w", err)
 	}
@@ -210,8 +215,7 @@ func (e *AgentToolExecutor) HandleToolCallMessage(agentRec *store.AgentTokenReco
 // the destination; capability precedence is not used to disambiguate, so a
 // dual-capability agent (e.g. the Responder) replies in whichever thread it was
 // activated in.
-func (e *AgentToolExecutor) handleIncidentAgentTextMessage(agentRec *store.AgentTokenRecord, ownerType string, incidentNumber int64, text, displayName string, mentions []string, replyToMessageID string) (string, error) {
-	ctx := context.Background()
+func (e *AgentToolExecutor) handleIncidentAgentTextMessage(ctx context.Context, agentRec *store.AgentTokenRecord, ownerType string, incidentNumber int64, text, displayName string, mentions []string, replyToMessageID string) (string, error) {
 	incID := strconv.FormatInt(incidentNumber, 10)
 
 	if ownerType == store.ThreadOwnerIncidentCoordination {
@@ -359,7 +363,7 @@ func (e *AgentToolExecutor) handleIncidentCoordinationTextMessage(ctx context.Co
 	return created.ID.String(), nil
 }
 
-func (e *AgentToolExecutor) HandleEditMessage(chatID, messageID, text string, agentRec *store.AgentTokenRecord) error {
+func (e *AgentToolExecutor) HandleEditMessage(ctx context.Context, chatID, messageID, text string, agentRec *store.AgentTokenRecord) error {
 	if chatID == "" || messageID == "" || text == "" {
 		return errors.New("missing chat_id, message_id, or text")
 	}
@@ -368,11 +372,11 @@ func (e *AgentToolExecutor) HandleEditMessage(chatID, messageID, text string, ag
 	if ownerType != "" && ownerID != "" {
 		if ownerType == store.ThreadOwnerIncidentCoordination {
 			ownerNum, _ := strconv.ParseInt(ownerID, 10, 64)
-			return e.editIncidentCoordinationMessage(context.Background(), agentRec, ownerNum, messageID, text)
+			return e.editIncidentCoordinationMessage(ctx, agentRec, ownerNum, messageID, text)
 		}
 		if ownerType == store.ThreadOwnerIncidentInvestigation {
 			ownerNum, _ := strconv.ParseInt(ownerID, 10, 64)
-			if err := e.authorizeIncidentTool(context.Background(), agentRec, ownerNum, "post_investigation_thread_message"); err != nil {
+			if err := e.authorizeIncidentTool(ctx, agentRec, ownerNum, "post_investigation_thread_message"); err != nil {
 				return err
 			}
 		}
@@ -384,7 +388,7 @@ func (e *AgentToolExecutor) HandleEditMessage(chatID, messageID, text string, ag
 			if e.alertInvestigationStore == nil {
 				return errors.New("alert investigation store not configured")
 			}
-			inv, err := e.alertInvestigationStore.GetCurrentAlertInvestigationByAlertNumber(context.Background(), alertNumber)
+			inv, err := e.alertInvestigationStore.GetCurrentAlertInvestigationByAlertNumber(ctx, alertNumber)
 			if err != nil {
 				return fmt.Errorf("failed to get investigation: %w", err)
 			}
@@ -395,7 +399,7 @@ func (e *AgentToolExecutor) HandleEditMessage(chatID, messageID, text string, ag
 		if e.threadStore == nil {
 			return errors.New("investigation thread store not configured")
 		}
-		msg, err := e.threadStore.UpdateMessage(context.Background(), ownerType, ownerID, messageID, text, false)
+		msg, err := e.threadStore.UpdateMessage(ctx, ownerType, ownerID, messageID, text, false)
 		if err != nil {
 			return fmt.Errorf("failed to update investigation thread message: %w", err)
 		}
@@ -458,7 +462,7 @@ func (e *AgentToolExecutor) editIncidentCoordinationMessage(ctx context.Context,
 	return nil
 }
 
-func (e *AgentToolExecutor) HandleDeleteMessage(chatID, messageID string, agentRec *store.AgentTokenRecord) error {
+func (e *AgentToolExecutor) HandleDeleteMessage(ctx context.Context, chatID, messageID string, agentRec *store.AgentTokenRecord) error {
 	if chatID == "" || messageID == "" {
 		return errors.New("missing chat_id or message_id")
 	}
@@ -470,7 +474,7 @@ func (e *AgentToolExecutor) HandleDeleteMessage(chatID, messageID string, agentR
 		}
 		if ownerType == store.ThreadOwnerIncidentInvestigation {
 			ownerNum, _ := strconv.ParseInt(ownerID, 10, 64)
-			if err := e.authorizeIncidentTool(context.Background(), agentRec, ownerNum, "post_investigation_thread_message"); err != nil {
+			if err := e.authorizeIncidentTool(ctx, agentRec, ownerNum, "post_investigation_thread_message"); err != nil {
 				return err
 			}
 		}
@@ -482,7 +486,7 @@ func (e *AgentToolExecutor) HandleDeleteMessage(chatID, messageID string, agentR
 			if e.alertInvestigationStore == nil {
 				return errors.New("alert investigation store not configured")
 			}
-			inv, err := e.alertInvestigationStore.GetCurrentAlertInvestigationByAlertNumber(context.Background(), alertNumber)
+			inv, err := e.alertInvestigationStore.GetCurrentAlertInvestigationByAlertNumber(ctx, alertNumber)
 			if err != nil {
 				return fmt.Errorf("failed to get investigation: %w", err)
 			}
@@ -493,7 +497,7 @@ func (e *AgentToolExecutor) HandleDeleteMessage(chatID, messageID string, agentR
 		if e.threadStore == nil {
 			return errors.New("investigation thread store not configured")
 		}
-		if err := e.threadStore.DeleteMessage(context.Background(), ownerType, ownerID, messageID); err != nil {
+		if err := e.threadStore.DeleteMessage(ctx, ownerType, ownerID, messageID); err != nil {
 			return fmt.Errorf("failed to delete investigation thread message: %w", err)
 		}
 		e.publishOwnerThreadEvent(ownerType, ownerID, "owner_thread_message_deleted", map[string]any{
@@ -520,7 +524,7 @@ func (e *AgentToolExecutor) HandleDeleteMessage(chatID, messageID string, agentR
 	return fmt.Errorf("invalid or unsupported chat_id format: %q (only owner-scoped threads are supported)", chatID)
 }
 
-func (e *AgentToolExecutor) handleAgentDMMessage(agentRec *store.AgentTokenRecord, chatID, text, senderID, senderName string) (string, error) {
+func (e *AgentToolExecutor) handleAgentDMMessage(ctx context.Context, agentRec *store.AgentTokenRecord, chatID, text, senderID, senderName string) (string, error) {
 	if e.agentDMStore == nil {
 		return "", errors.New("agent dm store not configured")
 	}
@@ -549,7 +553,7 @@ func (e *AgentToolExecutor) handleAgentDMMessage(agentRec *store.AgentTokenRecor
 	return rec.ID.String(), nil
 }
 
-func (e *AgentToolExecutor) HandleAgentTyping(agentRec *store.AgentTokenRecord, chatID string, active bool) bool {
+func (e *AgentToolExecutor) HandleAgentTyping(ctx context.Context, agentRec *store.AgentTokenRecord, chatID string, active bool) bool {
 	if store.IsAlgaAgentDMChatID(chatID) {
 		if active {
 			e.PublishAgentDMEvent("agent_dm_typing", map[string]any{
@@ -568,7 +572,7 @@ func (e *AgentToolExecutor) HandleAgentTyping(agentRec *store.AgentTokenRecord, 
 	}
 	ownerType, ownerID := parseOwnerFromChatID(chatID)
 	if ownerType != "" && ownerID != "" {
-		if !e.authorizeOwnerThreadTyping(agentRec, ownerType, ownerID) {
+		if !e.authorizeOwnerThreadTyping(ctx, agentRec, ownerType, ownerID) {
 			return false
 		}
 		eventType := "owner_thread_typing"
@@ -591,7 +595,7 @@ func AgentTypingSource(agentRec *store.AgentTokenRecord) string {
 	return "Agent"
 }
 
-func (e *AgentToolExecutor) HandleAgentDraft(agentRec *store.AgentTokenRecord, chatID, draftID, text string) bool {
+func (e *AgentToolExecutor) HandleAgentDraft(ctx context.Context, agentRec *store.AgentTokenRecord, chatID, draftID, text string) bool {
 	if draftID == "" {
 		return false
 	}
@@ -607,7 +611,7 @@ func (e *AgentToolExecutor) HandleAgentDraft(agentRec *store.AgentTokenRecord, c
 	}
 	ownerType, ownerID := parseOwnerFromChatID(chatID)
 	if ownerType != "" && ownerID != "" {
-		if !e.authorizeOwnerThreadTyping(agentRec, ownerType, ownerID) {
+		if !e.authorizeOwnerThreadTyping(ctx, agentRec, ownerType, ownerID) {
 			return false
 		}
 		e.publishOwnerThreadEvent(ownerType, ownerID, "owner_thread_draft", map[string]any{
@@ -620,14 +624,14 @@ func (e *AgentToolExecutor) HandleAgentDraft(agentRec *store.AgentTokenRecord, c
 	return false
 }
 
-func (e *AgentToolExecutor) authorizeOwnerThreadTyping(agentRec *store.AgentTokenRecord, ownerType string, ownerID string) bool {
+func (e *AgentToolExecutor) authorizeOwnerThreadTyping(ctx context.Context, agentRec *store.AgentTokenRecord, ownerType string, ownerID string) bool {
 	switch ownerType {
 	case store.ThreadOwnerIncidentInvestigation:
 		ownerNum, _ := strconv.ParseInt(ownerID, 10, 64)
-		return e.authorizeIncidentTool(context.Background(), agentRec, ownerNum, "post_investigation_thread_message") == nil
+		return e.authorizeIncidentTool(ctx, agentRec, ownerNum, "post_investigation_thread_message") == nil
 	case store.ThreadOwnerIncidentCoordination:
 		ownerNum, _ := strconv.ParseInt(ownerID, 10, 64)
-		return e.authorizeIncidentTool(context.Background(), agentRec, ownerNum, "post_handoff") == nil
+		return e.authorizeIncidentTool(ctx, agentRec, ownerNum, "post_handoff") == nil
 	case store.ThreadOwnerAlert:
 		if e.alertInvestigationStore == nil {
 			return false
@@ -636,7 +640,7 @@ func (e *AgentToolExecutor) authorizeOwnerThreadTyping(agentRec *store.AgentToke
 		if err != nil || alertNumber <= 0 {
 			return false
 		}
-		record, err := e.alertInvestigationStore.GetCurrentAlertInvestigationByAlertNumber(context.Background(), alertNumber)
+		record, err := e.alertInvestigationStore.GetCurrentAlertInvestigationByAlertNumber(ctx, alertNumber)
 		return err == nil && authorizeAssignedAlertInvestigationAgent(agentRec, record) == nil
 	default:
 		return false

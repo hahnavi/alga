@@ -52,11 +52,12 @@ Alga supports Google Sign-In via standard OAuth 2.0. When configured, users can 
 
 Set the following environment variables (or configure at runtime via [System Configuration API](/configuration/system-config)):
 
-| Variable                    | Required | Description                                                           |
-| --------------------------- | -------- | --------------------------------------------------------------------- |
-| `GOOGLE_CLIENT_ID`          | Yes      | Google OAuth client ID                                                |
-| `GOOGLE_CLIENT_SECRET`      | Yes      | Google OAuth client secret                                            |
-| `GOOGLE_OAUTH_REDIRECT_URL` | No       | Override callback URL (auto-detected from request headers if not set) |
+| Variable                    | Required | Description                                                                 |
+| --------------------------- | -------- | --------------------------------------------------------------------------- |
+| `GOOGLE_CLIENT_ID`          | Yes      | Google OAuth client ID                                                      |
+| `GOOGLE_CLIENT_SECRET`      | Yes      | Google OAuth client secret                                                  |
+| `GOOGLE_OAUTH_REDIRECT_URL` | No       | Override callback URL (auto-detected from request headers if not set)       |
+| `GOOGLE_OAUTH_ENABLED`      | No       | Set to `false` to hide the "Sign in with Google" button (`true` by default) |
 
 When `GOOGLE_CLIENT_ID` is set, the login page displays a "Sign in with Google" button.
 
@@ -84,7 +85,7 @@ Users can authenticate by linking their Slack identity, configured from **Settin
 
 Alga supports generic OIDC identity providers (e.g. Okta, Keycloak, Google, Auth0) using the Authorization Code flow with PKCE. Login state (including the PKCE verifier and provider ID) is stored in Valkey as a single-use record with a 10-minute TTL, preventing replay of authorization codes.
 
-Configure from **System > Authentication** or via the [System Configuration API](/configuration/system-config). See [OIDC SSO](/integrations/oidc-sso) for setup.
+Configure providers from the **SSO Providers** page (`/sso`) or via `/api/v1/oidc/providers` (needs the `oidc:manage` permission). See [OIDC SSO](/integrations/oidc-sso) for setup.
 
 ## Password Recovery
 
@@ -143,7 +144,7 @@ Full access to all features and every permission, including destructive and admi
 
 ### Operator
 
-Day-to-day operations: read/write for operational domains (alerts, knowledge, memories, incidents, triage, post-mortems, playbooks, heartbeats, status pages), incident command, notification management, and credential management. **No** system config, no deletes (except knowledge/memories), no token/OIDC management, no `admin:access`.
+Day-to-day operations: read/write for operational domains (alerts, knowledge, memories, incidents, triage, post-mortems, playbooks, heartbeats, status pages), incident command, notification management, and credential management. **No deletes at all**, no system config, no token/OIDC management, no `admin:access`.
 
 ### Viewer
 

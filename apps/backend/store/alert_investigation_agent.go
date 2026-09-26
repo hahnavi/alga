@@ -1,6 +1,6 @@
 // alert_investigation_agent.go contains agent-scoped alert investigation
-// operations: per-agent resets, active counts, and stalled investigation
-// detection/reset.
+// operations: dispatch-lease expiry/renewal, active counts, and stalled
+// investigation detection (for stuck-investigation escalation).
 package store
 
 import (
@@ -13,42 +13,88 @@ import (
 	"alga/db/models"
 )
 
-func (s *pgAlertInvestigationStore) ResetInvestigatingByAgent(ctx context.Context, agentID string) error {
+// defaultInvestigationLease is the fallback lease applied when callers pass a
+// non-positive duration.
+const defaultInvestigationLease = 10 * time.Minute
+
+// ExpireAlertInvestigationLeases requeues assigned/investigating rows whose
+// dispatch lease has lapsed and returns their public ids. The conditional
+// UPDATE is atomic: rows that an agent completes or transitions between
+// listing and expiry are never clobbered, because the status guard is
+// re-evaluated at write time.
+func (s *pgAlertInvestigationStore) ExpireAlertInvestigationLeases(ctx context.Context) ([]string, error) {
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	_, err := s.db.NewUpdate().Model((*models.AlertInvestigation)(nil)).
+	now := time.Now().UTC()
+	var ids []string
+	err := s.db.NewUpdate().Model((*models.AlertInvestigation)(nil)).
 		Set("status = ?", AlertInvestigationStatusPending).
 		Set("agent_id = ''").
 		Set("agent_name = ''").
 		Set("agent_type = ''").
 		Set("started_at = NULL").
-		Set("updated_at = ?", time.Now().UTC()).
+		Set("lease_until = NULL").
+		Set("updated_at = ?", now).
+		Where("status IN (?)", bun.List([]string{AlertInvestigationStatusAssigned, AlertInvestigationStatusInvestigating})).
+		Where("lease_until IS NOT NULL AND lease_until < ?", now).
+		Returning("public_id").
+		Scan(ctx, &ids)
+	if err != nil {
+		return nil, fmt.Errorf("failed to expire alert investigation leases: %w", err)
+	}
+	return ids, nil
+}
+
+// RenewAlertInvestigationLeases extends the lease of every investigating row
+// owned by the agent. Called from the agent heartbeat so actively-connected
+// agents keep their in-flight work; assigned rows are deliberately NOT renewed
+// so a connected-but-unresponsive agent's dispatch is re-prompted by expiry.
+func (s *pgAlertInvestigationStore) RenewAlertInvestigationLeases(ctx context.Context, agentID string, lease time.Duration) error {
+	if lease <= 0 {
+		lease = defaultInvestigationLease
+	}
+	ctx, cancel := pgctx(ctx)
+	defer cancel()
+
+	now := time.Now().UTC()
+	_, err := s.db.NewUpdate().Model((*models.AlertInvestigation)(nil)).
+		Set("lease_until = ?", now.Add(lease)).
+		Set("updated_at = ?", now).
 		Where("agent_id = ?", agentID).
-		Where("status IN (?)", bun.List([]string{AlertInvestigationStatusInvestigating, AlertInvestigationStatusPaused})).
+		Where("status = ?", AlertInvestigationStatusInvestigating).
 		Exec(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to reset investigating alert investigations by agent: %w", err)
+		return fmt.Errorf("failed to renew alert investigation leases: %w", err)
 	}
 	return nil
 }
 
-func (s *pgAlertInvestigationStore) ResetAssignedByAgent(ctx context.Context, agentID string) error {
+// ExpireAlertInvestigationLeasesByAgent shortens the leases of an agent's
+// active rows after a disconnect: assigned rows lapse immediately (the agent
+// never started), investigating rows get one reconnect grace window so a
+// transient blip doesn't kill in-flight work. Paused rows are untouched — the
+// agent paused them deliberately.
+func (s *pgAlertInvestigationStore) ExpireAlertInvestigationLeasesByAgent(ctx context.Context, agentID string, investigatingGrace time.Duration) error {
 	ctx, cancel := pgctx(ctx)
 	defer cancel()
 
-	_, err := s.db.NewUpdate().Model((*models.AlertInvestigation)(nil)).
-		Set("status = ?", AlertInvestigationStatusPending).
-		Set("agent_id = ''").
-		Set("agent_name = ''").
-		Set("agent_type = ''").
-		Set("started_at = NULL").
-		Set("updated_at = ?", time.Now().UTC()).
+	now := time.Now().UTC()
+	if _, err := s.db.NewUpdate().Model((*models.AlertInvestigation)(nil)).
+		Set("lease_until = ?", now).
+		Set("updated_at = ?", now).
 		Where("agent_id = ?", agentID).
 		Where("status = ?", AlertInvestigationStatusAssigned).
-		Exec(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to reset assigned alert investigations by agent: %w", err)
+		Exec(ctx); err != nil {
+		return fmt.Errorf("failed to expire assigned alert investigation leases by agent: %w", err)
+	}
+	if _, err := s.db.NewUpdate().Model((*models.AlertInvestigation)(nil)).
+		Set("lease_until = ?", now.Add(investigatingGrace)).
+		Set("updated_at = ?", now).
+		Where("agent_id = ?", agentID).
+		Where("status = ?", AlertInvestigationStatusInvestigating).
+		Exec(ctx); err != nil {
+		return fmt.Errorf("failed to expire investigating alert investigation leases by agent: %w", err)
 	}
 	return nil
 }
@@ -139,50 +185,4 @@ func (s *pgAlertInvestigationStore) listStalledAlertInvestigationsByStatus(ctx c
 		records = append(records, *rec)
 	}
 	return records, nil
-}
-
-func (s *pgAlertInvestigationStore) ResetStalledAssignedAlertInvestigations(timeout time.Duration) ([]string, error) {
-	return s.resetStalledAlertInvestigationsByStatus(AlertInvestigationStatusAssigned, timeout, false)
-}
-
-func (s *pgAlertInvestigationStore) ResetStalledInvestigatingAlertInvestigations(timeout time.Duration) ([]string, error) {
-	return s.resetStalledAlertInvestigationsByStatus(AlertInvestigationStatusInvestigating, timeout, true)
-}
-
-func (s *pgAlertInvestigationStore) resetStalledAlertInvestigationsByStatus(status string, timeout time.Duration, requireNoRecentUpdates bool) ([]string, error) {
-	ctx, cancel := pgctx(context.Background())
-	defer cancel()
-
-	cutoff := time.Now().UTC().Add(-timeout)
-
-	q := s.db.NewSelect().Model((*models.AlertInvestigation)(nil)).
-		Where("status = ?", status).
-		Where("started_at <= ?", cutoff)
-
-	if requireNoRecentUpdates {
-		q = q.Where("NOT EXISTS (SELECT 1 FROM alert_investigation_updates u WHERE u.alert_investigation_id = alert_investigation.id AND u.created_at >= ?)", cutoff)
-	}
-
-	var invs []models.AlertInvestigation
-	if err := q.Scan(ctx, &invs); err != nil {
-		return nil, fmt.Errorf("reset stalled alert investigations %s: %w", status, err)
-	}
-
-	ids := make([]string, 0, len(invs))
-	for _, inv := range invs {
-		_, err := s.db.NewUpdate().Model((*models.AlertInvestigation)(nil)).
-			Set("status = ?", AlertInvestigationStatusPending).
-			Set("agent_id = ''").
-			Set("agent_name = ''").
-			Set("agent_type = ''").
-			Set("started_at = NULL").
-			Set("updated_at = ?", time.Now().UTC()).
-			Where("id = ?", inv.ID).
-			Exec(ctx)
-		if err != nil {
-			continue
-		}
-		ids = append(ids, inv.AlertInvestigationID)
-	}
-	return ids, nil
 }

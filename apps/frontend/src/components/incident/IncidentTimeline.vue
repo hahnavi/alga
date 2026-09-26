@@ -12,6 +12,7 @@ import {
 } from "@lucide/vue";
 import type { IncidentTimelineRecord } from "@/lib/api";
 import { formatTimeAgo, formatTimeFull } from "@/lib/time";
+import { visibleTimelineEntries } from "@/lib/incidentEvents";
 defineOptions({ name: "IncidentTimeline" });
 
 const props = defineProps<{
@@ -21,8 +22,7 @@ const props = defineProps<{
 type Tone = "success" | "info" | "warning" | "danger" | "neutral";
 
 const displayEntries = computed(() =>
-  props.entries
-    .filter((entry) => entry.event_type !== "investigation_created")
+  visibleTimelineEntries(props.entries)
     .map((entry) => ({
       ...entry,
       message:

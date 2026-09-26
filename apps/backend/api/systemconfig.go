@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -19,7 +20,7 @@ func (s *Server) handleSystemConfig(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPut:
 		s.handlePutSystemConfig(w, r)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -64,44 +65,63 @@ func (s *Server) handleGetSystemConfig(w http.ResponseWriter, r *http.Request) {
 	writeData(w, http.StatusOK, resp)
 }
 
-func (s *Server) handlePutSystemConfig(w http.ResponseWriter, r *http.Request) {
-	if !s.checkPermission(w, r, rbac.SystemConfigWrite) {
-		return
+// systemConfigUpdate is the typed patch parsed from a PUT /system/config
+// body. Nil fields were not provided and are left unchanged.
+type systemConfigUpdate struct {
+	LogLevel                           *string
+	SessionExpiryHrs                   *int
+	MaxConcurrentInvestigations        *int
+	CorrelationWindow                  *time.Duration
+	CorrelationCooldownTTL             *time.Duration
+	InvestigationTimeout               *time.Duration
+	AgentPresenceTTL                   *time.Duration
+	AgentDisconnectGrace               *time.Duration
+	SchedulerLeaderTTL                 *time.Duration
+	SlackIncidentChannelsEnabled       *bool
+	SlackIncidentChannelVisibility     *string
+	SlackIncidentChannelTriggerStatus  *string
+	SlackIncidentChannelArchiveOnClose *bool
+	IncidentSummaryEnabled             *bool
+	IncidentSummaryInterval            *time.Duration
+	// IncidentSummaryIntervals is nil when the field was not provided; a
+	// non-nil (possibly empty) map replaces all per-severity overrides.
+	IncidentSummaryIntervals map[string]time.Duration
+
+	// Authentication.
+	GoogleOAuthEnabled     *bool
+	GoogleClientID         *string
+	GoogleClientSecret     *string // plaintext; only set when the caller provides a new value
+	GoogleOAuthRedirectURL *string
+}
+
+func (u *systemConfigUpdate) anySet() bool {
+	return u.LogLevel != nil || u.SessionExpiryHrs != nil || u.MaxConcurrentInvestigations != nil ||
+		u.CorrelationWindow != nil || u.CorrelationCooldownTTL != nil || u.InvestigationTimeout != nil ||
+		u.AgentPresenceTTL != nil || u.AgentDisconnectGrace != nil || u.SchedulerLeaderTTL != nil ||
+		u.SlackIncidentChannelsEnabled != nil || u.SlackIncidentChannelVisibility != nil ||
+		u.SlackIncidentChannelTriggerStatus != nil || u.SlackIncidentChannelArchiveOnClose != nil ||
+		u.IncidentSummaryEnabled != nil || u.IncidentSummaryInterval != nil || u.IncidentSummaryIntervals != nil ||
+		u.GoogleOAuthEnabled != nil || u.GoogleClientID != nil || u.GoogleClientSecret != nil ||
+		u.GoogleOAuthRedirectURL != nil
+}
+
+// parseOptionalDuration validates an optional Go-duration string field. Empty
+// input means "not provided".
+func parseOptionalDuration(raw, field string) (*time.Duration, error) {
+	d, err := time.ParseDuration(strings.TrimSpace(raw))
+	if err != nil {
+		if strings.TrimSpace(raw) == "" {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("invalid %s duration: %s", field, err.Error())
 	}
+	return &d, nil
+}
 
-	var req map[string]any
-	if !decodeJSON(w, r, &req) {
-		return
-	}
-
-	type configUpdate struct {
-		LogLevel                           *string
-		SessionExpiryHrs                   *int
-		MaxConcurrentInvestigations        *int
-		CorrelationWindow                  *time.Duration
-		CorrelationCooldownTTL             *time.Duration
-		InvestigationTimeout               *time.Duration
-		AgentPresenceTTL                   *time.Duration
-		AgentDisconnectGrace               *time.Duration
-		SchedulerLeaderTTL                 *time.Duration
-		SlackIncidentChannelsEnabled       *bool
-		SlackIncidentChannelVisibility     *string
-		SlackIncidentChannelTriggerStatus  *string
-		SlackIncidentChannelArchiveOnClose *bool
-		IncidentSummaryEnabled             *bool
-		IncidentSummaryInterval            *time.Duration
-		// IncidentSummaryIntervals is nil when the field was not provided; a
-		// non-nil (possibly empty) map replaces all per-severity overrides.
-		IncidentSummaryIntervals map[string]time.Duration
-
-		// Authentication.
-		GoogleOAuthEnabled     *bool
-		GoogleClientID         *string
-		GoogleClientSecret     *string // plaintext; only set when the caller provides a new value
-		GoogleOAuthRedirectURL *string
-	}
-
-	var upd configUpdate
+// parseSystemConfigUpdate decodes and validates the PUT /system/config body.
+// It returns a user-facing validation error for malformed fields.
+func parseSystemConfigUpdate(req map[string]any) (*systemConfigUpdate, error) {
+	upd := &systemConfigUpdate{}
 
 	if v, ok := req["log_level"].(string); ok {
 		v = strings.ToLower(strings.TrimSpace(v))
@@ -110,8 +130,7 @@ func (s *Server) handlePutSystemConfig(w http.ResponseWriter, r *http.Request) {
 			case "debug", "info", "warn", "error", "fatal":
 				upd.LogLevel = &v
 			default:
-				writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "log_level must be one of: debug, info, warn, error, fatal")
-				return
+				return nil, errors.New("log_level must be one of: debug, info, warn, error, fatal")
 			}
 		}
 	}
@@ -130,57 +149,24 @@ func (s *Server) handlePutSystemConfig(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if v, ok := req["correlation_window"].(string); ok {
-		if d, err := time.ParseDuration(strings.TrimSpace(v)); err == nil {
-			upd.CorrelationWindow = &d
-		} else if v != "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid correlation_window duration: "+err.Error())
-			return
-		}
-	}
-
-	if v, ok := req["correlation_cooldown_ttl"].(string); ok {
-		if d, err := time.ParseDuration(strings.TrimSpace(v)); err == nil {
-			upd.CorrelationCooldownTTL = &d
-		} else if v != "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid correlation_cooldown_ttl duration: "+err.Error())
-			return
-		}
-	}
-
-	if v, ok := req["investigation_timeout"].(string); ok {
-		if d, err := time.ParseDuration(strings.TrimSpace(v)); err == nil {
-			upd.InvestigationTimeout = &d
-		} else if v != "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid investigation_timeout duration: "+err.Error())
-			return
-		}
-	}
-
-	if v, ok := req["agent_presence_ttl"].(string); ok {
-		if d, err := time.ParseDuration(strings.TrimSpace(v)); err == nil {
-			upd.AgentPresenceTTL = &d
-		} else if v != "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid agent_presence_ttl duration: "+err.Error())
-			return
-		}
-	}
-
-	if v, ok := req["agent_disconnect_grace"].(string); ok {
-		if d, err := time.ParseDuration(strings.TrimSpace(v)); err == nil {
-			upd.AgentDisconnectGrace = &d
-		} else if v != "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid agent_disconnect_grace duration: "+err.Error())
-			return
-		}
-	}
-
-	if v, ok := req["scheduler_leader_ttl"].(string); ok {
-		if d, err := time.ParseDuration(strings.TrimSpace(v)); err == nil {
-			upd.SchedulerLeaderTTL = &d
-		} else if v != "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid scheduler_leader_ttl duration: "+err.Error())
-			return
+	for _, f := range []struct {
+		key   string
+		dest  **time.Duration
+		blank string
+	}{
+		{"correlation_window", &upd.CorrelationWindow, ""},
+		{"correlation_cooldown_ttl", &upd.CorrelationCooldownTTL, ""},
+		{"investigation_timeout", &upd.InvestigationTimeout, ""},
+		{"agent_presence_ttl", &upd.AgentPresenceTTL, ""},
+		{"agent_disconnect_grace", &upd.AgentDisconnectGrace, ""},
+		{"scheduler_leader_ttl", &upd.SchedulerLeaderTTL, ""},
+	} {
+		if v, ok := req[f.key].(string); ok {
+			d, err := parseOptionalDuration(v, f.key)
+			if err != nil {
+				return nil, err
+			}
+			*f.dest = d
 		}
 	}
 
@@ -188,21 +174,16 @@ func (s *Server) handlePutSystemConfig(w http.ResponseWriter, r *http.Request) {
 		upd.SlackIncidentChannelsEnabled = &v
 	}
 	if v, ok := req["slack_incident_channel_visibility"].(string); ok {
-		if v == "public" || v == "private" {
-			upd.SlackIncidentChannelVisibility = &v
-		} else {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "slack_incident_channel_visibility must be 'public' or 'private'")
-			return
+		if v != "public" && v != "private" {
+			return nil, errors.New("slack_incident_channel_visibility must be 'public' or 'private'")
 		}
+		upd.SlackIncidentChannelVisibility = &v
 	}
 	if v, ok := req["slack_incident_channel_trigger_status"].(string); ok {
-		validStatuses := map[string]bool{"active": true, "detected": true}
-		if validStatuses[v] {
-			upd.SlackIncidentChannelTriggerStatus = &v
-		} else {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "slack_incident_channel_trigger_status must be 'active' or 'detected'")
-			return
+		if v != "active" && v != "detected" {
+			return nil, errors.New("slack_incident_channel_trigger_status must be 'active' or 'detected'")
 		}
+		upd.SlackIncidentChannelTriggerStatus = &v
 	}
 	if v, ok := req["slack_incident_channel_archive_on_close"].(bool); ok {
 		upd.SlackIncidentChannelArchiveOnClose = &v
@@ -212,25 +193,22 @@ func (s *Server) handlePutSystemConfig(w http.ResponseWriter, r *http.Request) {
 		upd.IncidentSummaryEnabled = &v
 	}
 	if v, ok := req["incident_summary_interval"].(string); ok {
-		if d, err := time.ParseDuration(strings.TrimSpace(v)); err == nil {
-			upd.IncidentSummaryInterval = &d
-		} else if strings.TrimSpace(v) != "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid incident_summary_interval duration: "+err.Error())
-			return
+		d, err := parseOptionalDuration(v, "incident_summary_interval")
+		if err != nil {
+			return nil, err
 		}
+		upd.IncidentSummaryInterval = d
 	}
 	if v, ok := req["incident_summary_intervals"].(map[string]any); ok {
 		intervals := make(map[string]time.Duration, len(v))
 		for sev, val := range v {
 			s, ok := val.(string)
 			if !ok {
-				writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "incident_summary_intervals values must be Go duration strings")
-				return
+				return nil, errors.New("incident_summary_intervals values must be Go duration strings")
 			}
 			d, err := time.ParseDuration(strings.TrimSpace(s))
 			if err != nil {
-				writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid incident_summary_intervals duration for "+sev+": "+err.Error())
-				return
+				return nil, fmt.Errorf("invalid incident_summary_intervals duration for %s: %s", sev, err.Error())
 			}
 			intervals[strings.ToLower(strings.TrimSpace(sev))] = d
 		}
@@ -248,9 +226,8 @@ func (s *Server) handlePutSystemConfig(w http.ResponseWriter, r *http.Request) {
 	if v, ok := req["google_client_secret"].(string); ok {
 		// Only accept a non-empty value; an empty string means "leave
 		// unchanged" because the secret is never returned on GET.
-		if strings.TrimSpace(v) != "" {
-			v := strings.TrimSpace(v)
-			upd.GoogleClientSecret = &v
+		if s := strings.TrimSpace(v); s != "" {
+			upd.GoogleClientSecret = &s
 		}
 	}
 	if v, ok := req["google_oauth_redirect_url"].(string); ok {
@@ -258,39 +235,13 @@ func (s *Server) handlePutSystemConfig(w http.ResponseWriter, r *http.Request) {
 		upd.GoogleOAuthRedirectURL = &s
 	}
 
-	anySet := upd.LogLevel != nil || upd.SessionExpiryHrs != nil || upd.MaxConcurrentInvestigations != nil ||
-		upd.CorrelationWindow != nil || upd.CorrelationCooldownTTL != nil || upd.InvestigationTimeout != nil ||
-		upd.AgentPresenceTTL != nil || upd.AgentDisconnectGrace != nil || upd.SchedulerLeaderTTL != nil ||
-		upd.SlackIncidentChannelsEnabled != nil || upd.SlackIncidentChannelVisibility != nil ||
-		upd.SlackIncidentChannelTriggerStatus != nil || upd.SlackIncidentChannelArchiveOnClose != nil ||
-		upd.IncidentSummaryEnabled != nil || upd.IncidentSummaryInterval != nil || upd.IncidentSummaryIntervals != nil ||
-		upd.GoogleOAuthEnabled != nil || upd.GoogleClientID != nil || upd.GoogleClientSecret != nil ||
-		upd.GoogleOAuthRedirectURL != nil
+	return upd, nil
+}
 
-	if !anySet {
-		writeStatus(w, "no changes")
-		return
-	}
-
-	// Encrypt the secret before mutating anything so an encryption failure
-	// aborts the update and preserves the stored ciphertext. When no new
-	// secret is provided, re-encrypt the existing in-memory secret so an
-	// unrelated update does not overwrite the stored credential with empty.
-	secretToEncrypt := ""
-	if upd.GoogleClientSecret != nil {
-		secretToEncrypt = *upd.GoogleClientSecret
-	} else {
-		s.mu.RLock()
-		secretToEncrypt = s.cfg.GoogleClientSecret
-		s.mu.RUnlock()
-	}
-	googleSecretEnc, err := encryptAuthSecret(secretToEncrypt)
-	if err != nil {
-		logger.ErrorCtx(r.Context(), "failed to encrypt google client secret; aborting system config update", "error", err)
-		writeErrorStatus(w, http.StatusInternalServerError, ErrorCodeInternal, "failed to encrypt google client secret")
-		return
-	}
-
+// applySystemConfigUpdate mutates the live config under the server lock.
+// summaryChanged reports whether the incident-summary scheduler needs a
+// reconfiguration. Callers must compute googleSecret handling before calling.
+func (s *Server) applySystemConfigUpdate(upd *systemConfigUpdate) (summaryChanged bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -335,7 +286,6 @@ func (s *Server) handlePutSystemConfig(w http.ResponseWriter, r *http.Request) {
 		s.cfg.SlackIncidentChannelArchiveOnClose = *upd.SlackIncidentChannelArchiveOnClose
 	}
 
-	summaryChanged := false
 	if upd.IncidentSummaryEnabled != nil {
 		s.cfg.IncidentSummaryEnabled = *upd.IncidentSummaryEnabled
 		summaryChanged = true
@@ -347,13 +297,6 @@ func (s *Server) handlePutSystemConfig(w http.ResponseWriter, r *http.Request) {
 	if upd.IncidentSummaryIntervals != nil {
 		s.cfg.IncidentSummaryIntervals = upd.IncidentSummaryIntervals
 		summaryChanged = true
-	}
-	if summaryChanged && s.summaryConfigApplier != nil {
-		interval := s.cfg.IncidentSummaryInterval
-		if interval <= 0 {
-			interval = 15 * time.Minute
-		}
-		s.summaryConfigApplier(s.cfg.IncidentSummaryEnabled, interval, s.cfg.IncidentSummaryIntervals)
 	}
 
 	// --- Authentication ---
@@ -368,6 +311,63 @@ func (s *Server) handlePutSystemConfig(w http.ResponseWriter, r *http.Request) {
 	}
 	if upd.GoogleOAuthRedirectURL != nil {
 		s.cfg.GoogleOAuthRedirectURL = *upd.GoogleOAuthRedirectURL
+	}
+
+	return summaryChanged
+}
+
+func (s *Server) handlePutSystemConfig(w http.ResponseWriter, r *http.Request) {
+	if !s.checkPermission(w, r, rbac.SystemConfigWrite) {
+		return
+	}
+
+	var req map[string]any
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+
+	upd, err := parseSystemConfigUpdate(req)
+	if err != nil {
+		writeError(w, ErrorCodeValidationFailed, err.Error())
+		return
+	}
+
+	if !upd.anySet() {
+		writeStatus(w, "no changes")
+		return
+	}
+
+	// Encrypt the secret before mutating anything so an encryption failure
+	// aborts the update and preserves the stored ciphertext. When no new
+	// secret is provided, re-encrypt the existing in-memory secret so an
+	// unrelated update does not overwrite the stored credential with empty.
+	secretToEncrypt := ""
+	if upd.GoogleClientSecret != nil {
+		secretToEncrypt = *upd.GoogleClientSecret
+	} else {
+		s.mu.RLock()
+		secretToEncrypt = s.cfg.GoogleClientSecret
+		s.mu.RUnlock()
+	}
+	googleSecretEnc, err := encryptAuthSecret(secretToEncrypt)
+	if err != nil {
+		logger.ErrorCtx(r.Context(), "failed to encrypt google client secret; aborting system config update", "error", err)
+		writeErrorStatus(w, http.StatusInternalServerError, ErrorCodeInternal, "failed to encrypt google client secret")
+		return
+	}
+
+	summaryChanged := s.applySystemConfigUpdate(upd)
+
+	if summaryChanged && s.summaryConfigApplier != nil {
+		s.mu.RLock()
+		interval := s.cfg.IncidentSummaryInterval
+		if interval <= 0 {
+			interval = 15 * time.Minute
+		}
+		enabled := s.cfg.IncidentSummaryEnabled
+		intervals := s.cfg.IncidentSummaryIntervals
+		s.mu.RUnlock()
+		s.summaryConfigApplier(enabled, interval, intervals)
 	}
 
 	if s.systemConfigStore != nil {
@@ -409,7 +409,7 @@ func (s *Server) handlePutSystemConfig(w http.ResponseWriter, r *http.Request) {
 		if _, ok := auditFields["google_client_secret"]; ok {
 			auditFields["google_client_secret"] = "[redacted]"
 		}
-		s.auditStore.Log("system_config_updated", &user.ID, user.Email, s.ipExtractor.clientIP(r), r.UserAgent(), true, map[string]any{
+		s.audit(r, store.AuditSystemConfigUpdated, map[string]any{
 			"fields": auditFields,
 		})
 	}

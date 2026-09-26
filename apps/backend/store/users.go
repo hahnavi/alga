@@ -96,7 +96,9 @@ func (s *pgUserStore) CreateUser(email, password, role string) (*UserRecord, err
 		UpdatedAt: now,
 	}
 
-	_, err = s.db.NewInsert().Model(m).Exec(context.Background())
+	ctx, cancel := pgctx(context.Background())
+	defer cancel()
+	_, err = s.db.NewInsert().Model(m).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
@@ -129,7 +131,7 @@ func (s *pgUserStore) GetByID(id uuid.UUID) (*UserRecord, error) {
 }
 
 func (s *pgUserStore) ListUsers() ([]UserRecord, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := pgctxLong(context.Background())
 	defer cancel()
 
 	var users []models.User

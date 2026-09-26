@@ -23,6 +23,7 @@ const (
 // StateClient is the minimal Valkey surface cancellation needs. Satisfied by
 // *valkey.Client and by test fakes.
 type StateClient interface {
+	ZScore(ctx context.Context, key, member string) (float64, error)
 	HSet(ctx context.Context, key, field, value string) error
 	ZRem(ctx context.Context, key, member string) error
 }
@@ -42,6 +43,11 @@ func CancelForIncident(ctx context.Context, vkClient StateClient, timeline Timel
 	if vkClient == nil || incidentID == "" {
 		return
 	}
+	// The timeline entry is only honest when an escalation was actually
+	// pending: the escalation worker adds every fired escalation to the
+	// pending set, so its absence means there is nothing to cancel and
+	// writing "Escalation stopped" would fabricate history.
+	wasPending, pendingErr := vkClient.ZScore(ctx, PendingSetKey, incidentID)
 	hashKey := StateHashPrefix + incidentID
 	if err := vkClient.HSet(ctx, hashKey, "acknowledged", "1"); err != nil {
 		logger.WarnCtx(ctx, "Failed to mark escalation acknowledged in Valkey", "component", "escalation", "incident_id", incidentID, "error", err)
@@ -49,7 +55,7 @@ func CancelForIncident(ctx context.Context, vkClient StateClient, timeline Timel
 	if err := vkClient.ZRem(ctx, PendingSetKey, incidentID); err != nil {
 		logger.WarnCtx(ctx, "Failed to remove escalation from pending set in Valkey", "component", "escalation", "incident_id", incidentID, "error", err)
 	}
-	if timeline == nil {
+	if timeline == nil || pendingErr != nil || wasPending == 0 {
 		return
 	}
 	incidentNumber, err := strconv.ParseInt(incidentID, 10, 64)

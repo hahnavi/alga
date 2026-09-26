@@ -77,7 +77,7 @@ The frontend provides:
 
 - **Purpose:** Async message queue with retry topology
 - **Features:**
-  - 12 exchanges (one per async domain plus a dead-letter exchange)
+  - 10 exchanges (one per async domain plus a dead-letter exchange)
   - One processing queue per exchange, plus `alga.dead_letter`
   - 4-stage retry queues per domain with TTL-based dead-lettering back to the main exchange
   - Retry schedule of 1m → 5m → 15m → 1h with ±20% jitter
@@ -98,6 +98,7 @@ Background processing is split between **queue-consuming workers** (driven by Ra
 | **SLAWorker**                  | `alga.sla.sweep`                     | 1                             | Sweeps SLA-eligible incidents for response/resolve breaches; triggers escalation on breach                                                                                                   |
 | **NotificationDispatchWorker** | `alga.notification-dispatch.process` | 10                            | Creates in-app notifications, publishes SSE, dispatches via email/Slack DM/voice/Mattermost; 4x retry                                                                                        |
 | **EmailWorker**                | `alga.email.send`                    | 10                            | Sends email via SMTP; 3x retry with linear backoff                                                                                                                                           |
+| **TriageWorker**               | `alga.triage.process`                | 5                             | Classifies alerts (incident / investigate / noise) with triage context; low-confidence or disallowed decisions become `enrich_only`                                                          |
 | **ICSWorker**                  | `alga.ics-provision.process`         | 1                             | Provisions the war room (ICS channels/roles); 3x retry                                                                                                                                       |
 
 ### Sweep Workers (Timer-Based)
@@ -244,7 +245,7 @@ Webhook
          ▼
 ┌─────────────────┐
 │  SRE Agent       │
-│  (Hermes/OpenClaw)│
+│  (Alga Agent / Hermes / OpenClaw)│
 └────────┬────────┘
          │
          ├───► Query knowledge base
@@ -574,7 +575,7 @@ Each delay is adjusted by ±20% jitter to avoid retry storms.
   - Slack signing secret
   - Twilio auth token
   - Hermes platform token
-- **Fail-closed:** Requires key in production environment
+- **Fail-closed:** Refuses to start without `ENCRYPTION_KEYS` (or `ENCRYPTION_KEY`) AND `SECRET_PEPPER` in **every** environment, not only production
 
 ### Token Security
 
@@ -664,7 +665,7 @@ Each delay is adjusted by ±20% jitter to avoid retry storms.
 
 - **Levels:** DEBUG, INFO, WARN, ERROR, FATAL
 - **Output:** Stdout (configurable file output)
-- **Format:** Plain text (`[LEVEL] message`) via Go standard log package, regardless of environment
+- **Format:** Plain text (`[LEVEL] message`) by default, or structured JSON when `LOG_FORMAT=json` (the Docker Compose deployment sets JSON for log ingestion)
 - **Context:** Request IDs, user IDs, investigation IDs
 
 ## Conclusion

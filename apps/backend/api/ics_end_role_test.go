@@ -62,12 +62,12 @@ func TestHandleEndICSRoleValidatesEndedReason(t *testing.T) {
 		return w
 	}
 
-	t.Run("unknown reason rejected with 400 without touching the store", func(t *testing.T) {
+	t.Run("unknown reason rejected with 422 without touching the store", func(t *testing.T) {
 		t.Parallel()
 		st := &stubEndRoleICSStore{}
 		w := run(st, `{"ended_reason":"bogus"}`)
-		if w.Code != http.StatusBadRequest {
-			t.Fatalf("status = %d, want 400 (body=%s)", w.Code, w.Body.String())
+		if w.Code != http.StatusUnprocessableEntity {
+			t.Fatalf("status = %d, want 422 (body=%s)", w.Code, w.Body.String())
 		}
 		if st.called {
 			t.Fatal("EndRole must not be called for an unknown reason")

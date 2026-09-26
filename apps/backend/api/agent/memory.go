@@ -56,7 +56,7 @@ func (s *Service) handleAgentMemories(w http.ResponseWriter, r *http.Request) {
 		}
 		s.createAgentMemory(w, r)
 	default:
-		platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
+		platform.WriteError(w, platform.ErrorCodeMethodNotAllowed, "method not allowed")
 	}
 }
 
@@ -74,7 +74,7 @@ func (s *Service) handleAgentMemoryByID(w http.ResponseWriter, r *http.Request) 
 	idStr = strings.TrimSuffix(idStr, "/")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "invalid memory id")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "invalid memory id")
 		return
 	}
 	switch r.Method {
@@ -123,7 +123,7 @@ func (s *Service) handleAgentMemoryByID(w http.ResponseWriter, r *http.Request) 
 		})
 		platform.WriteStatus(w, "deleted")
 	default:
-		platform.WriteErrorStatus(w, http.StatusMethodNotAllowed, platform.ErrorCodeInternal, "method not allowed")
+		platform.WriteError(w, platform.ErrorCodeMethodNotAllowed, "method not allowed")
 	}
 }
 
@@ -166,7 +166,7 @@ func (s *Service) createAgentMemory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.TrimSpace(req.Content) == "" {
-		platform.WriteErrorStatus(w, http.StatusBadRequest, platform.ErrorCodeValidationFailed, "content is required")
+		platform.WriteError(w, platform.ErrorCodeValidationFailed, "content is required")
 		return
 	}
 

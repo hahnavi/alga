@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   displayName,
+  displayNameWithAgent,
   sourceAvatarBg,
   sourceColor,
   borderClass,
@@ -67,6 +68,24 @@ describe("displayName", () => {
     expect(displayName({ ...userMsg, source: "system" as const, username: undefined })).toBe(
       "System",
     );
+  });
+});
+
+describe("displayNameWithAgent", () => {
+  it("resolves agent messages to the assigned agent's name", () => {
+    expect(displayNameWithAgent(agentMsg, "Hermes Prime")).toBe("Hermes Prime");
+    expect(displayNameWithAgent(agentMsg, "  ")).toBe("Agent");
+    expect(displayNameWithAgent(agentMsg, null)).toBe("Agent");
+  });
+
+  it("keeps username and non-agent fallbacks", () => {
+    expect(displayNameWithAgent(userMsg, "Hermes Prime")).toBe("alice");
+    expect(
+      displayNameWithAgent({ ...userMsg, source: "system" as const, username: undefined }, null),
+    ).toBe("System");
+    expect(
+      displayNameWithAgent({ ...userMsg, username: undefined } as OwnerThreadMessage, null),
+    ).toBe("User");
   });
 });
 

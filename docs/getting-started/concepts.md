@@ -10,29 +10,28 @@ Understanding how Alga's pieces fit together makes everything else easier to con
 ## The Big Picture
 
 ```
-                    ┌──────────┐
-                    │  Alert   │  Webhook from Grafana, Prometheus, or any HTTP source
-                    │  Source  │
-                    └────┬─────┘
-                         │
-                         ▼
+                     ┌──────────┐
+                     │  Alert   │  Message from Grafana, Prometheus, or any tool
+                     │  Source  │
+                     └────┬─────┘
+                          │
+                          ▼
 ┌─────────────────────────────────────────────────────┐
-│                    INGESTION                         │
-│  Webhook token auth → dedup → maintenance window    │
-│  check → route → deliver                            │
+│                    RECEIVING                        │
+│  Check password → remove duplicates → hold back     │
+│  during maintenance → send on                       │
 └──────────────────────┬──────────────────────────────┘
                        │
                        ▼
 ┌─────────────────────────────────────────────────────┐
-│                   CORRELATION                        │
-│  Group related alerts by correlation key            │
-│  within CORRELATION_WINDOW → one investigation      │
+│                   GROUPING                          │
+│  Group related alerts together → one investigation  │
 └──────────────────────┬──────────────────────────────┘
                        │
                        ▼
 ┌─────────────────────────────────────────────────────┐
-│                     TRIAGE                           │
-│  Rules first (deterministic), then LLM              │
+│                     DECIDING                        │
+│  Simple rules first, then AI judgment               │
 │  Decision: investigate / auto_resolve /             │
 │           suppress / escalate / enrich_only         │
 └──────────┬──────────────────────┬───────────────────┘
@@ -41,22 +40,24 @@ Understanding how Alga's pieces fit together makes everything else easier to con
            │                      │
            ▼                      ▼
 ┌──────────────────┐   ┌───────────────────────────┐
-│   AI AGENT       │   │  INCIDENT                 │
-│   (Hermes /      │   │  Created with ICS roles,  │
-│    OpenClaw)     │   │  SLA, escalation, war     │
-│                  │   │  room, coordination       │
-│  Receives via    │   └───────────────────────────┘
-│  SSE dispatch    │
-│  Investigates,   │
-│  resolves, or    │
-│  promotes        │
+│   AI HELPER      │   │  INCIDENT                 │
+│   (built-in      │   │  Managed with clear roles,│
+│    Alga Agent,   │   │  response-time goals,     │
+│    Hermes, or    │   │  escalation, and a shared │
+│    OpenClaw)     │   │  chat room                │
+│                  │   └───────────────────────────┘
+│  Receives the    │
+│  investigation,  │
+│  looks into it,  │
+│  resolves it or  │
+│  raises it       │
 └────────┬─────────┘
          │
          ▼
 ┌─────────────────────────────────────────┐
-│            NOTIFICATION                  │
-│  In-app · Email · Slack · Mattermost    │
-│  · Voice (Twilio/Telnyx)                │
+│            NOTIFYING                     │
+│  In Alga · Email · Slack · Mattermost   │
+│  · Phone call                           │
 └─────────────────────────────────────────┘
 ```
 
@@ -72,17 +73,17 @@ An **alert** is a single firing or resolved event from a monitoring system. Each
 - **Annotations** — free-text metadata (summary, description, runbook URL).
 
 ::: tip The fingerprint is the dedup key, not the ID
-The `alert_number` is the unique identifier you interact with. The fingerprint ensures that repeated firings of the same alert (same label set) don't create duplicates. One open alert per fingerprint is enforced by a partial unique index.
+The `alert_number` is the unique identifier you interact with. The fingerprint makes sure that repeated firings of the same alert (same labels) don't create duplicates — you get one open alert per problem.
 :::
 
 ### Investigations
 
 An **investigation** is the AI analysis of one or more correlated alerts. When alerts arrive:
 
-1. The **correlator** groups alerts sharing a correlation key within `CORRELATION_WINDOW` into a single investigation
-2. The investigation enters `pending` status
-3. The **scheduler** picks an online agent with matching capabilities and scope
-4. The agent receives the investigation via SSE and begins analyzing
+1. Alga groups alerts about the same thing into a single investigation
+2. The investigation starts out as `pending`
+3. Alga picks an available helper whose skills match and hands it the investigation
+4. The helper starts analyzing and reports back
 
 There are two kinds of investigations, each with its own lifecycle:
 
@@ -110,14 +111,14 @@ An **incident** is a declared event requiring coordinated response. Incidents ca
 - **Manually created** by an operator
 - **Auto-created** by routing rules or triage decisions
 
-Incidents follow a formal lifecycle: `detected → triaging → active → mitigated → resolved → closed`, with `cancelled` as an additional terminal state and `reopen` returning `mitigated`/`resolved`/`closed` incidents to active response. The linear order is the normal path; the API also permits deliberate skip edges — acknowledge jumps `detected → active`, and mitigation/resolution may be reached directly from earlier states when appropriate (see [Incident Lifecycle](/incident-management/lifecycle) for the authoritative transition table).
+Incidents move through stages: `detected → triaging → active → mitigated → resolved → closed` (with `cancelled` if the incident turns out to be a false alarm, and `reopen` if a finished incident flares up again). You can also jump ahead when it makes sense — for example, confirming an incident moves it straight to `active` (see [Incident Lifecycle](/incident-management/lifecycle) for the full picture).
 
 Beyond the lifecycle, incidents carry several collaboration features:
 
 - **Coordination messages** — the per-incident thread where operators and agents collaborate via @mentions, agent replies, and structured handoffs
 - **ICS documents** — structured incident sections (`current_status`, `impact_assessment`, `root_cause`, `resolution`, `actions_taken`, `open_questions`, `resources`, `timeline_summary`) that are collaboratively edited by agents and operators
 - **Status updates** — public incident status updates posted to notification channels
-- **War rooms** — auto-created Google Meet spaces for real-time coordination (provisioned asynchronously by the ICS worker)
+- **War rooms** — auto-created Google Meet spaces for real-time coordination
 
 ### Services
 
@@ -145,10 +146,10 @@ Alerts matching an active maintenance window are suppressed at ingestion — the
 
 These four stages process every alert, in order:
 
-1. **Routing** — label-based rules determine _where_ to deliver the alert (Slack, Mattermost, etc.) and whether to suppress it
-2. **Correlation** — related alerts within the time window are grouped into one investigation
-3. **Triage** — deterministic rules first (fast, free), then LLM (smart, costs tokens) decide what to do: `investigate`, `auto_resolve`, `suppress`, `escalate`, or `enrich_only`
-4. **Investigation** — the scheduler dispatches the grouped alerts to an AI agent
+1. **Routing** — rules based on alert labels decide _where_ to send the alert (Slack, Mattermost, etc.) and whether to hold it back
+2. **Correlation** — related alerts that arrive close together are grouped into one investigation
+3. **Triage** — simple rules run first (fast and free), then AI judgment (smarter, uses a little AI budget) decides what to do: `investigate`, `auto_resolve`, `suppress`, `escalate`, or `enrich_only`
+4. **Investigation** — the grouped alerts are handed to an AI helper (the built-in Alga Agent, Hermes, or OpenClaw)
 
 ### On-Call → Escalation → SLA
 
@@ -162,20 +163,20 @@ These three govern human response:
 
 These three give agents the context they need:
 
-- **Knowledge base** — operator-authored notes (runbooks, known issues, service owners, facts) with label selectors. You write these. Agents read them.
-- **Agent memory** — LLM-extracted facts from past investigations, stored as vectors for semantic recall. The system learns these automatically.
-- **Episodic context** — past investigations with the same correlation key, surfaced to the agent
+- **Knowledge base** — notes you write (how-to guides, known issues, who owns what). Helpers read them when investigating.
+- **Agent memory** — lessons Alga learns on its own from past investigations. The system remembers these automatically.
+- **Past cases** — earlier investigations about the same problem, shown to the helper for context
 
-All three are injected into the agent's dispatch prompt automatically.
+All three are handed to the helper automatically when it starts work.
 
-### Agents → Capabilities → Scope
+### Agents → Skills → Scope
 
-AI agents (Hermes, OpenClaw, or custom SDK agents) connect via SSE and receive investigation dispatches. Two gates control which investigations an agent receives:
+AI helpers (the built-in Alga Agent, Hermes, OpenClaw, or a custom helper) stay connected and receive investigations. Two settings control which work a helper gets:
 
-- **Capabilities** (`investigate`, `communicate`, `command`) — what the agent is allowed to _do_
-- **Scope** (`all` or `labels` via label selectors) — which investigations the agent is allowed to _receive_
+- **Skills** (`investigate`, `communicate`, `command`) — what the helper is allowed to _do_
+- **Scope** (`all` or picked by matching labels) — which investigations the helper is allowed to _receive_
 
-The scheduler scores all eligible agents by specificity (label-matched > catch-all), then by load (least busy), then by health (success rate).
+Alga prefers helpers that match closely, then ones with the least on their plate.
 
 ::: tip Capability meanings
 
@@ -186,60 +187,37 @@ The scheduler scores all eligible agents by specificity (label-matched > catch-a
 
 ### Threads → Real-Time Chat
 
-Alerts and incidents have **owner-thread chat** — a conversation thread scoped to the alert or incident. Threads support:
+Alerts and incidents have their own chat thread — a conversation just about that alert or incident. Threads support:
 
-- Real-time message delivery via SSE
+- Messages appearing instantly
 - Typing indicators
-- Cross-provider sync (messages posted in Alga appear in the linked Slack or Mattermost thread, and vice versa)
+- Two-way sync (messages you write in Alga show up in the linked Slack or Mattermost thread, and vice versa)
 
 Thread owners include alert investigations, incident investigations, and incident coordination channels.
 
 ## Key Design Principles
 
-### Deduplication at the Database Level
+### No duplicate alerts
 
-Alga uses partial unique indexes to enforce one-open-alert-per-fingerprint at the database level — not in application code. This means duplicate alerts are safe even under concurrent ingestion.
+Alga guarantees one open alert per problem at the database level — not just in the app. Duplicate alerts are safe even if many arrive at the same moment.
 
-### Resolved Alerts Stay Resolved
+### Resolved alerts stay resolved
 
-Once an alert is resolved (by the monitoring system, an operator, or an agent), it is **never automatically reopened**. If the same condition fires again, a new alert is created. This prevents alert flapping.
+Once an alert is resolved (by your monitoring, by you, or by a helper), it is **never automatically reopened**. If the same problem happens again, you get a new alert. This stops alerts from flickering open and closed.
 
-The sanctioned exception is **manual reopen**: an operator or agent can explicitly reopen the latest resolved alert (an audited operation that creates a new firing cycle from it). Automated sources never reopen resolved alerts.
+The one exception is **manual reopen**: you can deliberately reopen the latest resolved alert (Alga records who did it). Automatic sources never reopen resolved alerts.
 
-### Fire-and-Forget Audit Logging
+### Everything important is recorded
 
-Every create, update, delete, command, and state transition produces an audit event. Audit logging is asynchronous — it never blocks the request that triggered it.
+Every change — creating, updating, deleting, and every status change — is written to an audit log. This happens in the background, so it never slows you down.
 
-### Async Everything
+### Work happens in the background
 
-Alert processing, notifications, investigations, escalation, SLA timers, and triage all run through RabbitMQ queues with tiered retry and dead-letter handling. The HTTP ingestion path returns immediately after persisting the alert — all downstream work is async.
+Alert processing, notifications, investigations, escalation, and reminders all run as background jobs with retries. The page that receives alerts saves them and returns right away — everything after that happens behind the scenes.
 
-The specific workers that consume these queues:
+### Safe by default
 
-| Worker                     | Responsibility                                      |
-| -------------------------- | --------------------------------------------------- |
-| AlertWorker                | Webhook ingestion, dedup, routing, delivery         |
-| InvestigateWorker          | Dispatch investigations to agents, manage lifecycle |
-| IncidentWorker             | Incident state transitions, ICS role assignment     |
-| EscalationWorker           | Execute escalation policy levels                    |
-| SLAWorker                  | Track SLA timers, trigger breach escalation         |
-| NotificationDispatchWorker | Fan out notifications to configured channels        |
-| EmailWorker                | Send transactional and notification emails          |
-| ICSWorker                  | Provision incident war rooms (Google Meet)          |
-
-Sweep workers run on timers to reconcile state:
-
-| Sweep Worker                 | Responsibility                                          |
-| ---------------------------- | ------------------------------------------------------- |
-| EscalationSweep              | Detect stalled escalations and advance them             |
-| HeartbeatSweep               | Detect missing heartbeats and fire stale alerts         |
-| StuckInvestigationEscalation | Escalate investigations stuck too long in active states |
-| ActionItemSweep              | Track overdue incident action items                     |
-| Outbox                       | Retry and publish pending outbox messages               |
-
-### Fail-Closed Security
-
-Alga refuses to start without encryption keys and secret pepper configured — in **every** environment, not just production. HSTS is always emitted on HTTPS. Tokens and secrets are stored as HMAC hashes or encrypted values, never plaintext.
+Alga refuses to start without its secret passwords — in **every** setup, not just production. Passwords and tokens are stored scrambled or locked up, never as readable text.
 
 ## Where to Go Next
 

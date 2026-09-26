@@ -53,7 +53,7 @@ func (s *Server) handleSlackOAuthCallback(w http.ResponseWriter, r *http.Request
 
 func (s *Server) handleSlackDisconnect(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 	if s.integrationStore == nil {
@@ -92,7 +92,7 @@ func (s *Server) handleSlackDisconnect(w http.ResponseWriter, r *http.Request) {
 // by the alga-plugin-ensure CronJob. No auth required — only reachable within cluster.
 func (s *Server) handleMMPluginDownload(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -100,14 +100,14 @@ func (s *Server) handleMMPluginDownload(w http.ResponseWriter, r *http.Request) 
 	f, err := os.Open(path)
 	if err != nil {
 		logger.Error("mm-plugin: tarball not found", "path", path, "error", err)
-		http.Error(w, "plugin tarball not found", http.StatusNotFound)
+		writeError(w, ErrorCodeNotFound, "plugin tarball not found")
 		return
 	}
 	defer func() { _ = f.Close() }()
 
 	stat, err := f.Stat()
 	if err != nil {
-		http.Error(w, "stat error", http.StatusInternalServerError)
+		writeInternalError(w, err, "failed to stat plugin tarball")
 		return
 	}
 

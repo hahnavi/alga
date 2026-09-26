@@ -51,7 +51,7 @@ func (e *AgentToolExecutor) postCommandUpdate(ctx context.Context, investigation
 		return
 	}
 
-	e.chatSync.postToInvestigationThread(inv, humanMsg, slack.Mrkdwn(humanMsg), &ChatSyncOptions{
+	e.chatSync.postToInvestigationThread(ctx, inv, humanMsg, slack.Mrkdwn(humanMsg), &ChatSyncOptions{
 		saveMMPostID: func(postID string) {
 			update.MMPostID = postID
 		},
@@ -64,8 +64,8 @@ func (e *AgentToolExecutor) postCommandUpdate(ctx context.Context, investigation
 	})
 }
 
-func (e *AgentToolExecutor) publishInvestigationPatch(investigationID string) {
-	rec, err := e.alertInvestigationStore.GetAlertInvestigation(context.Background(), investigationID)
+func (e *AgentToolExecutor) publishInvestigationPatch(ctx context.Context, investigationID string) {
+	rec, err := e.alertInvestigationStore.GetAlertInvestigation(ctx, investigationID)
 	if err != nil || rec == nil {
 		logger.Warn("could not reload investigation for patch event", "investigation_id", investigationID, "error", err)
 		return
@@ -77,12 +77,12 @@ func (e *AgentToolExecutor) publishInvestigationPatch(investigationID string) {
 	})
 }
 
-func (e *AgentToolExecutor) publishInvestigationStatusChange(investigationID, newStatus string) {
+func (e *AgentToolExecutor) publishInvestigationStatusChange(ctx context.Context, investigationID, newStatus string) {
 	data := map[string]any{
 		"alert_investigation_id": investigationID,
 		"status":                 newStatus,
 	}
-	if rec, err := e.alertInvestigationStore.GetAlertInvestigation(context.Background(), investigationID); err == nil && rec != nil {
+	if rec, err := e.alertInvestigationStore.GetAlertInvestigation(ctx, investigationID); err == nil && rec != nil {
 		if rec.CompletedAt != nil {
 			data["completed_at"] = rec.CompletedAt.Format(time.RFC3339Nano)
 		}
@@ -127,11 +127,10 @@ func (e *AgentToolExecutor) PublishAgentPresence(agentIDHex string, online bool)
 	})
 }
 
-func (e *AgentToolExecutor) syncOwnerThreadAgentMessage(ownerType, ownerID, senderName, text string) {
+func (e *AgentToolExecutor) syncOwnerThreadAgentMessage(ctx context.Context, ownerType, ownerID, senderName, text string) {
 	if e.chatSync == nil {
 		return
 	}
-	ctx := context.Background()
 
 	switch ownerType {
 	case store.ThreadOwnerAlert:
@@ -146,7 +145,7 @@ func (e *AgentToolExecutor) syncOwnerThreadAgentMessage(ownerType, ownerID, send
 		for i := len(investigations) - 1; i >= 0; i-- {
 			inv := investigations[i]
 			if inv.SlackChannelID != "" && inv.SlackThreadTS != "" {
-				e.chatSync.syncAgentMessage("", "", senderName, text, &inv)
+				e.chatSync.syncAgentMessage(ctx, "", "", senderName, text, &inv)
 				return
 			}
 			mmThread := inv.PrimaryThreadID
@@ -155,7 +154,7 @@ func (e *AgentToolExecutor) syncOwnerThreadAgentMessage(ownerType, ownerID, send
 			}
 			if mmThread != "" {
 				mmMsg := fmt.Sprintf("**%s**: %s", senderName, text)
-				e.chatSync.PostToMattermostThread(mmThread, mmMsg)
+				e.chatSync.PostToMattermostThread(ctx, mmThread, mmMsg)
 				return
 			}
 		}
@@ -172,7 +171,7 @@ func (e *AgentToolExecutor) syncOwnerThreadAgentMessage(ownerType, ownerID, send
 				Username: senderName,
 				IconURL:  fmt.Sprintf("https://api.dicebear.com/9.x/bottts-neutral/png?seed=%s&size=128", url.QueryEscape(senderName)),
 			}
-			e.chatSync.PostToSlackThreadWithCustomize(inc.SlackChannelID, "", slMsg, &cz)
+			e.chatSync.PostToSlackThreadWithCustomize(ctx, inc.SlackChannelID, "", slMsg, &cz)
 		}
 	}
 }

@@ -1,6 +1,7 @@
 package agent_test
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -20,7 +21,7 @@ func TestUserSlackThreadMessageUsesLinkedSlackIdentity(t *testing.T) {
 	}
 
 	cs := &agent.ChatSyncService{}
-	msg, customize := cs.UserSlackThreadMessage(user, "**checking** logs")
+	msg, customize := cs.UserSlackThreadMessage(context.Background(), user, "**checking** logs")
 	if msg != "*checking* logs" {
 		t.Fatalf("message = %q, want converted Slack mrkdwn without sender prefix", msg)
 	}
@@ -43,7 +44,7 @@ func TestUserSlackThreadMessageFallsBackWithoutLinkedSlackIdentity(t *testing.T)
 	}
 
 	cs := &agent.ChatSyncService{}
-	msg, customize := cs.UserSlackThreadMessage(user, "checking logs")
+	msg, customize := cs.UserSlackThreadMessage(context.Background(), user, "checking logs")
 	if msg != "*Ada Lovelace*: checking logs" {
 		t.Fatalf("message = %q, want prefixed fallback", msg)
 	}

@@ -48,7 +48,7 @@ For alert, investigation, incident, scheduler, RabbitMQ, Valkey, or lifecycle ch
 
 - Store interfaces and records live in `apps/backend/store`.
 - PostgreSQL stores embed `pgStoreBase` and are registered in `store/registry.go`.
-- Use `pgctx`, `rollbackTx`, `handleQueryErr`, duplicate-key helpers, limit/skip extraction, sort parsing, and the `nextSeq` sequence helper from `pg_helpers.go`.
+- Use `pgctx`/`pgctxLong`, `handleQueryErr`, duplicate-key helpers, limit/skip extraction, sort parsing, and the `nextSeq` sequence helper from `pg_helpers.go`.
 - Use Bun query builders and bound parameters; never concatenate values into SQL strings.
 - Use transactions only when multiple writes must be atomic.
 

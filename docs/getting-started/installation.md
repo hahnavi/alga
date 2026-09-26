@@ -16,28 +16,27 @@ cd alga
 docker compose up -d
 ```
 
-`setup.sh` generates `ENCRYPTION_KEYS` and `SECRET_PEPPER` in `apps/backend/.env`. The admin account is **not** seeded automatically: on first boot with no users in the database, open `http://localhost:3000` and complete the setup wizard to create the initial admin account (email, password, and full name).
+`setup.sh` creates your secret passwords automatically — you don't need to edit anything. Then open `http://localhost:3000` and fill in the setup wizard to create your admin account (email, password, and full name). You only do this once.
 
-### Services
+### What gets installed
 
-| Service    | Image                            | Port        | Purpose                             |
-| ---------- | -------------------------------- | ----------- | ----------------------------------- |
-| `postgres` | pgvector/pgvector:pg18           | 5432        | PostgreSQL database (with pgvector) |
-| `valkey`   | valkey/valkey:9.1-alpine         | 6379        | Sessions, caching, leader election  |
-| `rabbitmq` | rabbitmq:4.3.3-management-alpine | 5672, 15672 | Async message queue                 |
-| `backend`  | ghcr.io/hahnavi/alga-backend     | 8080        | Go API server                       |
-| `frontend` | ghcr.io/hahnavi/alga-frontend    | 3000        | Vue web UI (nginx)                  |
+| Part     | What you see it as          | Opens on  |
+| -------- | --------------------------- | --------- |
+| Database | Stores all your data        | —         |
+| Queue    | Delivers work in background | —         |
+| Alga app | The web pages you click     | Port 3000 |
+| Alga API | Works behind the scenes     | Port 8080 |
 
 Pin a specific release by setting `ALGA_VERSION=v1.2.3` in `.env`.
 
-### Verify
+### Check it's working
 
 ```sh
 docker compose ps
 curl http://localhost:8080/health
 ```
 
-Open `http://localhost:3000` and complete the setup wizard to create the initial admin account. The onboarding wizard then walks you through connecting integrations and configuring routing rules.
+Open `http://localhost:3000` and finish the setup wizard to create your admin account. The next time you log in, a short welcome guide shows you where to connect your tools.
 
 ### Building from Source
 
@@ -49,18 +48,16 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 
 ## Helm (Kubernetes)
 
-The Alga Helm chart is published to GHCR as an OCI artifact at `oci://ghcr.io/hahnavi/charts/alga`. It deploys the backend, frontend, and (by default) bundled PostgreSQL (pgvector), Valkey, and RabbitMQ.
+The chart deploys Alga plus the database, cache, and queue it needs (they're included by default, so you don't need to install them separately).
 
-### Prerequisites
+### What you need to install
 
-- **Kubernetes** cluster with a default StorageClass (for bundled data services)
-- **Helm** 3.8+ (OCI registry support)
+- A **Kubernetes** cluster with storage available
+- **Helm** 3.8+
 
 ### Install
 
-The chart fails closed: `backend.secrets.encryptionKeys`, `backend.secrets.secretPepper`, and a pinned `auth.password` for each enabled bundled service are required.
-
-Put secrets in a values file with owner-only permissions instead of `--set` flags, so they don't land in shell history or process listings:
+The chart needs secret passwords to start — it won't run without them (this keeps your data safe). Save them in a private file rather than typing them on the command line:
 
 ```sh
 (umask 077; cat > alga-values.yaml <<EOF
@@ -87,11 +84,11 @@ helm install alga oci://ghcr.io/hahnavi/charts/alga --version 0.0.6 \
   -f alga-values.yaml
 ```
 
-Keep `alga-values.yaml` out of version control and reuse it for upgrades — the bundled-service passwords must stay stable across releases and retained volumes.
+Keep `alga-values.yaml` private (don't commit it) and reuse it for upgrades — the passwords must stay the same between releases.
 
-### Ingress
+### Internet address
 
-Ingress is enabled by default with host `alga.example.com`. Set your own host by appending these flags to the `helm install` command above (`--set` merges into the default hosts entry, keeping its paths):
+By default Alga uses the address `alga.example.com`. Change it to your own address by adding these flags to the install command above:
 
 ```sh
 helm install alga oci://ghcr.io/hahnavi/charts/alga --version 0.0.6 \
@@ -101,20 +98,20 @@ helm install alga oci://ghcr.io/hahnavi/charts/alga --version 0.0.6 \
   --set 'ingress.tls[0].hosts[0]=alga.your-domain.com'
 ```
 
-To use externally managed data services, set `postgresql.enabled=false`, `valkey.enabled=false`, or `rabbitmq.enabled=false` and provide `backend.secrets.postgresDSN`, `backend.secrets.valkeyAddr`/`valkeyPassword`, or `backend.secrets.rabbitmqURI`. See `deploy/charts/alga/values.yaml` for all options.
+To use your own database, cache, or queue instead of the included ones, set `postgresql.enabled=false`, `valkey.enabled=false`, or `rabbitmq.enabled=false` and give Alga the connection details. See `deploy/charts/alga/values.yaml` for all options.
 
-### Verify
+### Check it's working
 
 ```sh
 kubectl get pods -n alga
 helm status alga -n alga
 ```
 
-Open the ingress host in a browser and complete the setup wizard to create the initial admin account.
+Open the address in your browser and fill in the setup wizard to create your admin account.
 
-## Manual Installation
+## Installing step by step (without Docker)
 
-### Prerequisites
+If you'd rather run each part yourself, you'll need:
 
 - **Go** 1.27+
 - **Node.js** 26+ with **pnpm** 12
@@ -154,7 +151,7 @@ cp apps/frontend/.env.example apps/frontend/.env
 
 Set `VITE_API_BASE_URL` if the backend is on a different host (leave empty for Vite proxy).
 
-4. **Start infrastructure services** (PostgreSQL, Valkey, RabbitMQ).
+4. **Start the database, cache, and queue** from the list above.
 
 5. **Run the backend:**
 
@@ -181,16 +178,16 @@ cd apps/frontend
 pnpm build
 ```
 
-## Production Setup
+## Running in production
 
-### Required Variables
+### Passwords Alga needs
 
-In production (`ENVIRONMENT=production`), Alga requires:
+When running live (`ENVIRONMENT=production`), Alga won't start without its two secret passwords (this protects your data):
 
-- `ENCRYPTION_KEYS` — versioned keyring for AES-256-GCM secret encryption
-- `SECRET_PEPPER` — HMAC pepper for password and token hashing
+- `ENCRYPTION_KEYS` — locks up private data like tokens
+- `SECRET_PEPPER` — scrambles passwords so they can't be read
 
-The admin account is not configured via environment. On first boot with no users in the database, open the UI and complete the setup wizard to create the initial admin. The onboarding wizard then guides you through connecting integrations and configuring routing rules.
+Your admin account is still created in the browser, not here. Open Alga and fill in the setup wizard the first time, then log in — the welcome guide will point you to the right pages.
 
 Generate keys:
 
@@ -206,7 +203,7 @@ export ENCRYPTION_KEYS="1:$(openssl rand -base64 32)"
 
 See [Deployment](/operations/deployment) for Caddy or nginx reverse proxy setup.
 
-### Resource Recommendations
+### How much computer power you need
 
 | Deployment          | CPU     | Memory | Disk   |
 | ------------------- | ------- | ------ | ------ |

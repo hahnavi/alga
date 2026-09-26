@@ -53,7 +53,7 @@ func (s *Server) handleGetHandoff(w http.ResponseWriter, r *http.Request, id str
 
 	uid, err := uuid.Parse(id)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid id")
+		writeError(w, ErrorCodeValidationFailed, "invalid id")
 		return
 	}
 
@@ -101,7 +101,7 @@ func (s *Server) handleSaveHandoffNotes(w http.ResponseWriter, r *http.Request, 
 
 	uid, err := uuid.Parse(id)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid id")
+		writeError(w, ErrorCodeValidationFailed, "invalid id")
 		return
 	}
 
@@ -149,7 +149,7 @@ func (s *Server) handleSaveHandoffNotes(w http.ResponseWriter, r *http.Request, 
 			return
 		}
 	default:
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "field must be outgoing_notes or incoming_notes")
+		writeError(w, ErrorCodeValidationFailed, "field must be outgoing_notes or incoming_notes")
 		return
 	}
 
@@ -170,7 +170,7 @@ func (s *Server) handleAcknowledgeHandoff(w http.ResponseWriter, r *http.Request
 
 	uid, err := uuid.Parse(id)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid id")
+		writeError(w, ErrorCodeValidationFailed, "invalid id")
 		return
 	}
 
@@ -209,7 +209,7 @@ func (s *Server) handleAcknowledgeHandoff(w http.ResponseWriter, r *http.Request
 func (s *Server) handleHandoffRoutes(w http.ResponseWriter, r *http.Request) {
 	suffix := pathID(r, "/api/v1/on-call/handoffs/")
 	if suffix == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing handoff id")
+		writeError(w, ErrorCodeValidationFailed, "missing handoff id")
 		return
 	}
 
@@ -217,7 +217,7 @@ func (s *Server) handleHandoffRoutes(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			s.handlePendingHandoffs(w, r)
 		} else {
-			writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+			writeMethodNotAllowed(w)
 		}
 		return
 	}
@@ -227,7 +227,7 @@ func (s *Server) handleHandoffRoutes(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			s.handleSaveHandoffNotes(w, r, id)
 		} else {
-			writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+			writeMethodNotAllowed(w)
 		}
 		return
 	}
@@ -237,7 +237,7 @@ func (s *Server) handleHandoffRoutes(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			s.handleAcknowledgeHandoff(w, r, id)
 		} else {
-			writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+			writeMethodNotAllowed(w)
 		}
 		return
 	}
@@ -246,7 +246,7 @@ func (s *Server) handleHandoffRoutes(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		s.handleGetHandoff(w, r, suffix)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 

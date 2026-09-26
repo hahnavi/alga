@@ -1,6 +1,7 @@
 package api
 
 import (
+	"strings"
 	"testing"
 
 	"alga/telnyx"
@@ -79,16 +80,16 @@ func TestSplitClientState(t *testing.T) {
 func TestIVRText(t *testing.T) {
 	t.Parallel()
 
-	if got := telnyx.AnnouncementText(7, 2, ""); !contains(got, "7") || !contains(got, "2") {
+	if got := telnyx.AnnouncementText(7, 2, ""); !strings.Contains(got, "7") || !strings.Contains(got, "2") {
 		t.Errorf("AnnouncementText(7,2,\"\") = %q, expected incident+level", got)
 	}
-	if got := telnyx.AcknowledgedText(); !contains(got, "acknowledged") {
+	if got := telnyx.AcknowledgedText(); !strings.Contains(got, "acknowledged") {
 		t.Errorf("AcknowledgedText = %q, expected 'acknowledged'", got)
 	}
-	if got := telnyx.SilencedText(); !contains(got, "silenced") {
+	if got := telnyx.SilencedText(); !strings.Contains(got, "silenced") {
 		t.Errorf("SilencedText = %q, expected 'silenced'", got)
 	}
-	if got := telnyx.PromptText(); !contains(got, "Press 1") {
+	if got := telnyx.PromptText(); !strings.Contains(got, "Press 1") {
 		t.Errorf("PromptText = %q, expected DTMF instructions", got)
 	}
 }
@@ -132,14 +133,14 @@ func TestAnnouncementText_Brief(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			got := telnyx.AnnouncementText(tc.incidentNumber, tc.level, tc.brief)
-			if !contains(got, tc.wantSubstr) {
+			if !strings.Contains(got, tc.wantSubstr) {
 				t.Errorf("AnnouncementText(...) = %q, expected to contain %q", got, tc.wantSubstr)
 			}
-			if tc.notWantSubstr != "" && contains(got, tc.notWantSubstr) {
+			if tc.notWantSubstr != "" && strings.Contains(got, tc.notWantSubstr) {
 				t.Errorf("AnnouncementText(...) = %q, expected NOT to contain %q", got, tc.notWantSubstr)
 			}
 			// Both branches must retain the menu instructions.
-			if !contains(got, "Press 1 to acknowledge") || !contains(got, "Press 2 to silence for one hour") {
+			if !strings.Contains(got, "Press 1 to acknowledge") || !strings.Contains(got, "Press 2 to silence for one hour") {
 				t.Errorf("AnnouncementText(...) = %q, menu instructions missing", got)
 			}
 		})
@@ -153,23 +154,10 @@ func TestGatherText_Brief(t *testing.T) {
 	// menu prompt. The menu prompt appears twice: once at the end of the
 	// announcement and once as PromptText.
 	got := telnyx.GatherText(42, 2, "CPU saturation on api-1")
-	if !contains(got, "CPU saturation on api-1.") {
+	if !strings.Contains(got, "CPU saturation on api-1.") {
 		t.Errorf("GatherText brief missing: %q", got)
 	}
-	if !contains(got, "Incident 42") || !contains(got, "level 2") {
+	if !strings.Contains(got, "Incident 42") || !strings.Contains(got, "level 2") {
 		t.Errorf("GatherText lost incident/level: %q", got)
 	}
-}
-
-func contains(s, sub string) bool {
-	return len(s) >= len(sub) && (s == sub || indexOf(s, sub) >= 0)
-}
-
-func indexOf(s, sub string) int {
-	for i := 0; i+len(sub) <= len(s); i++ {
-		if s[i:i+len(sub)] == sub {
-			return i
-		}
-	}
-	return -1
 }

@@ -1,8 +1,7 @@
-import { ref, watch, type Ref } from "vue";
+import { ref, type Ref } from "vue";
 import {
   api,
   type AlertInvestigationRecord,
-  type AlertRecord,
   type RelatedAlert,
   type RelatedIncident,
 } from "@/lib/api";
@@ -34,7 +33,7 @@ export function useAlertDetailData(alertNumber: Ref<number>) {
   } = useAsyncData(async () => {
     const data = await api.getAlert(alertNumber.value);
     investigation.value = data.alert_investigation ?? null;
-    return data.alert as AlertRecord;
+    return data.alert;
   }, "Failed to load alert");
 
   async function loadRelated() {
@@ -53,21 +52,19 @@ export function useAlertDetailData(alertNumber: Ref<number>) {
     try {
       const data = await api.getAlert(alertNumber.value);
       investigation.value = data.alert_investigation ?? null;
-      return data.alert as AlertRecord;
+      alert.value = data.alert;
+      return data.alert;
     } catch {
+      // Silent by design: SSE-triggered refreshes must not error-toast when
+      // the alert was deleted or the request transiently fails; the next
+      // event or navigation retries.
       return null;
     }
   }
 
-  // Re-fetch related whenever the route's alert number changes.
-  watch(
-    alertNumber,
-    (next) => {
-      if (!Number.isFinite(next)) return;
-      void loadRelated();
-    },
-    { immediate: false },
-  );
+  // The caller owns when related data loads (initial mount + route change +
+  // SSE-triggered refreshes) — both the page's onMounted and its alertNumber
+  // watcher trigger `loadRelated`, so an extra internal watch would double-fetch.
 
   return {
     alert,

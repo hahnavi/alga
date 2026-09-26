@@ -274,7 +274,7 @@ func (s *pgTriageResultStore) Update(ctx context.Context, id string, patch *Tria
 	}
 	uid, err := uuid.Parse(id)
 	if err != nil {
-		return nil, fmt.Errorf("invalid id: %w", err)
+		return nil, fmt.Errorf("%w: %v", ErrInvalidID, err)
 	}
 
 	q := s.db.NewUpdate().Model((*models.TriageResult)(nil)).
@@ -336,7 +336,7 @@ func (s *pgTriageResultStore) Update(ctx context.Context, id string, patch *Tria
 	}
 	n, _ := res.RowsAffected()
 	if n == 0 {
-		return nil, errors.New("triage result not found")
+		return nil, fmt.Errorf("triage result %w", ErrNotFound)
 	}
 
 	// Re-fetch to return the updated record
@@ -350,7 +350,7 @@ func (s *pgTriageResultStore) Update(ctx context.Context, id string, patch *Tria
 func (s *pgTriageResultStore) Get(ctx context.Context, id string) (*TriageResultRecord, error) {
 	uid, err := uuid.Parse(id)
 	if err != nil {
-		return nil, fmt.Errorf("invalid id: %w", err)
+		return nil, fmt.Errorf("%w: %v", ErrInvalidID, err)
 	}
 	var tr models.TriageResult
 	err = s.db.NewSelect().Model(&tr).Where("id = ?", uid).Scan(ctx)

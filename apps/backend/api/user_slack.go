@@ -40,7 +40,7 @@ func newUserSlackHandler(cfg *config.Config, userStore store.UserStore, integrat
 
 func (h *userSlackHandler) handleAuthorize(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -51,13 +51,13 @@ func (h *userSlackHandler) handleAuthorize(w http.ResponseWriter, r *http.Reques
 	}
 
 	if !h.isWorkspaceConnected() {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "Slack workspace is not connected")
+		writeError(w, ErrorCodeValidationFailed, "Slack workspace is not connected")
 		return
 	}
 
 	clientID, _ := h.getAppCredentials()
 	if clientID == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "Slack app client ID is not configured")
+		writeError(w, ErrorCodeValidationFailed, "Slack app client ID is not configured")
 		return
 	}
 
@@ -87,7 +87,7 @@ func (h *userSlackHandler) handleAuthorize(w http.ResponseWriter, r *http.Reques
 
 func (h *userSlackHandler) handleCallback(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -195,7 +195,7 @@ func (h *userSlackHandler) handleCallback(w http.ResponseWriter, r *http.Request
 
 func (h *userSlackHandler) handleDisconnect(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 

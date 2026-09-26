@@ -52,13 +52,13 @@ func (s *Server) handleWebhookTokens(w http.ResponseWriter, r *http.Request) {
 		})
 		writeData(w, http.StatusCreated, serializeWebhookToken(*record, false))
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
 func (s *Server) handleWebhookTokenByID(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 	idHex := pathID(r, "/api/v1/webhook-tokens/")
@@ -68,7 +68,7 @@ func (s *Server) handleWebhookTokenByID(w http.ResponseWriter, r *http.Request) 
 func (s *Server) revokeTokenByID(w http.ResponseWriter, r *http.Request, idHex string, revokeFn func(uuid.UUID) error, kind string) {
 	id, err := uuid.Parse(idHex)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid token id")
+		writeError(w, ErrorCodeValidationFailed, "invalid token id")
 		return
 	}
 

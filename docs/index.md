@@ -24,7 +24,7 @@ features:
       src: /icons/alerts.svg
       alt: ""
     title: Alert Ingestion & Dedup
-    details: Receive alerts from Grafana, Prometheus, or any webhook source. Fingerprint-based deduplication with partial unique database indexes guarantees one open alert per issue — no duplicates, no noise.
+    details: Receive alerts from Grafana, Prometheus, or any webhook source. Smart grouping makes sure you get one open alert per problem — no duplicates, no noise.
     link: /core-features/alerts
     linkText: Learn about alerts →
   - icon:
@@ -52,7 +52,7 @@ features:
       src: /icons/memory.svg
       alt: ""
     title: Agent Memory & Knowledge
-    details: A pgvector-backed memory system extracts learnings from completed investigations. Agents recall past solutions via semantic search. Knowledge compounds over time — every incident makes the next one faster.
+    details: A memory system that learns from finished investigations. Helpers remember past fixes and find them when similar problems come up. Knowledge builds over time — every incident makes the next one faster.
     link: /agents/memory
     linkText: How memory works →
   - icon:
@@ -73,7 +73,7 @@ features:
       src: /icons/security.svg
       alt: ""
     title: Secure & Self-Hosted
-    details: Argon2id password hashing, AES-256-GCM envelope encryption, CSRF protection, ASVS Level 2 hardening, and constant-time comparisons. Your data stays on your infrastructure. MIT licensed.
+    details: Strong password protection, encrypted secrets, and hardened logins. Your data stays on your computers. MIT licensed.
     link: /configuration/security
     linkText: Security details →
 ---
@@ -88,11 +88,11 @@ Alga combines four traditionally separate tools into a single platform:
 
 ### 1. Alert Management
 
-Ingest alerts from any webhook source (Grafana, Prometheus, custom scripts). Automatic fingerprint-based deduplication ensures you never get paged twice for the same issue. Alerts are correlated by deployment events and alertname within configurable time windows, then routed to the right destination via first-match rules.
+Ingest alerts from any webhook source (Grafana, Prometheus, custom scripts). Automatic grouping makes sure you never get paged twice for the same issue. Related alerts are bundled together, then sent to the right place by your rules.
 
 ### 2. AI Investigation
 
-Every alert can trigger an autonomous investigation. Alga's scheduler atomically assigns work to an online agent (the native Alga Agent, Hermes, OpenClaw, or a custom SDK agent), which receives the full alert context, queries the knowledge base, searches its own memories of past incidents, and produces a structured root-cause analysis — all visible to operators in real time through investigation threads.
+Every alert can trigger an investigation by an AI helper. Alga hands the work to an available helper (the built-in Alga Agent, Hermes, OpenClaw, or a custom helper), which gets the full alert details, reads your team's notes, remembers similar past incidents, and writes up what it found — all visible to you in real time.
 
 ### 3. Incident Response
 
@@ -106,21 +106,21 @@ Multi-layer schedules with follow-the-sun support, overrides, and structured han
 
 - **Open-source and self-hosted** — MIT licensed, runs on your infrastructure. No per-user pricing, no data leaving your control.
 - **AI that actually investigates** — not just alert routing. Autonomous agents query your knowledge base, search past incidents, and produce structured findings before a human even looks at the alert.
-- **Memory that compounds** — pgvector-backed episodic memory means every resolved investigation makes the next one faster. Agents get smarter the longer they run.
-- **Incident response that's structured** — formal ICS roles, SLA tracking, and automated escalation borrowed from emergency management, not ad-hoc chat rooms.
-- **Deduplication that works** — partial unique indexes at the database level enforce one-open-alert-per-fingerprint. No race conditions, no duplicates, ever.
-- **Built for scale** — Valkey-backed agent presence and leader election, cross-replica SSE fan-out, and a three-level RabbitMQ retry topology with dead-lettering.
+- **Memory that builds up** — every finished investigation teaches Alga something. Helpers get smarter the longer they run.
+- **Response that's organized** — clear roles, response-time goals, and automatic escalation, not ad-hoc chat rooms.
+- **No duplicates** — Alga keeps one open alert per problem, even when many copies arrive at once. No repeats, ever.
+- **Ready to grow** — background workers keep things moving reliably as you add more alerts and helpers.
 
 ## Quick Start
 
 ```bash
 git clone https://github.com/hahnavi/alga.git
 cd alga
-./setup.sh          # generates .env with random secrets
+./setup.sh          # creates secret passwords automatically, nothing to edit
 docker compose up -d
 ```
 
-Open `http://localhost:3000` and complete the setup wizard to create the initial admin account (email, password, and full name). The wizard is only available the first time, before any admin exists.
+Open `http://localhost:3000` and fill in the setup screen to create your admin account (email, full name, and password). You'll only see this screen the first time.
 
 → Full setup in the [Installation Guide](/getting-started/installation) · New here? Start with [Core Concepts](/getting-started/concepts)
 

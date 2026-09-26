@@ -31,8 +31,6 @@ const (
 	IncidentCoordinationSourceMattermost = "mattermost"
 	IncidentCoordinationSourceAgent      = "agent"
 	IncidentCoordinationSourceSystem     = "system"
-
-	MetadataKeyCommsTask = "comms_task"
 )
 
 type IncidentCoordinationMessageRecord struct {

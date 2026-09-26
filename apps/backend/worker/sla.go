@@ -150,6 +150,8 @@ func (w *SLAWorker) publishSLABreach(inc store.IncidentRecord, breachType string
 		return
 	}
 
+	// Broadcast once. The commander used to also receive a targeted copy of
+	// the same event — a duplicate, since Publish reaches every browser.
 	w.ssePublisher.Publish(sse.Event{
 		Type: "incident_sla_breach",
 		Data: map[string]any{
@@ -157,16 +159,6 @@ func (w *SLAWorker) publishSLABreach(inc store.IncidentRecord, breachType string
 			"breach_type":     breachType,
 		},
 	})
-
-	if inc.CommanderID != nil {
-		w.ssePublisher.PublishToUser(inc.CommanderID.String(), sse.Event{
-			Type: "incident_sla_breach",
-			Data: map[string]any{
-				"incident_number": inc.IncidentNumber,
-				"breach_type":     breachType,
-			},
-		})
-	}
 }
 
 func (w *SLAWorker) triggerEscalationOnBreach(ctx context.Context, inc store.IncidentRecord) {

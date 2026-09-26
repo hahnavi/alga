@@ -29,7 +29,7 @@ func (s *Server) handleIncidentStatusUpdates(w http.ResponseWriter, r *http.Requ
 	case http.MethodPost:
 		s.handleCreateStatusUpdate(w, r, incidentID)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -40,7 +40,7 @@ func (s *Server) handleListStatusUpdates(w http.ResponseWriter, r *http.Request,
 	limit, skip := parseLimitSkip(r, 50)
 	incidentNumber, err := strconv.ParseInt(incidentID, 10, 64)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid incident number")
+		writeError(w, ErrorCodeValidationFailed, "invalid incident number")
 		return
 	}
 	messages, err := s.incidentCoordinationStore.ListMessagesByKind(
@@ -63,17 +63,17 @@ func (s *Server) handleCreateStatusUpdate(w http.ResponseWriter, r *http.Request
 	}
 	incidentNumber, err := strconv.ParseInt(incidentID, 10, 64)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid incident number")
+		writeError(w, ErrorCodeValidationFailed, "invalid incident number")
 		return
 	}
 	statusLevel := strings.TrimSpace(req.StatusLevel)
 	if statusLevel == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "status_level is required")
+		writeError(w, ErrorCodeValidationFailed, "status_level is required")
 		return
 	}
 	body := strings.TrimSpace(req.Body)
 	if body == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "body is required")
+		writeError(w, ErrorCodeValidationFailed, "body is required")
 		return
 	}
 	user := userFromContext(r.Context())
@@ -91,7 +91,7 @@ func (s *Server) handleCreateStatusUpdate(w http.ResponseWriter, r *http.Request
 	)
 	if err != nil {
 		if errors.Is(err, store.ErrInvalidStatusLevel) {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid status_level: must be investigating, identified, mitigated, monitoring, or resolved")
+			writeError(w, ErrorCodeValidationFailed, "invalid status_level: must be investigating, identified, mitigated, monitoring, or resolved")
 			return
 		}
 		writeInternalError(w, err, "failed to create status update")

@@ -155,7 +155,7 @@ func (s *pgOIDCProviderStore) UpdateProvider(ctx context.Context, id uuid.UUID, 
 		return nil, fmt.Errorf("failed to update oidc provider: %w", err)
 	}
 	if n == 0 {
-		return nil, errors.New("oidc provider not found")
+		return nil, fmt.Errorf("oidc provider %w", ErrNotFound)
 	}
 
 	// Reload the updated record.
@@ -378,7 +378,7 @@ func (s *pgOIDCIdentityStore) Delete(ctx context.Context, id uuid.UUID) error {
 		return fmt.Errorf("failed to delete oidc identity: %w", err)
 	}
 	if n == 0 {
-		return errors.New("oidc identity not found")
+		return fmt.Errorf("oidc identity %w", ErrNotFound)
 	}
 	return nil
 }

@@ -793,7 +793,6 @@ onUnmounted(() => {
                   :can-write="canWrite"
                   :can-delete="canDelete"
                   :can-create-incident="false"
-                  :show-ack-button="alert.status === 'firing' && !alert.acknowledged"
                   icon="horizontal"
                   @resolve="resolveAlert(alert)"
                   @delete="confirmDelete(alert)"

@@ -232,35 +232,6 @@ export const incidentDetailSchema = z.object({ incident: incidentRecordSchema })
 // rather than corrupting UI state.
 // ---------------------------------------------------------------------------
 
-// `notification_new` — see apps/backend/api/notification.go (test-send path
-// ships the full record, optionally wrapped in `{notification}`).
-export const notificationRecordSchema = z
-  .object({
-    id: z.string(),
-    user_id: z.string(),
-    type: z.string(),
-    title: z.string(),
-    message: z.string(),
-    read: z.boolean(),
-    resource_type: z.string(),
-    resource_id: z.string(),
-    triggered_by_user_id: z.string().optional(),
-    triggered_by_display_name: z.string().optional(),
-    body: z.string().optional(),
-    url: z.string().optional(),
-    severity: z.string().optional(),
-    actor_id: z.string().optional(),
-    actor_name: z.string().optional(),
-    created_at: z.string(),
-  })
-  .passthrough();
-
-export const notificationNewEventSchema = z
-  .object({
-    notification: notificationRecordSchema.optional(),
-  })
-  .passthrough();
-
 // `notification` — see apps/backend/worker/notification_dispatch.go. Emitted
 // per dispatch-created record; the payload omits the owning `user_id`
 // (implied by the targeted stream) and `read` (always false when born).

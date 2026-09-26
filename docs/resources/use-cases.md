@@ -13,24 +13,13 @@ Alga is a flexible, open-source alert management and incident response platform 
 
 **Problem:** Your infrastructure monitoring tools (Prometheus, Grafana, Datadog, etc.) generate alerts across multiple channels, making it hard to maintain visibility and consistency.
 
-**Alga Solution:** Alga provides a unified webhook endpoint that ingests alerts from any source, normalizes them, and routes them based on configurable rules.
+**Alga Solution:** Alga provides a unified webhook endpoint that ingests alerts from any source, normalizes them, and routes them based on configurable rules. Set these up in the **Routes** page — the sketch below is illustrative, not literal config:
 
 ```yaml
-# Example: Route Prometheus alerts
-rules:
-  - name: Critical Database Alerts
-    conditions:
-      - field: labels.alertname
-        operator: contains
-        value: database
-      - field: labels.severity
-        operator: equals
-        value: critical
-    destinations:
-      - channel: "#incidents-db"
-        provider: slack
-      - channel: "ops-team"
-        provider: mattermost
+# Illustrative routing sketch (configure in Routes, not YAML):
+# - name: Critical Database Alerts
+#   when: alertname contains "database" AND severity equals "critical"
+#   send to: Slack #incidents-db + Mattermost ops-team
 ```
 
 ### Intelligent Alert Routing
@@ -102,7 +91,7 @@ Alerts sharing the same `deployment`, `statefulset`, `daemonset`, or `job` (comb
 **Alga Solution:** Alga implements a formal incident lifecycle:
 
 ```
-open → active → mitigated → resolved → closed
+detected → triaging → active → mitigated → resolved → closed
 ```
 
 (with `cancelled` and `reopened` branches)
@@ -173,7 +162,7 @@ Escalation stops automatically when the incident is acknowledged.
   - **Scribe** — Timeline documentation, decisions, and action items
   - **Liaison** — Stakeholder communication and status updates
 
-- **Role-based permissions:** Each ICS role has specific capabilities within the incident (e.g., only the IC can declare an incident resolved, only the Scribe can create timeline entries)
+- **Role-based permissions:** Each ICS role has its usual responsibilities (by convention the IC declares the incident resolved and the Scribe keeps the timeline current) — the backend enforces which agent tools each role may call (see [Agent API](/agents/agent-api))
 
 - **IC handoffs:** When the Incident Commander's shift ends, Alga facilitates a structured handoff — transferring command authority to the next on-call responder with full context
 
@@ -187,7 +176,7 @@ Escalation stops automatically when the incident is acknowledged.
 
 **Problem:** Alert volume is too high for manual investigation, leading to slow response times.
 
-**Alga Solution:** SRE agents (powered by Hermes + OpenClaw) automatically investigate alerts:
+**Alga Solution:** SRE agents (the built-in Alga Agent, Hermes, or OpenClaw) automatically investigate alerts:
 
 - **Triage:** Classify alert severity and impact
 - **Diagnosis:** Analyze logs, metrics, and recent changes
@@ -198,18 +187,19 @@ Escalation stops automatically when the incident is acknowledged.
 
 **Problem:** Complex incidents require knowledge that spans multiple systems and teams.
 
-**Alga Solution:** Agents can ask each other for help via peer-ask:
+**Alga Solution:** Agents can ask each other for help via peer-ask — one agent sends a question, another replies over the live stream:
 
-```typescript
-// Agent can request peer assistance
-await agent.peerAsk({
-  topic: "database.performance",
-  context: { query: "slow_query_123" },
-  urgency: "high",
-});
+```bash
+POST /api/v1/agent/peer-ask
+Authorization: Bearer alga_agent_...
+
+{
+  "to_agent_id": "550e8400-e29b-41d4-a716-446655440000",
+  "question": "Have you seen this connection pool leak in auth-service before?"
+}
 ```
 
-This enables distributed problem-solving across your agent fleet.
+This enables distributed problem-solving across your agent fleet — the built-in Alga Agent, Hermes, and OpenClaw agents can all ask each other.
 
 ### Memory and Knowledge Integration
 
@@ -234,7 +224,7 @@ This enables distributed problem-solving across your agent fleet.
 
 - **Label-based selectors:** Playbooks are matched using flexible label selectors (exact match, contains, regex) on alert labels like `alertname`, `service`, `severity`, `namespace`, or any custom label. This means playbooks can be broad ("all database alerts") or specific ("critical replication lag on the payments database").
 
-- **AI agent integration:** When an AI agent (Hermes/OpenClaw) receives an investigation with an attached playbook, it follows the defined steps rather than diagnosing from scratch. This dramatically reduces investigation time for known alert patterns.
+- **AI agent integration:** When an AI agent (the built-in Alga Agent, Hermes, or OpenClaw) receives an investigation with an attached playbook, it follows the defined steps rather than diagnosing from scratch. This dramatically reduces investigation time for known alert patterns.
 
 - **Continuous improvement:** After each playbook execution, teams can review the outcome, refine steps, and add new playbooks based on recurring patterns identified through the knowledge base and memories.
 

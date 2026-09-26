@@ -1,90 +1,48 @@
 ---
-title: On-Call Handoffs
-description: Structured shift handoffs with outgoing/incoming notes, incident summaries, and acknowledgment — plus pager-load metrics for balancing the load.
+title: Shift Handoffs
+description: How outgoing and incoming on-call hand off the pager with notes and acknowledgment.
 ---
 
-# On-Call Handoffs
+# Shift Handoffs
 
-Alga tracks on-call shift handoffs (`HandoffRecord`) with structured notes and acknowledgment to ensure continuity during shift transitions.
+> This page is about **on-call shift handoffs** — passing the pager from one shift to the next. It is not about swapping the incident commander during an incident (to rotate incident roles, end one role slot and assign a replacement on the incident itself).
 
-## How Handoffs Work
+When one on-call shift ends and another begins, Alga tracks the handover so context doesn't get lost.
+
+## How It Works
 
 ```
-Shift Ending → Outgoing Notes → Handoff Created (pending) → Incoming Acknowledges → acknowledged
+Shift ending → outgoing leaves notes → handoff waiting → incoming acknowledges → done
 ```
 
-1. An on-call shift ends and the next responder takes over
-2. The outgoing on-call saves outgoing notes (open issues, context, pending items)
-3. The incoming on-call saves incoming notes and acknowledges the handoff
-4. Each step is recorded in the audit log for traceability
+1. The person ending their shift writes **outgoing notes**: open issues, things to watch, anything the next person needs to know.
+2. The person starting their shift writes **incoming notes** and clicks **Acknowledge**.
+3. Each step is logged so you can see who handed off to whom and when.
 
-## Handoff Record
+Only the outgoing person can edit outgoing notes, and only the incoming person can acknowledge.
 
-| Field                      | Description                                  |
-| -------------------------- | -------------------------------------------- |
-| `schedule_id`              | The on-call schedule this handoff belongs to |
-| `outgoing_user_id`         | User ending their shift                      |
-| `incoming_user_id`         | User starting their shift                    |
-| `handoff_at`               | When the handoff occurs                      |
-| `status`                   | `pending` or `acknowledged`                  |
-| `outgoing_notes`           | Notes from the outgoing on-call              |
-| `incoming_notes`           | Notes from the incoming on-call              |
-| `incoming_acknowledged_at` | When the incoming on-call acknowledged       |
-| `incident_summary`         | Snapshot of active incidents at handoff time |
+## What You Click
 
-## API Endpoints
+- **Outgoing:** open the handoff, write your notes, save.
+- **Incoming:** open your pending handoff, add your notes, click **Acknowledge**.
 
-| Method | Path                                        | Auth    | Permission     | Description                                |
-| ------ | ------------------------------------------- | ------- | -------------- | ------------------------------------------ |
-| `GET`  | `/api/v1/on-call/handoffs`                  | Session | `oncall:read`  | List handoffs                              |
-| `GET`  | `/api/v1/on-call/handoffs/pending`          | Session | `oncall:read`  | List pending handoffs for the current user |
-| `GET`  | `/api/v1/on-call/handoffs/{id}`             | Session | `oncall:read`  | Get handoff details                        |
-| `POST` | `/api/v1/on-call/handoffs/{id}/notes`       | Session | `oncall:write` | Save handoff notes                         |
-| `POST` | `/api/v1/on-call/handoffs/{id}/acknowledge` | Session | `oncall:write` | Acknowledge handoff                        |
+Pending handoffs for you are surfaced prominently so nothing slips.
 
-### Saving Notes
+## Pager Load
 
-The notes endpoint takes a `field` (`outgoing_notes` or `incoming_notes`) and the `notes` text. Ownership is enforced: only the outgoing user can save outgoing notes, and only the incoming user can save incoming notes.
+To check if the load is fair, open the pager metrics view. Pick a schedule and a date range to see per-shift stats: how many alerts fired on each shift, how many were acknowledged or missed, and average time to acknowledge.
 
-```sh
-curl -X POST http://localhost:8080/api/v1/on-call/handoffs/{id}/notes \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "field": "outgoing_notes",
-    "notes": "Two open investigations: DB conn pool (#4512) and API latency (#4513). DB team is engaged on the pool issue. No active incidents."
-  }'
-```
+You can also group by person to compare load across responders.
 
-### Acknowledging a Handoff
+## Tips
 
-Only the incoming user can acknowledge. Acknowledging sets the status to `acknowledged` and stamps `incoming_acknowledged_at`. Save incoming notes first via the notes endpoint.
-
-```sh
-curl -X POST http://localhost:8080/api/v1/on-call/handoffs/{id}/acknowledge \
-  -H "Authorization: Bearer $TOKEN"
-```
-
-## Pager Load Metrics
-
-Track on-call burden with shift-level metrics to identify overloaded rotations and ensure fair load distribution:
-
-| Method | Path                      | Auth    | Permission    | Description                  |
-| ------ | ------------------------- | ------- | ------------- | ---------------------------- |
-| `GET`  | `/api/v1/on-call/metrics` | Session | `oncall:read` | Pager load metrics per shift |
-
-Metrics can be filtered by `schedule_id`, `user_id`, and date range.
-
-## Best Practices
-
-- **Always write outgoing notes** with open issues, ongoing investigations, and any context the next on-call needs
-- **Acknowledge handoffs promptly** to confirm continuity and signal readiness
-- **Review pager load metrics** regularly to identify overloaded on-call rotations
-- **Use overrides** for planned absences rather than informal swaps — overrides are tracked and auditable
-- **Keep notes concise** — focus on actionable items, not exhaustive incident histories
+- Always leave outgoing notes — short and actionable beats long and exhaustive.
+- Acknowledge promptly so everyone knows the pager is covered.
+- Use time-off overrides for planned absences instead of informal swaps.
+- Check pager load regularly to spot overloaded rotations.
 
 ## See Also
 
-- [On-Call Schedules](/on-call/schedules) — creating and managing rotation schedules
-- [Escalation Policies](/on-call/escalation-policies) — configuring multi-tier escalation
-- [ICS Roles](/incident-management/ics-roles) — incident command role assignments
+- [On-Call Schedules](/on-call/schedules) — rotas, layers, and overrides
+- [Escalation Policies](/on-call/escalation-policies) — who gets paged and when
+- [ICS Roles](/incident-management/ics-roles) — incident commander and responders (different from shift handoffs)

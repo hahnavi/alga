@@ -140,6 +140,12 @@ func (c *Client) ZRem(ctx context.Context, key, member string) error {
 	return c.client.Do(ctx, c.client.B().Zrem().Key(key).Member(member).Build()).Error()
 }
 
+// ZScore returns the score of a member in a sorted set. The error is non-nil
+// when the member or key does not exist, or the operation fails.
+func (c *Client) ZScore(ctx context.Context, key, member string) (float64, error) {
+	return c.client.Do(ctx, c.client.B().Zscore().Key(key).Member(member).Build()).ToFloat64()
+}
+
 // ZRangeByScore returns members with scores between min and max (inclusive).
 // Uses "-inf" for negative infinity and Unix timestamp for max.
 func (c *Client) ZRangeByScore(ctx context.Context, key string, min, max float64) ([]string, error) {

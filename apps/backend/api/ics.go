@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"alga/ics"
+	"alga/incident"
 	"alga/rbac"
 	"alga/store"
 
@@ -220,7 +221,7 @@ func (s *Server) icsDocAdapter() *icsDocumentStoreAdapter {
 func (s *Server) handleICSRoles(w http.ResponseWriter, r *http.Request) {
 	incidentID := strings.TrimSuffix(pathID(r, "/api/v1/incidents/"), "/ics/roles")
 	if incidentID == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing incident id")
+		writeError(w, ErrorCodeValidationFailed, "missing incident id")
 		return
 	}
 	switch r.Method {
@@ -229,7 +230,7 @@ func (s *Server) handleICSRoles(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		s.handleAssignICSRole(w, r, incidentID)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -237,12 +238,12 @@ func (s *Server) handleICSRoleRoutes(w http.ResponseWriter, r *http.Request) {
 	suffix := pathID(r, "/api/v1/incidents/")
 	parts := strings.SplitN(suffix, "/ics/roles/", 2)
 	if len(parts) != 2 || parts[0] == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid URL")
+		writeError(w, ErrorCodeValidationFailed, "invalid URL")
 		return
 	}
 	roleID, err := uuid.Parse(parts[1])
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid role assignment id")
+		writeError(w, ErrorCodeValidationFailed, "invalid role assignment id")
 		return
 	}
 	switch r.Method {
@@ -251,7 +252,7 @@ func (s *Server) handleICSRoleRoutes(w http.ResponseWriter, r *http.Request) {
 	case http.MethodDelete:
 		s.handleEndICSRole(w, r, parts[0], roleID)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -293,19 +294,19 @@ func (s *Server) handleAssignICSRole(w http.ResponseWriter, r *http.Request, inc
 		return
 	}
 	if req.RoleType == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "role_type is required")
+		writeError(w, ErrorCodeValidationFailed, "role_type is required")
 		return
 	}
 	if req.UserID == "" && req.AgentTokenID == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "user_id or agent_token_id is required")
+		writeError(w, ErrorCodeValidationFailed, "user_id or agent_token_id is required")
 		return
 	}
 	if req.UserID != "" && req.AgentTokenID != "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "provide either user_id or agent_token_id, not both")
+		writeError(w, ErrorCodeValidationFailed, "provide either user_id or agent_token_id, not both")
 		return
 	}
 	if !ics.ValidRoleType(ics.RoleType(req.RoleType)) {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid role_type")
+		writeError(w, ErrorCodeValidationFailed, "invalid role_type")
 		return
 	}
 
@@ -315,13 +316,13 @@ func (s *Server) handleAssignICSRole(w http.ResponseWriter, r *http.Request, inc
 	if req.AgentTokenID != "" {
 		atid, err := uuid.Parse(req.AgentTokenID)
 		if err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid agent_token_id")
+			writeError(w, ErrorCodeValidationFailed, "invalid agent_token_id")
 			return
 		}
 		record, err := rm.AssignAgentRole(r.Context(), incidentNumber, ics.RoleType(req.RoleType), atid, nil, req.ScopeDescription)
 		if err != nil {
 			if errors.Is(err, ics.ErrRoleNotAssignable) {
-				writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, err.Error())
+				writeError(w, ErrorCodeValidationFailed, err.Error())
 				return
 			}
 			if errors.Is(err, store.ErrAgentNotFoundInactive) {
@@ -329,7 +330,7 @@ func (s *Server) handleAssignICSRole(w http.ResponseWriter, r *http.Request, inc
 				return
 			}
 			if errors.Is(err, store.ErrAgentCapabilityMismatch) {
-				writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, err.Error())
+				writeError(w, ErrorCodeValidationFailed, err.Error())
 				return
 			}
 			writeInternalError(w, err, "failed to assign agent ICS role")
@@ -348,13 +349,13 @@ func (s *Server) handleAssignICSRole(w http.ResponseWriter, r *http.Request, inc
 
 	uid, err := uuid.Parse(req.UserID)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid user_id")
+		writeError(w, ErrorCodeValidationFailed, "invalid user_id")
 		return
 	}
 	record, err := rm.AssignRole(r.Context(), incidentNumber, ics.RoleType(req.RoleType), uid, nil, req.ScopeDescription)
 	if err != nil {
 		if errors.Is(err, ics.ErrRoleNotAssignable) {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, err.Error())
+			writeError(w, ErrorCodeValidationFailed, err.Error())
 			return
 		}
 		writeInternalError(w, err, "failed to assign ICS role")
@@ -404,7 +405,7 @@ func (s *Server) handleUpdateICSRole(w http.ResponseWriter, r *http.Request, inc
 	}
 	scope := req.ScopeDescription
 	if found.UserID == nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "cannot update agent-assigned role via this endpoint")
+		writeError(w, ErrorCodeValidationFailed, "cannot update agent-assigned role via this endpoint")
 		return
 	}
 	// Scope updates edit the active assignment in place; re-assigning would
@@ -449,7 +450,7 @@ func (s *Server) handleEndICSRole(w http.ResponseWriter, r *http.Request, incide
 		req.EndedReason = string(ics.EndReasonReplaced)
 	}
 	if !ics.ValidEndReason(ics.EndReason(req.EndedReason)) {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "unknown ended_reason")
+		writeError(w, ErrorCodeValidationFailed, "unknown ended_reason")
 		return
 	}
 	if err := s.icsRoleStore.EndRole(r.Context(), roleID, ics.EndReason(req.EndedReason)); err != nil {
@@ -467,7 +468,7 @@ func (s *Server) handleEndICSRole(w http.ResponseWriter, r *http.Request, incide
 
 func (s *Server) handleICSDocument(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 	if !s.checkPermission(w, r, rbac.IncidentsRead) {
@@ -482,7 +483,7 @@ func (s *Server) handleICSDocument(w http.ResponseWriter, r *http.Request) {
 	suffix := pathID(r, "/api/v1/incidents/")
 	incidentID := strings.TrimSuffix(strings.TrimSuffix(suffix, "/ics/document"), "/ics/document/")
 	if incidentID == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing incident id")
+		writeError(w, ErrorCodeValidationFailed, "missing incident id")
 		return
 	}
 	sections, err := s.incidentDocumentStore.GetAllSections(r.Context(), mustParseIncidentNumber(incidentID))
@@ -495,7 +496,7 @@ func (s *Server) handleICSDocument(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleICSDocumentRoutes(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 	if !s.checkPermission(w, r, rbac.IncidentsWrite) {
@@ -510,12 +511,12 @@ func (s *Server) handleICSDocumentRoutes(w http.ResponseWriter, r *http.Request)
 	suffix := pathID(r, "/api/v1/incidents/")
 	parts := strings.SplitN(suffix, "/ics/document/", 2)
 	if len(parts) != 2 || parts[0] == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid URL")
+		writeError(w, ErrorCodeValidationFailed, "invalid URL")
 		return
 	}
 	section := ics.DocumentSection(parts[1])
 	if !ics.ValidDocumentSection(section) {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid document section")
+		writeError(w, ErrorCodeValidationFailed, "invalid document section")
 		return
 	}
 	var req struct {
@@ -548,7 +549,7 @@ func (s *Server) handleICSDocumentRoutes(w http.ResponseWriter, r *http.Request)
 
 func (s *Server) handleBeginTriage(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 	if !s.checkPermission(w, r, rbac.IncidentsCommand) {
@@ -560,7 +561,7 @@ func (s *Server) handleBeginTriage(w http.ResponseWriter, r *http.Request) {
 	suffix := pathID(r, "/api/v1/incidents/")
 	incidentID := strings.TrimSuffix(suffix, "/begin-triage")
 	if incidentID == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing incident id")
+		writeError(w, ErrorCodeValidationFailed, "missing incident id")
 		return
 	}
 	record, ok := s.getIncidentOrError(w, r, incidentID)
@@ -568,10 +569,10 @@ func (s *Server) handleBeginTriage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if record.Status != "detected" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "incident must be in 'detected' status to begin triage")
+		writeError(w, ErrorCodeValidationFailed, "incident must be in 'detected' status to begin triage")
 		return
 	}
-	if err := s.incidentStore.TransitionIncidentStatus(r.Context(), mustParseIncidentNumber(incidentID), []string{"detected"}, "triaging"); err != nil {
+	if err := s.incidentStore.TransitionIncidentStatus(r.Context(), mustParseIncidentNumber(incidentID), incident.ActionSources("begin-triage"), incident.ActionTarget("begin-triage")); err != nil {
 		if errors.Is(err, store.ErrIncidentStatusConflict) {
 			writeConflict(w, "incident status changed concurrently")
 			return
@@ -594,7 +595,7 @@ func (s *Server) handleBeginTriage(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handlePromote(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 	if !s.checkPermission(w, r, rbac.IncidentsCommand) {
@@ -606,7 +607,7 @@ func (s *Server) handlePromote(w http.ResponseWriter, r *http.Request) {
 	suffix := pathID(r, "/api/v1/incidents/")
 	incidentID := strings.TrimSuffix(suffix, "/promote")
 	if incidentID == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing incident id")
+		writeError(w, ErrorCodeValidationFailed, "missing incident id")
 		return
 	}
 	record, ok := s.getIncidentOrError(w, r, incidentID)
@@ -614,10 +615,10 @@ func (s *Server) handlePromote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if record.Status != "triaging" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "incident must be in 'triaging' status to promote")
+		writeError(w, ErrorCodeValidationFailed, "incident must be in 'triaging' status to promote")
 		return
 	}
-	if err := s.incidentStore.TransitionIncidentStatus(r.Context(), mustParseIncidentNumber(incidentID), []string{"triaging"}, "active"); err != nil {
+	if err := s.incidentStore.TransitionIncidentStatus(r.Context(), mustParseIncidentNumber(incidentID), incident.ActionSources("promote"), incident.ActionTarget("promote")); err != nil {
 		if errors.Is(err, store.ErrIncidentStatusConflict) {
 			writeConflict(w, "incident status changed concurrently")
 			return

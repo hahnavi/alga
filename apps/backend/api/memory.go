@@ -36,7 +36,7 @@ func (s *Server) handleMemories(w http.ResponseWriter, r *http.Request) {
 		}
 		s.createMemory(w, r)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -48,7 +48,7 @@ func (s *Server) handleMemoryByID(w http.ResponseWriter, r *http.Request) {
 	idStr = strings.TrimSuffix(idStr, "/")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid memory id")
+		writeError(w, ErrorCodeValidationFailed, "invalid memory id")
 		return
 	}
 	switch r.Method {
@@ -72,7 +72,7 @@ func (s *Server) handleMemoryByID(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if strings.TrimSpace(req.Content) == "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "content is required")
+			writeError(w, ErrorCodeValidationFailed, "content is required")
 			return
 		}
 		out, err := s.memorySvc.Update(r.Context(), id, req.Content)
@@ -92,7 +92,7 @@ func (s *Server) handleMemoryByID(w http.ResponseWriter, r *http.Request) {
 		logger.InfoCtx(r.Context(), "memory deleted", "component", "api", "memory_id", id.String())
 		writeStatus(w, "deleted")
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -130,7 +130,7 @@ func (s *Server) createMemory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.TrimSpace(req.Content) == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "content is required")
+		writeError(w, ErrorCodeValidationFailed, "content is required")
 		return
 	}
 

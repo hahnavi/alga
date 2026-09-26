@@ -64,7 +64,7 @@ func (s *Server) handleAlertResolve(w http.ResponseWriter, r *http.Request, fing
 	}
 	if err := s.alertStore.ResolveAlertByUser(fingerprint, a.actor); err != nil {
 		if errors.Is(err, store.ErrAlertNotFiring) {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "alert is not firing or does not exist")
+			writeError(w, ErrorCodeValidationFailed, "alert is not firing or does not exist")
 			return
 		}
 		writeInternalError(w, err, "failed to resolve alert")
@@ -111,7 +111,7 @@ func (s *Server) handleAlertReopen(w http.ResponseWriter, r *http.Request, finge
 	ev := store.AlertEventWithActor("reopened", time.Now(), a.actor)
 	if err := s.alertStore.ReopenAlert(fingerprint, ev); err != nil {
 		if errors.Is(err, store.ErrAlertNotResolved) {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "alert is not resolved or does not exist")
+			writeError(w, ErrorCodeValidationFailed, "alert is not resolved or does not exist")
 			return
 		}
 		writeInternalError(w, err, "failed to reopen alert")
@@ -246,7 +246,7 @@ func (s *Server) handleAlerts(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		s.handleCreateAlert(w, r)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -321,39 +321,39 @@ func (s *Server) handleCreateAlert(w http.ResponseWriter, r *http.Request) {
 
 	alertname := strings.TrimSpace(req.Alertname)
 	if alertname == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "alertname is required")
+		writeError(w, ErrorCodeValidationFailed, "alertname is required")
 		return
 	}
 	if len(alertname) > manualAlertMaxFieldLen {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "alertname too long")
+		writeError(w, ErrorCodeValidationFailed, "alertname too long")
 		return
 	}
 
 	severity := strings.TrimSpace(req.Severity)
 	if len(severity) > manualAlertMaxFieldLen {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "severity too long")
+		writeError(w, ErrorCodeValidationFailed, "severity too long")
 		return
 	}
 
 	message := strings.TrimSpace(req.Message)
 	description := req.Description
 	if len(message) > manualAlertDescriptionMx {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "message too long")
+		writeError(w, ErrorCodeValidationFailed, "message too long")
 		return
 	}
 	if len(description) > manualAlertDescriptionMx {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "description too long")
+		writeError(w, ErrorCodeValidationFailed, "description too long")
 		return
 	}
 
 	labels, err := sanitizeManualAlertMap(req.Labels, false)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid labels: "+err.Error())
+		writeError(w, ErrorCodeValidationFailed, "invalid labels: "+err.Error())
 		return
 	}
 	annotations, err := sanitizeManualAlertMap(req.Annotations, true)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid annotations: "+err.Error())
+		writeError(w, ErrorCodeValidationFailed, "invalid annotations: "+err.Error())
 		return
 	}
 
@@ -374,7 +374,7 @@ func (s *Server) handleCreateAlert(w http.ResponseWriter, r *http.Request) {
 
 	source := strings.TrimSpace(req.Source)
 	if len(source) > 2048 {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "source URL too long")
+		writeError(w, ErrorCodeValidationFailed, "source URL too long")
 		return
 	}
 
@@ -485,26 +485,26 @@ func (s *Server) writeAlertsQueryResponse(w http.ResponseWriter, r *http.Request
 		writeInternalError(w, err, "failed to query alerts")
 		return
 	}
-	writeData(w, http.StatusOK, records)
+	writeData(w, http.StatusOK, ensureSlice(records))
 }
 
 func (s *Server) handleAlertByNumber(w http.ResponseWriter, r *http.Request) {
 	suffix := pathID(r, "/api/v1/alerts/")
 	if suffix == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing alert number")
+		writeError(w, ErrorCodeValidationFailed, "missing alert number")
 		return
 	}
 
 	// POST /api/v1/alerts/{alert_number}/acknowledge
 	if strings.HasSuffix(suffix, "/acknowledge") {
 		if r.Method != http.MethodPost {
-			writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+			writeMethodNotAllowed(w)
 			return
 		}
 		numStr := strings.TrimSuffix(suffix, "/acknowledge")
 		alertNumber, err := strconv.ParseInt(numStr, 10, 64)
 		if err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid alert number")
+			writeError(w, ErrorCodeValidationFailed, "invalid alert number")
 			return
 		}
 		if !s.checkPermission(w, r, rbac.AlertsWrite) {
@@ -517,13 +517,13 @@ func (s *Server) handleAlertByNumber(w http.ResponseWriter, r *http.Request) {
 	// POST /api/v1/alerts/{alert_number}/resolve
 	if strings.HasSuffix(suffix, "/resolve") {
 		if r.Method != http.MethodPost {
-			writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+			writeMethodNotAllowed(w)
 			return
 		}
 		numStr := strings.TrimSuffix(suffix, "/resolve")
 		alertNumber, err := strconv.ParseInt(numStr, 10, 64)
 		if err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid alert number")
+			writeError(w, ErrorCodeValidationFailed, "invalid alert number")
 			return
 		}
 		if !s.checkPermission(w, r, rbac.AlertsWrite) {
@@ -536,13 +536,13 @@ func (s *Server) handleAlertByNumber(w http.ResponseWriter, r *http.Request) {
 	// POST /api/v1/alerts/{alert_number}/reopen
 	if strings.HasSuffix(suffix, "/reopen") {
 		if r.Method != http.MethodPost {
-			writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+			writeMethodNotAllowed(w)
 			return
 		}
 		numStr := strings.TrimSuffix(suffix, "/reopen")
 		alertNumber, err := strconv.ParseInt(numStr, 10, 64)
 		if err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid alert number")
+			writeError(w, ErrorCodeValidationFailed, "invalid alert number")
 			return
 		}
 		if !s.checkPermission(w, r, rbac.AlertsWrite) {
@@ -555,13 +555,13 @@ func (s *Server) handleAlertByNumber(w http.ResponseWriter, r *http.Request) {
 	// POST /api/v1/alerts/{alert_number}/investigate
 	if strings.HasSuffix(suffix, "/investigate") {
 		if r.Method != http.MethodPost {
-			writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+			writeMethodNotAllowed(w)
 			return
 		}
 		numStr := strings.TrimSuffix(suffix, "/investigate")
 		alertNumber, err := strconv.ParseInt(numStr, 10, 64)
 		if err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid alert number")
+			writeError(w, ErrorCodeValidationFailed, "invalid alert number")
 			return
 		}
 		if !s.checkPermission(w, r, rbac.AlertsWrite) {
@@ -575,7 +575,7 @@ func (s *Server) handleAlertByNumber(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodDelete {
 		alertNumber, err := strconv.ParseInt(suffix, 10, 64)
 		if err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid alert number")
+			writeError(w, ErrorCodeValidationFailed, "invalid alert number")
 			return
 		}
 		user := userFromContext(r.Context())
@@ -631,12 +631,12 @@ func (s *Server) handleAlertByNumber(w http.ResponseWriter, r *http.Request) {
 
 	// GET /api/v1/alerts/{alert_number}
 	if r.Method != http.MethodGet {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 	alertNumber, err := strconv.ParseInt(suffix, 10, 64)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid alert number")
+		writeError(w, ErrorCodeValidationFailed, "invalid alert number")
 		return
 	}
 	record, err := s.alertStore.GetByAlertNumber(alertNumber)
@@ -741,7 +741,7 @@ func (s *Server) handleAlertResolveByNumber(w http.ResponseWriter, r *http.Reque
 	}
 	if err := s.alertStore.ResolveAlertByNumber(alertNumber, a.actor); err != nil {
 		if errors.Is(err, store.ErrAlertNotFiring) {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "alert is not firing or does not exist")
+			writeError(w, ErrorCodeValidationFailed, "alert is not firing or does not exist")
 			return
 		}
 		writeInternalError(w, err, "failed to resolve alert")
@@ -825,12 +825,12 @@ func (s *Server) handleAlertReopenByNumber(w http.ResponseWriter, r *http.Reques
 func (s *Server) handleAlertRelated(w http.ResponseWriter, r *http.Request) {
 	alertNumberStr := r.PathValue("alert_number")
 	if alertNumberStr == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing alert number")
+		writeError(w, ErrorCodeValidationFailed, "missing alert number")
 		return
 	}
 	alertNumber, err := strconv.ParseInt(alertNumberStr, 10, 64)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid alert number")
+		writeError(w, ErrorCodeValidationFailed, "invalid alert number")
 		return
 	}
 
@@ -967,7 +967,7 @@ func (s *Server) handleAlertInvestigate(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 	if record.Status == "resolved" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "resolved alerts cannot be investigated")
+		writeError(w, ErrorCodeValidationFailed, "resolved alerts cannot be investigated")
 		return
 	}
 

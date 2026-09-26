@@ -25,7 +25,7 @@ func (s *Server) handleServices(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		s.handleCreateService(w, r)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -89,7 +89,7 @@ func (s *Server) handleCreateService(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.TrimSpace(req.Name) == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "name is required")
+		writeError(w, ErrorCodeValidationFailed, "name is required")
 		return
 	}
 
@@ -115,6 +115,10 @@ func (s *Server) handleCreateService(w http.ResponseWriter, r *http.Request) {
 	created, err := s.serviceStore.CreateService(r.Context(), record)
 	if err != nil {
 		logger.ErrorCtx(r.Context(), "failed to create service", "component", "api", "error", err)
+		if store.IsDuplicateKey(err) {
+			writeConflict(w, "a service with this name already exists")
+			return
+		}
 		writeInternalError(w, err, "failed to create service")
 		return
 	}
@@ -131,13 +135,13 @@ func (s *Server) handleCreateService(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleServiceRoutes(w http.ResponseWriter, r *http.Request) {
 	suffix := pathID(r, "/api/v1/services/")
 	if suffix == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing service id")
+		writeError(w, ErrorCodeValidationFailed, "missing service id")
 		return
 	}
 
 	if idx := strings.Index(suffix, "/dependencies/"); idx != -1 {
 		if r.Method != http.MethodDelete {
-			writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+			writeMethodNotAllowed(w)
 			return
 		}
 		serviceID := suffix[:idx]
@@ -152,7 +156,7 @@ func (s *Server) handleServiceRoutes(w http.ResponseWriter, r *http.Request) {
 			serviceID = ""
 		}
 		if serviceID == "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing service id")
+			writeError(w, ErrorCodeValidationFailed, "missing service id")
 			return
 		}
 		s.handleListServiceDependents(w, r, serviceID)
@@ -165,7 +169,7 @@ func (s *Server) handleServiceRoutes(w http.ResponseWriter, r *http.Request) {
 			serviceID = ""
 		}
 		if serviceID == "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing service id")
+			writeError(w, ErrorCodeValidationFailed, "missing service id")
 			return
 		}
 		switch r.Method {
@@ -174,7 +178,7 @@ func (s *Server) handleServiceRoutes(w http.ResponseWriter, r *http.Request) {
 		case http.MethodPost:
 			s.handleAddServiceDependency(w, r, serviceID)
 		default:
-			writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+			writeMethodNotAllowed(w)
 		}
 		return
 	}
@@ -185,7 +189,7 @@ func (s *Server) handleServiceRoutes(w http.ResponseWriter, r *http.Request) {
 			serviceID = ""
 		}
 		if serviceID == "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing service id")
+			writeError(w, ErrorCodeValidationFailed, "missing service id")
 			return
 		}
 		s.handleListServiceIncidents(w, r, serviceID)
@@ -200,7 +204,7 @@ func (s *Server) handleServiceRoutes(w http.ResponseWriter, r *http.Request) {
 	case http.MethodDelete:
 		s.handleDeleteService(w, r, suffix)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -360,7 +364,7 @@ func (s *Server) handleListServiceDependencies(w http.ResponseWriter, r *http.Re
 
 	uid, err := uuid.Parse(serviceID)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid service id")
+		writeError(w, ErrorCodeValidationFailed, "invalid service id")
 		return
 	}
 
@@ -388,18 +392,18 @@ func (s *Server) handleAddServiceDependency(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if req.DependentOnID == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "dependent_on_service_id is required")
+		writeError(w, ErrorCodeValidationFailed, "dependent_on_service_id is required")
 		return
 	}
 
 	svcUID, err := uuid.Parse(serviceID)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid service id")
+		writeError(w, ErrorCodeValidationFailed, "invalid service id")
 		return
 	}
 	depUID, err := uuid.Parse(req.DependentOnID)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid dependent_on_service_id")
+		writeError(w, ErrorCodeValidationFailed, "invalid dependent_on_service_id")
 		return
 	}
 
@@ -409,7 +413,7 @@ func (s *Server) handleAddServiceDependency(w http.ResponseWriter, r *http.Reque
 	}
 
 	if svcUID == depUID {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "cannot add self-dependency")
+		writeError(w, ErrorCodeValidationFailed, "cannot add self-dependency")
 		return
 	}
 
@@ -447,12 +451,12 @@ func (s *Server) handleRemoveServiceDependency(w http.ResponseWriter, r *http.Re
 
 	svcUID, err := uuid.Parse(serviceID)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid service id")
+		writeError(w, ErrorCodeValidationFailed, "invalid service id")
 		return
 	}
 	targetUID, err := uuid.Parse(targetID)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid target service id")
+		writeError(w, ErrorCodeValidationFailed, "invalid target service id")
 		return
 	}
 
@@ -480,7 +484,7 @@ func (s *Server) handleListServiceIncidents(w http.ResponseWriter, r *http.Reque
 
 	uid, err := uuid.Parse(serviceID)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid service id")
+		writeError(w, ErrorCodeValidationFailed, "invalid service id")
 		return
 	}
 
@@ -509,7 +513,7 @@ func (s *Server) handleListServiceDependents(w http.ResponseWriter, r *http.Requ
 
 	uid, err := uuid.Parse(serviceID)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid service id")
+		writeError(w, ErrorCodeValidationFailed, "invalid service id")
 		return
 	}
 

@@ -1,16 +1,13 @@
 package models
 
 import (
-	"time"
-
 	"github.com/google/uuid"
-	"github.com/uptrace/bun"
+	"time"
 )
 
 type TriageResult struct {
-	bun.BaseModel `bun:"table:triage_results"`
+	BaseModel `bun:"table:triage_results"`
 
-	ID                 uuid.UUID         `bun:"id,pk"`
 	TriageNumber       int64             `bun:"triage_number,notnull,unique"`
 	CorrelationKey     string            `bun:"correlation_key,notnull"`
 	AlertCount         int               `bun:"alert_count,notnull,default:0"`
@@ -33,6 +30,4 @@ type TriageResult struct {
 	ModelUsed          string            `bun:"model_used,default:''"`
 	TriageDurationMs   int64             `bun:"triage_duration_ms,notnull,default:0"`
 	TraceID            string            `bun:"trace_id,default:''"`
-	CreatedAt          time.Time         `bun:"created_at,notnull,default:current_timestamp"`
-	UpdatedAt          time.Time         `bun:"updated_at,notnull,default:current_timestamp"`
 }

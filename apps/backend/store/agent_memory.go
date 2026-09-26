@@ -193,7 +193,7 @@ func (s *pgAgentMemoryStore) Update(ctx context.Context, id uuid.UUID, content s
 		return nil, fmt.Errorf("failed to update agent memory: %w", err)
 	}
 	if n == 0 {
-		return nil, errors.New("agent memory not found")
+		return nil, fmt.Errorf("agent memory %w", ErrNotFound)
 	}
 
 	if len(embedding) > 0 {
@@ -226,7 +226,7 @@ func (s *pgAgentMemoryStore) Delete(ctx context.Context, id uuid.UUID) error {
 		return fmt.Errorf("failed to delete agent memory: %w", err)
 	}
 	if n == 0 {
-		return errors.New("agent memory not found")
+		return fmt.Errorf("agent memory %w", ErrNotFound)
 	}
 	return nil
 }

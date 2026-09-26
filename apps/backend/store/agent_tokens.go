@@ -147,7 +147,7 @@ func (s *pgAgentTokenStore) CreateToken(name string, expiresAt *time.Time, agent
 }
 
 func (s *pgAgentTokenStore) ListTokens() ([]AgentTokenRecord, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := pgctxLong(context.Background())
 	defer cancel()
 
 	var tokens []models.AgentToken
@@ -201,7 +201,7 @@ func (s *pgAgentTokenStore) RevokeToken(id uuid.UUID) error {
 }
 
 func (s *pgAgentTokenStore) RegenerateToken(id uuid.UUID) (*AgentTokenRecord, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := pgctxLong(context.Background())
 	defer cancel()
 
 	var rec models.AgentToken
@@ -279,7 +279,10 @@ func (s *pgAgentTokenStore) ValidateToken(token string) (*AgentTokenRecord, erro
 		if t.ExpiresAt != nil && time.Now().After(*t.ExpiresAt) {
 			return nil, nil
 		}
-		go s.updateAgentTokenLastUsed(t.ID, t.LastUsedAt)
+		// Throttled async write: only spawn when the 24h guard would fire.
+		if t.LastUsedAt == nil || time.Since(*t.LastUsedAt) >= 24*time.Hour {
+			go s.updateAgentTokenLastUsed(t.ID, t.LastUsedAt)
+		}
 		return &AgentTokenRecord{
 			ID:           t.ID,
 			Name:         t.Name,
@@ -307,10 +310,12 @@ func (s *pgAgentTokenStore) updateAgentTokenLastUsed(id uuid.UUID, lastUsedAt *t
 	}
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
-	_, _ = s.db.NewUpdate().Model((*models.AgentToken)(nil)).
+	if _, err := s.db.NewUpdate().Model((*models.AgentToken)(nil)).
 		Set("last_used_at = ?", time.Now().UTC()).
 		Where("id = ?", id).
-		Exec(ctx)
+		Exec(ctx); err != nil {
+		logger.Error("failed to update agent token last_used_at", "token_id", id, "error", err)
+	}
 }
 
 func (s *pgAgentTokenStore) GetActiveAgentTokenByID(id uuid.UUID) (*AgentTokenRecord, error) {
@@ -397,7 +402,7 @@ func (s *pgAgentTokenStore) SetAgentEnabled(id uuid.UUID, enabled bool) error {
 }
 
 func (s *pgAgentTokenStore) ListActiveAgents() ([]AgentTokenRecord, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := pgctxLong(context.Background())
 	defer cancel()
 
 	var tokens []models.AgentToken

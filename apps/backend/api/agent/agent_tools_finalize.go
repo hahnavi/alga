@@ -68,11 +68,11 @@ func (e *AgentToolExecutor) finalizeAlertInvestigation(ctx context.Context, inv 
 	if targetStatus == "" {
 		targetStatus = store.AlertInvestigationStatusComplete
 	}
-	if err := e.alertInvestigationStore.TransitionAlertInvestigationStatus(ctx, inv.ID.String(), []string{"assigned", "investigating", "in_progress"}, targetStatus); err != nil {
+	if err := e.alertInvestigationStore.TransitionAlertInvestigationStatus(ctx, inv.ID.String(), []string{"assigned", "investigating"}, targetStatus); err != nil {
 		return err
 	}
 	inv.Status = targetStatus
-	e.publishInvestigationStatusChange(investigationID, targetStatus)
+	e.publishInvestigationStatusChange(ctx, investigationID, targetStatus)
 	e.extractMemories(inv)
 	if inv.PromotedIncidentID != nil && e.incidentStore != nil {
 		e.recordIncidentInvestigationCompletion(ctx, inv, investigationID, actorName, actorID)

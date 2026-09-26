@@ -60,11 +60,7 @@ Key indexes (created by hand-written goose migrations in `apps/backend/db/migrat
 
 ### Read Replicas
 
-For read-heavy workloads:
-
-1. Set up PostgreSQL streaming replication
-2. Route read queries to replicas via PgBouncer
-3. Write queries go to primary
+For read-heavy workloads, run PostgreSQL streaming replication **outside the app** (e.g. managed Postgres read replicas, PgBouncer in front). The app itself uses a single `POSTGRES_DSN` and does no in-app read/write splitting — point the DSN at your primary or pooler endpoint.
 
 ## Valkey Optimization
 

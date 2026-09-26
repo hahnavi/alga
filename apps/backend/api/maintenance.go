@@ -23,7 +23,7 @@ func (s *Server) handleMaintenanceWindows(w http.ResponseWriter, r *http.Request
 		}
 		s.createMaintenanceWindow(w, r)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -34,7 +34,7 @@ func (s *Server) handleMaintenanceWindowByID(w http.ResponseWriter, r *http.Requ
 	id := pathID(r, "/api/v1/maintenance-windows/")
 	id = strings.TrimSuffix(id, "/")
 	if id == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing id")
+		writeError(w, ErrorCodeValidationFailed, "missing id")
 		return
 	}
 	switch r.Method {
@@ -73,7 +73,7 @@ func (s *Server) handleMaintenanceWindowByID(w http.ResponseWriter, r *http.Requ
 		}
 		if !patch.StartTime.IsZero() && !patch.EndTime.IsZero() {
 			if !patch.EndTime.After(patch.StartTime) {
-				writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "end_time must be after start_time")
+				writeError(w, ErrorCodeValidationFailed, "end_time must be after start_time")
 				return
 			}
 		} else if !patch.StartTime.IsZero() || !patch.EndTime.IsZero() {
@@ -88,7 +88,7 @@ func (s *Server) handleMaintenanceWindowByID(w http.ResponseWriter, r *http.Requ
 					et = existing.EndTime
 				}
 				if !et.After(st) {
-					writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "end_time must be after start_time")
+					writeError(w, ErrorCodeValidationFailed, "end_time must be after start_time")
 					return
 				}
 			}
@@ -122,7 +122,7 @@ func (s *Server) handleMaintenanceWindowByID(w http.ResponseWriter, r *http.Requ
 		})
 		writeStatus(w, "deleted")
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -157,29 +157,29 @@ func (s *Server) createMaintenanceWindow(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	if strings.TrimSpace(req.Name) == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "name is required")
+		writeError(w, ErrorCodeValidationFailed, "name is required")
 		return
 	}
 	if req.StartTime == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "start_time is required")
+		writeError(w, ErrorCodeValidationFailed, "start_time is required")
 		return
 	}
 	startTime, err := time.Parse(time.RFC3339, req.StartTime)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid start_time format (expected RFC3339)")
+		writeError(w, ErrorCodeValidationFailed, "invalid start_time format (expected RFC3339)")
 		return
 	}
 	if req.EndTime == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "end_time is required")
+		writeError(w, ErrorCodeValidationFailed, "end_time is required")
 		return
 	}
 	endTime, err := time.Parse(time.RFC3339, req.EndTime)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid end_time format (expected RFC3339)")
+		writeError(w, ErrorCodeValidationFailed, "invalid end_time format (expected RFC3339)")
 		return
 	}
 	if !endTime.After(startTime) {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "end_time must be after start_time")
+		writeError(w, ErrorCodeValidationFailed, "end_time must be after start_time")
 		return
 	}
 	enabled := true

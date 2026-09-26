@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"slices"
 	"strings"
@@ -23,7 +24,7 @@ func (s *Server) handleOnCallSchedules(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		s.handleListOnCallSchedules(w, r)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "schedules are auto-created from teams and cannot be created directly")
+		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeMethodNotAllowed, "schedules are auto-created from teams and cannot be created directly")
 	}
 }
 
@@ -106,7 +107,7 @@ func (s *Server) handleListOnCallSchedules(w http.ResponseWriter, r *http.Reques
 func (s *Server) handleOnCallScheduleRoutes(w http.ResponseWriter, r *http.Request) {
 	suffix := pathID(r, "/api/v1/on-call/schedules/")
 	if suffix == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing schedule id")
+		writeError(w, ErrorCodeValidationFailed, "missing schedule id")
 		return
 	}
 
@@ -116,7 +117,7 @@ func (s *Server) handleOnCallScheduleRoutes(w http.ResponseWriter, r *http.Reque
 			scheduleID = ""
 		}
 		if scheduleID == "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing schedule id")
+			writeError(w, ErrorCodeValidationFailed, "missing schedule id")
 			return
 		}
 		switch r.Method {
@@ -125,7 +126,7 @@ func (s *Server) handleOnCallScheduleRoutes(w http.ResponseWriter, r *http.Reque
 		case http.MethodPost:
 			s.handleCreateOverride(w, r, scheduleID)
 		default:
-			writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+			writeMethodNotAllowed(w)
 		}
 		return
 	}
@@ -136,7 +137,7 @@ func (s *Server) handleOnCallScheduleRoutes(w http.ResponseWriter, r *http.Reque
 			scheduleID = ""
 		}
 		if scheduleID == "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing schedule id")
+			writeError(w, ErrorCodeValidationFailed, "missing schedule id")
 			return
 		}
 		s.handleCurrentOnCall(w, r, scheduleID)
@@ -149,7 +150,7 @@ func (s *Server) handleOnCallScheduleRoutes(w http.ResponseWriter, r *http.Reque
 			scheduleID = ""
 		}
 		if scheduleID == "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing schedule id")
+			writeError(w, ErrorCodeValidationFailed, "missing schedule id")
 			return
 		}
 		s.handleScheduleTimeline(w, r, scheduleID)
@@ -162,7 +163,7 @@ func (s *Server) handleOnCallScheduleRoutes(w http.ResponseWriter, r *http.Reque
 			scheduleID = ""
 		}
 		if scheduleID == "" {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing schedule id")
+			writeError(w, ErrorCodeValidationFailed, "missing schedule id")
 			return
 		}
 		s.handleScheduleICal(w, r, scheduleID)
@@ -175,14 +176,14 @@ func (s *Server) handleOnCallScheduleRoutes(w http.ResponseWriter, r *http.Reque
 	case http.MethodPatch:
 		s.handlePatchOnCallSchedule(w, r, suffix)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
 func (s *Server) getScheduleOrError(w http.ResponseWriter, r *http.Request, id string) (*store.OnCallScheduleRecord, bool) {
 	uid, err := uuid.Parse(id)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid schedule id")
+		writeError(w, ErrorCodeValidationFailed, "invalid schedule id")
 		return nil, false
 	}
 	record, err := s.onCallStore.GetSchedule(r.Context(), uid)
@@ -211,6 +212,98 @@ func (s *Server) handleGetOnCallSchedule(w http.ResponseWriter, r *http.Request,
 	writeData(w, http.StatusOK, s.enrichSchedule(r.Context(), record))
 }
 
+// scheduleLayerPatch is one layer of a PATCH /on-call/schedules/{id} body.
+type scheduleLayerPatch struct {
+	Name             string   `json:"name"`
+	RotationType     string   `json:"rotation_type"`
+	RotationInterval int      `json:"rotation_interval,omitempty"`
+	StartDate        string   `json:"start_date"`
+	EndDate          string   `json:"end_date,omitempty"`
+	Timezone         string   `json:"timezone,omitempty"`
+	StartTime        string   `json:"start_time,omitempty"`
+	EndTime          string   `json:"end_time,omitempty"`
+	DaysOfWeek       []string `json:"days_of_week,omitempty"`
+	Priority         int      `json:"priority,omitempty"`
+	UserIds          []string `json:"user_ids,omitempty"`
+}
+
+// applyScheduleLayerParses parses and validates one layer from the patch body.
+func applyScheduleLayer(l scheduleLayerPatch) (store.ScheduleLayerRecord, error) {
+	startDate, err := time.Parse(time.RFC3339, l.StartDate)
+	if err != nil {
+		return store.ScheduleLayerRecord{}, errors.New("invalid start_date format, use RFC3339")
+	}
+	layer := store.ScheduleLayerRecord{
+		Name:             l.Name,
+		RotationType:     l.RotationType,
+		RotationInterval: l.RotationInterval,
+		StartDate:        startDate,
+		Timezone:         l.Timezone,
+		StartTime:        l.StartTime,
+		EndTime:          l.EndTime,
+		DaysOfWeek:       l.DaysOfWeek,
+		Priority:         l.Priority,
+		UserIds:          l.UserIds,
+	}
+	if l.EndDate != "" {
+		endDate, err := time.Parse(time.RFC3339, l.EndDate)
+		if err == nil {
+			layer.EndDate = &endDate
+		}
+	}
+	if layer.RotationType == "" {
+		layer.RotationType = "weekly"
+	} else if !oncall.ValidRotationType(layer.RotationType) {
+		return store.ScheduleLayerRecord{}, errors.New("rotation_type must be hourly, daily, weekly, or monthly")
+	}
+	if layer.RotationInterval == 0 {
+		layer.RotationInterval = 1
+	}
+	if layer.Timezone == "" {
+		layer.Timezone = "UTC"
+	}
+	if layer.StartTime == "" {
+		layer.StartTime = "00:00"
+	}
+	return layer, nil
+}
+
+// validateScheduleLayers checks that every referenced layer user exists, is a
+// member of the schedule's team, and has a phone number. memberSet is nil when
+// the schedule has no team constraint.
+func (s *Server) validateScheduleLayers(layers []store.ScheduleLayerRecord, memberSet map[string]struct{}) error {
+	seen := make(map[string]struct{})
+	var missing []string
+	for _, l := range layers {
+		for _, uidStr := range l.UserIds {
+			if _, ok := seen[uidStr]; ok {
+				continue
+			}
+			seen[uidStr] = struct{}{}
+			layerUserUID, err := uuid.Parse(uidStr)
+			if err != nil {
+				return errors.New("invalid user_id in layer: " + uidStr)
+			}
+			target, gerr := s.userStore.GetByID(layerUserUID)
+			if gerr != nil || target == nil {
+				return errors.New("user not found: " + uidStr)
+			}
+			if memberSet != nil {
+				if _, isMember := memberSet[layerUserUID.String()]; !isMember {
+					return errors.New("user is not a member of the schedule's team: " + target.DisplayName())
+				}
+			}
+			if target.Phone == "" {
+				missing = append(missing, target.DisplayName())
+			}
+		}
+	}
+	if len(missing) > 0 {
+		return errors.New("the following users must have a phone number to be added to an on-call schedule: " + strings.Join(missing, ", "))
+	}
+	return nil
+}
+
 func (s *Server) handlePatchOnCallSchedule(w http.ResponseWriter, r *http.Request, id string) {
 	if !s.checkPermission(w, r, rbac.OnCallWrite) {
 		return
@@ -221,7 +314,7 @@ func (s *Server) handlePatchOnCallSchedule(w http.ResponseWriter, r *http.Reques
 
 	uid, err := uuid.Parse(id)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid schedule id")
+		writeError(w, ErrorCodeValidationFailed, "invalid schedule id")
 		return
 	}
 
@@ -238,19 +331,7 @@ func (s *Server) handlePatchOnCallSchedule(w http.ResponseWriter, r *http.Reques
 	// Only rotations (layers) are editable. A schedule's identity (team) and
 	// display name are derived from its team and cannot be patched directly.
 	var req struct {
-		Layers []struct {
-			Name             string   `json:"name"`
-			RotationType     string   `json:"rotation_type"`
-			RotationInterval int      `json:"rotation_interval,omitempty"`
-			StartDate        string   `json:"start_date"`
-			EndDate          string   `json:"end_date,omitempty"`
-			Timezone         string   `json:"timezone,omitempty"`
-			StartTime        string   `json:"start_time,omitempty"`
-			EndTime          string   `json:"end_time,omitempty"`
-			DaysOfWeek       []string `json:"days_of_week,omitempty"`
-			Priority         int      `json:"priority,omitempty"`
-			UserIds          []string `json:"user_ids,omitempty"`
-		} `json:"layers"`
+		Layers []scheduleLayerPatch `json:"layers"`
 	}
 	if !decodeJSON(w, r, &req) {
 		return
@@ -258,43 +339,10 @@ func (s *Server) handlePatchOnCallSchedule(w http.ResponseWriter, r *http.Reques
 
 	current.Layers = make([]store.ScheduleLayerRecord, 0, len(req.Layers))
 	for _, l := range req.Layers {
-		startDate, err := time.Parse(time.RFC3339, l.StartDate)
+		layer, err := applyScheduleLayer(l)
 		if err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid start_date format, use RFC3339")
+			writeError(w, ErrorCodeValidationFailed, err.Error())
 			return
-		}
-		layer := store.ScheduleLayerRecord{
-			Name:             l.Name,
-			RotationType:     l.RotationType,
-			RotationInterval: l.RotationInterval,
-			StartDate:        startDate,
-			Timezone:         l.Timezone,
-			StartTime:        l.StartTime,
-			EndTime:          l.EndTime,
-			DaysOfWeek:       l.DaysOfWeek,
-			Priority:         l.Priority,
-			UserIds:          l.UserIds,
-		}
-		if l.EndDate != "" {
-			endDate, err := time.Parse(time.RFC3339, l.EndDate)
-			if err == nil {
-				layer.EndDate = &endDate
-			}
-		}
-		if layer.RotationType == "" {
-			layer.RotationType = "weekly"
-		} else if !oncall.ValidRotationType(layer.RotationType) {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "rotation_type must be hourly, daily, weekly, or monthly")
-			return
-		}
-		if layer.RotationInterval == 0 {
-			layer.RotationInterval = 1
-		}
-		if layer.Timezone == "" {
-			layer.Timezone = "UTC"
-		}
-		if layer.StartTime == "" {
-			layer.StartTime = "00:00"
 		}
 		current.Layers = append(current.Layers, layer)
 	}
@@ -303,37 +351,8 @@ func (s *Server) handlePatchOnCallSchedule(w http.ResponseWriter, r *http.Reques
 	if !ok {
 		return
 	}
-	seen := make(map[string]struct{})
-	var missing []string
-	for _, l := range current.Layers {
-		for _, uidStr := range l.UserIds {
-			if _, ok := seen[uidStr]; ok {
-				continue
-			}
-			seen[uidStr] = struct{}{}
-			layerUserUID, perr := uuid.Parse(uidStr)
-			if perr != nil {
-				writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid user_id in layer: "+uidStr)
-				return
-			}
-			target, gerr := s.userStore.GetByID(layerUserUID)
-			if gerr != nil || target == nil {
-				writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "user not found: "+uidStr)
-				return
-			}
-			if memberSet != nil {
-				if _, isMember := memberSet[layerUserUID.String()]; !isMember {
-					writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "user is not a member of the schedule's team: "+target.DisplayName())
-					return
-				}
-			}
-			if target.Phone == "" {
-				missing = append(missing, target.DisplayName())
-			}
-		}
-	}
-	if len(missing) > 0 {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "the following users must have a phone number to be added to an on-call schedule: "+strings.Join(missing, ", "))
+	if err := s.validateScheduleLayers(current.Layers, memberSet); err != nil {
+		writeError(w, ErrorCodeValidationFailed, err.Error())
 		return
 	}
 
@@ -373,7 +392,7 @@ func (s *Server) handleCurrentOnCall(w http.ResponseWriter, r *http.Request, sch
 
 	uid, err := uuid.Parse(scheduleID)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid schedule id")
+		writeError(w, ErrorCodeValidationFailed, "invalid schedule id")
 		return
 	}
 
@@ -437,7 +456,7 @@ func (s *Server) handleScheduleTimeline(w http.ResponseWriter, r *http.Request, 
 
 	uid, err := uuid.Parse(scheduleID)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid schedule id")
+		writeError(w, ErrorCodeValidationFailed, "invalid schedule id")
 		return
 	}
 
@@ -461,7 +480,7 @@ func parseTimelineRange(w http.ResponseWriter, r *http.Request) (time.Time, time
 	if raw := r.URL.Query().Get("from"); raw != "" {
 		parsed, err := time.Parse(time.RFC3339, raw)
 		if err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid from, use RFC3339")
+			writeError(w, ErrorCodeValidationFailed, "invalid from, use RFC3339")
 			return time.Time{}, time.Time{}, false
 		}
 		from = parsed.UTC()
@@ -469,14 +488,14 @@ func parseTimelineRange(w http.ResponseWriter, r *http.Request) (time.Time, time
 	if raw := r.URL.Query().Get("to"); raw != "" {
 		parsed, err := time.Parse(time.RFC3339, raw)
 		if err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid to, use RFC3339")
+			writeError(w, ErrorCodeValidationFailed, "invalid to, use RFC3339")
 			return time.Time{}, time.Time{}, false
 		}
 		to = parsed.UTC()
 	}
 
 	if !to.After(from) {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "to must be after from")
+		writeError(w, ErrorCodeValidationFailed, "to must be after from")
 		return time.Time{}, time.Time{}, false
 	}
 	if to.Sub(from) > 90*24*time.Hour {
@@ -511,7 +530,7 @@ func (s *Server) handleScheduleICal(w http.ResponseWriter, r *http.Request, sche
 
 	uid, err := uuid.Parse(scheduleID)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid schedule id")
+		writeError(w, ErrorCodeValidationFailed, "invalid schedule id")
 		return
 	}
 
@@ -600,7 +619,7 @@ func (s *Server) handleListOverrides(w http.ResponseWriter, r *http.Request, sch
 
 	uid, err := uuid.Parse(scheduleID)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid schedule id")
+		writeError(w, ErrorCodeValidationFailed, "invalid schedule id")
 		return
 	}
 
@@ -622,7 +641,7 @@ func (s *Server) handleCreateOverride(w http.ResponseWriter, r *http.Request, sc
 
 	schedUID, err := uuid.Parse(scheduleID)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid schedule id")
+		writeError(w, ErrorCodeValidationFailed, "invalid schedule id")
 		return
 	}
 
@@ -635,21 +654,21 @@ func (s *Server) handleCreateOverride(w http.ResponseWriter, r *http.Request, sc
 		return
 	}
 	if req.UserID == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "user_id is required")
+		writeError(w, ErrorCodeValidationFailed, "user_id is required")
 		return
 	}
 	userUID, err := uuid.Parse(req.UserID)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid user_id")
+		writeError(w, ErrorCodeValidationFailed, "invalid user_id")
 		return
 	}
 	target, err := s.userStore.GetByID(userUID)
 	if err != nil || target == nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "user not found")
+		writeError(w, ErrorCodeValidationFailed, "user not found")
 		return
 	}
 	if target.Phone == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, target.DisplayName()+" must have a phone number to be added to an on-call schedule")
+		writeError(w, ErrorCodeValidationFailed, target.DisplayName()+" must have a phone number to be added to an on-call schedule")
 		return
 	}
 	sched, ok := s.getScheduleOrError(w, r, scheduleID)
@@ -662,18 +681,18 @@ func (s *Server) handleCreateOverride(w http.ResponseWriter, r *http.Request, sc
 	}
 	if memberSet != nil {
 		if _, isMember := memberSet[userUID.String()]; !isMember {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "user is not a member of the schedule's team: "+target.DisplayName())
+			writeError(w, ErrorCodeValidationFailed, "user is not a member of the schedule's team: "+target.DisplayName())
 			return
 		}
 	}
 	startAt, err := time.Parse(time.RFC3339, req.StartAt)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid start_at format, use RFC3339")
+		writeError(w, ErrorCodeValidationFailed, "invalid start_at format, use RFC3339")
 		return
 	}
 	endAt, err := time.Parse(time.RFC3339, req.EndAt)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid end_at format, use RFC3339")
+		writeError(w, ErrorCodeValidationFailed, "invalid end_at format, use RFC3339")
 		return
 	}
 
@@ -842,7 +861,7 @@ func (s *Server) handleMyOnCall(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleOnCallOverrideRoutes(w http.ResponseWriter, r *http.Request) {
 	suffix := pathID(r, "/api/v1/on-call/overrides/")
 	if suffix == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing override id")
+		writeError(w, ErrorCodeValidationFailed, "missing override id")
 		return
 	}
 
@@ -853,7 +872,7 @@ func (s *Server) handleOnCallOverrideRoutes(w http.ResponseWriter, r *http.Reque
 		}
 		id, err := uuid.Parse(suffix)
 		if err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid override id")
+			writeError(w, ErrorCodeValidationFailed, "invalid override id")
 			return
 		}
 		if err := s.onCallStore.DeleteOverride(r.Context(), id); err != nil {
@@ -866,13 +885,13 @@ func (s *Server) handleOnCallOverrideRoutes(w http.ResponseWriter, r *http.Reque
 		s.invalidateOnCallCache(r)
 		writeStatus(w, "deleted")
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
 func (s *Server) handleOnCallMetrics(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 	if !s.checkPermission(w, r, rbac.OnCallRead) {
@@ -892,22 +911,22 @@ func (s *Server) handleOnCallMetrics(w http.ResponseWriter, r *http.Request) {
 	groupBy := r.URL.Query().Get("group_by")
 
 	if scheduleIDStr == "" || startDateStr == "" || endDateStr == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "schedule_id, start_date, end_date are required")
+		writeError(w, ErrorCodeValidationFailed, "schedule_id, start_date, end_date are required")
 		return
 	}
 	scheduleID, err := uuid.Parse(scheduleIDStr)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid schedule_id")
+		writeError(w, ErrorCodeValidationFailed, "invalid schedule_id")
 		return
 	}
 	startDate, err := time.Parse(time.RFC3339, startDateStr)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid start_date")
+		writeError(w, ErrorCodeValidationFailed, "invalid start_date")
 		return
 	}
 	endDate, err := time.Parse(time.RFC3339, endDateStr)
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid end_date")
+		writeError(w, ErrorCodeValidationFailed, "invalid end_date")
 		return
 	}
 

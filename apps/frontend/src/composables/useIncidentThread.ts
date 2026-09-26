@@ -3,15 +3,17 @@ import { api, type OwnerThread, type OwnerThreadMessage } from "@/lib/api";
 import { getErrorMessage } from "@/lib/error";
 import { useToast } from "@/lib/toast";
 import { MAX_THREAD_MESSAGES } from "@/lib/threadLimits";
-
-type OwnerThreadKind = "incident_inv" | "incident_coord";
+import { isIncidentInvestigationEvent, isOwnerThreadEvent } from "@/lib/incidentEvents";
 
 /**
  * Owns the incident "investigation" owner-thread state: the initial load,
  * the SSE reducer for live message upsert / edit / delete, and the
- * investigation lifecycle events that trigger a refresh. The coordination
- * typing branch of the `owner_thread_typing` events stays in the page
- * because it is shared with the coordination thread.
+ * investigation lifecycle events that trigger a refresh.
+ *
+ * Every SSE handler here is scoped: incident investigations carry
+ * `incident_number` in the payload, while alert investigations carry
+ * `alert_investigation_id` — those never belong to this thread and are
+ * filtered out so unrelated alert activity doesn't reload the page.
  */
 export function useIncidentThread(
   incidentNumber: Ref<number>,
@@ -23,14 +25,13 @@ export function useIncidentThread(
   const incidentThread = shallowRef<OwnerThread | null>(null);
   const incidentThreadMessageCount = computed(() => incidentThread.value?.messages?.length ?? 0);
 
-  function isRelevantOwnerThreadEvent(data: unknown, kind: OwnerThreadKind): boolean {
-    const d = data as { owner_type?: string; owner_id?: string };
-    return d.owner_type === kind && String(d.owner_id) === String(incidentNumber.value);
-  }
+  let loadSeq = 0;
 
   async function loadIncidentThread() {
+    const seq = ++loadSeq;
     try {
       const fresh = await api.getIncidentThread(incidentNumber.value);
+      if (seq !== loadSeq) return;
       if (incidentThread.value && fresh) {
         const freshIds = new Set((fresh.messages ?? []).map((m) => m.id));
         const preserved = (incidentThread.value.messages ?? []).filter((m) => !freshIds.has(m.id));
@@ -42,6 +43,7 @@ export function useIncidentThread(
         incidentThread.value = fresh;
       }
     } catch (err) {
+      if (seq !== loadSeq) return;
       incidentThread.value = null;
       push(getErrorMessage(err, "Failed to load incident thread"), "error");
     }
@@ -64,39 +66,30 @@ export function useIncidentThread(
     incidentThread.value = t;
   }
 
+  /** Reloads the thread only when the event belongs to this incident. */
+  function onIncidentInvestigationEvent(data: unknown) {
+    if (!isIncidentInvestigationEvent(data, incidentNumber.value)) return;
+    void loadIncidentThread();
+    opts.scheduleReload();
+  }
+
   const handlers = {
-    investigation_created: () => {
-      void loadIncidentThread();
-      opts.scheduleReload();
-    },
-    investigation_started: () => {
-      void loadIncidentThread();
-      opts.scheduleReload();
-    },
-    investigation_update: () => {
-      void loadIncidentThread();
-      opts.scheduleReload();
-    },
-    investigation_status_changed: () => {
-      void loadIncidentThread();
-      opts.scheduleReload();
-    },
-    investigation_complete: () => {
-      void loadIncidentThread();
-      opts.scheduleReload();
-    },
-    investigation_patch: () => {
-      void loadIncidentThread();
-      opts.scheduleReload();
-    },
+    // The incident-scoped investigation create/update family. The backend
+    // publishes the record itself (`IncidentInvestigationRecord` with
+    // `incident_number`), plus a slim map variant for `investigation_created`.
+    investigation_created: onIncidentInvestigationEvent,
+    investigation_updated: onIncidentInvestigationEvent,
+    investigation_complete: onIncidentInvestigationEvent,
+    investigation_status_changed: onIncidentInvestigationEvent,
+    // Alert-investigation lifecycle: kept for the `owner_thread_message`
+    // reducer below, which is separately scoped by owner_type/owner_id.
     owner_thread_message: (data: unknown) => {
-      if (!isRelevantOwnerThreadEvent(data, "incident_inv")) return;
+      if (!isOwnerThreadEvent(data, "incident_inv", incidentNumber.value)) return;
       const d = data as { message?: OwnerThreadMessage };
       if (d.message) handleLiveThreadMessage(d.message);
-      opts.scheduleReload();
     },
     owner_thread_message_edited: (data: unknown) => {
-      if (!isRelevantOwnerThreadEvent(data, "incident_inv")) return;
+      if (!isOwnerThreadEvent(data, "incident_inv", incidentNumber.value)) return;
       const d = data as { message_id?: string; message?: string; edited?: boolean };
       if (!d.message_id || !incidentThread.value) return;
       const msgs = incidentThread.value.messages ?? [];
@@ -110,7 +103,7 @@ export function useIncidentThread(
       }
     },
     owner_thread_message_deleted: (data: unknown) => {
-      if (!isRelevantOwnerThreadEvent(data, "incident_inv")) return;
+      if (!isOwnerThreadEvent(data, "incident_inv", incidentNumber.value)) return;
       const d = data as { message_id?: string };
       if (!d.message_id || !incidentThread.value) return;
       incidentThread.value = {
@@ -120,11 +113,17 @@ export function useIncidentThread(
     },
   };
 
+  function reset() {
+    loadSeq++;
+    incidentThread.value = null;
+  }
+
   return reactive({
     incidentThread,
     incidentThreadMessageCount,
     loadIncidentThread,
     setThread,
+    reset,
     handlers,
   });
 }

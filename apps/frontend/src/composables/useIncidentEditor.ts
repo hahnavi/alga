@@ -53,15 +53,15 @@ export function useIncidentEditor(
   const actionLoading = ref(false);
   const escalating = ref(false);
 
-  // Link-alert dialog.
+  // Link-alert dialog. The picker (IncidentLinkAlertDialog) stages a single
+  // alert_number; this composable owns submission + error/loading state.
   const showLinkAlertDialog = ref(false);
-  const linkAlertNumber = ref("");
   const linkAlertSubmitting = ref(false);
   const linkAlertError = ref("");
+  const linkAlertPickerStaged = ref<number | null>(null);
 
   const showUnlinkChannelConfirm = ref(false);
 
-  const unlinkAlertTarget = ref<AlertRecord | null>(null);
   const unlinkAlertSubmitting = ref(false);
 
   // Add-timeline-entry dialog.
@@ -286,17 +286,17 @@ export function useIncidentEditor(
   }
 
   function openLinkAlertDialog() {
-    linkAlertNumber.value = "";
+    linkAlertPickerStaged.value = null;
     linkAlertError.value = "";
     linkAlertSubmitting.value = false;
     showLinkAlertDialog.value = true;
   }
 
-  async function submitLinkAlert() {
+  async function submitStagedLink() {
     if (!incident.value || linkAlertSubmitting.value) return;
-    const num = parseInt(linkAlertNumber.value.trim(), 10);
-    if (Number.isNaN(num) || num < 1) {
-      linkAlertError.value = "Valid alert number is required.";
+    const num = linkAlertPickerStaged.value;
+    if (num == null || num < 1) {
+      linkAlertError.value = "Select an alert to link.";
       return;
     }
     linkAlertSubmitting.value = true;
@@ -304,6 +304,7 @@ export function useIncidentEditor(
     try {
       await api.linkAlertToIncident(incident.value.incident_number, num);
       showLinkAlertDialog.value = false;
+      linkAlertPickerStaged.value = null;
       push("Alert linked", "success");
       await dataReload();
     } catch (err) {
@@ -313,13 +314,16 @@ export function useIncidentEditor(
     }
   }
 
-  async function confirmUnlinkAlert() {
-    const target = unlinkAlertTarget.value;
-    if (!target || !incident.value || unlinkAlertSubmitting.value) return;
+  /**
+   * Unlinks the given alert. The confirm dialog state (which alert is being
+   * unlinked, and whether the dialog is open) is owned by the page; this only
+   * performs the API call and the local list removal.
+   */
+  async function confirmUnlinkAlert(target: AlertRecord) {
+    if (!incident.value || unlinkAlertSubmitting.value) return;
     const num = target.alert_number;
     if (!num) {
       push("Cannot unlink alert without alert number", "error");
-      unlinkAlertTarget.value = null;
       return;
     }
     unlinkAlertSubmitting.value = true;
@@ -331,7 +335,6 @@ export function useIncidentEditor(
       push(getErrorMessage(err, "Failed to unlink alert"), "error");
     } finally {
       unlinkAlertSubmitting.value = false;
-      unlinkAlertTarget.value = null;
     }
   }
 
@@ -395,11 +398,10 @@ export function useIncidentEditor(
     actionLoading,
     escalating,
     showLinkAlertDialog,
-    linkAlertNumber,
     linkAlertSubmitting,
     linkAlertError,
+    linkAlertPickerStaged,
     showUnlinkChannelConfirm,
-    unlinkAlertTarget,
     unlinkAlertSubmitting,
     showAddTimelineDialog,
     timelineMessage,
@@ -426,7 +428,7 @@ export function useIncidentEditor(
     openEditDialog,
     submitEdit,
     openLinkAlertDialog,
-    submitLinkAlert,
+    submitStagedLink,
     confirmUnlinkAlert,
     openAddTimelineDialog,
     submitTimelineEntry,

@@ -106,8 +106,8 @@ func TestC9AuditEventsValidationAndGuards(t *testing.T) {
 	badReq := gateSessionRequest(http.MethodGet, "/api/v1/audit-events?entity_id=not-a-uuid")
 	w := httptest.NewRecorder()
 	s.handleListAuditEvents(w, badReq)
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("invalid entity_id = %d, want 400 (body=%s)", w.Code, w.Body.String())
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("invalid entity_id = %d, want 422 (body=%s)", w.Code, w.Body.String())
 	}
 
 	noStore := &Server{cfg: &config.Config{}, ipExtractor: newIPExtractor(&config.Config{})}

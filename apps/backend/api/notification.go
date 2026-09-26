@@ -12,7 +12,7 @@ import (
 
 func (s *Server) handleNotifications(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -33,12 +33,12 @@ func (s *Server) handleNotifications(w http.ResponseWriter, r *http.Request) {
 		writeInternalError(w, err, "failed to list notifications")
 		return
 	}
-	writeData(w, http.StatusOK, records)
+	writeData(w, http.StatusOK, ensureSlice(records))
 }
 
 func (s *Server) handleUnreadCount(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -48,8 +48,7 @@ func (s *Server) handleUnreadCount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if s.notificationStore == nil {
-		writeJSON(w, http.StatusOK, map[string]any{"count": 0})
+	if !s.requireStore(w, s.notificationStore, "notification store") {
 		return
 	}
 
@@ -63,7 +62,7 @@ func (s *Server) handleUnreadCount(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleMarkAllRead(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -83,18 +82,19 @@ func (s *Server) handleMarkAllRead(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.publishToUser(user.ID.String(), "notification_unread_count", map[string]any{"count": 0})
+	s.audit(r, store.AuditNotificationsReadAll, nil)
 	writeStatus(w, "ok")
 }
 
 func (s *Server) handleNotificationByID(w http.ResponseWriter, r *http.Request) {
 	suffix := pathID(r, "/api/v1/notifications/")
 	if suffix == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing notification id")
+		writeError(w, ErrorCodeValidationFailed, "missing notification id")
 		return
 	}
 
 	if r.Method != http.MethodPost {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -125,6 +125,7 @@ func (s *Server) handleNotificationByID(w http.ResponseWriter, r *http.Request) 
 
 	unreadCount, _ := s.notificationStore.GetUnreadCount(r.Context(), user.ID.String())
 	s.publishToUser(user.ID.String(), "notification_unread_count", map[string]any{"count": unreadCount})
+	s.audit(r, store.AuditNotificationRead, map[string]any{"notification_id": notificationID})
 
 	writeStatus(w, "ok")
 }

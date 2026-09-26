@@ -2,29 +2,26 @@
 import { computed, h, onMounted, onBeforeUnmount, ref, watch, type CSSProperties } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 import {
-  ChevronRight,
   CircleAlert,
   CircleDot,
   Clock,
   ExternalLink,
   FileText,
   HatGlasses,
-  Pencil,
+  ShieldAlert,
+  Wrench,
   X,
   Plus,
   Unlink,
   ChevronDown,
   ChevronUp,
   BookOpen,
-  Save,
   MessageSquare,
-  ShieldAlert,
-  Wrench,
 } from "@lucide/vue";
 import { useSSE } from "@/composables/useSSE";
 import { useEscapeKey } from "@/composables/useEscapeKey";
 import { useResizableMain } from "@/composables/useResizableMain";
-import { useUsers } from "@/composables/useUsers";
+import { useUsersIfPermitted } from "@/composables/useUsers";
 import { useIncidentDetailData } from "@/composables/useIncidentDetailData";
 import { useIncidentDocumentSections } from "@/composables/useIncidentDocumentSections";
 import { useIncidentCoordination } from "@/composables/useIncidentCoordination";
@@ -35,28 +32,43 @@ import { getProviderIconSrc } from "@/lib/providerIcon";
 import TypingIndicator from "@/components/ui/TypingIndicator.vue";
 import ChatTypingIndicator from "@/components/ui/ChatTypingIndicator.vue";
 import { useTypingIndicator } from "@/composables/useTypingIndicator";
-import { api, type IncidentRecord, type AlertRecord, type OwnerThreadMessage } from "@/lib/api";
+import { api, type IncidentRecord, type AlertRecord } from "@/lib/api";
 import {
   alertSeverityLabel,
   postMortemStatusBadgeClass,
+  postMortemStatusLabel,
   incidentStatusBadgeClass,
   incidentStatusLabel,
   severityBorderColor,
 } from "@/lib/alertLabels";
+import {
+  isForIncident,
+  isOwnerThreadEvent,
+  ownerThreadParticipants,
+  participantLabel,
+  visibleTimelineEntries,
+} from "@/lib/incidentEvents";
 import { formatTime, formatTimeFull } from "@/lib/time";
-import { CARD_ICON_BTN_CLASS } from "@/lib/uiClasses";
+import {
+  incidentImpactBadgeClass,
+  incidentPriorityBadgeClass,
+  incidentSeverityBadgeClass,
+} from "@/lib/uiClasses";
 import IncidentActionsMenu from "@/components/incident/IncidentActionsMenu.vue";
+import IncidentDocSectionCard from "@/components/incident/IncidentDocSectionCard.vue";
+import IncidentThreadSummaryCard from "@/components/incident/IncidentThreadSummaryCard.vue";
 import IncidentTimeline from "@/components/incident/IncidentTimeline.vue";
 import IncidentCoordinationStream from "@/components/incident/IncidentCoordinationStream.vue";
+import IncidentLinkAlertDialog from "@/components/incident/IncidentLinkAlertDialog.vue";
 import StatusUpdateFeed from "@/components/incident/StatusUpdateFeed.vue";
 import ICSRoleBoard from "@/components/incident/ICSRoleBoard.vue";
 import OwnerThreadPanel from "@/components/thread/OwnerThreadPanel.vue";
 import Card from "@/components/ui/Card.vue";
 import Button from "@/components/ui/Button.vue";
 import Input from "@/components/ui/Input.vue";
-import NumberInput from "@/components/ui/NumberInput.vue";
 import Textarea from "@/components/ui/Textarea.vue";
 import Select from "@/components/ui/Select.vue";
+import FormLabel from "@/components/ui/FormLabel.vue";
 import ErrorBanner from "@/components/ui/ErrorBanner.vue";
 import AlertStatusBadge from "@/components/ui/AlertStatusBadge.vue";
 import ConfirmDialog from "@/components/ui/ConfirmDialog.vue";
@@ -80,9 +92,13 @@ const googleMeetBrandIcon = getAgentBrandIconSrc("google_meet") ?? "";
 const incidentNumber = computed(() => Number(route.params.incident_number));
 const { canRead: canReadPostmortem, canWrite: canWritePostmortem } =
   useEntityPermissions("postmortems");
+const { canRead: canReadPlaybooks } = useEntityPermissions("playbooks");
+const { canWrite, canDelete, canCommand } = useEntityPermissions("incidents");
 
 const data = useIncidentDetailData(incidentNumber, {
   canCreatePostMortem: canWritePostmortem,
+  canReadPostMortem: canReadPostmortem,
+  canReadPlaybooks: canReadPlaybooks,
 });
 
 const incident = data.incident;
@@ -96,8 +112,6 @@ const mitigationPlaybooks = data.mitigationPlaybooks;
 const docs = useIncidentDocumentSections(incidentNumber, incident, data.setIncident);
 const coord = useIncidentCoordination(incidentNumber);
 
-const { canWrite, canDelete, canCommand } = useEntityPermissions("incidents");
-
 const editor = useIncidentEditor(
   incidentNumber,
   incident,
@@ -109,13 +123,31 @@ const editor = useIncidentEditor(
 
 const thread = useIncidentThread(incidentNumber, { scheduleReload });
 
+const linkedAlertNumbers = computed(() =>
+  alerts.value.map((a) => a.alert_number).filter((n): n is number => typeof n === "number"),
+);
+
+// Mention targets: the agent list needs `tokens:manage` and the user list
+// `users:manage` — both operator permissions an `incidents` viewer may lack,
+// so each fetch is permission-gated (the composable gates agents, the
+// `useUsersIfPermitted` helper gates users) to avoid error toasts on every
+// visit. Mentions only matter for writers anyway.
+const { users, loadUsers } = useUsersIfPermitted("users:manage");
+
+async function loadMentionTargets() {
+  const targets: Promise<unknown>[] = [coord.loadMentionTargets()];
+  if (canWrite.value) targets.push(loadUsers());
+  await Promise.all(targets);
+}
+
 async function loadIncident() {
   // The detail-data composable owns the main load + timeline, alerts,
   // ICS roles, mitigation playbooks, and post-mortem status side-loads.
   // The remaining side-loads (document sections, coordination,
   // thread, status updates) live in their own composables / helpers
   // and are awaited here so the page can render a complete view in
-  // one shot.
+  // one shot. `docs.load()` must run after `data.load()` because it
+  // seeds the summary display from the incident row.
   await data.load();
   if (!incident.value) return;
   await Promise.all([
@@ -176,64 +208,12 @@ const {
   clearTyping: clearInvestigationTyping,
 } = useTypingIndicator({ timeoutMs: 6000 });
 
-type ThreadParticipant = {
-  key: string;
-  name: string;
-  avatarSrc?: string;
-};
-
-function addParticipant(
-  map: Map<string, ThreadParticipant>,
-  key: string | undefined,
-  fallbackKey: string,
-  name: string,
-  avatarSrc?: string,
-) {
-  const normalizedName = name.trim() || "User";
-  const normalizedKey = (key?.trim() || normalizedName).toLowerCase();
-  if (!map.has(normalizedKey)) {
-    map.set(normalizedKey, { key: fallbackKey, name: normalizedName, avatarSrc });
-  }
-}
-
-function ownerThreadDisplayName(message: OwnerThreadMessage): string {
-  if (message.username?.trim()) return message.username.trim();
-  if (message.source === "agent") return "Agent";
-  if (message.source === "system") return "System";
-  if (message.source === "slack") return "Slack";
-  if (message.source === "mattermost") return "Mattermost";
-  return "User";
-}
-
-function participantInitial(name: string): string {
-  return name.trim().charAt(0).toUpperCase() || "U";
-}
-
-function participantLabel(participants: ThreadParticipant[], fallback: string): string {
-  if (participants.length === 0) return fallback;
-  if (participants.length === 1) return participants[0].name;
-  const others = participants.length - 1;
-  return `${participants[0].name} and ${others} ${others === 1 ? "other" : "others"}`;
-}
-
 const coordinationParticipants = coord.coordinationParticipants;
 const coordinationParticipantLabel = coord.coordinationParticipantLabel;
 
-const investigationParticipants = computed(() => {
-  const map = new Map<string, ThreadParticipant>();
-  for (const message of thread.incidentThread?.messages ?? []) {
-    const isAgent = message.source === "agent";
-    const avatar = isAgent ? getAgentAvatarSrc(message.agent_type) : undefined;
-    addParticipant(
-      map,
-      message.user_id ?? ownerThreadDisplayName(message),
-      message.id,
-      ownerThreadDisplayName(message),
-      avatar,
-    );
-  }
-  return [...map.values()];
-});
+const investigationParticipants = computed(() =>
+  ownerThreadParticipants(thread.incidentThread?.messages ?? []),
+);
 
 const investigationParticipantLabel = computed(() =>
   participantLabel(investigationParticipants.value, "No participants yet"),
@@ -243,17 +223,13 @@ const expandedPlaybookId = ref<string | null>(null);
 
 const coordinationText = coord.coordinationText;
 const coordinationSubmitting = coord.coordinationSubmitting;
-const coordinationKind = coord.coordinationKind;
 const coordinationThreadEl = coord.coordinationThreadEl;
 const stickCoordinationToBottom = coord.stickCoordinationToBottom;
 const scrollCoordinationToBottom = coord.scrollCoordinationToBottom;
 const agents = coord.agents;
 const editorRef = ref<InstanceType<typeof MarkdownEditor> | null>(null);
-const { users } = useUsers();
-// Touch the page-local aliases so the typecheck sees them as used;
-// the template references them via `ref="…"` and event handlers,
-// but the script-only audit only counts script reads.
-void coordinationKind;
+// Referenced by the template via `ref="coordinationThreadEl"`; the script-only
+// usage audit doesn't count template reads.
 void coordinationThreadEl;
 
 const postMortemStatus = data.postMortemStatus;
@@ -296,7 +272,6 @@ usePageHeader(() => {
         escalating: editor.escalating,
         conferenceHref: conferenceHref.value,
         onEscalate: () => editor.escalateIncident(),
-        onConference: () => {},
         onAcknowledge: () => editor.acknowledge(),
         onMitigate: () => editor.mitigate(),
         onResolve: () => editor.resolve(),
@@ -324,7 +299,7 @@ function resetIncidentState() {
   data.reset();
   docs.reset();
   coord.reset();
-  thread.incidentThread = null;
+  thread.reset();
   activeSidebarThread.value = null;
   threadLayoutOpen.value = false;
   threadLeaving.value = false;
@@ -424,73 +399,49 @@ function scheduleReload() {
   }, 1500);
 }
 
-function isIncidentEvent(data: unknown): data is { incident_number: number | string } {
-  return (
-    typeof data === "object" &&
-    data !== null &&
-    "incident_number" in data &&
-    (typeof (data as Record<string, unknown>).incident_number === "number" ||
-      typeof (data as Record<string, unknown>).incident_number === "string")
-  );
-}
-
-function onIncidentSSE(data: unknown, handler: () => void) {
-  if (isIncidentEvent(data)) {
-    const num =
-      typeof data.incident_number === "number"
-        ? data.incident_number
-        : parseInt(data.incident_number, 10);
-    if (num === incidentNumber.value) handler();
-  }
-}
-
-type OwnerThreadKind = "incident_inv" | "incident_coord";
-
-function isRelevantOwnerThreadEvent(data: unknown, kind: OwnerThreadKind): boolean {
-  const d = data as { owner_type?: string; owner_id?: string };
-  return d.owner_type === kind && String(d.owner_id) === String(incidentNumber.value);
-}
-
 const sse = useSSE(
   "/api/v1/events",
   {
     // Incident status transitions (triaging/promoted/etc.) arrive via the
     // single incident_updated event; dedicated per-status events don't exist.
-    incident_updated: (data: unknown) => onIncidentSSE(data, scheduleReload),
+    incident_updated: (data: unknown) => {
+      if (isForIncident(data, incidentNumber.value)) scheduleReload();
+    },
     // Emitted by ICSWorker after provisioning completes.
-    war_room_created: (data: unknown) => onIncidentSSE(data, scheduleReload),
-    ics_role_assigned: (payload: unknown) => onIncidentSSE(payload, data.loadICSRoles),
+    war_room_created: (data: unknown) => {
+      if (isForIncident(data, incidentNumber.value)) scheduleReload();
+    },
+    // The scheduler publishes this with `incident_id` holding the incident
+    // number, while the other incident events use `incident_number` — the
+    // shared guard accepts both keys.
+    ics_role_assigned: (payload: unknown) => {
+      if (isForIncident(payload, incidentNumber.value)) void data.loadICSRoles();
+    },
     incident_coordination_message_created: (data: unknown) => {
-      onIncidentSSE(data, async () => {
+      if (!isForIncident(data, incidentNumber.value)) return;
+      void (async () => {
         await coord.loadCoordinationMessages();
         stickCoordinationToBottom();
         fetchStatusUpdates(true);
-      });
+      })();
     },
     ...thread.handlers,
     owner_thread_typing: (data: unknown) => {
       const d = data as { source?: string; agent_type?: string };
       const source = d.source ?? "agent";
       const agentType = d.agent_type;
-      if (isRelevantOwnerThreadEvent(data, "incident_coord")) {
+      if (isOwnerThreadEvent(data, "incident_coord", incidentNumber.value)) {
         setCoordinationTyping(source, agentType);
-      } else if (isRelevantOwnerThreadEvent(data, "incident_inv")) {
+      } else if (isOwnerThreadEvent(data, "incident_inv", incidentNumber.value)) {
         setInvestigationTyping(source, agentType);
       }
     },
     owner_thread_typing_stop: (data: unknown) => {
-      if (isRelevantOwnerThreadEvent(data, "incident_coord")) {
+      if (isOwnerThreadEvent(data, "incident_coord", incidentNumber.value)) {
         clearCoordinationTyping();
-      } else if (isRelevantOwnerThreadEvent(data, "incident_inv")) {
+      } else if (isOwnerThreadEvent(data, "incident_inv", incidentNumber.value)) {
         clearInvestigationTyping();
       }
-    },
-    investigation_typing: (data: unknown) => {
-      const d = data as { source?: string; agent_type?: string };
-      setInvestigationTyping(d.source ?? "agent", d.agent_type);
-    },
-    investigation_typing_stop: () => {
-      clearInvestigationTyping();
     },
   },
   {
@@ -499,9 +450,9 @@ const sse = useSSE(
 );
 const sseState = sse.state;
 
-onMounted(async () => {
-  loadIncident();
-  void coord.loadMentionTargets(editorRef.value);
+onMounted(() => {
+  void loadIncident();
+  void loadMentionTargets();
   void editor.probeIntegrations();
 });
 
@@ -525,57 +476,24 @@ const incidentStartedAtText = computed(() =>
   incident.value ? formatTimeFull(incident.value.created_at) : "",
 );
 
-const timelineEventCount = computed(
-  () => timeline.value.filter((e) => e.event_type !== "investigation_created").length,
-);
+const timelineEventCount = computed(() => visibleTimelineEntries(timeline.value).length);
 
-const priorityFilledBadgeCss = computed(() => {
-  switch (incident.value?.priority) {
-    case "P1":
-      return "rounded bg-red-500 px-2 py-0.5 text-xs font-semibold text-white";
-    case "P2":
-      return "rounded bg-orange-500 px-2 py-0.5 text-xs font-semibold text-white";
-    case "P3":
-      return "rounded bg-amber-500 px-2 py-0.5 text-xs font-semibold text-white";
-    case "P4":
-      return "rounded bg-blue-500 px-2 py-0.5 text-xs font-semibold text-white";
-    case "P5":
-      return "rounded bg-slate-500 px-2 py-0.5 text-xs font-semibold text-white";
-    default:
-      return "rounded bg-[var(--bg-tertiary)] px-2 py-0.5 text-xs font-semibold text-[var(--text-primary)]";
-  }
-});
+/** Closes the unlink-alert dialog after the confirm resolves. */
+async function onConfirmUnlinkAlert() {
+  const target = unlinkAlertTarget.value;
+  if (!target) return;
+  await editor.confirmUnlinkAlert(target);
+  unlinkAlertTarget.value = null;
+}
 
-const severityFilledBadgeCss = computed(() => {
-  switch (incident.value?.severity) {
-    case "critical":
-      return "rounded bg-red-500 px-2 py-0.5 text-xs font-semibold text-white";
-    case "high":
-      return "rounded bg-orange-500 px-2 py-0.5 text-xs font-semibold text-white";
-    case "warning":
-      return "rounded bg-amber-500 px-2 py-0.5 text-xs font-semibold text-white";
-    case "info":
-      return "rounded bg-sky-500 px-2 py-0.5 text-xs font-semibold text-white";
-    default:
-      return "rounded bg-[var(--bg-tertiary)] px-2 py-0.5 text-xs font-semibold text-[var(--text-primary)]";
-  }
-});
-
-const impactFilledBadgeCss = computed(() => {
-  switch (incident.value?.impact_level) {
-    case "high":
-      return "rounded bg-red-500 px-2 py-0.5 text-xs font-semibold text-white";
-    case "medium":
-      return "rounded bg-amber-500 px-2 py-0.5 text-xs font-semibold text-white";
-    case "low":
-      return "rounded bg-sky-500 px-2 py-0.5 text-xs font-semibold text-white";
-    default:
-      return "rounded bg-[var(--bg-tertiary)] px-2 py-0.5 text-xs font-semibold text-[var(--text-primary)]";
-  }
-});
+/** Appends the created entry without a full reload; see useIncidentEditor. */
+async function onSubmitTimelineEntry() {
+  const entry = await editor.submitTimelineEntry();
+  if (entry) data.addTimelineEntry(entry);
+}
 
 onBeforeUnmount(() => {
-  data.reset();
+  resetIncidentState();
   if (reloadDebounce) {
     clearTimeout(reloadDebounce);
     reloadDebounce = null;
@@ -750,7 +668,7 @@ onBeforeUnmount(() => {
                 <span
                   v-if="incident.priority"
                   class="shrink-0 uppercase"
-                  :class="priorityFilledBadgeCss"
+                  :class="incidentPriorityBadgeClass(incident.priority)"
                 >
                   <span class="sr-only">Priority:</span>
                   {{ incident.priority }}
@@ -758,7 +676,7 @@ onBeforeUnmount(() => {
                 <span
                   v-if="incident.severity"
                   class="shrink-0 uppercase"
-                  :class="severityFilledBadgeCss"
+                  :class="incidentSeverityBadgeClass(incident.severity)"
                 >
                   <span class="sr-only">Severity:</span>
                   {{ incident.severity }}
@@ -766,7 +684,7 @@ onBeforeUnmount(() => {
                 <span
                   v-if="incident.impact_level"
                   class="shrink-0 uppercase"
-                  :class="impactFilledBadgeCss"
+                  :class="incidentImpactBadgeClass(incident.impact_level)"
                 >
                   <span class="sr-only">Impact:</span>
                   {{ incident.impact_level }}
@@ -802,139 +720,28 @@ onBeforeUnmount(() => {
           </Card>
 
           <div class="grid gap-3 md:grid-cols-2">
-            <div class="rounded border border-[var(--border-primary)] bg-[var(--bg-secondary)]">
-              <div class="rounded-t">
-                <div class="flex items-center justify-between gap-2 px-4 py-3">
-                  <div class="flex min-w-0 items-center gap-2">
-                    <h3 class="field-label mb-0">
-                      <MessageSquare
-                        class="inline h-4 w-4 align-text-bottom text-[var(--text-muted)]"
-                      />
-                      Coordination
-                    </h3>
-                  </div>
-                </div>
+            <IncidentThreadSummaryCard
+              :icon="MessageSquare"
+              title="Coordination"
+              :participants="coordinationParticipants"
+              :participant-label="coordinationParticipantLabel"
+              :message-count="coordinationMessages.length"
+              :expanded="activeSidebarThread?.kind === 'coordination'"
+              :typing="coordinationTyping"
+              @toggle="toggleSidebarThread('coordination')"
+            />
 
-                <button
-                  type="button"
-                  class="flex w-full cursor-pointer items-center justify-between gap-3 border-t border-[var(--border-primary)] px-4 py-3 text-left transition-colors hover:bg-[var(--btn-default-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
-                  :aria-expanded="activeSidebarThread?.kind === 'coordination'"
-                  aria-controls="incident-thread-drawer"
-                  @click="toggleSidebarThread('coordination')"
-                >
-                  <div class="flex min-w-0 items-center gap-2 text-sm">
-                    <div class="flex -space-x-1.5">
-                      <div
-                        v-for="participant in coordinationParticipants.slice(0, 3)"
-                        :key="participant.key"
-                        class="flex h-5 w-5 items-center justify-center overflow-hidden rounded-full border border-[var(--bg-secondary)] bg-[var(--bg-tertiary)] text-[10px] font-semibold text-[var(--text-secondary)]"
-                        :title="participant.name"
-                      >
-                        <img
-                          v-if="participant.avatarSrc"
-                          :src="participant.avatarSrc"
-                          :alt="participant.name"
-                          class="h-full w-full object-cover rounded-full"
-                          loading="lazy"
-                          decoding="async"
-                        />
-                        <span v-else>{{ participantInitial(participant.name) }}</span>
-                      </div>
-                      <div
-                        v-if="coordinationParticipants.length === 0"
-                        class="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--bg-tertiary)] text-[var(--text-muted)]"
-                      >
-                        <MessageSquare class="h-3 w-3" />
-                      </div>
-                    </div>
-                    <span class="truncate font-semibold text-[var(--text-secondary)]">
-                      {{ coordinationParticipantLabel }}
-                    </span>
-                    <TypingIndicator v-if="coordinationTyping" class="shrink-0" />
-                  </div>
-                  <div class="flex shrink-0 items-center gap-2">
-                    <span
-                      v-if="coordinationMessages.length > 0"
-                      class="flex items-center gap-1 text-xs text-[var(--text-muted)]"
-                    >
-                      <MessageSquare class="h-3 w-3" />
-                      {{ coordinationMessages.length }}
-                    </span>
-                    <ChevronRight
-                      class="h-5 w-5 text-[var(--text-muted)] transition-transform duration-200"
-                      :class="activeSidebarThread?.kind === 'coordination' ? 'rotate-180' : ''"
-                    />
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            <div class="rounded border border-[var(--border-primary)] bg-[var(--bg-secondary)]">
-              <div class="rounded-t">
-                <div class="flex items-center justify-between gap-2 px-4 py-3">
-                  <div class="flex min-w-0 items-center gap-2">
-                    <h3 class="field-label mb-0">
-                      <HatGlasses
-                        class="inline h-4 w-4 align-text-bottom text-[var(--text-muted)]"
-                      />
-                      Investigation
-                    </h3>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  class="flex w-full cursor-pointer items-center justify-between gap-3 border-t border-[var(--border-primary)] px-4 py-3 text-left transition-colors hover:bg-[var(--btn-default-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
-                  :aria-expanded="activeSidebarThread?.kind === 'technical_thread'"
-                  aria-controls="incident-thread-drawer"
-                  @click="toggleSidebarThread('technical_thread')"
-                >
-                  <div class="flex min-w-0 items-center gap-2 text-sm">
-                    <div class="flex -space-x-1.5">
-                      <div
-                        v-for="participant in investigationParticipants.slice(0, 3)"
-                        :key="participant.key"
-                        class="flex h-5 w-5 items-center justify-center overflow-hidden rounded-full border border-[var(--bg-secondary)] bg-[var(--bg-tertiary)] text-[10px] font-semibold text-[var(--text-secondary)]"
-                        :title="participant.name"
-                      >
-                        <img
-                          v-if="participant.avatarSrc"
-                          :src="participant.avatarSrc"
-                          :alt="participant.name"
-                          class="h-full w-full object-cover rounded-full"
-                          loading="lazy"
-                          decoding="async"
-                        />
-                        <span v-else>{{ participantInitial(participant.name) }}</span>
-                      </div>
-                      <div
-                        v-if="investigationParticipants.length === 0"
-                        class="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--bg-tertiary)] text-[var(--text-muted)]"
-                      >
-                        <HatGlasses class="h-3 w-3" />
-                      </div>
-                    </div>
-                    <span class="truncate font-semibold text-[var(--text-secondary)]">
-                      {{ investigationParticipantLabel }}
-                    </span>
-                    <TypingIndicator v-if="investigationTyping" class="shrink-0" />
-                  </div>
-                  <div class="flex shrink-0 items-center gap-2">
-                    <span
-                      v-if="thread.incidentThreadMessageCount > 0"
-                      class="flex items-center gap-1 text-xs text-[var(--text-muted)]"
-                    >
-                      <MessageSquare class="h-3 w-3" />
-                      {{ thread.incidentThreadMessageCount }}
-                    </span>
-                    <ChevronRight
-                      class="h-5 w-5 text-[var(--text-muted)] transition-transform duration-200"
-                      :class="activeSidebarThread?.kind === 'technical_thread' ? 'rotate-180' : ''"
-                    />
-                  </div>
-                </button>
-              </div>
-            </div>
+            <IncidentThreadSummaryCard
+              :icon="HatGlasses"
+              title="Investigation"
+              :participants="investigationParticipants"
+              :participant-label="investigationParticipantLabel"
+              :message-count="thread.incidentThreadMessageCount"
+              :expanded="activeSidebarThread?.kind === 'technical_thread'"
+              :typing="investigationTyping"
+              :empty-participant-icon="HatGlasses"
+              @toggle="toggleSidebarThread('technical_thread')"
+            />
           </div>
 
           <StatusUpdateFeed
@@ -944,213 +751,82 @@ onBeforeUnmount(() => {
             :loading="statusUpdatesLoading"
             :error="statusUpdatesError"
             :incident-status="incident?.status"
+            :disabled="isDeleted"
             @posted="fetchStatusUpdates(true)"
             @retry="() => fetchStatusUpdates()"
           />
 
           <!-- Summary -->
-          <Card class="hover:shadow-md transition-all duration-300">
-            <div
-              class="mb-3 flex items-center justify-between gap-2 border-b border-[var(--border-primary)] pb-2"
-            >
-              <div class="flex items-center gap-2">
-                <FileText class="h-4 w-4 text-[var(--text-secondary)]" />
-                <h3 class="text-sm font-semibold text-[var(--text-primary)]">Summary</h3>
-              </div>
-              <button
-                v-if="canWrite && !summaryEditing && !isDeleted"
-                type="button"
-                :class="CARD_ICON_BTN_CLASS"
-                title="Edit summary"
-                @click="docs.startEditSummary"
-              >
-                <Pencil class="h-3.5 w-3.5" />
-              </button>
-            </div>
-            <MarkdownEditor
-              v-if="summaryEditing"
-              v-model="summaryContent"
-              :disabled="summarySaving"
-              :users="users"
-              :agents="agents"
-              :enable-internal-note="false"
-              :show-send-button="false"
-              placeholder="Write an executive summary (the cause, why it started, what it did, and status until recovery)... (markdown supported)"
-            />
-            <MarkdownRenderer
-              v-else-if="summaryContent.trim()"
-              :content="summaryContent"
-              class="text-sm text-[var(--text-secondary)]"
-            />
-            <p v-else class="text-sm text-[var(--text-muted)]">No executive summary recorded.</p>
-            <div v-if="summaryEditing" class="flex justify-end gap-2 mt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                :disabled="summarySaving"
-                @click="summaryEditing = false"
-              >
-                Cancel
-              </Button>
-              <Button size="sm" :disabled="summarySaving" @click="docs.saveSummary">
-                <Save class="h-3.5 w-3.5" />
-                {{ summarySaving ? "Saving..." : "Save" }}
-              </Button>
-            </div>
-          </Card>
+          <IncidentDocSectionCard
+            :icon="FileText"
+            title="Summary"
+            :content="summaryContent"
+            :editing="summaryEditing"
+            :saving="summarySaving"
+            :can-edit="canWrite && !isDeleted"
+            empty-text="No executive summary recorded."
+            placeholder="Write an executive summary (the cause, why it started, what it did, and status until recovery)... (markdown supported)"
+            :users="users"
+            :agents="agents"
+            @start-edit="docs.startEditSummary"
+            @cancel-edit="summaryEditing = false"
+            @save="docs.saveSummary"
+            @update:content="summaryContent = $event"
+          />
 
           <!-- Root Cause -->
-          <Card class="hover:shadow-md transition-all duration-300">
-            <div
-              class="mb-3 flex items-center justify-between gap-2 border-b border-[var(--border-primary)] pb-2"
-            >
-              <div class="flex items-center gap-2">
-                <ShieldAlert class="h-4 w-4 text-[var(--text-secondary)]" />
-                <h3 class="text-sm font-semibold text-[var(--text-primary)]">Root Cause</h3>
-              </div>
-              <button
-                v-if="canCommand && !rootCauseEditing && !isDeleted"
-                type="button"
-                :class="CARD_ICON_BTN_CLASS"
-                title="Edit root cause"
-                @click="docs.startEditRootCause"
-              >
-                <Pencil class="h-3.5 w-3.5" />
-              </button>
-            </div>
-            <MarkdownEditor
-              v-if="rootCauseEditing"
-              v-model="rootCauseContent"
-              :disabled="rootCauseSaving"
-              :users="users"
-              :agents="agents"
-              :enable-internal-note="false"
-              :show-send-button="false"
-              placeholder="Describe the root cause of this incident... (markdown supported)"
-            />
-            <MarkdownRenderer
-              v-else-if="rootCauseContent.trim()"
-              :content="rootCauseContent"
-              class="text-sm text-[var(--text-secondary)]"
-            />
-            <p v-else class="text-sm text-[var(--text-muted)]">No root cause recorded.</p>
-            <div v-if="rootCauseEditing" class="flex justify-end gap-2 mt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                :disabled="rootCauseSaving"
-                @click="rootCauseEditing = false"
-              >
-                Cancel
-              </Button>
-              <Button size="sm" :disabled="rootCauseSaving" @click="docs.saveRootCause">
-                <Save class="h-3.5 w-3.5" />
-                {{ rootCauseSaving ? "Saving..." : "Save" }}
-              </Button>
-            </div>
-          </Card>
+          <IncidentDocSectionCard
+            :icon="ShieldAlert"
+            title="Root Cause"
+            :content="rootCauseContent"
+            :editing="rootCauseEditing"
+            :saving="rootCauseSaving"
+            :can-edit="canCommand && !isDeleted"
+            empty-text="No root cause recorded."
+            placeholder="Describe the root cause of this incident... (markdown supported)"
+            :users="users"
+            :agents="agents"
+            @start-edit="docs.startEditRootCause"
+            @cancel-edit="rootCauseEditing = false"
+            @save="docs.saveRootCause"
+            @update:content="rootCauseContent = $event"
+          />
 
           <!-- Resolution -->
-          <Card class="hover:shadow-md transition-all duration-300">
-            <div
-              class="mb-3 flex items-center justify-between gap-2 border-b border-[var(--border-primary)] pb-2"
-            >
-              <div class="flex items-center gap-2">
-                <Wrench class="h-4 w-4 text-[var(--text-secondary)]" />
-                <h3 class="text-sm font-semibold text-[var(--text-primary)]">Resolution</h3>
-              </div>
-              <button
-                v-if="canCommand && !resolutionEditing && !isDeleted"
-                type="button"
-                :class="CARD_ICON_BTN_CLASS"
-                title="Edit resolution"
-                @click="docs.startEditResolution"
-              >
-                <Pencil class="h-3.5 w-3.5" />
-              </button>
-            </div>
-            <MarkdownEditor
-              v-if="resolutionEditing"
-              v-model="resolutionContent"
-              :disabled="resolutionSaving"
-              :users="users"
-              :agents="agents"
-              :enable-internal-note="false"
-              :show-send-button="false"
-              placeholder="Describe the resolution for this incident... (markdown supported)"
-            />
-            <MarkdownRenderer
-              v-else-if="resolutionContent.trim()"
-              :content="resolutionContent"
-              class="text-sm text-[var(--text-secondary)]"
-            />
-            <p v-else class="text-sm text-[var(--text-muted)]">No resolution recorded.</p>
-            <div v-if="resolutionEditing" class="flex justify-end gap-2 mt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                :disabled="resolutionSaving"
-                @click="resolutionEditing = false"
-              >
-                Cancel
-              </Button>
-              <Button size="sm" :disabled="resolutionSaving" @click="docs.saveResolution">
-                <Save class="h-3.5 w-3.5" />
-                {{ resolutionSaving ? "Saving..." : "Save" }}
-              </Button>
-            </div>
-          </Card>
+          <IncidentDocSectionCard
+            :icon="Wrench"
+            title="Resolution"
+            :content="resolutionContent"
+            :editing="resolutionEditing"
+            :saving="resolutionSaving"
+            :can-edit="canCommand && !isDeleted"
+            empty-text="No resolution recorded."
+            placeholder="Describe the resolution for this incident... (markdown supported)"
+            :users="users"
+            :agents="agents"
+            @start-edit="docs.startEditResolution"
+            @cancel-edit="resolutionEditing = false"
+            @save="docs.saveResolution"
+            @update:content="resolutionContent = $event"
+          />
 
           <!-- Impact Assessment -->
-          <Card class="hover:shadow-md transition-all duration-300">
-            <div
-              class="mb-3 flex items-center justify-between gap-2 border-b border-[var(--border-primary)] pb-2"
-            >
-              <div class="flex items-center gap-2">
-                <CircleAlert class="h-4 w-4 text-[var(--text-secondary)]" />
-                <h3 class="text-sm font-semibold text-[var(--text-primary)]">Impact Assessment</h3>
-              </div>
-              <button
-                v-if="canCommand && !impactEditing && !isDeleted"
-                type="button"
-                :class="CARD_ICON_BTN_CLASS"
-                title="Edit impact assessment"
-                @click="docs.startEditImpact"
-              >
-                <Pencil class="h-3.5 w-3.5" />
-              </button>
-            </div>
-            <MarkdownEditor
-              v-if="impactEditing"
-              v-model="impactContent"
-              :disabled="impactSaving"
-              :users="users"
-              :agents="agents"
-              :enable-internal-note="false"
-              :show-send-button="false"
-              placeholder="Describe the impact of this incident... (markdown supported)"
-            />
-            <MarkdownRenderer
-              v-else-if="impactContent.trim()"
-              :content="impactContent"
-              class="text-sm text-[var(--text-secondary)]"
-            />
-            <p v-else class="text-sm text-[var(--text-muted)]">No impact assessment recorded.</p>
-            <div v-if="impactEditing" class="flex justify-end gap-2 mt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                :disabled="impactSaving"
-                @click="impactEditing = false"
-              >
-                Cancel
-              </Button>
-              <Button size="sm" :disabled="impactSaving" @click="docs.saveImpact">
-                <Save class="h-3.5 w-3.5" />
-                {{ impactSaving ? "Saving..." : "Save" }}
-              </Button>
-            </div>
-          </Card>
+          <IncidentDocSectionCard
+            :icon="CircleAlert"
+            title="Impact Assessment"
+            :content="impactContent"
+            :editing="impactEditing"
+            :saving="impactSaving"
+            :can-edit="canCommand && !isDeleted"
+            empty-text="No impact assessment recorded."
+            placeholder="Describe the impact of this incident... (markdown supported)"
+            :users="users"
+            :agents="agents"
+            @start-edit="docs.startEditImpact"
+            @cancel-edit="impactEditing = false"
+            @save="docs.saveImpact"
+            @update:content="impactContent = $event"
+          />
 
           <!-- Timeline -->
           <Card class="hover:shadow-md transition-all duration-300">
@@ -1342,8 +1018,8 @@ onBeforeUnmount(() => {
             </div>
             <div class="flex items-center gap-2">
               <a
-                v-if="incident.google_meet_space_name"
-                :href="incident.conference_url"
+                v-if="incident.google_meet_space_name && conferenceHref"
+                :href="conferenceHref"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md border border-[var(--border-primary)] bg-[var(--bg-secondary)] px-3 py-2 text-left text-sm text-[var(--text-primary)] transition-colors hover:bg-[var(--btn-default-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
@@ -1443,7 +1119,9 @@ onBeforeUnmount(() => {
                 >
                   <CircleDot
                     class="h-4 w-4 shrink-0"
-                    :style="{ color: severityBorderColor(alertSeverityLabel(alert.labels)) }"
+                    :style="{
+                      color: severityBorderColor(alertSeverityLabel(alert.labels)),
+                    }"
                   />
                   <div class="min-w-0 flex-1">
                     <span
@@ -1503,7 +1181,7 @@ onBeforeUnmount(() => {
               </button>
               <div class="flex items-center gap-2">
                 <span :class="['badge', postMortemStatusBadgeClass(postMortemStatus)]">
-                  {{ postMortemStatus.replaceAll("_", " ") }}
+                  {{ postMortemStatusLabel(postMortemStatus) }}
                 </span>
               </div>
             </div>
@@ -1605,11 +1283,7 @@ onBeforeUnmount(() => {
         <form class="space-y-4" @submit.prevent="editor.submitEdit">
           <ErrorBanner :message="editor.editError" />
           <div>
-            <label
-              for="edit-incident-title-input"
-              class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]"
-              >Title <span class="text-[var(--text-error)]">*</span></label
-            >
+            <FormLabel for="edit-incident-title-input" required>Title</FormLabel>
             <Input
               id="edit-incident-title-input"
               v-model="editor.editTitle"
@@ -1618,11 +1292,7 @@ onBeforeUnmount(() => {
             />
           </div>
           <div>
-            <label
-              for="edit-incident-desc"
-              class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]"
-              >Description</label
-            >
+            <FormLabel for="edit-incident-desc">Description</FormLabel>
             <Textarea
               id="edit-incident-desc"
               v-model="editor.editDescription"
@@ -1632,11 +1302,7 @@ onBeforeUnmount(() => {
             />
           </div>
           <div>
-            <label
-              for="edit-incident-severity"
-              class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]"
-              >Severity</label
-            >
+            <FormLabel for="edit-incident-severity">Severity</FormLabel>
             <Select
               id="edit-incident-severity"
               v-model="editor.editSeverity"
@@ -1650,11 +1316,7 @@ onBeforeUnmount(() => {
             </Select>
           </div>
           <div>
-            <label
-              for="edit-incident-impact"
-              class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]"
-              >Impact</label
-            >
+            <FormLabel for="edit-incident-impact">Impact</FormLabel>
             <Select
               id="edit-incident-impact"
               v-model="editor.editImpact"
@@ -1668,11 +1330,7 @@ onBeforeUnmount(() => {
             </Select>
           </div>
           <div>
-            <label
-              for="edit-incident-priority"
-              class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]"
-              >Priority</label
-            >
+            <FormLabel for="edit-incident-priority">Priority</FormLabel>
             <Select
               id="edit-incident-priority"
               v-model="editor.editPriority"
@@ -1701,47 +1359,15 @@ onBeforeUnmount(() => {
         </template>
       </Modal>
 
-      <Modal
+      <IncidentLinkAlertDialog
         :open="editor.showLinkAlertDialog"
-        title="Link Alert"
-        max-width="lg"
-        :prevent-close="editor.linkAlertSubmitting"
-        @update:open="!$event && (editor.showLinkAlertDialog = false)"
-        @close="editor.showLinkAlertDialog = false"
-      >
-        <form class="space-y-4" @submit.prevent="editor.submitLinkAlert">
-          <ErrorBanner :message="editor.linkAlertError" />
-          <div>
-            <label
-              for="link-alert-number"
-              class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]"
-              >Alert Number <span class="text-[var(--text-error)]">*</span></label
-            >
-            <NumberInput
-              id="link-alert-number"
-              v-model="editor.linkAlertNumber"
-              required
-              :disabled="editor.linkAlertSubmitting"
-              placeholder="e.g. 42"
-            />
-          </div>
-        </form>
-        <template #footer>
-          <Button
-            variant="outline"
-            :disabled="editor.linkAlertSubmitting"
-            @click="editor.showLinkAlertDialog = false"
-            >Cancel</Button
-          >
-          <Button
-            variant="primary"
-            :loading="editor.linkAlertSubmitting"
-            @click="editor.submitLinkAlert"
-          >
-            Link
-          </Button>
-        </template>
-      </Modal>
+        :submitting="editor.linkAlertSubmitting"
+        :error="editor.linkAlertError"
+        :linked-alert-numbers="linkedAlertNumbers"
+        @update:open="(v: boolean) => (editor.showLinkAlertDialog = v)"
+        @pick-alert="(n: number) => (editor.linkAlertPickerStaged = n)"
+        @submit="editor.submitStagedLink"
+      />
 
       <Modal
         :open="editor.showAddTimelineDialog"
@@ -1751,14 +1377,10 @@ onBeforeUnmount(() => {
         @update:open="!$event && (editor.showAddTimelineDialog = false)"
         @close="editor.showAddTimelineDialog = false"
       >
-        <form class="space-y-4" @submit.prevent="editor.submitTimelineEntry">
+        <form class="space-y-4" @submit.prevent="onSubmitTimelineEntry">
           <ErrorBanner :message="editor.timelineError" />
           <div>
-            <label
-              for="timeline-event-type"
-              class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]"
-              >Event Type</label
-            >
+            <FormLabel for="timeline-event-type">Event Type</FormLabel>
             <Select
               id="timeline-event-type"
               v-model="editor.timelineEventType"
@@ -1772,11 +1394,7 @@ onBeforeUnmount(() => {
             </Select>
           </div>
           <div>
-            <label
-              for="timeline-message"
-              class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]"
-              >Message <span class="text-[var(--text-error)]">*</span></label
-            >
+            <FormLabel for="timeline-message" required>Message</FormLabel>
             <Textarea
               id="timeline-message"
               v-model="editor.timelineMessage"
@@ -1798,7 +1416,7 @@ onBeforeUnmount(() => {
           <Button
             variant="primary"
             :loading="editor.timelineSubmitting"
-            @click="editor.submitTimelineEntry"
+            @click="onSubmitTimelineEntry"
           >
             Add
           </Button>
@@ -1835,7 +1453,7 @@ onBeforeUnmount(() => {
             if (!v) unlinkAlertTarget = null;
           }
         "
-        @confirm="editor.confirmUnlinkAlert"
+        @confirm="onConfirmUnlinkAlert"
       />
     </template>
   </div>
@@ -1853,13 +1471,5 @@ onBeforeUnmount(() => {
 .investigation-sidebar-leave-to {
   opacity: 0;
   transform: translateX(1rem);
-}
-
-:deep(.rounded-lg) {
-  border-radius: 0.375rem;
-}
-:deep(.rounded-t-lg) {
-  border-top-left-radius: 0.375rem;
-  border-top-right-radius: 0.375rem;
 }
 </style>

@@ -3,7 +3,11 @@ package store
 import "errors"
 
 var (
-	ErrNotFound                    = errors.New("not found")
+	ErrNotFound = errors.New("not found")
+	// ErrInvalidID marks a caller-supplied identifier that failed to parse
+	// (e.g. non-UUID path/query parameters). Handlers map it to 400/422 while
+	// ErrNotFound maps to 404.
+	ErrInvalidID                   = errors.New("invalid id")
 	ErrAlertNotFound               = errors.New("alert not found")
 	ErrAlertNotFiring              = errors.New("alert not found or not firing")
 	ErrAlertNotResolved            = errors.New("alert not found or not resolved")

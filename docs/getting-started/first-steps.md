@@ -5,15 +5,21 @@ description: A 12-step walkthrough from creating the initial admin account throu
 
 # First Steps Guide
 
-You have Alga running. Here's what to do next.
+Alga is running. Here's what to do next, step by step.
 
-## 1. Complete First-Run Setup
+## 1. Create your admin account
 
-Open `http://localhost:3000` in your browser. When no users exist in the database, Alga automatically redirects to the setup wizard. Enter an email, password, and full name to create the initial admin account. This is the only time the setup wizard is available — once an admin exists, it is disabled.
+Open `http://localhost:3000` in your browser. Since this is the first time, you'll see a setup screen. Enter your email, full name, and a password — that's your admin account. You'll only see this screen once.
 
-## 2. Create a Webhook Token
+Tip: if you turned on Google, Slack, or company login (SSO), you'll also see those buttons on the login page later.
 
-Go to **Settings → Webhook Tokens** and create a token. You'll need this to send alerts.
+## 2. Create a webhook token
+
+You need a token (a secret password for machines) before your tools can send alerts to Alga.
+
+1. In the left sidebar, click **Incoming Webhooks**
+2. Create a new token and give it a name like "Grafana"
+3. Copy the token — you'll use it in the next step
 
 ## 3. Send a Test Alert
 
@@ -37,95 +43,92 @@ curl -X POST http://localhost:8080/webhooks/alerts \
   }'
 ```
 
-You should see the alert appear on the **Alerts** page.
+You should see the alert appear on the **Alerts** page. (The token comes from the **Incoming Webhooks** page and goes in the `Authorization: Bearer` line.)
 
 ## 4. Connect Grafana
 
-1. In Alga, copy your webhook token
+1. In Alga, copy your token from the **Incoming Webhooks** page
 2. In Grafana, go to **Alerting → Contact points → Add contact point**
 3. Set type to **Webhook**
 4. Set URL to `http://your-alga-host:8080/webhooks/alerts`
-5. Add an HTTP header `Authorization` = `Bearer alga_YOUR_TOKEN` to the
-   contact point (Grafana: _Optional Webhook settings → HTTP Headers_)
-6. Save and test
+5. Add an HTTP header `Authorization` = `Bearer alga_YOUR_TOKEN`
+   (in Grafana you'll find this under _Optional Webhook settings → HTTP Headers_)
+6. Save and send a test
 
-## 5. Set Up Routing Rules
+## 5. Decide where alerts go
 
-Go to **Routes** and create rules to route alerts to specific channels:
+Go to **Settings → Routes** (click Settings in the sidebar, then Routes) to decide which alerts go where:
 
 1. Click **Add Rule**
-2. Set conditions (e.g., `namespace = production`)
-3. Set destination channels (Slack or Mattermost)
+2. Pick which alerts it applies to (for example, `namespace = production`)
+3. Pick where they go (Slack, Mattermost, and more)
 4. Save
 
 Alerts that don't match any rule go to the default channel.
 
-## 6. Create Knowledge Notes
+## 6. Write down what you know
 
-Knowledge notes capture operational runbooks and context so your team (and AI agents) know exactly what to do when an alert fires.
+**Knowledge** notes are your team's shared cheat sheets — what to do when an alert fires.
 
-1. Go to **Knowledge** in the sidebar
-2. Create notes with tags and selectors matching your alert labels (e.g., `alertname: HighMemory`)
-3. AI agents and operators can reference these during investigations
+1. In the sidebar, click **Knowledge**
+2. Write a note with tags matching your alerts (for example, `alertname: HighMemory`)
+3. The AI helpers and your teammates will see these notes when that alert fires
 
-Knowledge notes help standardize incident response and reduce mean time to resolution. For structured, step-by-step procedures, see [Playbooks](/core-features/playbooks).
+Writing down fixes once means faster fixes every time. For step-by-step checklists, see [Playbooks](/core-features/playbooks).
 
-## 7. Explore Core Features
+## 7. Look around
 
-| Feature            | Where               | What                                  |
-| ------------------ | ------------------- | ------------------------------------- |
-| **Alerts**         | Alerts page         | View, acknowledge, resolve alerts     |
-| **Investigations** | Investigations page | AI-powered root cause analysis        |
-| **Knowledge**      | Knowledge page      | Shared notes for operators and agents |
-| **Routing**        | Routes page         | Alert routing rules                   |
+| What you want to see | Where to click      | What you can do                |
+| -------------------- | ------------------- | ------------------------------ |
+| **Alerts**           | Alerts page         | See, confirm, and close alerts |
+| **Investigations**   | Investigations page | Read AI findings               |
+| **Knowledge**        | Knowledge page      | Shared team notes              |
+| **Routes**           | Settings → Routes   | Decide where alerts go         |
 
-## 8. Set Up Incident Management
+## 8. Set up incident response
 
-1. Create **Services** in the Service Catalog
-2. Define **Dependencies** between services
-3. Create **Teams** and add members
-4. Set up **On-Call Schedules** with rotations
-5. Create **Escalation Policies** with tiers and delays
+1. Add your **Services** (the parts of your system you care about)
+2. Note which services depend on each other
+3. Create **Teams** and add your people
+4. Set up **On-Call Schedules** so someone is always reachable
+5. Create **Escalation Policies** — who gets called if the first person doesn't answer
 
-## 9. Set Up On-Call and Escalation
+## 9. Set up on-call and escalation
 
-On-call schedules ensure the right person is always reachable. Escalation policies define what happens when they don't respond.
+On-call schedules make sure the right person is always reachable. Escalation says what happens if they don't answer.
 
 1. Go to **On-Call → Schedules** and create a rotation
-2. Add layers for follow-the-sun coverage if you have multiple time zones
-3. Create an **Escalation Policy** with tiered levels and delays
-4. Assign the escalation policy to a service (target a team or user within each level)
+2. Add extra layers if your team spans time zones
+3. Create an **Escalation Policy** with levels and wait times
+4. Link the policy to a service
 
-See [Teams & On-Call](/on-call/) for detailed schedule and escalation configuration.
+See [Teams & On-Call](/on-call/) for details.
 
-## 10. Connect an Agent (Optional)
+## 10. Turn on AI help (optional)
 
-To enable automated investigations:
+Alga comes with a built-in Alga Agent, and also works with Hermes or OpenClaw — you don't need to install anything to try the built-in one. To connect a helper:
 
-1. Go to **Agents** in the sidebar menu and create an agent token
-2. Install the Hermes adapter or OpenClaw plugin
-3. Configure the agent to connect to `http://your-alga-host:8080/api/v1/agent/events` with the agent token
+1. Go to **Agents** in the sidebar and create an agent token
+2. Connect your chosen agent (built-in Alga Agent, Hermes, or OpenClaw) using that token
 
 See [AI Investigation](/core-features/investigation) for details.
 
-## 11. Configure Notifications
+## 11. Choose how you get notified
 
-Each user can set their own notification preferences for how they receive alerts:
+Everyone picks their own notification style:
 
-1. Click your **profile avatar** → **Notification Preferences**
-2. Add rules mapping notification types to channels (in-app, email, Slack DM, voice)
-3. Set a default channel for notification types without an explicit rule
-4. Optionally enable the voice opt-out to suppress phone calls
-5. Link your personal Slack account for DM delivery under **Connected Accounts**
+1. Click your **profile picture** (top corner) → go to **Settings → Notifications**
+2. Pick how you hear about each kind of alert (pop-up in Alga, email, Slack message, or phone call)
+3. Pick a backup method for anything you didn't list
+4. Optionally link your personal Slack account so Alga can message you directly
 
-See [Notification Preferences](/on-call/notification-preferences) for details on all available channels.
+See [Notification Preferences](/on-call/notification-preferences) for all the options.
 
-## 12. Secure Your Instance
+## 12. Lock things down
 
-For production deployments:
+If other people will use this over the internet:
 
-- Set `ENVIRONMENT=production`
-- Configure `ENCRYPTION_KEYS` and `SECRET_PEPPER`
-- Enable `SECURE_COOKIES=true` with HTTPS
-- Complete the first-run setup wizard to create the initial admin account before enabling production
+- Run it with `ENVIRONMENT=production`
+- Make sure your secret passwords are set (`ENCRYPTION_KEYS` and `SECRET_PEPPER` — `setup.sh` already created these for you)
+- Use `https://` with secure cookies on
 - See [Security & Authentication](/configuration/security) for details

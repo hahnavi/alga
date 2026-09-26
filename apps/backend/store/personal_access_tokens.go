@@ -218,7 +218,11 @@ func (s *pgPersonalAccessTokenStore) ValidateToken(token string) (*PATRecord, er
 			continue
 		}
 
-		go s.updateLastUsed(c.ID, c.LastUsedAt)
+		// Throttled async write: only spawn the goroutine when the 24h guard
+		// would actually fire, so a token-validation flood doesn't fan out.
+		if c.LastUsedAt == nil || time.Since(*c.LastUsedAt) >= 24*time.Hour {
+			go s.updateLastUsed(c.ID, c.LastUsedAt)
+		}
 
 		return &PATRecord{
 			ID:          c.ID,
@@ -246,10 +250,12 @@ func (s *pgPersonalAccessTokenStore) updateLastUsed(id uuid.UUID, lastUsedAt *ti
 	}
 	ctx, cancel := pgctx(context.Background())
 	defer cancel()
-	_, _ = s.db.NewUpdate().Model((*models.PersonalAccessToken)(nil)).
+	if _, err := s.db.NewUpdate().Model((*models.PersonalAccessToken)(nil)).
 		Set("last_used_at = ?", time.Now().UTC()).
 		Where("id = ?", id).
-		Exec(ctx)
+		Exec(ctx); err != nil {
+		logger.Error("failed to update personal access token last_used_at", "token_id", id, "error", err)
+	}
 }
 
 func (s *pgPersonalAccessTokenStore) Close() {}

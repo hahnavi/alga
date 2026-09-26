@@ -20,7 +20,7 @@ func (s *Server) handleNotificationPreferences(w http.ResponseWriter, r *http.Re
 	case http.MethodPut:
 		s.updateNotificationPreferences(w, r, user.ID.String())
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -45,28 +45,28 @@ func (s *Server) updateNotificationPreferences(w http.ResponseWriter, r *http.Re
 	if rulesRaw, ok := prefs["rules"]; ok {
 		rules, ok := rulesRaw.([]any)
 		if !ok {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "rules must be an array")
+			writeError(w, ErrorCodeValidationFailed, "rules must be an array")
 			return
 		}
 		for i, ruleRaw := range rules {
 			rule, ok := ruleRaw.(map[string]any)
 			if !ok {
-				writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "each rule must be an object")
+				writeError(w, ErrorCodeValidationFailed, "each rule must be an object")
 				return
 			}
 			nt, ok := rule["notification_type"].(string)
 			if !ok || nt == "" {
-				writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "each rule must have a notification_type string")
+				writeError(w, ErrorCodeValidationFailed, "each rule must have a notification_type string")
 				return
 			}
 			channels, ok := rule["channels"].([]any)
 			if !ok {
-				writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "each rule must have a channels array")
+				writeError(w, ErrorCodeValidationFailed, "each rule must have a channels array")
 				return
 			}
 			for _, ch := range channels {
 				if _, ok := ch.(string); !ok {
-					writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "channels must be an array of strings")
+					writeError(w, ErrorCodeValidationFailed, "channels must be an array of strings")
 					return
 				}
 			}
@@ -88,7 +88,7 @@ func (s *Server) updateNotificationPreferences(w http.ResponseWriter, r *http.Re
 
 func (s *Server) handleTestNotification(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -119,7 +119,17 @@ func (s *Server) handleTestNotification(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	s.publishToUser(user.ID.String(), "notification_new", created)
+	// Same event type as the dispatch worker; the payload is the dispatch
+	// shape so the frontend keeps one handler for both producers.
+	s.publishToUser(user.ID.String(), "notification", map[string]any{
+		"id":            created.ID,
+		"type":          created.Type,
+		"title":         created.Title,
+		"message":       created.Message,
+		"resource_type": created.ResourceType,
+		"resource_id":   created.ResourceID,
+		"created_at":    created.CreatedAt,
+	})
 
 	logger.InfoCtx(r.Context(), "test notification sent", "component", "api", "user_id", user.ID.String())
 

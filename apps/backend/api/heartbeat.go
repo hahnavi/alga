@@ -84,11 +84,11 @@ func (s *Server) handleCreateHeartbeat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.TrimSpace(req.Name) == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "name is required")
+		writeError(w, ErrorCodeValidationFailed, "name is required")
 		return
 	}
 	if req.IntervalSeconds == nil || *req.IntervalSeconds <= 0 {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "interval_seconds must be a positive integer")
+		writeError(w, ErrorCodeValidationFailed, "interval_seconds must be a positive integer")
 		return
 	}
 	severity := strings.TrimSpace(req.Severity)
@@ -96,7 +96,7 @@ func (s *Server) handleCreateHeartbeat(w http.ResponseWriter, r *http.Request) {
 		severity = "warning"
 	}
 	if !validHeartbeatSeverities[severity] {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid severity (expected critical, high, warning, or info)")
+		writeError(w, ErrorCodeValidationFailed, "invalid severity (expected critical, high, warning, or info)")
 		return
 	}
 	grace := 60
@@ -119,7 +119,7 @@ func (s *Server) handleCreateHeartbeat(w http.ResponseWriter, r *http.Request) {
 	if req.OwnerTeamID != "" {
 		uid, err := uuid.Parse(req.OwnerTeamID)
 		if err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid owner_team_id")
+			writeError(w, ErrorCodeValidationFailed, "invalid owner_team_id")
 			return
 		}
 		record.OwnerTeamID = &uid
@@ -148,20 +148,20 @@ func (s *Server) handleHeartbeatByID(w http.ResponseWriter, r *http.Request) {
 	rest := strings.TrimPrefix(r.URL.Path, "/api/v1/heartbeats/")
 	rest = strings.TrimSuffix(rest, "/")
 	if rest == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "missing id")
+		writeError(w, ErrorCodeValidationFailed, "missing id")
 		return
 	}
 	parts := strings.SplitN(rest, "/", 2)
 	id, err := uuid.Parse(parts[0])
 	if err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid id")
+		writeError(w, ErrorCodeValidationFailed, "invalid id")
 		return
 	}
 
 	// Sub-resource: POST {id}/regenerate-token.
 	if len(parts) == 2 && parts[1] == "regenerate-token" {
 		if r.Method != http.MethodPost {
-			writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+			writeMethodNotAllowed(w)
 			return
 		}
 		if !s.checkPermission(w, r, rbac.HeartbeatsWrite) {
@@ -192,7 +192,7 @@ func (s *Server) handleHeartbeatByID(w http.ResponseWriter, r *http.Request) {
 		}
 		s.deleteHeartbeat(w, r, id)
 	default:
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 	}
 }
 
@@ -216,7 +216,7 @@ func (s *Server) updateHeartbeat(w http.ResponseWriter, r *http.Request, id uuid
 	}
 	severity := strings.TrimSpace(req.Severity)
 	if severity != "" && !validHeartbeatSeverities[severity] {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid severity (expected critical, high, warning, or info)")
+		writeError(w, ErrorCodeValidationFailed, "invalid severity (expected critical, high, warning, or info)")
 		return
 	}
 
@@ -228,14 +228,14 @@ func (s *Server) updateHeartbeat(w http.ResponseWriter, r *http.Request, id uuid
 	}
 	if req.IntervalSeconds != nil {
 		if *req.IntervalSeconds <= 0 {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "interval_seconds must be a positive integer")
+			writeError(w, ErrorCodeValidationFailed, "interval_seconds must be a positive integer")
 			return
 		}
 		patch.IntervalSeconds = *req.IntervalSeconds
 	}
 	if req.GraceSeconds != nil {
 		if *req.GraceSeconds < 0 {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "grace_seconds must be non-negative")
+			writeError(w, ErrorCodeValidationFailed, "grace_seconds must be non-negative")
 			return
 		}
 		patch.GraceSeconds = *req.GraceSeconds
@@ -243,7 +243,7 @@ func (s *Server) updateHeartbeat(w http.ResponseWriter, r *http.Request, id uuid
 	if req.OwnerTeamID != "" {
 		uid, err := uuid.Parse(req.OwnerTeamID)
 		if err != nil {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid owner_team_id")
+			writeError(w, ErrorCodeValidationFailed, "invalid owner_team_id")
 			return
 		}
 		patch.OwnerTeamID = &uid

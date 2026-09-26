@@ -2,15 +2,11 @@ package models
 
 import (
 	"time"
-
-	"github.com/google/uuid"
-	"github.com/uptrace/bun"
 )
 
 type User struct {
-	bun.BaseModel `bun:"table:users"`
+	BaseModel `bun:"table:users"`
 
-	ID                      uuid.UUID      `bun:"id,pk"`
 	Email                   string         `bun:"email,notnull,unique"`
 	Password                string         `bun:"password,notnull"`
 	Role                    string         `bun:"role,notnull,default:'viewer'"`
@@ -27,6 +23,4 @@ type User struct {
 	SlackDisplayName        string         `bun:"slack_display_name,default:''"`
 	NotificationPreferences map[string]any `bun:"notification_preferences,type:jsonb"`
 	VoiceOptOut             bool           `bun:"voice_opt_out,notnull,default:false"`
-	CreatedAt               time.Time      `bun:"created_at,notnull,default:current_timestamp"`
-	UpdatedAt               time.Time      `bun:"updated_at,notnull,default:current_timestamp"`
 }

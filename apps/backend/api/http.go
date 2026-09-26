@@ -90,6 +90,7 @@ type Server struct {
 	loginLimiter             LoginRateLimiting
 	rateLimiter              RateLimiting
 	agentRateLimiter         RateLimiting
+	authedRateLimiter        RateLimiting
 	mmClient                 *mattermost.Client
 	slackClient              *slack.Client
 	twilioClient             *twilio.Client
@@ -257,7 +258,7 @@ func (s *Server) Register(mux *http.ServeMux) {
 
 	// Public auth endpoints (no middleware)
 	mux.HandleFunc("/api/v1/auth/login", s.rateLimitMiddleware(s.handleLogin))
-	mux.HandleFunc("/api/v1/auth/logout", s.handleLogout)
+	mux.HandleFunc("/api/v1/auth/logout", s.rateLimitMiddleware(s.handleLogout))
 	mux.HandleFunc("/api/v1/auth/me", s.authMiddleware(s.handleGetCurrentUser))
 	mux.HandleFunc("/api/v1/auth/refresh", s.rateLimitMiddleware(s.handleRefreshSession))
 	mux.HandleFunc("/api/v1/auth/change-password", s.authMiddleware(s.handleChangePassword))
@@ -297,7 +298,8 @@ func (s *Server) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/admin/tokens/", s.authMiddleware(s.handleAdminTokenByID, rbac.TokensManage))
 	mux.HandleFunc("/api/v1/routes", s.authMiddleware(s.handleRoutes, rbac.RoutesRead))
 	// Read-only admin audit review surface: the audit:read permission
-	// finally gates a route. Rate limiting inherits from authMiddleware.
+	// finally gates a route. Like other authenticated routes it is not
+	// per-IP rate limited (only public/callback and agent routes are).
 	mux.HandleFunc("GET /api/v1/audit-events", s.authMiddleware(s.handleListAuditEvents, rbac.AuditRead))
 	mux.HandleFunc("/api/v1/knowledge", s.authMiddleware(s.handleKnowledge, rbac.KnowledgeRead))
 	mux.HandleFunc("/api/v1/knowledge/", s.authMiddleware(s.handleKnowledgeByID, rbac.KnowledgeRead))
@@ -398,7 +400,9 @@ func (s *Server) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/playbooks/", s.authMiddleware(s.handlePlaybookRoutes))
 
 	// Internal: serve Mattermost plugin tarball for the auto-install CronJob.
-	mux.HandleFunc("/internal/mm-plugin", s.handleMMPluginDownload)
+	// Unauthenticated by design (cluster-internal only), but rate limited so a
+	// misconfigured ingress cannot turn it into an unthrottled file server.
+	mux.HandleFunc("/internal/mm-plugin", s.rateLimitMiddleware(s.handleMMPluginDownload))
 
 	// Agent domain routes (agent-bearer + operator agent-token management).
 	// Registered last so the agent.Service can compose its own middleware.
@@ -456,6 +460,7 @@ const (
 	ErrorCodeConflict         = platform.ErrorCodeConflict
 	ErrorCodeRateLimited      = platform.ErrorCodeRateLimited
 	ErrorCodeInternal         = platform.ErrorCodeInternal
+	ErrorCodeMethodNotAllowed = platform.ErrorCodeMethodNotAllowed
 )
 
 // ErrorDetail carries field-level validation context for an error.
@@ -497,6 +502,12 @@ func writeStatus(w http.ResponseWriter, status string) {
 // invariant-conflict failures instead of repeating the status literal.
 func writeConflict(w http.ResponseWriter, message string) {
 	platform.WriteConflict(w, message)
+}
+
+// writeMethodNotAllowed writes the canonical 405 response for multi-method
+// dispatchers whose request method has no matching branch.
+func writeMethodNotAllowed(w http.ResponseWriter) {
+	writeError(w, ErrorCodeMethodNotAllowed, "method not allowed")
 }
 
 func validateRouteConfigs(routes []config.RouteConfig) error {

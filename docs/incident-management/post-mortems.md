@@ -1,116 +1,56 @@
 ---
 title: Post-Mortems
-description: Blameless post-incident reviews with structured content sections, an AI draft builder, action items with owners and due dates, and a draft-to-published workflow.
+description: Blameless reviews after an incident — what happened, why, and what to do next.
 ---
 
 # Post-Mortems
 
-Alga provides a structured, blameless post-mortem workflow for incidents, with review/approval processes and trackable action items. Each post-mortem is linked 1:1 to an incident (`incident_id` is unique).
+After an incident is fixed, write a blameless review: what happened, why, what helped, and what you'll follow up on. Each incident has one post-mortem.
 
-## Post-Mortem Lifecycle
+## The Flow
 
 ```
-draft → in_review → approved → published
+Draft → In review → Approved → Published
 ```
 
-| Status      | Description                                      |
-| ----------- | ------------------------------------------------ |
-| `draft`     | Initial creation, being written                  |
-| `in_review` | Submitted for review                             |
-| `approved`  | Reviewed and approved (records `approved_by_id`) |
-| `published` | Publicly visible (records `published_at`)        |
+| Stage     | What it means                       |
+| --------- | ----------------------------------- |
+| Draft     | You're still writing                |
+| In review | You've asked for feedback           |
+| Approved  | Reviewers are happy with it         |
+| Published | Finished and locked — no more edits |
 
-Allowed transitions: `draft → in_review`; `in_review → draft` or `approved`; `approved → in_review` or `published`. `published` is terminal — published post-mortems cannot be edited or reverted (PATCH returns `409`). Submitting for review requires `blameless_confirmed` to be set and notifies the incident commander that a review is requested.
+To send for review you'll confirm the review is blameless. Publishing locks the post-mortem so it can't be changed afterward.
 
-## Content Fields
+## What to Write
 
-A post-mortem includes the following fields:
+- **What happened** — short summary and timeline of key events.
+- **Why** — root cause and anything that contributed.
+- **Impact** — how long, what was affected, who felt it.
+- **What helped** — what went well during the response.
+- **What to improve** — what didn't work and lessons learned.
 
-| Field                  | Description                                      |
-| ---------------------- | ------------------------------------------------ |
-| `title`                | Post-mortem title                                |
-| `summary`              | Brief description of what happened               |
-| `timeline`             | Key events during the incident (structured JSON) |
-| `root_cause`           | Technical explanation                            |
-| `contributing_factors` | Additional factors that contributed (list)       |
-| `impact`               | Duration, affected services, user impact         |
-| `what_went_well`       | Things that worked during the response           |
-| `what_went_wrong`      | Things that did not work or could be improved    |
-| `lessons_learned`      | What was learned and what could be improved      |
-| `blameless_confirmed`  | Acknowledgement that the review is blameless     |
-| `blameless_notes`      | Notes supporting the blameless confirmation      |
+## Follow-Up Tasks
 
-## AI Draft Builder
+Add follow-up tasks with an owner and a due date so fixes actually happen.
 
-When an incident is resolved, Alga can auto-create a post-mortem draft pre-populated from incident context — the incident document sections, coordination messages, timeline entries, status updates, and linked alerts. The same enrichment logic backs both the operator resolve flow and the agent resolve tool.
+- For the due date you can pick just a date (treated as end of that day) or a full date and time.
+- To clear a date, empty the field and save.
+- If a task goes overdue, its owner gets a reminder.
 
-## Action Items
+You can see all open follow-ups in one place, sorted with the most urgent due dates first.
 
-Action items are tracked per post-mortem and can be assigned, prioritized, and driven to completion.
+## Workflow in the App
 
-| Field                           | Description                                                                                              |
-| ------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `description`                   | What needs to be done (required)                                                                         |
-| `type`                          | Kind of follow-up (`prevent`, `mitigate`, `detect`, `investigate`; defaults to `investigate`)            |
-| `assignee_id` / `assignee_name` | User responsible (`assignee_id` must reference an existing user; reassignment notifies the new assignee) |
-| `status`                        | `open` → `in_progress` → `completed` (or `cancelled`; defaults to `open`)                                |
-| `priority`                      | Priority level (`low`, `medium`, `high`; defaults to `medium`)                                           |
-| `due_date`                      | Target completion date — RFC3339 timestamp or `YYYY-MM-DD` (interpreted as end of day UTC)               |
+1. Open the incident's **Post-mortem** tab (a draft may already be started for you after resolving).
+2. Fill in the sections while it's a draft.
+3. Click **Submit for review** and confirm it's blameless.
+4. Reviewers approve, then you click **Publish**.
+5. Track follow-up tasks to completion.
 
-Action item mutations are scoped to the path incident: an item id from a different incident's post-mortem returns `404`. Overdue items (due date in the past, not completed/cancelled) are detected by a background sweep every 5 minutes; the sweep emits an `action_item_overdue` SSE event and notifies the assignee at most once per item per 24 hours.
-
-View all open action items globally at `GET /api/v1/action-items` (sorted by due date, undated items last).
-
-## Workflow
-
-1. **Create** the post-mortem (auto-drafted on resolve, or created manually)
-2. **Edit** content as needed (while in `draft`; editing is allowed in any non-published state)
-3. **Submit for Review** — moves to `in_review` and notifies the commander (requires `blameless_confirmed`)
-4. **Approve** — moves to `approved` and records the approver
-5. **Publish** — moves to `published` (immutable)
-6. **Track Action Items** — ensure follow-up tasks are completed
-7. **Revert** — `in_review`/`approved` post-mortems can be returned to `draft` (or `approved` to `in_review`) via `POST …/revert-to-draft` / `POST …/revert-to-review`
-
-## API Endpoints
-
-### Post-Mortem Management
-
-| Method   | Path                                 | Auth    | Permission           | Description                             |
-| -------- | ------------------------------------ | ------- | -------------------- | --------------------------------------- |
-| `GET`    | `/api/v1/post-mortems`               | Session | `postmortems:read`   | List all post-mortems                   |
-| `GET`    | `/api/v1/incidents/{id}/post-mortem` | Session | `postmortems:read`   | Get post-mortem                         |
-| `POST`   | `/api/v1/incidents/{id}/post-mortem` | Session | `postmortems:write`  | Create post-mortem                      |
-| `PATCH`  | `/api/v1/incidents/{id}/post-mortem` | Session | `postmortems:write`  | Update post-mortem (409 when published) |
-| `DELETE` | `/api/v1/incidents/{id}/post-mortem` | Session | `postmortems:delete` | Delete post-mortem                      |
-
-`{id}` accepts either the incident number or the incident UUID.
-
-### Workflow Actions
-
-| Method | Path                                                  | Auth    | Permission          | Description                              |
-| ------ | ----------------------------------------------------- | ------- | ------------------- | ---------------------------------------- |
-| `POST` | `/api/v1/incidents/{id}/post-mortem/submit-review`    | Session | `postmortems:write` | Submit for review (`in_review`)          |
-| `POST` | `/api/v1/incidents/{id}/post-mortem/revert-to-draft`  | Session | `postmortems:write` | Return `in_review`/`approved` to `draft` |
-| `POST` | `/api/v1/incidents/{id}/post-mortem/revert-to-review` | Session | `postmortems:write` | Return `approved` to `in_review`         |
-| `POST` | `/api/v1/incidents/{id}/post-mortem/approve`          | Session | `postmortems:write` | Approve post-mortem                      |
-| `POST` | `/api/v1/incidents/{id}/post-mortem/publish`          | Session | `postmortems:write` | Publish post-mortem                      |
-
-### Action Items
-
-| Method   | Path                                                       | Auth    | Permission           | Description        |
-| -------- | ---------------------------------------------------------- | ------- | -------------------- | ------------------ |
-| `GET`    | `/api/v1/incidents/{id}/post-mortem/action-items`          | Session | `postmortems:read`   | List action items  |
-| `POST`   | `/api/v1/incidents/{id}/post-mortem/action-items`          | Session | `postmortems:write`  | Create action item |
-| `PATCH`  | `/api/v1/incidents/{id}/post-mortem/action-items/{itemId}` | Session | `postmortems:write`  | Update action item |
-| `DELETE` | `/api/v1/incidents/{id}/post-mortem/action-items/{itemId}` | Session | `postmortems:delete` | Delete action item |
-
-### Global Action Items
-
-| Method | Path                   | Auth    | Permission         | Description           |
-| ------ | ---------------------- | ------- | ------------------ | --------------------- |
-| `GET`  | `/api/v1/action-items` | Session | `postmortems:read` | All open action items |
+If review sends it back, it returns to draft for more edits.
 
 ## See Also
 
-- [Incident Lifecycle](/incident-management/lifecycle) — state transitions and resolution requirements
-- [Incident Overview](/incident-management/) — creation and management
+- [Incident Lifecycle](/incident-management/lifecycle) — steps and what's needed to resolve
+- [Incident Overview](/incident-management/) — creating and working with incidents

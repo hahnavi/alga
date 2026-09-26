@@ -85,11 +85,11 @@ func requireAgent(w http.ResponseWriter, r *http.Request) (*platform.AgentTokenC
 
 func validateTokenName(w http.ResponseWriter, name string) bool {
 	if name == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "name is required")
+		writeError(w, ErrorCodeValidationFailed, "name is required")
 		return false
 	}
 	if len(name) > maxTokenNameLength {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, fmt.Sprintf("name must be at most %d characters", maxTokenNameLength))
+		writeError(w, ErrorCodeValidationFailed, fmt.Sprintf("name must be at most %d characters", maxTokenNameLength))
 		return false
 	}
 	return true
@@ -99,9 +99,9 @@ func parseAndValidateExpiry(w http.ResponseWriter, raw string) (*time.Time, bool
 	expPtr, err := parseOptionalExpiry(raw)
 	if err != nil {
 		if err == errExpiryInPast {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "expires_at must be in the future")
+			writeError(w, ErrorCodeValidationFailed, "expires_at must be in the future")
 		} else {
-			writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid expires_at (use RFC3339)")
+			writeError(w, ErrorCodeValidationFailed, "invalid expires_at (use RFC3339)")
 		}
 		return nil, false
 	}
@@ -133,6 +133,9 @@ func (s *Server) auditAlertAction(r *http.Request, event store.AuditEvent, a *al
 }
 
 func (s *Server) audit(r *http.Request, event store.AuditEvent, details map[string]any) {
+	if s.auditStore == nil {
+		return
+	}
 	if user := userFromContext(r.Context()); user != nil {
 		s.auditStore.LogRecord(store.AuditRecord{
 			Event:     event,

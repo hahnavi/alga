@@ -22,6 +22,22 @@ export function displayName(message: ChatMessage): string {
   return "Responder";
 }
 
+/**
+ * `displayName` for owner-thread messages where the assigned agent's name is
+ * known out-of-band (e.g. the alert/incident investigation record): agents
+ * without a username on the message resolve to that name instead of the
+ * generic "Agent".
+ */
+export function displayNameWithAgent(
+  message: OwnerThreadMessage,
+  agentName: string | null | undefined,
+): string {
+  if (message.username) return message.username;
+  if (message.source === "agent") return agentName?.trim() || "Agent";
+  if (message.source === "system") return "System";
+  return "User";
+}
+
 /** Avatar background tint per source. */
 export function sourceAvatarBg(source: ChatSource | string): string {
   switch (source) {

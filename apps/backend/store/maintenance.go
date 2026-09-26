@@ -83,7 +83,7 @@ func (s *pgMaintenanceWindowStore) Update(ctx context.Context, id string, patch 
 	}
 	uid, err := uuid.Parse(id)
 	if err != nil {
-		return nil, fmt.Errorf("invalid id: %w", err)
+		return nil, fmt.Errorf("%w: %v", ErrInvalidID, err)
 	}
 
 	now := time.Now().UTC()
@@ -119,7 +119,7 @@ func (s *pgMaintenanceWindowStore) Update(ctx context.Context, id string, patch 
 		return nil, fmt.Errorf("failed to update maintenance window: %w", err)
 	}
 	if n == 0 {
-		return nil, errors.New("maintenance window not found")
+		return nil, fmt.Errorf("maintenance window %w", ErrNotFound)
 	}
 
 	// Reload the updated record.
@@ -133,7 +133,7 @@ func (s *pgMaintenanceWindowStore) Update(ctx context.Context, id string, patch 
 func (s *pgMaintenanceWindowStore) Delete(ctx context.Context, id string) error {
 	uid, err := uuid.Parse(id)
 	if err != nil {
-		return fmt.Errorf("invalid id: %w", err)
+		return fmt.Errorf("%w: %v", ErrInvalidID, err)
 	}
 	res, err := s.db.NewDelete().Model((*models.MaintenanceWindow)(nil)).Where("id = ?", uid).Exec(ctx)
 	if err != nil {
@@ -144,7 +144,7 @@ func (s *pgMaintenanceWindowStore) Delete(ctx context.Context, id string) error 
 		return fmt.Errorf("failed to delete maintenance window: %w", err)
 	}
 	if n == 0 {
-		return errors.New("maintenance window not found")
+		return fmt.Errorf("maintenance window %w", ErrNotFound)
 	}
 	return nil
 }
@@ -152,7 +152,7 @@ func (s *pgMaintenanceWindowStore) Delete(ctx context.Context, id string) error 
 func (s *pgMaintenanceWindowStore) Get(ctx context.Context, id string) (*MaintenanceWindowRecord, error) {
 	uid, err := uuid.Parse(id)
 	if err != nil {
-		return nil, fmt.Errorf("invalid id: %w", err)
+		return nil, fmt.Errorf("%w: %v", ErrInvalidID, err)
 	}
 	mw := new(models.MaintenanceWindow)
 	err = s.db.NewSelect().Model(mw).Where("id = ?", uid).Scan(ctx)

@@ -22,6 +22,15 @@ type IDModel struct {
 	ID uuid.UUID `bun:"id,pk"`
 }
 
+// CreatedOnlyModel is the base for immutable rows that record creation time
+// but are never updated (sessions, schedule overrides, token grants): no
+// updated_at column exists and no updated_at trigger fires.
+type CreatedOnlyModel struct {
+	bun.BaseModel
+	ID        uuid.UUID `bun:"id,pk"`
+	CreatedAt time.Time `bun:"created_at,notnull,default:current_timestamp"`
+}
+
 type SoftDeleteModel struct {
 	DeletedAt *time.Time `bun:"deleted_at,soft_delete"`
 }

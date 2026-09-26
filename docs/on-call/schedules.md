@@ -1,127 +1,51 @@
 ---
 title: On-Call Schedules
-description: Multi-layer on-call schedules with rotations, overrides, follow-the-sun coverage, reminders, handoffs, and pager-load metrics.
+description: Who's on call when — rotas, rotations, time off, and pager load.
 ---
 
 # On-Call Schedules
 
-Alga supports multi-layer on-call schedules with follow-the-sun restrictions and overrides.
+Each team has **one rota**, created automatically when the team is created. The rota doesn't have its own name — it takes its name from the team.
 
-## Schedule Structure
+## How Rotations Work
 
-A schedule's display name is **derived dynamically from its owning team** — no `name` field is stored on the schedule itself. There is exactly one schedule per team, auto-provisioned when the team is created.
+A rota is made of one or more **layers** — for example a Primary layer and a Secondary layer. Each layer says who rotates and how often:
 
-Each schedule has one or more **layers** that define rotating on-call coverage. A layer carries:
+- **How often:** hourly, daily, weekly, or monthly shifts.
+- **Who:** the people in the rotation, in order.
+- **When:** optional daily time windows and days of the week (for example, weekdays 9–5 in your timezone, or follow-the-sun coverage).
+- **Priority:** if two layers cover the same moment, the higher-priority layer decides who's on call.
 
-| Field                     | Description                                                                                   |
-| ------------------------- | --------------------------------------------------------------------------------------------- |
-| `name`                    | Display name for the layer (e.g., "Primary", "Secondary")                                     |
-| `rotation_type`           | `hourly`, `daily`, `weekly`, or `monthly` (rejected values are refused with HTTP 400)         |
-| `rotation_interval`       | How many units of `rotation_type` per shift (e.g., `2` for bi-weekly)                         |
-| `start_date`              | When the rotation begins (RFC3339)                                                            |
-| `end_date`                | Optional end; the layer stops resolving after this                                            |
-| `timezone`                | IANA timezone the layer's windows are interpreted in (default `UTC`)                          |
-| `start_time` / `end_time` | Daily active window as `HH:MM` in the layer's timezone; empty `end_time` means active all day |
-| `days_of_week`            | Active days (empty means every day)                                                           |
-| `priority`                | Higher-priority layers win when multiple layers are active                                    |
-| `user_ids`                | Ordered list of users in the rotation                                                         |
+To change a rotation, open the team's rota and edit its layers.
 
-When more than one layer is active at a given moment, the layer with the highest `priority` determines who is on call. Users added to a layer must be members of the schedule's team and must have a phone number on file.
+## Time Off and Swaps
 
-## Overrides
+Use **overrides** for holidays, sick days, or coverage swaps. Pick the replacement person and the date range — while an override is active, that person is on call, no matter what the normal rotation says.
 
-Temporary schedule changes can be created via **overrides**. An override records `user_id`, `start_at`, `end_at`, and `created_by`:
+Overrides always win over layers, so use them instead of informal swaps. They're tracked, so everyone can see who covered whom.
 
-- Covers a specific time range
-- Takes **absolute precedence** over every layer — while an override is active, the override's user is on call regardless of layer priority or rotation
-- Useful for PTO, sick days, or manual coverage swaps
+## Who's On Call?
 
-## Viewing On-Call Status
+- **Who's on call now:** check the On-Call overview to see every rota's current person.
+- **My shifts:** check your own view to see where you're currently on call and what's coming up in the next couple of weeks.
+- **Calendar:** export a rota to your calendar app if you want reminders there.
 
-### Who is On-Call Now?
+## Shift Handoffs
 
-- **Global**: `GET /api/v1/on-call/who-is-on-call` — All schedules' current on-call
-- **Per Schedule**: `GET /api/v1/on-call/schedules/{id}/current` — Specific schedule; includes `until`, the RFC3339 end of the active shift
-- **My Shifts**: `GET /api/v1/on-call/me` — `{current: [...], pending: [...]}` for the logged-in user. `current` lists every schedule where the caller is on call right now (with the matching layer names); `pending` lists the next upcoming shift per schedule within a two-week horizon (`start_at`/`end_at` included).
+When shifts change, the outgoing person leaves notes and the incoming person acknowledges. See [Shift handoffs](/incident-management/handoffs).
 
-### Timeline
+## Pager Load
 
-`GET /api/v1/on-call/schedules/{id}/timeline` — Shows next N rotations
+To check if the load is fair, pick a schedule and a date range in the pager metrics view. You'll see per-shift stats: how many alerts fired on each shift, how many were acknowledged or missed, and average time to acknowledge — plus a summary across the range.
 
-## Handoffs
+Group by person to compare load across responders instead of shift by shift.
 
-On-call **handoffs** formalize the transfer of pager responsibility between responders. Each handoff record includes:
+## A Note on Phone Numbers
 
-- **Outgoing / Incoming user** — the responder ending their shift and the one taking over
-- **Handoff time** (`handoff_at`) — when the transfer occurs
-- **Status** — `pending` until the incoming responder acknowledges, then `acknowledged`
-- **Outgoing notes** — context from the outgoing responder (open issues, items to watch); editable only by the outgoing user
-- **Incoming notes** — notes from the incoming responder; editable only by the incoming user
-- **Incident summary** — a snapshot of active incidents at handoff time
+You can join a rota without a phone number. You only need one on file if you want to receive **voice call** pages — in-app, email, and chat pages work without it. You can also opt out of voice calls entirely in your notification preferences.
 
-Handoffs ensure continuity of on-call coverage and reduce the risk of dropped context during shift transitions. Only the incoming user can acknowledge a handoff, and pending handoffs are surfaced prominently so nothing falls through the cracks.
+## See Also
 
-## Pager Load Metrics
-
-Track on-call burden per shift to identify overloaded responders and optimize rotation design. `GET /api/v1/on-call/metrics` requires `schedule_id`, `start_date`, and `end_date` (RFC3339) query parameters and returns per-shift statistics:
-
-- **Alerts received** — alerts that fired while the shift holder was on call
-- **Alerts acknowledged / resolved** — acknowledge/resolve events recorded during the shift window
-- **Alerts missed** — alerts that fired during the shift but had no acknowledge event recorded by the shift's end
-- **Average ack time** (`avg_ack_time_seconds`) — mean seconds from an alert's fire time to its first acknowledgement, averaged over alerts fired during the shift
-- **Summary** — `total_shifts`, `avg_ack_rate`, and `avg_ack_time_seconds` across the range
-
-Pass `group_by=user` to aggregate shifts per responder instead of per shift.
-
-## API Endpoints
-
-### Schedule Management
-
-> **Note:** Schedules are **auto-provisioned one-per-team**. Creating a team (`POST /api/v1/teams`) automatically creates its on-call schedule. Schedules **cannot be created directly** — `POST /api/v1/on-call/schedules` returns HTTP 405 with the message _"schedules are auto-created from teams and cannot be created directly."_ Only `GET` and `PATCH` work on `/api/v1/on-call/schedules/{id}`.
-
-| Method  | Path                             | Auth    | Permission     | Description              |
-| ------- | -------------------------------- | ------- | -------------- | ------------------------ |
-| `GET`   | `/api/v1/on-call/schedules`      | Session | `oncall:read`  | List schedules           |
-| `GET`   | `/api/v1/on-call/schedules/{id}` | Session | `oncall:read`  | Get schedule with layers |
-| `PATCH` | `/api/v1/on-call/schedules/{id}` | Session | `oncall:write` | Update schedule          |
-
-### On-Call Lookup
-
-| Method | Path                                      | Auth    | Permission    | Description                       |
-| ------ | ----------------------------------------- | ------- | ------------- | --------------------------------- |
-| `GET`  | `/api/v1/on-call/who-is-on-call`          | Session | `oncall:read` | Global on-call status             |
-| `GET`  | `/api/v1/on-call/me`                      | Session | `oncall:read` | My current/pending shifts         |
-| `GET`  | `/api/v1/on-call/my-on-call`              | Session | `oncall:read` | Alias for `/on-call/me`           |
-| `GET`  | `/api/v1/on-call/schedules/{id}/current`  | Session | `oncall:read` | Current on-call for schedule      |
-| `GET`  | `/api/v1/on-call/schedules/{id}/timeline` | Session | `oncall:read` | Next N rotations                  |
-| `GET`  | `/api/v1/on-call/schedules/{id}/ical`     | Session | `oncall:read` | Export shifts as iCalendar (.ics) |
-
-### Overrides
-
-| Method   | Path                                       | Auth    | Permission     | Description     |
-| -------- | ------------------------------------------ | ------- | -------------- | --------------- |
-| `GET`    | `/api/v1/on-call/schedules/{id}/overrides` | Session | `oncall:read`  | List overrides  |
-| `POST`   | `/api/v1/on-call/schedules/{id}/overrides` | Session | `oncall:write` | Create override |
-| `DELETE` | `/api/v1/on-call/overrides/{id}`           | Session | `oncall:write` | Delete override |
-
-### Handoffs
-
-| Method | Path                                        | Auth    | Permission     | Description                                   |
-| ------ | ------------------------------------------- | ------- | -------------- | --------------------------------------------- |
-| `GET`  | `/api/v1/on-call/handoffs`                  | Session | `oncall:read`  | List handoffs                                 |
-| `GET`  | `/api/v1/on-call/handoffs/{id}`             | Session | `oncall:read`  | Get handoff                                   |
-| `GET`  | `/api/v1/on-call/handoffs/pending`          | Session | `oncall:read`  | Pending handoffs                              |
-| `POST` | `/api/v1/on-call/handoffs/{id}/notes`       | Session | `oncall:write` | Save notes (outgoing_notes or incoming_notes) |
-| `POST` | `/api/v1/on-call/handoffs/{id}/acknowledge` | Session | `oncall:write` | Acknowledge                                   |
-
-### Pager Load Metrics
-
-| Method | Path                      | Auth    | Permission    | Description        |
-| ------ | ------------------------- | ------- | ------------- | ------------------ |
-| `GET`  | `/api/v1/on-call/metrics` | Session | `oncall:read` | Pager load metrics |
-
-## Agent API
-
-| Method | Path                            | Auth   | Description    |
-| ------ | ------------------------------- | ------ | -------------- |
-| `GET`  | `/api/v1/agent/on-call/current` | Bearer | Who is on call |
+- [Shift handoffs](/incident-management/handoffs) — passing the pager with notes
+- [Escalation Policies](/on-call/escalation-policies) — who gets paged when nobody responds
+- [Notification Preferences](/on-call/notification-preferences) — choose how you get paged

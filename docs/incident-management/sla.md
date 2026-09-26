@@ -1,119 +1,43 @@
 ---
 title: SLA Tracking
-description: SLA targets — response and resolution — with priority-based defaults, background breach detection, escalation on response breach, and aggregate metrics.
+description: Response and resolution countdowns based on urgency — what they mean and what stops them.
 ---
 
 # SLA Tracking
 
-Alga tracks Service Level Agreement (SLA) compliance with automatic breach detection and escalation.
+Every incident shows two countdowns:
 
-## How SLA Works
+- **Respond by** — how fast someone needs to pick it up.
+- **Resolve by** — how fast it needs to be fixed.
 
-When an incident is created, Alga computes two deadlines that are stored on the incident:
+## Where Countdowns Come From
 
-- **`sla_target_respond_at`** — Time by which the incident must be acknowledged
-- **`sla_target_resolve_at`** — Time by which the incident must be resolved
+Countdowns come from the incident's **urgency (P1–P4)** — P1 is the fastest, P4 the slowest. They do not come from service settings.
 
-These can be supplied explicitly at creation (`sla_target_respond_at` / `sla_target_resolve_at`). When omitted, they default from the incident priority via `PriorityToSLATargets`:
+When you create an incident you can accept the default times for its urgency or set your own custom times.
 
-| Priority  | Respond Within | Resolve Within |
-| --------- | -------------- | -------------- |
-| P1        | 15 minutes     | 4 hours        |
-| P2        | 30 minutes     | 8 hours        |
-| P3        | 2 hours        | 24 hours       |
-| P4        | 8 hours        | 72 hours       |
-| P5        | 24 hours       | 168 hours      |
-| (default) | 2 hours        | 24 hours       |
+## What Stops the Clock
 
-Priority is derived from severity and impact for alert-created incidents.
+- **Acknowledging** stops further paging — Alga knows someone's got it.
+- **Resolving, closing, or cancelling** stops any pending escalations.
 
-## Lifecycle Timestamps
+## If You Miss the Respond Deadline
 
-SLA metrics are derived from lifecycle timestamps written by status transitions:
+If nobody picks up in time and the incident has an escalation policy, Alga pages the next level (starting with level 1). You'll see a note on the timeline that the response goal was missed.
 
-| Field                 | Set When                                        |
-| --------------------- | ----------------------------------------------- |
-| `sla_acknowledged_at` | Incident becomes `active` (acknowledge/promote) |
-| `sla_resolved_at`     | Incident becomes `resolved`                     |
-| `mitigated_at`        | Incident becomes `mitigated`                    |
-| `resolved_at`         | Incident becomes `resolved`                     |
+## Metrics You'll See
 
-## Breach Detection
+On the incidents metrics view you can see:
 
-SLA sweep ticks are published by the **scheduler leader** on the `alga.sla` exchange every `SLA_SWEEP_INTERVAL` (default 60s); values ≤ 0 disable publication. The `SLAWorker` consumes these ticks and sweeps SLA-eligible incidents — those in `detected`, `triaging`, `active`, or `mitigated` status with a response or resolve target set. For each incident past a deadline:
+- **Time to acknowledge** — how long from creation to someone picking it up.
+- **Time to mitigate** — how long to contain it.
+- **Time to resolve** — how long to fix it.
+- **Goal compliance** — what share of incidents met their respond and resolve goals.
 
-1. **Response breach** — `sla_target_respond_at` passed and not yet acknowledged (`sla_acknowledged_at` is null):
-   - A `sla_breach` timeline entry is added ("Response SLA breached")
-   - An `incident_sla_breach` SSE event is published (and to the commander)
-   - Escalation is triggered (level 1) if an escalation policy is configured
-2. **Resolve breach** — `sla_target_resolve_at` passed and not yet resolved (`sla_resolved_at` is null):
-   - A `sla_breach` timeline entry is added ("Resolve SLA breached")
-   - An `incident_sla_breach` SSE event is published
-
-Breaches are de-duplicated in Valkey (`alga:sla:breach:{incident}:{type}` with a 24h TTL) so each breach type fires once per incident. The worker also nudges the commander when public status updates go stale after responder activity.
-
-## SLA Metrics
-
-| Metric                   | Abbreviation | Description                                                     |
-| ------------------------ | ------------ | --------------------------------------------------------------- |
-| Mean Time To Acknowledge | MTTA         | Time from creation to acknowledgement                           |
-| Mean Time To Resolve     | MTTR         | Time from creation to resolution                                |
-| Mean Time To Mitigate    | MTTM         | Time from creation to mitigation                                |
-| SLA Compliance           | —            | Percentage of incidents meeting response and resolution targets |
-
-## Metrics API
-
-```sh
-curl -b cookies.txt "http://localhost:8080/api/v1/incidents/metrics?start_date=2026-01-01&end_date=2026-05-10"
-```
-
-### Query Parameters
-
-| Parameter    | Description                                     |
-| ------------ | ----------------------------------------------- |
-| `start_date` | Start of date range (defaults to one month ago) |
-| `end_date`   | End of date range (defaults to now)             |
-
-### Response
-
-```json
-{
-  "mtta_minutes": 8.5,
-  "mttr_minutes": 127.3,
-  "mttm_minutes": 45.2,
-  "total_created": 42,
-  "total_resolved": 38,
-  "by_severity": {
-    "critical": { "count": 12, "mtta_minutes": 3.2, "mttr_minutes": 89.1 },
-    "warning": { "count": 30, "mtta_minutes": 12.1, "mttr_minutes": 156.7 }
-  },
-  "by_priority": {
-    "P1": { "count": 8, "mtta_minutes": 4.1, "mttr_minutes": 72.3 }
-  },
-  "by_service": {
-    "payment-service": { "count": 12, "mtta_minutes": 4.1, "mttr_minutes": 72.3 }
-  },
-  "sla_compliance": {
-    "response_sla_compliance_pct": 92.5,
-    "resolve_sla_compliance_pct": 87.5,
-    "response_breaches": 3,
-    "resolve_breaches": 5,
-    "total_with_sla": 40
-  },
-  "trend": [
-    {
-      "date": "2026-05-01",
-      "created": 3,
-      "resolved": 2,
-      "mtta_minutes": 6.5,
-      "mttr_minutes": 108.2
-    }
-  ]
-}
-```
+Filter by date to spot trends.
 
 ## See Also
 
-- [Incident Lifecycle](/incident-management/lifecycle) — state transitions and timestamps
-- [Escalation Policies](/on-call/escalation-policies) — policy-driven escalation
-- [Incident Overview](/incident-management/) — creation and management
+- [Incident Lifecycle](/incident-management/lifecycle) — steps and buttons
+- [Escalation Policies](/on-call/escalation-policies) — who gets paged when nobody responds
+- [Incident Overview](/incident-management/) — creating and working with incidents

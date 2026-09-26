@@ -74,7 +74,7 @@ go run . db migrate
 - Embed `pgStoreBase` and register the store in `store/registry.go`.
 - Use `pgctx()` inside store methods unless an existing nearby store intentionally uses caller context.
 - Use `handleQueryErr` for not-found translation and wrap other errors with `%w`.
-- Use transactions only when consistency requires them; always rollback with `rollbackTx`.
+- Use transactions only when consistency requires them; always run multi-write flows through Bun `RunInTx` (auto-rollback).
 - Use Bun query builders with bound parameters (`Where("id = ?", id)`); never concatenate values into SQL strings.
 
 Store skeleton policy:

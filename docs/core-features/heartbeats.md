@@ -1,64 +1,32 @@
 ---
 title: Heartbeats
-description: Dead-man's-switch monitoring — configure periodic ping URLs so Alga alerts you when a cron job, scheduled task, or service stops reporting.
+description: Get alerted when a scheduled job stops checking in.
 ---
 
 # Heartbeats
 
-Heartbeats are dead-man's-switch monitors. A periodic job pings a unique Alga URL; if a ping stops arriving within the configured interval plus grace period, Alga creates an alert so you can respond to the silent failure (e.g. a cron job that stopped running, a service that stopped reporting).
+A heartbeat means "ping me every X minutes or raise an alert." Use it for cron jobs, scheduled tasks, or anything that should check in regularly — so you hear about it when it goes quiet.
 
-## How It Works
+## How it works
 
-1. Create a heartbeat with an `interval_seconds` and optional `grace_seconds`.
-2. Configure your job/service to send a `GET` or `HEAD` to the heartbeat's ping URL on every run.
-3. Each ping extends the heartbeat's expiry (`now + interval + grace`) and keeps its status `healthy`.
-4. If no ping arrives before expiry, the **heartbeat sweep worker** (ticks every 30s) marks the heartbeat `expired` and ingests a firing alert with fingerprint `heartbeat:{id}`.
-5. The next ping resolves the alert automatically.
+1. You create a heartbeat and tell Alga how often to expect a ping — for example, every 5 minutes, with a little extra grace time.
+2. Alga gives you a private ping address. Add it to your job so it pings Alga on every run.
+3. As long as pings keep arriving, everything shows as healthy.
+4. If Alga doesn't hear from the job in time, it raises an alert that flows through your normal routing and notifications.
+5. The next ping clears the alert automatically.
 
-## Ping Endpoint
+## Creating a heartbeat
 
-The ping endpoint is **public** (no auth) — the token in the path **is** the capability. It is rate-limited.
+1. Go to **Heartbeats → New Heartbeat**.
+2. Give it a name like "Nightly backup."
+3. Set how often it should ping and how much grace time to allow.
+4. Pick a severity for the alert it raises.
+5. Save and copy the ping token right away — it is shown once, so keep it secret like a password.
 
-```
-GET  /api/v1/heartbeats/ping/{token}
-HEAD /api/v1/heartbeats/ping/{token}
-```
+If you lose the token, come back and regenerate it to get a new one.
 
-Example cron entry:
+## Tips
 
-```sh
-*/5 * * * * curl -fsS https://alga.example.com/api/v1/heartbeats/ping/alga_hb_... >/dev/null
-```
-
-::: tip
-The plaintext ping token is shown **once** on create/regenerate. Store it securely — Alga only persists an HMAC hash.
-:::
-
-## Configuration
-
-Heartbeats have no environment variables; they are managed entirely through the API/UI.
-
-| Field              | Description                                                                 |
-| ------------------ | --------------------------------------------------------------------------- |
-| `name`             | Human-readable identifier                                                   |
-| `description`      | Optional context                                                            |
-| `interval_seconds` | Expected time between pings (positive)                                      |
-| `grace_seconds`    | Extra tolerance before breach (default 60)                                  |
-| `severity`         | Alert severity if breached: `critical`, `high`, `warning` (default), `info` |
-| `labels`           | Label map attached to the generated alert (enables routing rules)           |
-| `owner_team_id`    | Owning team                                                                 |
-| `enabled`          | Toggle without deleting                                                     |
-
-The generated alert uses labels `{ alertname: "HeartbeatExpired", severity: <severity>, heartbeat: <name>, heartbeat_id: <id> }` (merged with the heartbeat's own labels), so it flows through your normal [routing](/core-features/routing), [escalation](/on-call/escalation-policies), and [notification](/core-features/notifications) setup.
-
-## API
-
-| Method       | Path                                       | Permission          | Description                                                     |
-| ------------ | ------------------------------------------ | ------------------- | --------------------------------------------------------------- |
-| `GET`        | `/api/v1/heartbeats`                       | `heartbeats:read`   | List heartbeats (query: enabled, status, search, owner_team_id) |
-| `POST`       | `/api/v1/heartbeats`                       | `heartbeats:write`  | Create heartbeat                                                |
-| `GET`        | `/api/v1/heartbeats/{id}`                  | `heartbeats:read`   | Get heartbeat                                                   |
-| `PUT`        | `/api/v1/heartbeats/{id}`                  | `heartbeats:write`  | Update heartbeat                                                |
-| `DELETE`     | `/api/v1/heartbeats/{id}`                  | `heartbeats:delete` | Delete heartbeat                                                |
-| `POST`       | `/api/v1/heartbeats/{id}/regenerate-token` | `heartbeats:write`  | Regenerate ping token                                           |
-| `GET`/`HEAD` | `/api/v1/heartbeats/ping/{token}`          | None                | Record a ping                                                   |
+- Pick intervals that match your job's real schedule, plus a minute or two of grace for slow runs.
+- Give each job its own heartbeat so you know exactly which one went quiet.
+- You can pause a heartbeat without deleting it when a job is intentionally stopped.

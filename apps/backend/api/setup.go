@@ -9,7 +9,7 @@ import (
 
 func (s *Server) handleSetupStatus(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -29,7 +29,7 @@ func (s *Server) handleSetupStatus(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleSetup(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -52,12 +52,12 @@ func (s *Server) handleSetup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.Email == "" || req.Password == "" {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "email and password are required")
+		writeError(w, ErrorCodeValidationFailed, "email and password are required")
 		return
 	}
 
 	if err := validatePasswordPolicy(req.Password); err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, err.Error())
+		writeError(w, ErrorCodeValidationFailed, err.Error())
 		return
 	}
 

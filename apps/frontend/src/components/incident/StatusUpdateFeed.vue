@@ -27,6 +27,8 @@ type Props = {
   loading: boolean;
   error: string | null;
   incidentStatus?: string;
+  /** True when the incident is deleted: posting is hidden, the feed stays read-only. */
+  disabled?: boolean;
 };
 
 const props = defineProps<Props>();
@@ -66,6 +68,7 @@ function defaultLevelForStatus(status?: string): StatusUpdateStatusLevel {
 }
 
 function openCompose() {
+  if (props.disabled) return;
   composeLevel.value = defaultLevelForStatus(props.incidentStatus);
   composeBody.value = "";
   showCompose.value = true;
@@ -137,7 +140,7 @@ function capitalize(s: string): string {
     <div class="mb-3 flex items-center justify-between gap-2">
       <h3 class="text-sm font-medium text-[var(--text-primary)]">Status Updates</h3>
       <button
-        v-if="canPost"
+        v-if="canPost && !disabled"
         type="button"
         :class="CARD_ICON_BTN_CLASS"
         title="Post status update"

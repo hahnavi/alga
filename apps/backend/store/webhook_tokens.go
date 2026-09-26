@@ -92,7 +92,7 @@ func (s *pgWebhookTokenStore) CreateToken(name string, expiresAt *time.Time) (*W
 }
 
 func (s *pgWebhookTokenStore) ListTokens() ([]WebhookTokenRecord, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := pgctxLong(context.Background())
 	defer cancel()
 
 	var tokens []models.WebhookToken
@@ -162,7 +162,10 @@ func (s *pgWebhookTokenStore) ValidateToken(token string) (bool, error) {
 		if t.ExpiresAt != nil && time.Now().After(*t.ExpiresAt) {
 			return false, nil
 		}
-		go s.updateLastUsed(t.ID, t.LastUsedAt)
+		// Throttled async write: only spawn when the 24h guard would fire.
+		if t.LastUsedAt == nil || time.Since(*t.LastUsedAt) >= 24*time.Hour {
+			go s.updateLastUsed(t.ID, t.LastUsedAt)
+		}
 		return true, nil
 	}
 	return false, nil

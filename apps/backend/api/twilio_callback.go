@@ -21,7 +21,7 @@ import (
 
 func (s *Server) handleTwilioCallback(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeErrorStatus(w, http.StatusMethodNotAllowed, ErrorCodeInternal, "method not allowed")
+		writeMethodNotAllowed(w)
 		return
 	}
 
@@ -38,7 +38,7 @@ func (s *Server) handleTwilioCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := r.ParseForm(); err != nil {
-		writeErrorStatus(w, http.StatusBadRequest, ErrorCodeValidationFailed, "invalid form data")
+		writeError(w, ErrorCodeValidationFailed, "invalid form data")
 		return
 	}
 

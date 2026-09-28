@@ -220,7 +220,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       - name: Setup pnpm
-        uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b  # v2.1.0
+        uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024  # v3.0.0
         with:
           version: ${{ env.PNPM_VERSION }}
           install: false
@@ -246,7 +246,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       - name: Setup pnpm
-        uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b  # v2.1.0
+        uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024  # v3.0.0
         with:
           version: ${{ env.PNPM_VERSION }}
           install: false
@@ -459,7 +459,7 @@ jobs:
       # ── pnpm audit: frontend dependency CVEs ──
       - name: Setup pnpm
         if: needs.changes.outputs.frontend == 'true'
-        uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b  # v2.1.0
+        uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024  # v3.0.0
         with:
           version: ${{ env.PNPM_VERSION }}
           install: false
@@ -492,7 +492,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       - name: Setup pnpm
-        uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b  # v2.1.0
+        uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024  # v3.0.0
         with:
           version: ${{ env.PNPM_VERSION }}
           install: false

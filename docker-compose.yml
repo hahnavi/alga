@@ -25,7 +25,7 @@ services:
           memory: 512M
 
   valkey:
-    image: valkey/valkey:9.1-alpine
+    image: valkey/valkey:9.2-alpine
     restart: unless-stopped
     command: valkey-server --save 60 1 --loglevel warning --requirepass ${VALKEY_PASSWORD:-valkey_dev_only}
     volumes:

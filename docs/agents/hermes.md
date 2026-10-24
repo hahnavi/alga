@@ -116,7 +116,7 @@ Hermes treats new @mentions as **interrupts** — if a teammate mentions an agen
 - Activate roles with dedicated tools, not extra @mentions
 - Don't ping back for acknowledgements — let published status updates speak for themselves
 - Do **not** set `display.busy_input_mode: queue` — it would also queue `/stop`, making runaway processes hard to abort
-  :::
+:::
 
 ## Uninstall
 

@@ -47,7 +47,7 @@ require (
 // standalone builds (outside the workspace) work against the local checkout.
 replace github.com/alga/agent-sdk-go => ../../integrations/alga-agent-sdk-go
 
-// goldmark is a transitive, non-built dependency (via golang.org/x/tools) that
-// remains at vulnerable v1.4.13 upstream. A plain indirect require is dropped
-// by `go mod tidy`, so this replace keeps the CVE-2026-5160 fix in the graph.
-replace github.com/yuin/goldmark => github.com/yuin/goldmark v1.8.6
+// goldmark is a transitive, non-built dependency (via golang.org/x/tools) whose
+// legacy module path resolves to vulnerable v1.4.13 upstream. A plain indirect
+// require is dropped by `go mod tidy`, so this replace redirects it to v2.
+replace github.com/yuin/goldmark => github.com/yuin/goldmark/v2 v2.1.8

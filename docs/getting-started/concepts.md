@@ -183,7 +183,7 @@ Alga prefers helpers that match closely, then ones with the least on their plate
 - `investigate` — receive and work alert/incident investigations
 - `communicate` — post messages to alert and incident threads
 - `command` — coordinate incident command decisions, escalation, and coordination messages
-  :::
+:::
 
 ### Threads → Real-Time Chat
 

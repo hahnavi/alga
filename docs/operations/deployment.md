@@ -53,7 +53,7 @@ openssl rand -base64 32
 | ---------- | ----------------------------------------------- | ------------ | ---------------------------------------------------- |
 | `postgres` | `pgvector/pgvector:pg18`                        | — (internal) | PostgreSQL 18 with pgvector extension                |
 | `valkey`   | `valkey/valkey:9.1-alpine`                      | — (internal) | In-memory store (sessions, leader election, pub/sub) |
-| `rabbitmq` | `rabbitmq:4.3.3-management-alpine`              | — (internal) | Message queue (async pipeline)                       |
+| `rabbitmq` | `rabbitmq:4.4.0-management-alpine`              | — (internal) | Message queue (async pipeline)                       |
 | `backend`  | `ghcr.io/hahnavi/alga-backend:${ALGA_VERSION}`  | — (internal) | Go API server + workers                              |
 | `frontend` | `ghcr.io/hahnavi/alga-frontend:${ALGA_VERSION}` | — (internal) | Vue web UI (nginx)                                   |
 | `caddy`    | `caddy:2-alpine`                                | 80, 443      | TLS-terminating reverse proxy                        |

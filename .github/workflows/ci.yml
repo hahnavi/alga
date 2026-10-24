@@ -29,9 +29,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Use the current security patch for the Go 1.27 language level. Module
-  # directives stay at 1.27.0 for compatibility with tools built on Go 1.27.0.
-  # GOTOOLCHAIN=local makes CI fail if this pin ever falls below the module floor.
+  # Use the current security patch for the Go 1.27 language level. Keep the
+  # workspace and backend module floors aligned so vulnerability scans use the
+  # patched standard library. GOTOOLCHAIN=local makes CI fail if this pin drifts.
   GO_VERSION: "1.27.3"
   GOTOOLCHAIN: local
   NODE_VERSION: "26"
@@ -40,7 +40,7 @@ env:
   # version when `version` is omitted, so a partial bump silently splits the
   # toolchain between CI and dev machines.
   PNPM_VERSION: "12.6.0"
-  # This Go 1.27 build supports the workspace's Go 1.27.0 module floor.
+  # This Go 1.27 build supports the workspace's Go 1.27.3 module floor.
   # golangci-lint can only lint Go versions ≤ its build toolchain and must also
   # understand the export data emitted by the CI toolchain. v2.15.0 (built with
   # go1.27.0, bundling x/tools v0.52.0) is the first release that can decode
@@ -49,7 +49,7 @@ env:
   GOLANGCI_LINT_VERSION: "v2.15.0"
   # Pinned for the native gosec step in security-scan. The securego/gosec
   # Docker action was dropped because its image ships a fixed Go toolchain that
-  # can drift below the `go 1.27.0` floor in go.work; with GOTOOLCHAIN=local
+  # can drift below the `go 1.27.3` floor in go.work; with GOTOOLCHAIN=local
   # that made every package fail to load (0 files scanned). `go install` builds
   # gosec against the runner's own GO_VERSION instead. v2.30.0 is the first
   # release built for Go 1.27.3; older releases fail to type-check packages
@@ -432,7 +432,7 @@ jobs:
       # Fail on High/Critical; surface findings as annotations. Installed
       # natively (not via the securego/gosec Docker action) so it builds
       # against this job's GO_VERSION toolchain — the action's pinned image
-      # bundles an older Go that cannot load the `go 1.27.0` floor in go.work
+      # bundles an older Go that cannot load the `go 1.27.3` floor in go.work
       # under GOTOOLCHAIN=local.
       - name: gosec
         if: needs.changes.outputs.backend == 'true'

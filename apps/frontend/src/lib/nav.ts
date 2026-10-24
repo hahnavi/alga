@@ -116,6 +116,7 @@ export function useNavSections() {
       readCreds: auth.hasPermission("credentials:read"),
       readPostmortem: auth.hasPermission("postmortems:read"),
       readPlaybooks: auth.hasPermission("playbooks:read"),
+      readAutomation: auth.hasPermission("automation:read"),
       readEscalation: auth.hasPermission("escalation:read"),
       writeRoutes: auth.hasPermission("routes:write"),
       readIntegrations: auth.hasPermission("integrations:read"),
@@ -165,6 +166,7 @@ export function useNavSections() {
           { to: "/on-call", icon: Clock, label: "On-Call" },
           { to: "/teams", icon: Users, label: "Teams" },
           ...(p.readPlaybooks ? [{ to: "/playbooks", icon: FileText, label: "Playbooks" }] : []),
+          ...(p.readAutomation ? [{ to: "/automation", icon: Workflow, label: "Automation" }] : []),
           ...(p.readEscalation
             ? [{ to: "/escalation-policies", icon: Shield, label: "Escalation" }]
             : []),

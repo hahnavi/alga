@@ -42,7 +42,7 @@ type Config struct {
 	GoogleMeetEnabled                  bool   `yaml:"google_meet_enabled"`
 	GoogleMeetCredentialsPath          string `yaml:"google_meet_credentials_path"`
 	GoogleMeetAutoCreate               bool   `yaml:"google_meet_auto_create"`
-	AlgaBaseURL                        string `yaml:"alga_base_url"`
+	AlgaPublicURL                      string `yaml:"alga_public_url"`
 	PostgresDSN                        string `yaml:"postgres_dsn"`
 	PostgresAutoMigrate                bool   `yaml:"postgres_auto_migrate"`
 	// PostgreSQL connection pool tuning. Zero/negative values fall back to
@@ -709,8 +709,8 @@ func Load() (*Config, error) {
 	if v := os.Getenv("SLACK_OAUTH_REDIRECT_URL"); v != "" {
 		cfg.SlackOAuthRedirectURL = v
 	}
-	if v := os.Getenv("ALGA_BASE_URL"); v != "" {
-		cfg.AlgaBaseURL = v
+	if v := os.Getenv("ALGA_PUBLIC_URL"); v != "" {
+		cfg.AlgaPublicURL = v
 	}
 	if v := os.Getenv("GOOGLE_CLIENT_ID"); v != "" {
 		cfg.GoogleClientID = v

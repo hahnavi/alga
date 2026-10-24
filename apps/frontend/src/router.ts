@@ -49,6 +49,7 @@ const NotificationPreferencesPage = () => import("@/pages/NotificationPreference
 const PersonalAccessTokensPage = () => import("@/pages/PersonalAccessTokensPage.vue");
 const PlaybookPage = () => import("@/pages/PlaybookPage.vue");
 const PlaybookDetailPage = () => import("@/pages/PlaybookDetailPage.vue");
+const AutomationPage = () => import("@/pages/AutomationPage.vue");
 const SettingsGeneralPage = () => import("@/pages/settings/SettingsGeneralPage.vue");
 const SettingsAppearancePage = () => import("@/pages/settings/SettingsAppearancePage.vue");
 const SettingsSecurityPage = () => import("@/pages/settings/SettingsSecurityPage.vue");
@@ -285,6 +286,11 @@ const router = createRouter({
     },
     { path: "/system", redirect: { path: "/system/general" } },
     { path: "/playbooks", component: PlaybookPage, meta: { requiredPermission: "playbooks:read" } },
+    {
+      path: "/automation",
+      component: AutomationPage,
+      meta: { requiredPermission: "automation:read" },
+    },
     {
       path: "/playbooks/:id",
       component: PlaybookDetailPage,

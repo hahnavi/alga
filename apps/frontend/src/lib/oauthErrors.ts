@@ -38,10 +38,15 @@ const OIDC_ERROR_MESSAGES: Record<string, string> = {
   oidc_provider_not_found: "SSO provider not found or disabled.",
 };
 
+const SAML_ERROR_MESSAGES: Record<string, string> = {
+  saml_auth_failed: "SAML sign-in failed. Please try again or contact your administrator.",
+};
+
 const ALL_MESSAGES: Record<string, string> = {
   ...GOOGLE_ERROR_MESSAGES,
   ...SLACK_ERROR_MESSAGES,
   ...OIDC_ERROR_MESSAGES,
+  ...SAML_ERROR_MESSAGES,
 };
 
 const GENERIC_FALLBACK = "Sign-in failed. Please try again.";

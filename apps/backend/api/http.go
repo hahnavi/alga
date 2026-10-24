@@ -114,6 +114,7 @@ type Server struct {
 	slackOAuthHandler  *slackOAuthHandler
 	googleOAuthHandler *googleOAuthHandler
 	oidcHandler        *oidcHandler
+	samlHandler        *samlHandler
 	slackSignInHandler *slackSignInHandler
 	userSlackHandler   *userSlackHandler
 	userGoogleHandler  *userGoogleHandler
@@ -140,6 +141,10 @@ type Server struct {
 	healthHandler             *health.Handler
 	oidcProviderStore         store.OIDCProviderStore
 	oidcIdentityStore         store.OIDCIdentityStore
+	samlProviderStore         store.SAMLProviderStore
+	samlIdentityStore         store.SAMLIdentityStore
+	ldapProviderStore         store.LDAPProviderStore
+	ldapIdentityStore         store.LDAPIdentityStore
 	credentialProviderStore   store.CredentialProviderStore
 	sharedSecretStore         store.SharedSecretStore
 	secretProviderRegistry    *secretprovider.Registry
@@ -160,6 +165,7 @@ type Server struct {
 	onCallResolver            *oncall.Resolver
 	handoffStore              store.HandoffStore
 	playbookStore             store.PlaybookStore
+	automationStore           store.AutomationStore
 	// alertIngestor, if set, lets API handlers persist user-authored alerts
 	// through the same routing/delivery/correlator path as Grafana webhooks.
 	alertIngestor *webhook.Receiver
@@ -279,6 +285,12 @@ func (s *Server) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/auth/oidc/providers", s.rateLimitMiddleware(s.handleOIDCPublicProviders))
 	mux.HandleFunc("/api/v1/auth/oidc/{id}/authorize", s.rateLimitMiddleware(s.handleOIDCAuthorize))
 	mux.HandleFunc("/api/v1/auth/oidc/{id}/callback", s.rateLimitMiddleware(s.handleOIDCCallback))
+	mux.HandleFunc("GET /api/v1/auth/saml/providers", s.rateLimitMiddleware(s.handleSAMLOauthProviders))
+	mux.HandleFunc("GET /api/v1/auth/saml/{id}/metadata", s.rateLimitMiddleware(s.handleSAMLMetadata))
+	mux.HandleFunc("GET /api/v1/auth/saml/{id}/authorize", s.rateLimitMiddleware(s.handleSAMLAuthorize))
+	mux.HandleFunc("POST /api/v1/auth/saml/{id}/acs", s.rateLimitMiddleware(s.handleSAMLACS))
+	mux.HandleFunc("GET /api/v1/auth/ldap/providers", s.rateLimitMiddleware(s.handleLDAPPublicProviders))
+	mux.HandleFunc("POST /api/v1/auth/ldap/login", s.rateLimitMiddleware(s.handleLDAPLogin))
 
 	// Protected API endpoints
 	mux.HandleFunc("/api/v1/alerts", s.authMiddleware(s.handleAlerts, rbac.AlertsRead))
@@ -360,6 +372,11 @@ func (s *Server) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/oidc/providers", s.authMiddleware(s.handleOIDCListProviders, rbac.OIDCManage))
 	mux.HandleFunc("POST /api/v1/oidc/providers", s.authMiddleware(s.handleOIDCCreateProvider, rbac.OIDCManage))
 	mux.HandleFunc("/api/v1/oidc/providers/", s.authMiddleware(s.handleOIDCProviderRoutes, rbac.OIDCManage))
+	mux.HandleFunc("GET /api/v1/saml/providers", s.authMiddleware(s.handleSAMLListProviders, rbac.OIDCManage))
+	mux.HandleFunc("POST /api/v1/saml/providers", s.authMiddleware(s.handleSAMLCreateProvider, rbac.OIDCManage))
+	mux.HandleFunc("/api/v1/saml/providers/{id}", s.authMiddleware(s.handleSAMLProviderByID))
+	mux.HandleFunc("/api/v1/ldap/providers", s.authMiddleware(s.handleLDAPProviders, rbac.OIDCManage))
+	mux.HandleFunc("/api/v1/ldap/providers/{id}", s.authMiddleware(s.handleLDAPProviderByID, rbac.OIDCManage))
 	mux.HandleFunc("/api/v1/incidents/metrics", s.authMiddleware(s.handleIncidentMetrics, rbac.IncidentsRead))
 	mux.HandleFunc("/api/v1/incidents", s.authMiddleware(s.withIdempotency("incident:create", s.handleIncidents), rbac.IncidentsRead))
 	mux.HandleFunc("/api/v1/incidents/", s.authMiddleware(s.handleIncidentRoutes, rbac.IncidentsRead))
@@ -398,6 +415,14 @@ func (s *Server) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/on-call/metrics", s.authMiddleware(s.handleOnCallMetrics))
 	mux.HandleFunc("/api/v1/playbooks", s.authMiddleware(s.handlePlaybooks))
 	mux.HandleFunc("/api/v1/playbooks/", s.authMiddleware(s.handlePlaybookRoutes))
+	mux.HandleFunc("GET /api/v1/automation/rules", s.authMiddleware(s.handleListAutomationRules, rbac.AutomationRead))
+	mux.HandleFunc("POST /api/v1/automation/rules", s.authMiddleware(s.handleCreateAutomationRule, rbac.AutomationWrite))
+	mux.HandleFunc("GET /api/v1/automation/rules/{id}", s.authMiddleware(s.handleGetAutomationRule, rbac.AutomationRead))
+	mux.HandleFunc("PUT /api/v1/automation/rules/{id}", s.authMiddleware(s.handleUpdateAutomationRule, rbac.AutomationWrite))
+	mux.HandleFunc("DELETE /api/v1/automation/rules/{id}", s.authMiddleware(s.handleArchiveAutomationRule, rbac.AutomationDelete))
+	mux.HandleFunc("GET /api/v1/automation/runs", s.authMiddleware(s.handleListAutomationRuns, rbac.AutomationRead))
+	mux.HandleFunc("GET /api/v1/automation/runs/{id}", s.authMiddleware(s.handleGetAutomationRun, rbac.AutomationRead))
+	mux.HandleFunc("POST /api/v1/automation/runs/{id}/retry", s.authMiddleware(s.handleRetryAutomationRun, rbac.AutomationWrite))
 
 	// Internal: serve Mattermost plugin tarball for the auto-install CronJob.
 	// Unauthenticated by design (cluster-internal only), but rate limited so a

@@ -105,6 +105,13 @@ func (s *Server) newOIDCLoginStore() oidcLoginStore {
 	return newMemoryOIDCLoginStore()
 }
 
+func (s *Server) newSAMLFlowStore() samlFlowStore {
+	if s.vkClient == nil {
+		return nil
+	}
+	return newValkeySAMLFlowStore(s.vkClient)
+}
+
 func (s *Server) InitGoogleOAuthHandler() {
 	s.googleOAuthHandler = newGoogleOAuthHandler(s.cfg, s.userStore, s.sessionStore, s.auditStore, s.newOAuthStateStore(), s.sessionExpiry)
 }
@@ -130,6 +137,13 @@ func (s *Server) InitOIDCHandler() {
 		s.userStore, s.sessionStore, s.auditStore,
 		s.newOAuthStateStore(), s.newOIDCLoginStore(), s.sessionExpiry,
 	)
+}
+
+func (s *Server) InitSAMLHandler() {
+	if s.samlProviderStore == nil {
+		return
+	}
+	s.samlHandler = newSAMLHandler(s, s.samlProviderStore, s.samlIdentityStore, s.newSAMLFlowStore())
 }
 
 func (s *Server) SetAgentSSE(h *agent.AgentSSEHandler) {
@@ -262,6 +276,24 @@ func (s *Server) SetOIDCStores(provider store.OIDCProviderStore, identity store.
 	}
 }
 
+func (s *Server) SetSAMLStores(provider store.SAMLProviderStore, identity store.SAMLIdentityStore) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.samlProviderStore = provider
+	s.samlIdentityStore = identity
+	if s.samlHandler != nil {
+		s.samlHandler.providerStore = provider
+		s.samlHandler.identityStore = identity
+	}
+}
+
+func (s *Server) SetLDAPStores(provider store.LDAPProviderStore, identity store.LDAPIdentityStore) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.ldapProviderStore = provider
+	s.ldapIdentityStore = identity
+}
+
 // SetCredentialStores wires the shared-credentials stores and the provider
 // resolver registry. The admin REST endpoints (/api/v1/credential-providers,
 // /api/v1/shared-secrets) and the agent fetch endpoint
@@ -346,6 +378,12 @@ func (s *Server) SetPlaybookStore(st store.PlaybookStore) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.playbookStore = st
+}
+
+func (s *Server) SetAutomationStore(st store.AutomationStore) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.automationStore = st
 }
 
 func (s *Server) SetPostMortemStore(st store.PostMortemStore) {

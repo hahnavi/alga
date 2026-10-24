@@ -48,6 +48,6 @@ require (
 replace github.com/alga/agent-sdk-go => ../../integrations/alga-agent-sdk-go
 
 // goldmark is a transitive, non-built dependency (via golang.org/x/tools) that
-// Snyk flags for XSS below v1.7.17. A plain indirect require is dropped by
-// `go mod tidy`, so this replace pins the patched version durably.
-replace github.com/yuin/goldmark => github.com/yuin/goldmark v1.8.5
+// remains at vulnerable v1.4.13 upstream. A plain indirect require is dropped
+// by `go mod tidy`, so this replace keeps the CVE-2026-5160 fix in the graph.
+replace github.com/yuin/goldmark => github.com/yuin/goldmark v1.8.6

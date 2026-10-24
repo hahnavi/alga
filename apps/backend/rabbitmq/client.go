@@ -79,7 +79,10 @@ func (c *Client) reconnect() {
 		select {
 		case <-c.stopCh:
 			return
-		case <-closeCh:
+		case err := <-closeCh:
+			if err != nil {
+				logger.Warn("RabbitMQ connection closed", "component", "rabbitmq", "error", err)
+			}
 		}
 
 		// Attempt reconnection with backoff

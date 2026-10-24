@@ -17,6 +17,7 @@ import (
 	"alga/api"
 	"alga/api/agent"
 	"alga/api/platform"
+	"alga/automation"
 	"alga/config"
 	"alga/correlator"
 	algacrypto "alga/crypto"
@@ -220,7 +221,7 @@ func (a *App) wire() error {
 	if strings.EqualFold(a.cfg.VoiceProvider, "telnyx") {
 		telnyxClient = telnyx.NewClient(a.cfg.TelnyxAPIKey, a.cfg.TelnyxConnectionID, a.cfg.TelnyxFromNumber, a.cfg.TelnyxTTSVoice, a.cfg.TelnyxTTSLanguage, a.cfg.TelnyxTTSAPIKeyRef)
 		telnyxClient.SetDisabled(a.cfg.TelnyxDisabled)
-		telnyxClient.SetCallbackBaseURL(a.cfg.AlgaBaseURL)
+		telnyxClient.SetCallbackBaseURL(a.cfg.AlgaPublicURL)
 		if a.cfg.TelnyxPublicKey != "" {
 			if err := telnyxClient.SetPublicKey(a.cfg.TelnyxPublicKey); err != nil {
 				logger.Warn("Failed to configure Telnyx webhook public key", "component", "telnyx", "error", err)
@@ -229,7 +230,7 @@ func (a *App) wire() error {
 	} else {
 		twilioClient = twilio.NewClient(a.cfg.TwilioAccountSID, a.cfg.TwilioAuthToken, a.cfg.TwilioFromNumber)
 		twilioClient.SetDisabled(a.cfg.TwilioDisabled)
-		twilioClient.SetCallbackBaseURL(a.cfg.AlgaBaseURL)
+		twilioClient.SetCallbackBaseURL(a.cfg.AlgaPublicURL)
 	}
 	var activeVoice notification.VoiceProvider = twilioClient
 	if telnyxClient != nil {
@@ -473,7 +474,7 @@ func (a *App) wire() error {
 				"max_per_investigation", a.cfg.MemoryMaxPerInvestigation, "similarity_threshold", a.cfg.MemorySimilarityThreshold)
 		}
 
-		channelManager = incidentchannel.NewManager(slackClient, a.stores.Incident, a.stores.User, a.cfg.AlgaBaseURL)
+		channelManager = incidentchannel.NewManager(slackClient, a.stores.Incident, a.stores.User, a.cfg.AlgaPublicURL)
 		channelManager.SetOnCallResolver(&incidentOnCallResolver{
 			serviceStore:    a.stores.Service,
 			escalationStore: a.stores.Escalation,
@@ -767,8 +768,11 @@ func (a *App) wire() error {
 	a.apiServer.SetHeartbeatStore(a.stores.Heartbeat)
 	a.apiServer.SetStatusPageStore(a.stores.StatusPage)
 	a.apiServer.SetOIDCStores(a.stores.OIDCProvider, a.stores.OIDCIdentity)
+	a.apiServer.SetSAMLStores(a.stores.SAMLProvider, a.stores.SAMLIdentity)
+	a.apiServer.SetLDAPStores(a.stores.LDAPProvider, a.stores.LDAPIdentity)
 	a.apiServer.SetCredentialStores(a.stores.CredentialProvider, a.stores.SharedSecret, secretprovider.NewRegistry())
 	a.apiServer.InitOIDCHandler()
+	a.apiServer.InitSAMLHandler()
 	a.apiServer.SetTriageResultStore(a.stores.TriageResult)
 	a.apiServer.SetTriageRuleStore(a.stores.TriageRule)
 	a.apiServer.SetIncidentStore(a.stores.Incident)
@@ -784,6 +788,7 @@ func (a *App) wire() error {
 	a.apiServer.SetActionItemStore(a.stores.ActionItem)
 	a.apiServer.SetHandoffStore(a.stores.Handoff)
 	a.apiServer.SetPlaybookStore(a.stores.Playbook)
+	a.apiServer.SetAutomationStore(a.stores.Automation)
 	statusTracker := servicetracker.NewStatusTracker(a.stores.Service, a.stores.Incident, &sse.DualPublisher{Broker: a.sseBroker, VKClient: a.valkeyClient})
 	a.apiServer.SetStatusTracker(statusTracker)
 	a.apiServer.SetICSRoleStore(a.stores.ICSRole)
@@ -817,6 +822,21 @@ func (a *App) wire() error {
 	}
 	if a.workerSet != nil {
 		a.workerSet.Start()
+	}
+	// The automation queue is PostgreSQL-backed and remains available when the
+	// optional broker is down. Run one bounded poller per replica; row locks
+	// coordinate dispatch and execution across replicas.
+	if a.stores.Automation != nil {
+		automationWorker := worker.NewAutomationWorker(a.stores.Automation, automation.HostPolicyFromEnv())
+		automationWorker.SetAuditStore(a.stores.Audit)
+		go func() {
+			defer func() {
+				if recovered := recover(); recovered != nil {
+					logger.Error("automation worker panic recovered", "component", "automation-worker", "panic", recovered)
+				}
+			}()
+			automationWorker.Run(a.shutdownCtx)
+		}()
 	}
 	if a.scheduler != nil {
 		a.apiServer.SetPendingNotifier(a.scheduler)

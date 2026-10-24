@@ -29,11 +29,10 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Pinned to the exact patch in apps/backend/go.mod (`go 1.27.0`) so setup-go
-  # installs a toolchain that already satisfies the module floor. GOTOOLCHAIN=local
-  # is the belt-and-suspenders guard: if the pin drifts behind go.mod, Go fails
-  # loudly instead of auto-downloading a toolchain into the read-only module cache.
-  GO_VERSION: "1.27.0"
+  # Use the current security patch for the Go 1.27 language level. Module
+  # directives stay at 1.27.0 for compatibility with tools built on Go 1.27.0.
+  # GOTOOLCHAIN=local makes CI fail if this pin ever falls below the module floor.
+  GO_VERSION: "1.27.3"
   GOTOOLCHAIN: local
   NODE_VERSION: "26"
   # Keep in sync with `packageManager` in package.json and the pnpm pin in
@@ -41,17 +40,21 @@ env:
   # version when `version` is omitted, so a partial bump silently splits the
   # toolchain between CI and dev machines.
   PNPM_VERSION: "12.6.0"
-  # Pinned to the latest stable release built with Go 1.27 (go1.27.0).
-  # golangci-lint can only lint Go versions ≤ its build toolchain, so this must
-  # stay ≥ the `go 1.27.0` floor in apps/backend/go.mod. v2.12.2 was built with
-  # go1.26 and cannot lint modules targeting Go 1.27.
-  GOLANGCI_LINT_VERSION: "v2.13.1"
+  # This Go 1.27 build supports the workspace's Go 1.27.0 module floor.
+  # golangci-lint can only lint Go versions ≤ its build toolchain and must also
+  # understand the export data emitted by the CI toolchain. v2.15.0 (built with
+  # go1.27.0, bundling x/tools v0.52.0) is the first release that can decode
+  # Go 1.27.x export data; v2.13.1 fails with "export data version 5 is greater
+  # than maximum supported version 4".
+  GOLANGCI_LINT_VERSION: "v2.15.0"
   # Pinned for the native gosec step in security-scan. The securego/gosec
   # Docker action was dropped because its image ships a fixed Go toolchain that
   # can drift below the `go 1.27.0` floor in go.work; with GOTOOLCHAIN=local
   # that made every package fail to load (0 files scanned). `go install` builds
-  # gosec against the runner's own GO_VERSION instead.
-  GOSEC_VERSION: "v2.28.0"
+  # gosec against the runner's own GO_VERSION instead. v2.30.0 is the first
+  # release built for Go 1.27.3; older releases fail to type-check packages
+  # compiled by that toolchain and exit 1 even with zero findings.
+  GOSEC_VERSION: "v2.30.0"
 
 jobs:
   # ─────────────────────────────── Change detection ────────────────────────

@@ -60,6 +60,10 @@ export default defineConfig({
           { text: "Telnyx", link: "/integrations/telnyx" },
           { text: "Email", link: "/integrations/email" },
           { text: "OIDC SSO", link: "/integrations/oidc-sso" },
+          {
+            text: "AWS IAM Identity Center SAML",
+            link: "/integrations/aws-iam-identity-center-saml",
+          },
         ],
       },
       {

@@ -78,6 +78,12 @@ export const useAuthStore = defineStore("auth", () => {
     await refreshOnboardingStatus();
   }
 
+  async function loginLDAP(providerId: string, login: string, password: string) {
+    const res = await api.loginLDAP(providerId, login, password);
+    user.value = res;
+    await refreshOnboardingStatus();
+  }
+
   async function logout() {
     try {
       await api.logout();
@@ -163,6 +169,7 @@ export const useAuthStore = defineStore("auth", () => {
     checkSetupStatus,
     refreshOnboardingStatus,
     login,
+    loginLDAP,
     logout,
     fetchCurrentUser,
     refreshSession,

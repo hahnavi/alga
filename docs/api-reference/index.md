@@ -458,6 +458,19 @@ See [Session Management](/configuration/session-management) for full details and
 | `PATCH`  | `/api/v1/playbooks/{id}` | Update playbook                                |
 | `DELETE` | `/api/v1/playbooks/{id}` | Delete playbook                                |
 
+### Automation
+
+| Method   | Path                                 | Permission          | Description                              |
+| -------- | ------------------------------------ | ------------------- | ---------------------------------------- |
+| `GET`    | `/api/v1/automation/rules`           | `automation:read`   | List rules                               |
+| `POST`   | `/api/v1/automation/rules`           | `automation:write`  | Create a disabled rule                   |
+| `GET`    | `/api/v1/automation/rules/{id}`      | `automation:read`   | Get a rule with credentials redacted     |
+| `PUT`    | `/api/v1/automation/rules/{id}`      | `automation:write`  | Update a rule with optimistic versioning |
+| `DELETE` | `/api/v1/automation/rules/{id}`      | `automation:delete` | Archive and disable a rule               |
+| `GET`    | `/api/v1/automation/runs`            | `automation:read`   | List runs, optionally by `rule_id`       |
+| `GET`    | `/api/v1/automation/runs/{id}`       | `automation:read`   | Get a run and action attempts            |
+| `POST`   | `/api/v1/automation/runs/{id}/retry` | `automation:write`  | Retry a failed action                    |
+
 ---
 
 ## RBAC-Protected Routes
@@ -668,6 +681,7 @@ Alga defines 52 granular permissions organized by resource domain.
 | Escalation    | `escalation:read`, `escalation:write`                                        |
 | Post-Mortems  | `postmortems:read`, `postmortems:write`, `postmortems:delete`                |
 | Playbooks     | `playbooks:read`, `playbooks:write`, `playbooks:delete`                      |
+| Automation    | `automation:read`, `automation:write`, `automation:delete`                   |
 | Heartbeats    | `heartbeats:read`, `heartbeats:write`, `heartbeats:delete`                   |
 | Status Pages  | `statuspages:read`, `statuspages:write`, `statuspages:delete`                |
 | OIDC          | `oidc:manage`                                                                |
@@ -678,6 +692,6 @@ Alga defines 52 granular permissions organized by resource domain.
 
 | Role         | Scope                                                                                                                           |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------- |
-| **admin**    | All 52 permissions                                                                                                              |
+| **admin**    | All permissions                                                                                                                 |
 | **operator** | Most read/write permissions; no deletes at all, no users:manage, tokens:manage, system:read/write, admin:access, or oidc:manage |
 | **viewer**   | Read-only permissions across all domains                                                                                        |

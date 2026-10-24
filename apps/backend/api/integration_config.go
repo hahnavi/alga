@@ -724,7 +724,7 @@ func (s *Server) handlePutIntegrations(w http.ResponseWriter, r *http.Request) {
 	if s.twilioClient != nil {
 		s.twilioClient.Reconfigure(twilioSID, twilioToken, twilioFrom)
 		s.twilioClient.SetDisabled(twilioDisabled)
-		s.twilioClient.SetCallbackBaseURL(s.cfg.AlgaBaseURL)
+		s.twilioClient.SetCallbackBaseURL(s.cfg.AlgaPublicURL)
 	}
 	if s.telnyxClient != nil {
 		s.telnyxClient.Reconfigure(telnyxAPIKey, telnyxConnID, telnyxFrom, telnyxTTSVoice, telnyxTTSLanguage, telnyxTTSAPIKeyRef)
@@ -734,7 +734,7 @@ func (s *Server) handlePutIntegrations(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		s.telnyxClient.SetDisabled(telnyxDisabled)
-		s.telnyxClient.SetCallbackBaseURL(s.cfg.AlgaBaseURL)
+		s.telnyxClient.SetCallbackBaseURL(s.cfg.AlgaPublicURL)
 	}
 	s.rebuildChatRouter()
 	if s.slackWebhookHandler != nil {

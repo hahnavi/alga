@@ -3,13 +3,19 @@ import { getErrorMessage } from "@/lib/error";
 import { ref, computed, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
-import { api, type OIDCProviderPublic } from "@/lib/api";
+import {
+  api,
+  type LDAPProviderPublic,
+  type OIDCProviderPublic,
+  type SAMLProviderPublic,
+} from "@/lib/api";
 import { safeRedirectTarget } from "@/lib/redirect";
 import { resolveOAuthErrorMessage, unknownOAuthErrorMessage } from "@/lib/oauthErrors";
-import { Eye, EyeOff, Mail, Lock, ArrowRight } from "@lucide/vue";
+import { Eye, EyeOff, Mail, Lock, ArrowRight, KeyRound } from "@lucide/vue";
 import Button from "@/components/ui/Button.vue";
 import FormLabel from "@/components/ui/FormLabel.vue";
 import Input from "@/components/ui/Input.vue";
+import Select from "@/components/ui/Select.vue";
 import ErrorBanner from "@/components/ui/ErrorBanner.vue";
 
 defineOptions({ name: "LoginPage" });
@@ -27,10 +33,14 @@ const touched = ref({ email: false, password: false });
 const googleEnabled = ref(false);
 const slackEnabled = ref(false);
 const oidcProviders = ref<OIDCProviderPublic[]>([]);
+const samlProviders = ref<SAMLProviderPublic[]>([]);
+const ldapProviders = ref<LDAPProviderPublic[]>([]);
+const ldapProviderId = ref("");
 
 const emailError = computed(() => {
   if (!touched.value.email) return "";
-  if (!email.value.trim()) return "Email is required";
+  if (!email.value.trim())
+    return ldapProviderId.value ? "Directory login is required" : "Email is required";
   return "";
 });
 
@@ -45,7 +55,12 @@ const formValid = computed(() => {
 });
 
 const showOAuthSection = computed(() => {
-  return googleEnabled.value || slackEnabled.value || oidcProviders.value.length > 0;
+  return (
+    googleEnabled.value ||
+    slackEnabled.value ||
+    oidcProviders.value.length > 0 ||
+    samlProviders.value.length > 0
+  );
 });
 
 function handleBlur(field: "email" | "password") {
@@ -59,7 +74,9 @@ async function handleLogin() {
   error.value = "";
   loading.value = true;
   try {
-    await auth.login(email.value, password.value);
+    if (ldapProviderId.value)
+      await auth.loginLDAP(ldapProviderId.value, email.value, password.value);
+    else await auth.login(email.value, password.value);
     router.push(safeRedirectTarget(route.query.redirect));
   } catch (err) {
     error.value = getErrorMessage(err, "Login failed");
@@ -80,20 +97,29 @@ function handleOIDCSignIn(providerId: string) {
   window.location.href = "/api/v1/auth/oidc/" + providerId + "/authorize";
 }
 
+function handleSAMLSignIn(providerId: string) {
+  const next = encodeURIComponent(safeRedirectTarget(route.query.redirect));
+  window.location.href =
+    "/api/v1/auth/saml/" + encodeURIComponent(providerId) + "/authorize?next=" + next;
+}
+
 onMounted(async () => {
   document.getElementById("login-email")?.focus();
 
   const googleParam = route.query.google as string;
   const slackParam = route.query.slack as string;
+  const samlParam = route.query.saml as string;
   const errorParam = route.query.error;
 
-  if (googleParam === "success" || slackParam === "success") {
+  if (googleParam === "success" || slackParam === "success" || samlParam === "success") {
     try {
       await auth.fetchCurrentUser();
       router.replace(safeRedirectTarget(route.query.redirect));
       return;
     } catch {
-      error.value = `Failed to complete ${slackParam === "success" ? "Slack" : "Google"} Sign-In. Please try again.`;
+      const provider =
+        samlParam === "success" ? "SAML" : slackParam === "success" ? "Slack" : "Google";
+      error.value = `Failed to complete ${provider} Sign-In. Please try again.`;
     }
   }
 
@@ -127,7 +153,19 @@ onMounted(async () => {
     oidcProviders.value = [];
   }
 
-  if (googleParam || slackParam || errorParam) {
+  try {
+    samlProviders.value = await api.listPublicSAMLProviders();
+  } catch {
+    samlProviders.value = [];
+  }
+
+  try {
+    ldapProviders.value = await api.listPublicLDAPProviders();
+  } catch {
+    ldapProviders.value = [];
+  }
+
+  if (googleParam || slackParam || samlParam || errorParam) {
     await router.replace({ query: {} });
   }
 });
@@ -152,8 +190,19 @@ onMounted(async () => {
       novalidate
       @submit.prevent="handleLogin"
     >
+      <div v-if="ldapProviders.length">
+        <FormLabel for="login-source">Sign-in source</FormLabel>
+        <Select id="login-source" v-model="ldapProviderId" class="w-full">
+          <option value="">Alga account</option>
+          <option v-for="provider in ldapProviders" :key="provider.id" :value="provider.id">
+            {{ provider.name }} (LDAP)
+          </option>
+        </Select>
+      </div>
       <div>
-        <FormLabel for="login-email" required>Email</FormLabel>
+        <FormLabel for="login-email" required>{{
+          ldapProviderId ? "Directory login" : "Email"
+        }}</FormLabel>
         <div class="group relative">
           <Mail
             class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)] transition-colors group-focus-within:text-[var(--accent)]"
@@ -161,10 +210,10 @@ onMounted(async () => {
           <Input
             id="login-email"
             v-model="email"
-            type="email"
-            autocomplete="email"
+            :type="ldapProviderId ? 'text' : 'email'"
+            :autocomplete="ldapProviderId ? 'username' : 'email'"
             required
-            placeholder="you@company.com"
+            :placeholder="ldapProviderId ? 'Directory username' : 'you@company.com'"
             :error="emailError"
             :aria-describedby="emailError ? 'login-email-error' : undefined"
             class="h-11 pl-9"
@@ -179,6 +228,7 @@ onMounted(async () => {
         <div class="flex items-baseline justify-between">
           <FormLabel for="login-password" required>Password</FormLabel>
           <router-link
+            v-if="!ldapProviderId"
             to="/forgot-password"
             class="text-xs font-medium text-[var(--color-primary)] transition-colors hover:text-[var(--accent-strong)] hover:underline"
           >
@@ -316,6 +366,17 @@ onMounted(async () => {
               d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"
             />
           </svg>
+          Sign in with {{ provider.name }}
+        </Button>
+
+        <Button
+          v-for="provider in samlProviders"
+          :key="provider.id"
+          variant="outline"
+          class="h-10 w-full"
+          @click="handleSAMLSignIn(provider.id)"
+        >
+          <KeyRound class="mr-2 h-4 w-4" />
           Sign in with {{ provider.name }}
         </Button>
       </div>

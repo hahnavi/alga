@@ -1,6 +1,6 @@
 ---
 title: Integrations
-description: Connect Alga to chat platforms (Slack, Mattermost), voice escalation (Twilio, Telnyx), email, and OIDC SSO. AI agents have their own dedicated section.
+description: Connect Alga to chat platforms (Slack, Mattermost), voice escalation (Twilio, Telnyx), email, and identity providers. AI agents have their own dedicated section.
 ---
 
 # Integrations
@@ -46,6 +46,8 @@ SMTP-based email notifications for alert delivery, investigation updates, and pa
 ## Authentication
 
 - [OIDC SSO](/integrations/oidc-sso) — Single sign-on via Okta, Keycloak, Google, Auth0, and other OIDC IdPs
+- [AWS IAM Identity Center SAML](/integrations/aws-iam-identity-center-saml) — SP-initiated SAML sign-in through AWS IAM Identity Center
+- [LDAP directory sign-in](/integrations/ldap-identity) — Authenticate existing users against LDAP or Active Directory
 
 ## Notification Dispatcher
 

@@ -33,6 +33,7 @@ const EXACT_TITLES: Record<string, string> = {
   "/settings/authentication": "Authentication",
   "/settings/users": "Users",
   "/playbooks": "Playbooks",
+  "/automation": "Automation",
   "/login": "Sign in",
   "/setup": "Setup",
   "/forgot-password": "Forgot Password",

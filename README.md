@@ -31,6 +31,7 @@ Alga is a self-hosted incident management platform with an autonomous AI investi
 | AI Investigation             | Autonomous SRE agent pipeline with Hermes/OpenClaw and Alga Agent integration        |
 | LLM Triage                   | Rule-based + LLM-powered triage for automated classification and noise suppression   |
 | Playbooks                    | Structured response procedures matched to investigations via label selectors         |
+| Workflow Automation          | Audited alert and incident rules with incident notes and authenticated HTTPS actions |
 | Incident Management          | Full lifecycle with ICS command structure, SLA tracking, and escalation              |
 | Post-Mortems                 | Post-incident reviews with action items and timeline reconstruction                  |
 | Multi-Channel Routing        | Route alerts to Mattermost, Slack, email, or voice with first-match rule evaluation  |

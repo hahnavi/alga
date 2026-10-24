@@ -3,11 +3,11 @@ package api
 import "net/http"
 
 // SecurityHeaders adds browser hardening headers to every backend response
-// (ASVS V12.4/V12.5, SPEC gap M3). The backend serves JSON only, so the
-// Content-Security-Policy is the strictest possible: default-src 'none' blocks
-// all resource loading and inline execution, and frame-ancestors 'none'
-// prevents any framing (clickjacking). This closes reflected-content injection
-// even though responses are JSON.
+// (ASVS V12.4/V12.5, SPEC gap M3). The default Content-Security-Policy is the
+// strictest possible: default-src 'none' blocks resource loading and inline
+// execution, and frame-ancestors 'none' prevents framing. The SAML POST launch
+// page replaces this policy with a per-response script nonce and the configured
+// IdP origin as its only form action.
 func SecurityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()

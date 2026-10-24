@@ -19,6 +19,8 @@ import { usePageHeaderActions } from "@/composables/usePageHeaderActions";
 import { useListFilter } from "@/composables/useListFilter";
 import { getErrorMessage } from "@/lib/error";
 import { Plus, KeyRound, Trash2, Pencil, ExternalLink } from "@lucide/vue";
+import SAMLProvidersSection from "@/components/settings/SAMLProvidersSection.vue";
+import LDAPProvidersSection from "@/components/settings/LDAPProvidersSection.vue";
 
 defineOptions({ name: "OIDCProvidersPage" });
 
@@ -158,7 +160,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <SettingsPageShell description="Add an OIDC provider to enable single sign-on for your team.">
+  <SettingsPageShell
+    description="Configure OIDC, SAML, and LDAP identity providers for team sign-in."
+  >
     <ErrorBanner v-if="error" :message="error" @retry="loadProviders" />
 
     <LoadingSpinner v-if="loading" />
@@ -218,6 +222,9 @@ onMounted(() => {
         </div>
       </Card>
     </div>
+
+    <SAMLProvidersSection />
+    <LDAPProvidersSection />
 
     <Modal
       :open="formOpen"

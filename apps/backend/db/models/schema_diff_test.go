@@ -17,6 +17,7 @@ import (
 func allModels() []any {
 	return []any{
 		(*ActionItem)(nil), (*AgentAsk)(nil), (*AgentDMMessage)(nil), (*AgentMemory)(nil),
+		(*AutomationEvent)(nil), (*AutomationRule)(nil), (*AutomationRun)(nil), (*AutomationRunStep)(nil),
 		(*AgentToken)(nil), (*Alert)(nil), (*AlertEvent)(nil), (*AlertInvestigation)(nil),
 		(*AlertInvestigationAlert)(nil), (*AlertInvestigationEvent)(nil), (*AlertInvestigationUpdate)(nil),
 		(*AuditLog)(nil), (*CredentialProvider)(nil), (*DeliveryTarget)(nil),
@@ -28,7 +29,7 @@ func allModels() []any {
 		(*OIDCIdentity)(nil), (*OIDCProvider)(nil), (*OnCallSchedule)(nil), (*Outbox)(nil),
 		(*PasswordResetToken)(nil), (*PersonalAccessToken)(nil), (*Playbook)(nil), (*PlaybookStep)(nil),
 		(*PostMortem)(nil), (*RouteRules)(nil), (*ScheduleLayer)(nil), (*ScheduleOverride)(nil),
-		(*Service)(nil), (*ServiceDependency)(nil), (*Session)(nil), (*SharedSecret)(nil),
+		(*SAMLIdentity)(nil), (*SAMLProvider)(nil), (*Service)(nil), (*ServiceDependency)(nil), (*Session)(nil), (*SharedSecret)(nil),
 		(*StatusPage)(nil), (*StatusPageComponent)(nil), (*SystemConfig)(nil), (*Team)(nil),
 		(*TeamMember)(nil), (*TriageResult)(nil), (*TriageRule)(nil), (*User)(nil), (*WebhookToken)(nil),
 		(*IncidentAlert)(nil),

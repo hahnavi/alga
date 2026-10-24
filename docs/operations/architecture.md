@@ -14,7 +14,7 @@ Alga is a full-stack monorepo architecture designed for high availability, scala
 ### Backend (Go)
 
 - **Location:** `apps/backend/`
-- **Version:** Go 1.27.0
+- **Version:** Go 1.27.0 module floor; CI and Docker builds use Go 1.27.3
 - **Module:** `alga`
 
 The backend provides:
@@ -397,28 +397,28 @@ Each exchange routes to a dedicated processing queue plus `alga.dead_letter`.
 
 ## Technology Stack
 
-| Component               | Technology           | Version             | Purpose                        |
-| ----------------------- | -------------------- | ------------------- | ------------------------------ |
-| **Backend**             | Go                   | 1.27.0              | REST API, webhooks, workers    |
-| **Frontend**            | Vue                  | 3                   | Operations console             |
-| **Frontend**            | Vite                 | Latest              | Build tooling                  |
-| **Frontend**            | Tailwind CSS         | v4                  | Styling                        |
-| **Database**            | PostgreSQL           | Latest              | Primary persistence            |
-| **Database ORM**        | Bun                  | v1.2                | Query builder + models         |
-| **Database Driver**     | pgx                  | v5                  | PostgreSQL driver              |
-| **Database Extensions** | pgvector             | Latest              | Vector search for agent memory |
-| **Cache**               | Valkey/Redis         | Latest              | Distributed state, caching     |
-| **Message Queue**       | RabbitMQ             | Latest              | Async processing with retries  |
-| **Web Server**          | net/http             | Go stdlib           | HTTP server                    |
-| **Session Storage**     | Valkey/PostgreSQL    | Preferred: Valkey   | Session management             |
-| **Encryption**          | AES-256-GCM          | Go crypto           | Integration secrets            |
-| **Password Hashing**    | Argon2id             | golang.org/x/crypto | Password security              |
-| **Auth**                | Session + CSRF       | Custom              | Session-based auth             |
-| **RBAC**                | Custom               | -                   | Role-based access control      |
-| **Real-time**           | SSE + Valkey pub/sub | Custom              | Server-sent events             |
-| **Monitoring**          | expvar               | Go stdlib           | Metrics endpoint               |
-| **Frontend Rich Text**  | TipTap               | @tiptap/vue-3       | Markdown editor                |
-| **Frontend Charts**     | Chart.js             | vue-chartjs         | Data visualization             |
+| Component               | Technology           | Version                      | Purpose                        |
+| ----------------------- | -------------------- | ---------------------------- | ------------------------------ |
+| **Backend**             | Go                   | 1.27.0 floor / 1.27.3 builds | REST API, webhooks, workers    |
+| **Frontend**            | Vue                  | 3                            | Operations console             |
+| **Frontend**            | Vite                 | Latest                       | Build tooling                  |
+| **Frontend**            | Tailwind CSS         | v4                           | Styling                        |
+| **Database**            | PostgreSQL           | Latest                       | Primary persistence            |
+| **Database ORM**        | Bun                  | v1.2                         | Query builder + models         |
+| **Database Driver**     | pgx                  | v5                           | PostgreSQL driver              |
+| **Database Extensions** | pgvector             | Latest                       | Vector search for agent memory |
+| **Cache**               | Valkey/Redis         | Latest                       | Distributed state, caching     |
+| **Message Queue**       | RabbitMQ             | Latest                       | Async processing with retries  |
+| **Web Server**          | net/http             | Go stdlib                    | HTTP server                    |
+| **Session Storage**     | Valkey/PostgreSQL    | Preferred: Valkey            | Session management             |
+| **Encryption**          | AES-256-GCM          | Go crypto                    | Integration secrets            |
+| **Password Hashing**    | Argon2id             | golang.org/x/crypto          | Password security              |
+| **Auth**                | Session + CSRF       | Custom                       | Session-based auth             |
+| **RBAC**                | Custom               | -                            | Role-based access control      |
+| **Real-time**           | SSE + Valkey pub/sub | Custom                       | Server-sent events             |
+| **Monitoring**          | expvar               | Go stdlib                    | Metrics endpoint               |
+| **Frontend Rich Text**  | TipTap               | @tiptap/vue-3                | Markdown editor                |
+| **Frontend Charts**     | Chart.js             | vue-chartjs                  | Data visualization             |
 
 ## Scalability
 

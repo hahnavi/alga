@@ -23,15 +23,17 @@ Full resolution order (lowest to highest): built-in defaults → YAML config fil
 
 ## General
 
-| Variable        | Default                | Required | Description                                                                                                                                           |
-| --------------- | ---------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PORT`          | `8080`                 | No       | Backend HTTP listen port                                                                                                                              |
-| `LOG_LEVEL`     | `info`                 | No       | Log level: `debug`, `info`, `warn`, `error`                                                                                                           |
-| `LOG_FILE`      |                        | No       | Path to log file output. Empty logs to stdout                                                                                                         |
-| `LOG_FORMAT`    | `text`                 | No       | Log output format: `text` (human-readable) or `json` (structured)                                                                                     |
-| `ENVIRONMENT`   |                        | No       | Set to `production` (or `prod`) to enforce production checks (secure cookies). Crypto config is required in **all** environments, not only production |
-| `CONFIG_PATH`   | `./config/config.yaml` | No       | Optional YAML config file path for non-route settings                                                                                                 |
-| `ALGA_BASE_URL` |                        | No       | Base URL used for incident channel links and outbound references                                                                                      |
+| Variable          | Default                | Required | Description                                                                                                                                           |
+| ----------------- | ---------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`            | `8080`                 | No       | Backend HTTP listen port                                                                                                                              |
+| `LOG_LEVEL`       | `info`                 | No       | Log level: `debug`, `info`, `warn`, `error`                                                                                                           |
+| `LOG_FILE`        |                        | No       | Path to log file output. Empty logs to stdout                                                                                                         |
+| `LOG_FORMAT`      | `text`                 | No       | Log output format: `text` (human-readable) or `json` (structured)                                                                                     |
+| `ENVIRONMENT`     |                        | No       | Set to `production` (or `prod`) to enforce production checks (secure cookies). Crypto config is required in **all** environments, not only production |
+| `CONFIG_PATH`     | `./config/config.yaml` | No       | Optional YAML config file path for non-route settings                                                                                                 |
+| `ALGA_PUBLIC_URL` |                        | No       | Public HTTPS origin for absolute links, Telnyx/Twilio callbacks, and SAML SP endpoints                                                                |
+
+When upgrading from a version that used `ALGA_BASE_URL`, rename it to `ALGA_PUBLIC_URL`. YAML configuration must use `alga_public_url` instead of `alga_base_url`; the old names are not aliases. If rolling back to an older binary, restore the previous name for that version.
 
 ## Admin Bootstrap
 
@@ -153,6 +155,13 @@ To install Alga into a whole Slack workspace at once (instead of pasting a singl
 | `IDEMPOTENCY_ENABLED`   | `true`          | No       | Enable `Idempotency-Key` replay for opted-in retry-safe writes (create incident, ingest alert webhook, notification send, agent state-changing actions). Requires Valkey; no-op when Valkey is not configured |
 | `IDEMPOTENCY_TTL`       | `24h`           | No       | How long a cached response is replayed for a repeated `Idempotency-Key` before the key expires                                                                                                                |
 | `ALGA_OUTBOX_RETENTION` | `168h` (7 days) | No       | Retention window for published transactional-outbox rows before pruning. Set to `0` to disable pruning                                                                                                        |
+
+## Automation
+
+| Variable                           | Default | Required             | Description                                                                                |
+| ---------------------------------- | ------- | -------------------- | ------------------------------------------------------------------------------------------ |
+| `AUTOMATION_WEBHOOK_ALLOWED_HOSTS` | Empty   | For outbound actions | Comma-separated exact DNS names approved for automation HTTPS requests                     |
+| `AUTOMATION_WEBHOOK_PRIVATE_HOSTS` | Empty   | No                   | Approved names that may resolve to RFC1918 or ULA addresses; unsafe addresses stay blocked |
 
 ## Hermes / SRE Agent
 

@@ -24,3 +24,22 @@ type OIDCIdentity struct {
 	Issuer     string    `bun:"issuer,notnull,default:''"`
 	Email      string    `bun:"email,notnull,default:''"`
 }
+
+type SAMLProvider struct {
+	BaseModel
+
+	Name           string `bun:"name,notnull,unique"`
+	IDPEntityID    string `bun:"idp_entity_id,notnull,default:''"`
+	MetadataXML    string `bun:"metadata_xml,notnull,default:''"`
+	EmailAttribute string `bun:"email_attribute,notnull,default:'email'"`
+	Enabled        bool   `bun:"enabled,notnull,default:false"`
+}
+
+type SAMLIdentity struct {
+	BaseModel
+
+	UserID     uuid.UUID `bun:"user_id,notnull"`
+	ProviderID uuid.UUID `bun:"provider_id,notnull"`
+	Subject    string    `bun:"subject,notnull"`
+	Email      string    `bun:"email,notnull,default:''"`
+}

@@ -1,6 +1,6 @@
 ---
 title: Security & Authentication
-description: Alga's security model — login, SSO (Google, Slack, OIDC), RBAC roles and permissions, session management, password recovery, and API token security.
+description: Alga's security model — login, SSO (Google, Slack, OIDC, and SAML), RBAC roles and permissions, session management, password recovery, and API token security.
 ---
 
 # Authentication
@@ -86,6 +86,10 @@ Users can authenticate by linking their Slack identity, configured from **Settin
 Alga supports generic OIDC identity providers (e.g. Okta, Keycloak, Google, Auth0) using the Authorization Code flow with PKCE. Login state (including the PKCE verifier and provider ID) is stored in Valkey as a single-use record with a 10-minute TTL, preventing replay of authorization codes.
 
 Configure providers from the **SSO Providers** page (`/sso`) or via `/api/v1/oidc/providers` (needs the `oidc:manage` permission). See [OIDC SSO](/integrations/oidc-sso) for setup.
+
+## AWS IAM Identity Center SAML
+
+Alga supports SP-initiated SAML sign-in through AWS IAM Identity Center. SAML request state and assertion replay checks use Valkey, and sign-in links an existing Alga user by the configured email attribute. Configure SAML providers from the **SSO Providers** page (`/sso`, `oidc:manage` permission). See [AWS IAM Identity Center SAML](/integrations/aws-iam-identity-center-saml) for setup and validation details.
 
 ## Password Recovery
 
@@ -287,4 +291,4 @@ See [Personal Access Tokens](/operations/personal-access-tokens) for details.
 - **Security Headers** — Middleware emits standard security headers on all responses
 - **Trusted Proxies** — `TRUSTED_PROXIES` configures which upstream proxy IPs are trusted for `X-Forwarded-For` client IP extraction
 - **SMTP TLS** — `SMTP_SKIP_TLS_VERIFY=true` disables TLS certificate verification for outgoing email; logs a loud warning at startup due to MITM risk. Use only for testing.
-- **SSO** — Google Sign-In, Slack Sign-In, and multi-provider OIDC SSO (see [OIDC SSO](/integrations/oidc-sso))
+- **SSO** — Google Sign-In, Slack Sign-In, multi-provider OIDC SSO, and AWS IAM Identity Center SAML (see [OIDC SSO](/integrations/oidc-sso) and [AWS IAM Identity Center SAML](/integrations/aws-iam-identity-center-saml))

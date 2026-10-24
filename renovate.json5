@@ -85,8 +85,8 @@
     },
 
     // ── Frozen: Go toolchain version ───────────────────────────────────
-    // Never bump the `go` / `toolchain` directive in go.mod. CI pins
-    // GO_VERSION="1.27.0" with GOTOOLCHAIN=local (see ci.yml): a directive
+    // Never bump the `go` / `toolchain` directive in go.mod or go.work. CI pins
+    // GO_VERSION="1.27.3" with GOTOOLCHAIN=local (see ci.yml): a directive
     // above the pinned runner toolchain makes every build fail loudly instead
     // of auto-downloading. The version is managed manually alongside the CI
     // pin — Renovate's github-actions manager cannot see that env var.

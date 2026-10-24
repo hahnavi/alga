@@ -3,6 +3,7 @@ package store
 import (
 	"time"
 
+	"alga/automation"
 	"alga/db"
 )
 
@@ -46,9 +47,14 @@ type Stores struct {
 	StatusPage            StatusPageStore
 	OIDCProvider          OIDCProviderStore
 	OIDCIdentity          OIDCIdentityStore
+	SAMLProvider          SAMLProviderStore
+	SAMLIdentity          SAMLIdentityStore
+	LDAPProvider          LDAPProviderStore
+	LDAPIdentity          LDAPIdentityStore
 	CredentialProvider    CredentialProviderStore
 	SharedSecret          SharedSecretStore
 	Outbox                OutboxStore
+	Automation            AutomationStore
 	PasswordReset         PasswordResetStore
 }
 
@@ -100,9 +106,14 @@ func NewStores(cli *db.Client, sessionExpiry, sessionMaxLifetime time.Duration) 
 		StatusPage:            newPGStatusPageStore(bunDB),
 		OIDCProvider:          newPGOIDCProviderStore(bunDB),
 		OIDCIdentity:          newPGOIDCIdentityStore(bunDB),
+		SAMLProvider:          newPGSAMLProviderStore(bunDB),
+		SAMLIdentity:          newPGSAMLIdentityStore(bunDB),
+		LDAPProvider:          newPGLDAPProviderStore(bunDB),
+		LDAPIdentity:          newPGLDAPIdentityStore(bunDB),
 		CredentialProvider:    newPGCredentialProviderStore(bunDB),
 		SharedSecret:          newPGSharedSecretStore(bunDB),
 		Outbox:                newPGOutboxStore(bunDB),
+		Automation:            newPGAutomationStore(bunDB, automation.HostPolicyFromEnv()),
 		PasswordReset:         newPGPasswordResetStore(bunDB),
 	}, nil
 }

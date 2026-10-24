@@ -715,6 +715,46 @@ export type OIDCProviderPublic = {
   name: string;
 };
 
+export type SAMLProviderRecord = {
+  id: string;
+  name: string;
+  idp_entity_id: string;
+  email_attribute: string;
+  enabled: boolean;
+  metadata_url: string;
+  acs_url: string;
+  authorize_url: string;
+  entity_id: string;
+  metadata_configured: boolean;
+  configuration_valid: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SAMLProviderPublic = {
+  id: string;
+  name: string;
+};
+
+export type LDAPProviderRecord = {
+  id: string;
+  name: string;
+  url: string;
+  base_dn: string;
+  bind_dn: string;
+  bind_password_configured: boolean;
+  login_attribute: string;
+  id_attribute: string;
+  email_attribute: string;
+  start_tls: boolean;
+  enabled: boolean;
+};
+
+export type LDAPProviderPublic = { id: string; name: string };
+export type LDAPProviderInput = Omit<LDAPProviderRecord, "id" | "bind_password_configured"> & {
+  bind_password?: string;
+};
+
 type CredentialProviderType =
   | "internal"
   | "hashicorp_vault"
@@ -1145,6 +1185,74 @@ export type PlaybookRecord = {
   steps?: PlaybookStepRecord[];
 };
 
+export type AutomationCondition = {
+  field: string;
+  operator: "equals" | "not_equals" | "contains" | "exists";
+  value?: string;
+};
+
+export type AutomationAction = {
+  type: "webhook" | "incident_note";
+  url?: string;
+  message?: string;
+  bearer_token?: string;
+  has_bearer_token?: boolean;
+  clear_bearer_token?: boolean;
+};
+
+export type AutomationRuleInput = {
+  name: string;
+  description: string;
+  trigger_type: string;
+  conditions: AutomationCondition[];
+  actions: AutomationAction[];
+  enabled: boolean;
+};
+
+export type AutomationRuleRecord = AutomationRuleInput & {
+  id: string;
+  version: number;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AutomationStepRecord = {
+  id: string;
+  action_index: number;
+  attempt: number;
+  status: "succeeded" | "retrying" | "failed";
+  http_status?: number;
+  error_code?: string;
+  created_at: string;
+};
+
+export type AutomationRunRecord = {
+  id: string;
+  rule_id: string;
+  event_id: string;
+  rule_name: string;
+  rule_version: number;
+  actions: AutomationAction[];
+  event_payload: {
+    event_type: string;
+    entity_type: string;
+    entity_id: string;
+    entity_number: number;
+    status: string;
+    previous_status?: string;
+    severity: string;
+  };
+  status: "pending" | "running" | "succeeded" | "failed";
+  next_action: number;
+  attempt: number;
+  last_error?: string;
+  created_at: string;
+  updated_at: string;
+  completed_at?: string;
+  steps?: AutomationStepRecord[];
+};
+
 type PagerLoadShift = {
   user_id: string;
   user_display_name: string;
@@ -1297,6 +1405,8 @@ const safe401Paths: Safe401Entry[] = [
   "/api/v1/auth/slack/enabled",
   "/api/v1/auth/slack/callback",
   { prefix: "/api/v1/auth/oidc/" },
+  { prefix: "/api/v1/auth/saml/" },
+  { prefix: "/api/v1/auth/ldap/" },
 ];
 
 function isSafe401Path(path: string): boolean {
@@ -1496,6 +1606,15 @@ export const api = {
     if (res.csrf_token) {
       csrfToken = res.csrf_token;
     }
+    return res;
+  },
+
+  async loginLDAP(providerId: string, login: string, password: string) {
+    const res = await request<LoginResponse>("/api/v1/auth/ldap/login", {
+      method: "POST",
+      body: JSON.stringify({ provider_id: providerId, login, password }),
+    });
+    if (res.csrf_token) csrfToken = res.csrf_token;
     return res;
   },
 
@@ -2894,6 +3013,42 @@ export const api = {
     });
   },
 
+  // Automation
+  listAutomationRules(params?: { limit?: number; skip?: number }) {
+    return request<{ items: AutomationRuleRecord[]; total: number }>(
+      `/api/v1/automation/rules${buildQuery(params ?? {})}`,
+    );
+  },
+  getAutomationRule(id: string) {
+    return request<AutomationRuleRecord>(`/api/v1/automation/rules/${e(id)}`);
+  },
+  createAutomationRule(data: AutomationRuleInput) {
+    return request<AutomationRuleRecord>("/api/v1/automation/rules", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+  updateAutomationRule(id: string, data: AutomationRuleInput & { version: number }) {
+    return request<AutomationRuleRecord>(`/api/v1/automation/rules/${e(id)}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+  archiveAutomationRule(id: string) {
+    return request<StatusResponse>(`/api/v1/automation/rules/${e(id)}`, { method: "DELETE" });
+  },
+  listAutomationRuns(params?: { rule_id?: string; limit?: number; skip?: number }) {
+    return request<{ items: AutomationRunRecord[]; total: number }>(
+      `/api/v1/automation/runs${buildQuery(params ?? {})}`,
+    );
+  },
+  getAutomationRun(id: string) {
+    return request<AutomationRunRecord>(`/api/v1/automation/runs/${e(id)}`);
+  },
+  retryAutomationRun(id: string) {
+    return request<StatusResponse>(`/api/v1/automation/runs/${e(id)}/retry`, { method: "POST" });
+  },
+
   // Playbooks
   listPlaybooks(params?: {
     kind?: string;
@@ -3162,6 +3317,67 @@ export const api = {
   // OIDC SSO (public — login page)
   listPublicOIDCProviders() {
     return request<OIDCProviderPublic[]>("/api/v1/auth/oidc/providers");
+  },
+
+  // SAML SSO Providers
+  listSAMLProviders() {
+    return unwrapItems<SAMLProviderRecord>(
+      request<{ items: SAMLProviderRecord[]; total: number }>("/api/v1/saml/providers"),
+    );
+  },
+  createSAMLProvider(data: {
+    name: string;
+    metadata_xml?: string;
+    email_attribute?: string;
+    enabled?: boolean;
+  }) {
+    return request<SAMLProviderRecord>("/api/v1/saml/providers", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+  updateSAMLProvider(
+    id: string,
+    data: {
+      name?: string;
+      metadata_xml?: string;
+      email_attribute?: string;
+      enabled?: boolean;
+    },
+  ) {
+    return request<SAMLProviderRecord>(`/api/v1/saml/providers/${e(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+  deleteSAMLProvider(id: string) {
+    return request<StatusResponse>(`/api/v1/saml/providers/${e(id)}`, { method: "DELETE" });
+  },
+  listPublicSAMLProviders() {
+    return request<SAMLProviderPublic[]>("/api/v1/auth/saml/providers");
+  },
+
+  // LDAP identity providers
+  listLDAPProviders() {
+    return request<LDAPProviderRecord[]>("/api/v1/ldap/providers");
+  },
+  createLDAPProvider(data: LDAPProviderInput) {
+    return request<LDAPProviderRecord>("/api/v1/ldap/providers", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+  updateLDAPProvider(id: string, data: LDAPProviderInput) {
+    return request<LDAPProviderRecord>(`/api/v1/ldap/providers/${e(id)}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+  deleteLDAPProvider(id: string) {
+    return request<StatusResponse>(`/api/v1/ldap/providers/${e(id)}`, { method: "DELETE" });
+  },
+  listPublicLDAPProviders() {
+    return request<LDAPProviderPublic[]>("/api/v1/auth/ldap/providers");
   },
 
   // Credential providers (admin)

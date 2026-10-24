@@ -1,6 +1,6 @@
 module alga
 
-go 1.27.0
+go 1.27.3
 
 require (
 	github.com/beevik/etree v1.8.1

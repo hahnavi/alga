@@ -23,7 +23,7 @@ services:
       - e2e
 
   valkey:
-    image: valkey/valkey:9.1-alpine
+    image: valkey/valkey:9.2-alpine
     command: valkey-server --save "" --loglevel warning --requirepass valkey_e2e
     tmpfs:
       - /data

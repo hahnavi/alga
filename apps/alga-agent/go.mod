@@ -4,7 +4,7 @@ go 1.27.0
 
 require (
 	charm.land/bubbles/v2 v2.2.1
-	charm.land/bubbletea/v2 v2.1.0
+	charm.land/bubbletea/v2 v2.1.1
 	charm.land/lipgloss/v2 v2.0.6
 	github.com/alga/agent-sdk-go v0.0.0-00010101000000-000000000000
 	github.com/modelcontextprotocol/go-sdk v1.8.0
@@ -50,4 +50,4 @@ replace github.com/alga/agent-sdk-go => ../../integrations/alga-agent-sdk-go
 // goldmark is a transitive, non-built dependency (via golang.org/x/tools) whose
 // legacy module path resolves to vulnerable v1.4.13 upstream. A plain indirect
 // require is dropped by `go mod tidy`, so this replace redirects it to v2.
-replace github.com/yuin/goldmark => github.com/yuin/goldmark/v2 v2.1.8
+replace github.com/yuin/goldmark => github.com/yuin/goldmark/v2 v2.1.11

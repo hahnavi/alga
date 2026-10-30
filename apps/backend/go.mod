@@ -10,7 +10,7 @@ require (
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/joho/godotenv v1.5.1
 	github.com/mattermost/xml-roundtrip-validator v0.1.0
-	github.com/nyaruka/phonenumbers/v2 v2.0.15
+	github.com/nyaruka/phonenumbers/v2 v2.0.16
 	github.com/pgvector/pgvector-go v0.4.1
 	github.com/pressly/goose/v3 v3.29.0
 	github.com/rabbitmq/amqp091-go v1.16.0
@@ -18,8 +18,8 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/testcontainers/testcontainers-go v0.44.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.44.0
-	github.com/uptrace/bun v1.2.18
-	github.com/uptrace/bun/dialect/pgdialect v1.2.18
+	github.com/uptrace/bun v1.3.0
+	github.com/uptrace/bun/dialect/pgdialect v1.3.0
 	github.com/valkey-io/valkey-go v1.0.79
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.72.0
 	go.opentelemetry.io/otel v1.47.0
@@ -103,4 +103,4 @@ require (
 // (via github.com/containerd/errdefs/pkg@v0.3.0) otherwise resolves grpc
 // v1.67.0. Keep this replacement because tidy prunes a require for an
 // unimported module. v1.84.0 includes the fix for GO-2026-6443.
-replace google.golang.org/grpc => google.golang.org/grpc v1.84.0
+replace google.golang.org/grpc => google.golang.org/grpc v1.85.0

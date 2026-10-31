@@ -18,7 +18,7 @@
   "devDependencies": {
     "@moonrepo/cli": "^2.6.4",
     "markdownlint-cli2": "^0.24.0",
-    "oxfmt": "^0.74.0",
+    "oxfmt": "^0.75.0",
     "oxlint": "^1.89.0"
   },
   "dependencies": {

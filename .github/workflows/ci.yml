@@ -223,7 +223,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       - name: Setup pnpm
-        uses: pnpm/setup@a0881977cd8ea73b1ed212236c99ca10dcc80cf4  # v3.1.1
+        uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e  # v3.1.2
         with:
           version: ${{ env.PNPM_VERSION }}
           install: false
@@ -249,7 +249,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       - name: Setup pnpm
-        uses: pnpm/setup@a0881977cd8ea73b1ed212236c99ca10dcc80cf4  # v3.1.1
+        uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e  # v3.1.2
         with:
           version: ${{ env.PNPM_VERSION }}
           install: false
@@ -357,14 +357,14 @@ jobs:
         # GHAS-enabled. The real gate is the blocking scan below.
         if: always() && needs.changes.outputs.backend == 'true' && hashFiles('trivy-backend-results.sarif') != ''
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370  # v4.39.1
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066  # v4.39.3
         with:
           sarif_file: trivy-backend-results.sarif
           category: trivy-backend
       - name: Upload Trivy frontend SARIF
         if: always() && needs.changes.outputs.frontend == 'true' && hashFiles('trivy-frontend-results.sarif') != ''
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370  # v4.39.1
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066  # v4.39.3
         with:
           sarif_file: trivy-frontend-results.sarif
           category: trivy-frontend
@@ -462,7 +462,7 @@ jobs:
       # ── pnpm audit: frontend dependency CVEs ──
       - name: Setup pnpm
         if: needs.changes.outputs.frontend == 'true'
-        uses: pnpm/setup@a0881977cd8ea73b1ed212236c99ca10dcc80cf4  # v3.1.1
+        uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e  # v3.1.2
         with:
           version: ${{ env.PNPM_VERSION }}
           install: false
@@ -495,7 +495,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       - name: Setup pnpm
-        uses: pnpm/setup@a0881977cd8ea73b1ed212236c99ca10dcc80cf4  # v3.1.1
+        uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e  # v3.1.2
         with:
           version: ${{ env.PNPM_VERSION }}
           install: false

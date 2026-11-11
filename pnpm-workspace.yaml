@@ -22,7 +22,7 @@ overrides:
   # GHSA-gfr2-rv44-r23c and the related markdown-it quadratic-parsing
   # advisories. tiptap-markdown and prosemirror-markdown resolve the 14.x
   # line; the frontend pins 15.x directly.
-  "markdown-it@<15": "^14.3.3"
+  "markdown-it@<15": "^15.0.0"
   # ProseMirror paste-handler XSS (GHSA-*) and source-map-js event-loop DoS
   # (GHSA-*) reach the frontend through @tiptap and the Vue compiler toolchain.
   "prosemirror-view@<1.42.3": "^1.42.3"

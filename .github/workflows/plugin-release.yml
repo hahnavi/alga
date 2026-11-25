@@ -70,7 +70,7 @@ jobs:
           mv "dist/com.alga.mattermost-plugin-0.0.1.tar.gz" \
              "dist/com.alga.mattermost-plugin-${{ needs.meta.outputs.version }}.tar.gz"
       - name: Attach bundle to GitHub Release
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64  # v3.0.3
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3  # v3.0.4
         with:
           tag_name: ${{ github.ref_name }}
           # generate_release_notes appends to the existing release body; we
